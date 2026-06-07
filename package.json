@@ -1,0 +1,14 @@
+{
+  "name": "polarbear",
+  "private": true,
+  "description": "Polarbear is a local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows.",
+  "workspaces": [
+    "apps/desktop"
+  ],
+  "scripts": {
+    "lint": "node scripts/check-frontend-content.mjs",
+    "typecheck": "node scripts/check-typescript-syntax.mjs",
+    "build": "node scripts/build-desktop.mjs",
+    "tauri": "npm --workspace apps/desktop run tauri"
+  }
+}

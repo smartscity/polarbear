@@ -1,0 +1,12 @@
+{
+  "name": "polarbear-desktop",
+  "private": true,
+  "description": "Polarbear desktop app - a local-first Markdown editor powered by Rust, Tauri, and TypeScript.",
+  "version": "0.1.0",
+  "scripts": {
+    "lint": "node ../../scripts/check-frontend-content.mjs",
+    "typecheck": "node ../../scripts/check-typescript-syntax.mjs",
+    "build": "node ../../scripts/build-desktop.mjs",
+    "tauri": "tauri dev"
+  }
+}
