@@ -49,17 +49,22 @@ jobs:
 
       - name: Show bundle files
         run: |
-          find apps/desktop/src-tauri/target -type f \( -name "*.dmg" -o -name "*.app" \) -print
+          echo "DMG files:"
+          find . -type f -path "*/bundle/dmg/*.dmg" -print
+
+          echo "macOS app bundles:"
+          find . -type d -path "*/bundle/macos/*.app" -print
 
       - name: Upload DMG to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          DMG_FILE=$(find apps/desktop/src-tauri/target -type f -name "*.dmg" | head -n 1)
+          DMG_FILE=$(find . -type f -path "*/bundle/dmg/*.dmg" | head -n 1)
 
           if [ -z "$DMG_FILE" ]; then
             echo "No DMG file found"
+            find . -type f -name "*.dmg" -print
             exit 1
           fi
 
