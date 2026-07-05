@@ -134,11 +134,52 @@ function consumeAppZoomWheelEvent(event: WheelEvent): void {
   event.stopImmediatePropagation();
 }
 
+function isAppZoomDebugOverlayEnabled(): boolean {
+  try {
+    return window.localStorage.getItem("polarbear.liveDebugScroll") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeAppZoomDebugOverlay(note: string): void {
+  if (!isAppZoomDebugOverlayEnabled()) {
+    return;
+  }
+
+  const overlayId = "polarbear-app-zoom-debug-overlay";
+  let overlay = document.getElementById(overlayId);
+  if (!overlay) {
+    overlay = document.createElement("pre");
+    overlay.id = overlayId;
+    overlay.style.position = "fixed";
+    overlay.style.right = "12px";
+    overlay.style.bottom = "12px";
+    overlay.style.zIndex = "2147483647";
+    overlay.style.maxWidth = "760px";
+    overlay.style.maxHeight = "38vh";
+    overlay.style.margin = "0";
+    overlay.style.padding = "10px 12px";
+    overlay.style.overflow = "auto";
+    overlay.style.border = "1px solid rgba(148, 163, 184, 0.45)";
+    overlay.style.borderRadius = "8px";
+    overlay.style.background = "rgba(15, 23, 42, 0.92)";
+    overlay.style.color = "#e5edf8";
+    overlay.style.font = "12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace";
+    overlay.style.pointerEvents = "none";
+    overlay.style.whiteSpace = "pre-wrap";
+    document.body.appendChild(overlay);
+  }
+
+  overlay.textContent = `APP ZOOM DEBUG\n${note}`;
+}
+
 function dispatchAppZoomDebug(
   phase: string,
   params: {
     canvas?: HTMLElement | null;
     canvasSize?: HTMLElement | null;
+    extra?: Record<string, boolean | number | string | null | undefined>;
     prepared?: boolean;
     viewport?: HTMLElement | null;
     zoom?: number;
@@ -149,6 +190,11 @@ function dispatchAppZoomDebug(
   const canvas = params.canvas ?? null;
   const liveScroller = document.querySelector(".typora-live-editor-pane .cm-scroller");
   const liveScrollerElement = liveScroller instanceof HTMLElement ? liveScroller : null;
+  const extraNote = params.extra
+    ? Object.entries(params.extra)
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => `${key}=${String(value)}`)
+    : [];
   const note = [
     `phase=${phase}`,
     `zoom=${Number((params.zoom ?? 1).toFixed(4))}`,
@@ -162,14 +208,10 @@ function dispatchAppZoomDebug(
     `canvasSize=${canvas ? `${canvas.clientWidth}x${canvas.clientHeight}` : "n/a"}`,
     `transform=${canvas?.style.transform || "n/a"}`,
     `liveScroll=${liveScrollerElement ? `${Math.round(liveScrollerElement.scrollLeft)},${Math.round(liveScrollerElement.scrollTop)}` : "n/a"}`,
+    ...extraNote,
   ].join(" ");
 
-  window.dispatchEvent(new CustomEvent("polarbear-app-zoom-debug", {
-    detail: {
-      note,
-      phase,
-    },
-  }));
+  writeAppZoomDebugOverlay(note);
 }
 
 function setAppCanvasZoomDataset(zoom: number): void {
@@ -325,6 +367,7 @@ export function App() {
   const zoomScrollUnlockTimerRef = useRef<number | null>(null);
   const zoomScrollLockUntilRef = useRef(0);
   const zoomInnerScrollLocksRef = useRef<Map<HTMLElement, InnerScrollLock>>(new Map());
+  const lastInnerScrollRestoreDebugAtRef = useRef(0);
   const zoomSettleTimerRef = useRef<number | null>(null);
   const zoomSnapAnimationRef = useRef(0);
   const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
@@ -640,19 +683,55 @@ export function App() {
 
   const restoreInnerScrollLocks = useCallback(() => {
     const locks = zoomInnerScrollLocksRef.current;
+    let restoredCount = 0;
+    let liveBefore = "";
+    let liveAfter = "";
     for (const [element, position] of Array.from(locks.entries())) {
       if (!element.isConnected) {
         locks.delete(element);
         continue;
       }
 
+      const isLiveScroller = element.matches(".typora-live-editor-pane .cm-scroller");
+      if (isLiveScroller) {
+        liveBefore = `${Math.round(element.scrollLeft)},${Math.round(element.scrollTop)}`;
+      }
+
       if (Math.abs(element.scrollLeft - position.left) > 0.5) {
         element.scrollLeft = position.left;
+        restoredCount += 1;
       }
 
       if (Math.abs(element.scrollTop - position.top) > 0.5) {
         element.scrollTop = position.top;
+        restoredCount += 1;
       }
+
+      if (isLiveScroller) {
+        liveAfter = `${Math.round(element.scrollLeft)},${Math.round(element.scrollTop)}`;
+      }
+    }
+
+    const now = Date.now();
+    if (
+      restoredCount > 0 &&
+      now - lastInnerScrollRestoreDebugAtRef.current > 120
+    ) {
+      lastInnerScrollRestoreDebugAtRef.current = now;
+      dispatchAppZoomDebug("inner-scroll-restore", {
+        canvas: zoomCanvasRef.current,
+        canvasSize: zoomCanvasSizeRef.current,
+        extra: {
+          innerLocks: locks.size,
+          liveAfter,
+          liveBefore,
+          restoredCount,
+          transformScale: appCanvasTransformRef.current.scale.toFixed(4),
+        },
+        prepared: appZoomInteractionSurfacePreparedRef.current,
+        viewport: zoomViewportRef.current,
+        zoom: appZoomRef.current,
+      });
     }
   }, []);
 
@@ -690,13 +769,22 @@ export function App() {
       dispatchAppZoomDebug("unlock", {
         canvas: zoomCanvasRef.current,
         canvasSize: zoomCanvasSizeRef.current,
+        extra: {
+          appCanvasZooming: document.documentElement.dataset.appCanvasZooming ?? "false",
+          innerLocks: zoomInnerScrollLocksRef.current.size,
+          transformScale: appCanvasTransformRef.current.scale.toFixed(4),
+          transformX: Math.round(appCanvasTransformRef.current.x),
+          transformY: Math.round(appCanvasTransformRef.current.y),
+        },
         prepared: appZoomInteractionSurfacePreparedRef.current,
         viewport: zoomViewportRef.current,
         zoom: appZoomRef.current,
       });
-      delete document.documentElement.dataset.appCanvasZooming;
       if (isAtNormalZoom) {
+        delete document.documentElement.dataset.appCanvasZooming;
         window.dispatchEvent(new CustomEvent("polarbear-app-canvas-zoom-settled"));
+      } else {
+        document.documentElement.dataset.appCanvasZooming = "true";
       }
     }, APP_ZOOM_SCROLL_LOCK_MS + 40);
   }, [
@@ -755,6 +843,22 @@ export function App() {
       return;
     }
 
+    let flushedPendingFrame = false;
+    if (zoomRafRef.current) {
+      window.cancelAnimationFrame(zoomRafRef.current);
+      zoomRafRef.current = 0;
+      flushedPendingFrame = true;
+      if (activeZoomAnchorRef.current) {
+        applyVisualZoomAtAnchor(pendingZoomRef.current, activeZoomAnchorRef.current);
+      } else if (pendingAnchorRef.current) {
+        zoomAtPoint(
+          pendingZoomRef.current,
+          pendingAnchorRef.current.x,
+          pendingAnchorRef.current.y,
+        );
+      }
+    }
+
     const currentZoom = appZoomRef.current;
     const fallbackPoint = lastZoomClientRef.current;
     const anchor = activeZoomAnchorRef.current ?? getAnchorCanvasPoint(
@@ -768,6 +872,14 @@ export function App() {
       dispatchAppZoomDebug("settle-before-reset", {
         canvas: zoomCanvasRef.current,
         canvasSize: zoomCanvasSizeRef.current,
+        extra: {
+          flushedPendingFrame,
+          innerLocks: zoomInnerScrollLocksRef.current.size,
+          pendingZoom: pendingZoomRef.current.toFixed(4),
+          transformScale: appCanvasTransformRef.current.scale.toFixed(4),
+          transformX: Math.round(appCanvasTransformRef.current.x),
+          transformY: Math.round(appCanvasTransformRef.current.y),
+        },
         prepared: appZoomInteractionSurfacePreparedRef.current,
         viewport,
         zoom: currentZoom,
@@ -780,29 +892,50 @@ export function App() {
     dispatchAppZoomDebug("settle-before", {
       canvas: zoomCanvasRef.current,
       canvasSize: zoomCanvasSizeRef.current,
+      extra: {
+        flushedPendingFrame,
+        innerLocks: zoomInnerScrollLocksRef.current.size,
+        keepTransform: true,
+        pendingZoom: pendingZoomRef.current.toFixed(4),
+        transformScale: appCanvasTransformRef.current.scale.toFixed(4),
+        transformX: Math.round(appCanvasTransformRef.current.x),
+        transformY: Math.round(appCanvasTransformRef.current.y),
+      },
       prepared: appZoomInteractionSurfacePreparedRef.current,
       viewport,
       zoom: currentZoom,
     });
-    applyZoomAtAnchor(currentZoom, anchor, false);
+    // Keep the exact transform produced by the last gesture frame. Re-applying
+    // it around an anchor at gesture end creates a visible snap when the final
+    // wheel/native-pinch frame and the settle timer are not perfectly aligned.
+    appZoomInteractionSurfacePreparedRef.current = false;
     if (currentZoom <= NORMAL_APP_ZOOM + 0.0005) {
-      appZoomInteractionSurfacePreparedRef.current = false;
+      applyCanvasZoom(NORMAL_APP_ZOOM, false);
     }
     commitZoom(currentZoom);
     dispatchAppZoomDebug("settle-after", {
       canvas: zoomCanvasRef.current,
       canvasSize: zoomCanvasSizeRef.current,
+      extra: {
+        innerLocks: zoomInnerScrollLocksRef.current.size,
+        keepTransform: true,
+        transformScale: appCanvasTransformRef.current.scale.toFixed(4),
+        transformX: Math.round(appCanvasTransformRef.current.x),
+        transformY: Math.round(appCanvasTransformRef.current.y),
+      },
       prepared: appZoomInteractionSurfacePreparedRef.current,
       viewport,
       zoom: currentZoom,
     });
     activeZoomAnchorRef.current = null;
   }, [
+    applyCanvasZoom,
     animateZoomTo,
-    applyZoomAtAnchor,
+    applyVisualZoomAtAnchor,
     commitZoom,
     getAnchorCanvasPoint,
     lockAppZoomScroll,
+    zoomAtPoint,
   ]);
 
   const scheduleZoomSettle = useCallback((clientX?: number, clientY?: number) => {
@@ -1231,11 +1364,13 @@ export function App() {
     }
 
     if (zoom > NORMAL_APP_ZOOM + 0.0005) {
+      document.documentElement.dataset.appCanvasZooming = "true";
       captureInnerScrollLocks();
       restoreInnerScrollLocks();
     } else {
       restoreInnerScrollLocks();
       releaseInnerScrollLocks();
+      delete document.documentElement.dataset.appCanvasZooming;
     }
 
     setStatusMessage(`App zoom ${Math.round(zoom * 100)}%.`);

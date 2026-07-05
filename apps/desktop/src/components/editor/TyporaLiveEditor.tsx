@@ -227,11 +227,6 @@ function isLiveScrollDebugEnabled(): boolean {
   }
 }
 
-type AppZoomDebugEvent = CustomEvent<{
-  note?: string;
-  phase?: string;
-}>;
-
 type LiveDebugState = {
   version: string;
   source: string;
@@ -643,7 +638,7 @@ export function TyporaLiveEditor({
   }, [onEditorReady]);
 
   const reportLiveDebug = useCallback((source: string, extra: Partial<LiveDebugState> = {}) => {
-    if (!liveDebugEnabled) {
+    if (!liveDebugEnabled || isAppCanvasTransformActive()) {
       return;
     }
 
@@ -857,25 +852,6 @@ export function TyporaLiveEditor({
       resizeObserver.disconnect();
       mutationObserver.disconnect();
       clearLiveScrollAreaSizing(pane);
-    };
-  }, [liveDebugEnabled, reportLiveDebug]);
-
-  useEffect(() => {
-    if (!liveDebugEnabled) {
-      return undefined;
-    }
-
-    const handleAppZoomDebug = (event: Event) => {
-      const detail = (event as AppZoomDebugEvent).detail ?? {};
-      reportLiveDebug(`app-zoom-${detail.phase ?? "debug"}`, {
-        note: detail.note ?? "",
-        pinch: detail.note ?? "",
-      });
-    };
-
-    window.addEventListener("polarbear-app-zoom-debug", handleAppZoomDebug);
-    return () => {
-      window.removeEventListener("polarbear-app-zoom-debug", handleAppZoomDebug);
     };
   }, [liveDebugEnabled, reportLiveDebug]);
 
