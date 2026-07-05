@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties, type MouseEvent } from "react";
+import { useMemo, type MouseEvent } from "react";
 import MarkdownIt from "markdown-it";
 import { MarkdownImage } from "./MarkdownImage";
 import { MermaidBlock } from "../mermaid/MermaidBlock";
@@ -10,15 +10,13 @@ type MarkdownPreviewProps = {
   activeFileName: string;
   markdownContent: string;
   workspaceRoot: string;
-  zoom?: number;
 };
 
 export function MarkdownPreview({
   activeFileId,
   activeFileName,
   markdownContent,
-  workspaceRoot,
-  zoom = 1
+  workspaceRoot
 }: MarkdownPreviewProps) {
   const markdownRenderer = useMemo(
     () => {
@@ -79,11 +77,6 @@ export function MarkdownPreview({
     [markdownContent]
   );
 
-  const previewStyle = {
-    "--preview-document-zoom": zoom,
-    "--preview-zoom": zoom,
-  } as CSSProperties;
-
   return (
     <section className="preview-pane">
       <div className="pane-title">
@@ -99,7 +92,6 @@ export function MarkdownPreview({
         <div
           className="markdown-preview-surface"
           data-editor-document-surface="true"
-          style={previewStyle}
         >
           {segments.map((segment, index) => {
             if (segment.type === "mermaid") {

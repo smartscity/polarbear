@@ -27,8 +27,6 @@ import {
 } from "@codemirror/view";
 import mermaid from "mermaid";
 import { resolveMarkdownAsset } from "../../tauri/workspaceCommands";
-import { MermaidZoomOverlay } from "../mermaid/MermaidZoomOverlay";
-import { useLiveZoomController } from "./LiveZoomController";
 import { macNavigationKeyBindings } from "./macNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
 
@@ -48,7 +46,6 @@ type TyporaLiveEditorProps = {
   activeFileName: string;
   markdown?: string;
   markdownContent?: string;
-  zoom?: number;
   onChange?: (nextMarkdown: string) => void;
   onMarkdownChange?: (nextMarkdown: string) => void;
   onEditorReady?: (editorView: MarkdownEditorView | null) => void;
@@ -101,12 +98,11 @@ function hashPreviewBlockSource(source: string): string {
   return hash.toString(36);
 }
 
-function markZoomAnchorBlock(
+function markMarkdownPreviewBlock(
   element: HTMLElement,
   block: Pick<PreviewBlock, "id" | "type">,
   className?: string,
 ) {
-  element.dataset.zoomAnchorBlock = "true";
   element.dataset.markdownBlockId = block.id;
   element.dataset.markdownBlockType = block.type;
   if (className) {
@@ -115,16 +111,6 @@ function markZoomAnchorBlock(
 }
 
 type TableAlignment = "center" | "default" | "left" | "right";
-
-type DiagramZoomState = {
-  source: string;
-  svgContent: string;
-} | null;
-
-type OpenDiagramZoomEvent = CustomEvent<{
-  source: string;
-  svgContent: string;
-}>;
 
 function clearLiveScrollAreaSizing(pane: HTMLElement) {
   pane.style.height = "";
@@ -643,7 +629,6 @@ export function TyporaLiveEditor({
   onImageDrop,
   onImagePaste,
   workspaceRoot,
-  zoom = 1,
 }: TyporaLiveEditorProps) {
   const editorMarkdown = markdown ?? markdownContent ?? "";
   const emitChange = onChange ?? onMarkdownChange ?? (() => undefined);
@@ -651,14 +636,11 @@ export function TyporaLiveEditor({
   const editorViewRef = useRef<EditorView | null>(null);
   const onEditorReadyRef = useRef(onEditorReady);
   const liveDebugEnabled = useMemo(() => isLiveDebugEnabled(), []);
-  const [diagramZoom, setDiagramZoom] = useState<DiagramZoomState>(null);
   const [debugState, setDebugState] = useState<LiveDebugState>(() => createInitialLiveDebugState());
 
   useEffect(() => {
     onEditorReadyRef.current = onEditorReady;
   }, [onEditorReady]);
-
-  useLiveZoomController(paneRef, { zoom });
 
   const reportLiveDebug = useCallback((source: string, extra: Partial<LiveDebugState> = {}) => {
     if (!liveDebugEnabled) {
@@ -693,22 +675,6 @@ export function TyporaLiveEditor({
     ],
     [activeFileId, onImagePaste, workspaceRoot],
   );
-
-  useEffect(() => {
-    const handleOpenDiagramZoom = (event: Event) => {
-      const zoomEvent = event as OpenDiagramZoomEvent;
-      setDiagramZoom(zoomEvent.detail);
-    };
-
-    window.addEventListener("polarbear-open-diagram-zoom", handleOpenDiagramZoom);
-
-    return () => {
-      window.removeEventListener(
-        "polarbear-open-diagram-zoom",
-        handleOpenDiagramZoom,
-      );
-    };
-  }, []);
 
   useEffect(() => {
     if (!liveDebugEnabled || !isLiveScrollDebugEnabled()) {
@@ -811,9 +777,6 @@ export function TyporaLiveEditor({
 
     const syncLiveScrollArea = () => {
       if (isAppCanvasTransformActive()) {
-        reportLiveDebug("height-sync-skipped-app-zoom", {
-          note: "Skipped Live height sync while app canvas transform is active",
-        });
         return;
       }
 
@@ -824,9 +787,6 @@ export function TyporaLiveEditor({
       frameId = window.requestAnimationFrame(() => {
         frameId = 0;
         if (isAppCanvasTransformActive()) {
-          reportLiveDebug("height-sync-skipped-app-zoom-raf", {
-            note: "Skipped Live height sync after RAF while app canvas transform is active",
-          });
           return;
         }
 
@@ -848,9 +808,6 @@ export function TyporaLiveEditor({
         if (!didSize) {
           window.requestAnimationFrame(() => {
             if (isAppCanvasTransformActive()) {
-              reportLiveDebug("height-sync-skipped-app-zoom-retry", {
-                note: "Skipped Live height sync retry while app canvas transform is active",
-              });
               return;
             }
 
@@ -1070,13 +1027,6 @@ export function TyporaLiveEditor({
           highlightActiveLine: false,
         }}
       />
-      {diagramZoom ? (
-        <MermaidZoomOverlay
-          source={diagramZoom.source}
-          svgContent={diagramZoom.svgContent}
-          onClose={() => setDiagramZoom(null)}
-        />
-      ) : null}
     </section>
   );
 }
@@ -2971,17 +2921,6 @@ function diagramIdForSource(source: string): string {
   return `polarbear-live-mermaid-${hash}`;
 }
 
-function openDiagramZoom(source: string, svgContent: string) {
-  window.dispatchEvent(
-    new CustomEvent("polarbear-open-diagram-zoom", {
-      detail: {
-        source,
-        svgContent,
-      },
-    }),
-  );
-}
-
 class ListMarkerWidget extends WidgetType {
   constructor(private readonly type: "bullet") {
     super();
@@ -3105,7 +3044,7 @@ class HorizontalRuleWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-horizontal-rule";
-    markZoomAnchorBlock(wrapper, this.block);
+    markMarkdownPreviewBlock(wrapper, this.block);
     const rule = document.createElement("hr");
     wrapper.append(rule);
     return wrapper;
@@ -3132,7 +3071,7 @@ class MathBlockPreviewWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-math-block";
-    markZoomAnchorBlock(wrapper, this.block, "markdown-math-block");
+    markMarkdownPreviewBlock(wrapper, this.block, "markdown-math-block");
     wrapper.title = "Click to edit formula source";
     wrapper.addEventListener("click", () => revealSource(wrapper, this.block));
     wrapper.addEventListener("dblclick", () => revealSource(wrapper, this.block));
@@ -3257,7 +3196,7 @@ class CalloutPreviewWidget extends WidgetType {
 
     const wrapper = document.createElement("aside");
     wrapper.className = `cm-typora-callout cm-typora-callout-${type}`;
-    markZoomAnchorBlock(wrapper, this.block, "markdown-callout-block");
+    markMarkdownPreviewBlock(wrapper, this.block, "markdown-callout-block");
     const title = document.createElement("div");
     title.className = "cm-typora-callout-title";
     title.textContent = titleText;
@@ -3288,7 +3227,7 @@ class HtmlImagePreviewWidget extends WidgetType {
     const attributes = parseHtmlAttributes(this.block.raw);
     const figure = document.createElement("figure");
     figure.className = "cm-typora-image-preview cm-typora-html-image-preview";
-    markZoomAnchorBlock(figure, this.block, "markdown-image-block");
+    markMarkdownPreviewBlock(figure, this.block, "markdown-image-block");
     allowEditorVerticalScroll(figure);
 
     const src = attributes.src ?? "";
@@ -3340,7 +3279,7 @@ class TablePreviewWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-table-preview";
-    markZoomAnchorBlock(wrapper, this.block, "markdown-table-block");
+    markMarkdownPreviewBlock(wrapper, this.block, "markdown-table-block");
     wrapper.title = "Markdown table preview";
     allowEditorVerticalScroll(wrapper);
 
@@ -3991,7 +3930,7 @@ class MermaidPreviewWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-diagram-preview";
-    markZoomAnchorBlock(wrapper, this.block, "mermaid-block");
+    markMarkdownPreviewBlock(wrapper, this.block, "mermaid-block");
     allowEditorVerticalScroll(wrapper);
 
     const toolbar = document.createElement("div");
@@ -4012,12 +3951,7 @@ class MermaidPreviewWidget extends WidgetType {
       void navigator.clipboard.writeText(this.block.source);
     });
 
-    const zoomButton = document.createElement("button");
-    zoomButton.type = "button";
-    zoomButton.textContent = "Zoom";
-    zoomButton.disabled = true;
-
-    toolbar.append(title, editButton, copyButton, zoomButton);
+    toolbar.append(title, editButton, copyButton);
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
@@ -4026,7 +3960,7 @@ class MermaidPreviewWidget extends WidgetType {
     wrapper.append(toolbar, content);
     scheduleEditorMeasureFromDom(wrapper);
 
-    void renderMermaidPreview(this.block.source, content, zoomButton);
+    void renderMermaidPreview(this.block.source, content);
 
     return wrapper;
   }
@@ -4048,7 +3982,7 @@ class PlantUmlPreviewWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-diagram-preview cm-typora-plantuml-preview";
-    markZoomAnchorBlock(wrapper, this.block, "plantuml-block");
+    markMarkdownPreviewBlock(wrapper, this.block, "plantuml-block");
     allowEditorVerticalScroll(wrapper);
     wrapper.addEventListener("dblclick", () => revealSource(wrapper, this.block));
 
@@ -4070,12 +4004,7 @@ class PlantUmlPreviewWidget extends WidgetType {
       void navigator.clipboard.writeText(this.block.source);
     });
 
-    const zoomButton = document.createElement("button");
-    zoomButton.type = "button";
-    zoomButton.textContent = "Zoom";
-    zoomButton.disabled = true;
-
-    toolbar.append(title, editButton, copyButton, zoomButton);
+    toolbar.append(title, editButton, copyButton);
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
@@ -4088,7 +4017,7 @@ class PlantUmlPreviewWidget extends WidgetType {
     wrapper.append(toolbar, content, privacyNote);
     scheduleEditorMeasureFromDom(wrapper);
 
-    void renderPlantUmlPreview(this.block.source, content, zoomButton);
+    void renderPlantUmlPreview(this.block.source, content);
 
     return wrapper;
   }
@@ -4101,13 +4030,10 @@ class PlantUmlPreviewWidget extends WidgetType {
 async function renderPlantUmlPreview(
   source: string,
   content: HTMLElement,
-  zoomButton: HTMLButtonElement,
 ) {
   const cachedResult = plantUmlRenderCache.get(source);
   if (cachedResult?.svgContent) {
     content.innerHTML = cachedResult.svgContent;
-    zoomButton.disabled = false;
-    zoomButton.onclick = () => openDiagramZoom(source, cachedResult.svgContent ?? "");
     scheduleEditorMeasureFromDom(content);
     return;
   }
@@ -4134,8 +4060,6 @@ async function renderPlantUmlPreview(
       svgContent,
     });
     content.innerHTML = svgContent;
-    zoomButton.disabled = false;
-    zoomButton.onclick = () => openDiagramZoom(source, svgContent);
     scheduleEditorMeasureFromDom(content);
   } catch (error) {
     const message =
@@ -4163,13 +4087,10 @@ function encodePlantUmlHex(source: string): string {
 async function renderMermaidPreview(
   source: string,
   content: HTMLElement,
-  zoomButton: HTMLButtonElement,
 ) {
   const cachedResult = mermaidRenderCache.get(source);
   if (cachedResult?.svgContent) {
     content.innerHTML = cachedResult.svgContent;
-    zoomButton.disabled = false;
-    zoomButton.onclick = () => openDiagramZoom(source, cachedResult.svgContent ?? "");
     scheduleEditorMeasureFromDom(content);
     return;
   }
@@ -4188,8 +4109,6 @@ async function renderMermaidPreview(
       svgContent: result.svg,
     });
     content.innerHTML = result.svg;
-    zoomButton.disabled = false;
-    zoomButton.onclick = () => openDiagramZoom(source, result.svg);
     scheduleEditorMeasureFromDom(content);
   } catch (error) {
     const message =
@@ -4349,7 +4268,6 @@ class MarkdownImagePreviewWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("figure");
     wrapper.className = "cm-typora-image-preview";
-    wrapper.dataset.zoomAnchorBlock = "true";
     wrapper.dataset.markdownBlockId = this.params.blockId;
     wrapper.dataset.markdownBlockType = "image";
     wrapper.classList.add("markdown-image-block");

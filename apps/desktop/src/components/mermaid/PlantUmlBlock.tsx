@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { MermaidZoomOverlay } from "./MermaidZoomOverlay";
 
 export type PlantUmlBlockProps = {
   diagramId: string;
@@ -11,7 +10,6 @@ const plantUmlServerUrl = "https://www.plantuml.com/plantuml/svg/";
 export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   const [svgContent, setSvgContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [isZoomOpen, setIsZoomOpen] = useState(false);
   const diagramUrl = useMemo(
     () => `${plantUmlServerUrl}${encodePlantUmlHex(source)}`,
     [source]
@@ -69,34 +67,20 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
           <span>{errorMessage}</span>
         </div>
       ) : (
-        <button
-          type="button"
+        <div
           className="plantuml-render-target"
-          disabled={!svgContent}
-          onClick={() => {
-            if (svgContent) {
-              setIsZoomOpen(true);
-            }
-          }}
         >
           {svgContent ? (
             <span dangerouslySetInnerHTML={{ __html: svgContent }} />
           ) : (
             <span className="plantuml-loading">Rendering PlantUML...</span>
           )}
-        </button>
+        </div>
       )}
       <details className="mermaid-source">
         <summary>Source</summary>
         <pre>{source}</pre>
       </details>
-      {isZoomOpen ? (
-        <MermaidZoomOverlay
-          source={source}
-          svgContent={svgContent}
-          onClose={() => setIsZoomOpen(false)}
-        />
-      ) : null}
     </figure>
   );
 }

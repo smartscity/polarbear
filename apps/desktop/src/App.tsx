@@ -82,7 +82,6 @@ import {
   saveImageAsset,
   writeMarkdownFile,
 } from "./tauri/workspaceCommands";
-import { AppZoomManager } from "./zoom/AppZoomManager";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -108,421 +107,6 @@ const NATIVE_PINCH_ZOOM_SENSITIVITY = 2.35;
 const NATIVE_PINCH_SCALE_SENSITIVITY = 1.35;
 const NATIVE_GESTURE_WHEEL_SUPPRESS_MS = 160;
 const APP_CANVAS_ZOOM_ENABLED = true;
-const EDITOR_WORKSPACE_ZOOM_ENABLED = false;
-const EDITOR_ZOOM_DEFAULT = 1;
-const EDITOR_ZOOM_MIN = 0.5;
-const EDITOR_ZOOM_MAX = 8;
-const EDITOR_ZOOM_STEP = 1.1;
-
-type EditorZoomMode = "source" | "live" | "preview" | "split";
-
-function clampEditorZoom(value: number): number {
-  if (!Number.isFinite(value)) {
-    return EDITOR_ZOOM_DEFAULT;
-  }
-
-  return Math.max(EDITOR_ZOOM_MIN, Math.min(EDITOR_ZOOM_MAX, value));
-}
-
-function toEditorZoomMode(viewMode: ViewMode): EditorZoomMode {
-  if (viewMode === "edit") {
-    return "source";
-  }
-
-  return viewMode;
-}
-
-type EditorZoomDebugSource =
-  | "menu"
-  | "native-pinch"
-  | "shortcut"
-  | "wheel";
-
-type ActiveDocumentZoomMode = Exclude<EditorZoomMode, "split">;
-
-type ActiveDocumentZoomTarget = {
-  host: HTMLElement;
-  mode: ActiveDocumentZoomMode;
-  scrollport: HTMLElement;
-  surface: HTMLElement;
-};
-
-type ContinuousZoomFocusSource =
-  | "last-pointer"
-  | "native-pinch"
-  | "viewport-center"
-  | "wheel-client";
-
-type ContinuousZoomInput = "native-pinch" | "wheel";
-
-type ContinuousZoomFocus = {
-  clientX: number;
-  clientY: number;
-  docX: number;
-  docY: number;
-  focusSource: ContinuousZoomFocusSource;
-  focusX: number;
-  focusY: number;
-};
-
-type ContinuousZoomSession = ContinuousZoomFocus & {
-  baseZoom: number;
-  cloneWrapper: HTMLElement;
-  input: ContinuousZoomInput;
-  originalSurfaceVisibility: string;
-  overlay: HTMLElement;
-  target: ActiveDocumentZoomTarget;
-  visualZoom: number;
-};
-
-type ContinuousZoomRequest = {
-  input: ContinuousZoomInput;
-  nextZoom: number;
-};
-
-function readEditorZoomDomDebug(mode: EditorZoomMode, zoom: number) {
-  if (mode === "source") {
-    const scrollerSelector = ".editor-workspace-edit .cm-scroller";
-    const surfaceSelector = ".editor-workspace-edit .cm-content";
-    const rootSelector = ".editor-workspace-edit [data-editor-document-host][data-editor-document-mode='source']";
-    const root = document.querySelector(rootSelector);
-    const scroller = document.querySelector(scrollerSelector);
-    const surface = document.querySelector(surfaceSelector);
-    const contentStyle = surface instanceof HTMLElement
-      ? getComputedStyle(surface)
-      : null;
-    const computedFontSize = contentStyle?.fontSize ?? "";
-    const expectedFontSize = Number.parseFloat(
-      root instanceof HTMLElement
-        ? root.style.getPropertyValue("--source-editor-font-size")
-        : "",
-    );
-    const actualFontSize = Number.parseFloat(computedFontSize);
-
-    return {
-      adapter: "SourceZoomAdapter",
-      adapterFound: true,
-      committedZoom: Number(zoom.toFixed(4)),
-      computedFontSize,
-      computedLineHeight: contentStyle?.lineHeight ?? "",
-      computedPaddingTop: contentStyle?.paddingTop ?? "",
-      computedTransform: contentStyle?.transform ?? "",
-      cssVarApplied: root instanceof HTMLElement &&
-        root.style.getPropertyValue("--source-editor-font-size").trim().length > 0,
-      cssZoom: "",
-      expectedFontSize: `${14 * zoom}px`,
-      expectedPaddingTop: "",
-      hostSelector: rootSelector,
-      scrollerClass: scroller?.className ?? "",
-      scrollerFound: scroller instanceof HTMLElement,
-      scrollerSelector,
-      surfaceClass: surface?.className ?? "",
-      surfaceFound: surface instanceof HTMLElement,
-      surfaceSelector,
-      targetFound: scroller instanceof HTMLElement && surface instanceof HTMLElement,
-      transformApplied: false,
-      visualChanged: Number.isFinite(expectedFontSize) &&
-        Number.isFinite(actualFontSize) &&
-        Math.abs(actualFontSize - expectedFontSize) < 0.5,
-    };
-  }
-
-  if (mode === "live") {
-    const scrollerSelector = ".typora-live-editor-pane .cm-scroller";
-    const surfaceSelector = ".typora-live-editor-pane .cm-content";
-    const rootSelector = ".typora-live-editor-pane[data-editor-document-host][data-editor-document-mode='live']";
-    const root = document.querySelector(rootSelector);
-    const scroller = document.querySelector(scrollerSelector);
-    const surface = document.querySelector(surfaceSelector);
-    const rootStyle = root instanceof HTMLElement ? getComputedStyle(root) : null;
-    const surfaceStyle = surface instanceof HTMLElement ? getComputedStyle(surface) : null;
-    const expectedFontSize = Number.parseFloat(
-      root instanceof HTMLElement
-        ? root.style.getPropertyValue("--typora-live-font-size")
-        : "",
-    );
-    const actualFontSize = Number.parseFloat(surfaceStyle?.fontSize ?? "");
-
-    return {
-      adapter: "LiveZoomAdapter",
-      adapterFound: true,
-      committedZoom: Number(zoom.toFixed(4)),
-      computedFontSize: surfaceStyle?.fontSize ?? "",
-      computedLineHeight: surfaceStyle?.lineHeight ?? "",
-      computedPaddingTop: surfaceStyle?.paddingTop ?? "",
-      computedTransform: surfaceStyle?.transform ?? "",
-      cssVarApplied: Boolean(rootStyle?.getPropertyValue("--typora-live-font-size").trim()),
-      cssZoom: rootStyle?.getPropertyValue("--live-zoom").trim() ?? "",
-      expectedFontSize: `${17 * zoom}px`,
-      expectedPaddingTop: `${48 * zoom}px`,
-      hostSelector: rootSelector,
-      liveCssZoom: rootStyle?.getPropertyValue("--live-zoom").trim() ?? "",
-      scrollerClass: scroller?.className ?? "",
-      scrollerFound: scroller instanceof HTMLElement,
-      scrollerSelector,
-      surfaceClass: surface?.className ?? "",
-      surfaceFound: surface instanceof HTMLElement,
-      surfaceSelector,
-      targetFound: scroller instanceof HTMLElement && surface instanceof HTMLElement,
-      transformApplied: false,
-      visualChanged: Number.isFinite(expectedFontSize) &&
-        Number.isFinite(actualFontSize) &&
-        Math.abs(actualFontSize - expectedFontSize) < 0.5,
-    };
-  }
-
-  if (mode === "preview") {
-    const scrollerSelector = ".markdown-preview";
-    const surfaceSelector = ".markdown-preview-surface";
-    const rootSelector = ".markdown-preview[data-editor-document-host][data-editor-document-mode='preview']";
-    const previewRoot = document.querySelector(scrollerSelector);
-    const surface = document.querySelector(surfaceSelector);
-    const surfaceStyle = surface instanceof HTMLElement ? getComputedStyle(surface) : null;
-    const cssZoom = surfaceStyle?.getPropertyValue("zoom") ?? "";
-
-    return {
-      adapter: "PreviewZoomAdapter",
-      adapterFound: true,
-      committedZoom: Number(zoom.toFixed(4)),
-      computedFontSize: surfaceStyle?.fontSize ?? "",
-      computedPaddingTop: surfaceStyle?.paddingTop ?? "",
-      computedTransform: surfaceStyle?.transform ?? "",
-      cssVarApplied: surface instanceof HTMLElement &&
-        surface.style.getPropertyValue("--preview-zoom").trim().length > 0,
-      cssZoom,
-      expectedFontSize: "",
-      expectedPaddingTop: "",
-      hostSelector: rootSelector,
-      scrollerClass: previewRoot?.className ?? "",
-      scrollerFound: previewRoot instanceof HTMLElement,
-      scrollerSelector,
-      surfaceClass: surface?.className ?? "",
-      surfaceFound: surface instanceof HTMLElement,
-      surfaceSelector,
-      targetFound: previewRoot instanceof HTMLElement && surface instanceof HTMLElement,
-      transformApplied: Boolean(surfaceStyle?.getPropertyValue("zoom")),
-      visualChanged: cssZoom.trim().length > 0 && cssZoom !== "1",
-    };
-  }
-
-  return {
-    adapter: "SplitZoomAdapter",
-    adapterFound: false,
-    committedZoom: Number(zoom.toFixed(4)),
-    cssVarApplied: false,
-    cssZoom: "",
-    computedFontSize: "",
-    computedPaddingTop: "",
-    computedTransform: "",
-    expectedFontSize: "",
-    expectedPaddingTop: "",
-    hostSelector: "",
-    scrollerClass: "",
-    scrollerFound: false,
-    scrollerSelector: "",
-    surfaceClass: "",
-    surfaceFound: false,
-    surfaceSelector: "",
-    targetFound: false,
-    transformApplied: false,
-    visualChanged: false,
-  };
-}
-
-function scheduleEditorZoomDebug(params: {
-  mode: EditorZoomMode;
-  nextZoom: number;
-  oldZoom: number;
-  source: EditorZoomDebugSource;
-}) {
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      console.table({
-        event: "editor-zoom",
-        editorZoom: Number(params.nextZoom.toFixed(4)),
-        input: params.source,
-        mode: params.mode,
-        nextZoom: Number(params.nextZoom.toFixed(4)),
-        oldZoom: Number(params.oldZoom.toFixed(4)),
-        source: params.source,
-        ...readEditorZoomDomDebug(params.mode, params.nextZoom),
-      });
-    });
-  });
-}
-
-function resolveActiveDocumentZoomTarget(
-  mode: EditorZoomMode,
-): ActiveDocumentZoomTarget | null {
-  if (mode === "split") {
-    return null;
-  }
-
-  const selectors: Record<ActiveDocumentZoomMode, {
-    host: string;
-    scrollport: string;
-    surface: string;
-  }> = {
-    live: {
-      host: ".typora-live-editor-pane[data-editor-document-host][data-editor-document-mode='live']",
-      scrollport: ".typora-live-editor-pane .cm-scroller",
-      surface: ".typora-live-editor-pane .cm-content",
-    },
-    preview: {
-      host: ".markdown-preview[data-editor-document-host][data-editor-document-mode='preview']",
-      scrollport: ".markdown-preview",
-      surface: ".markdown-preview-surface",
-    },
-    source: {
-      host: ".editor-workspace-edit [data-editor-document-host][data-editor-document-mode='source']",
-      scrollport: ".editor-workspace-edit .cm-scroller",
-      surface: ".editor-workspace-edit .cm-content",
-    },
-  };
-
-  const selector = selectors[mode];
-  const host = document.querySelector(selector.host);
-  const scrollport = document.querySelector(selector.scrollport);
-  const surface = document.querySelector(selector.surface);
-
-  if (
-    !(host instanceof HTMLElement) ||
-    !(scrollport instanceof HTMLElement) ||
-    !(surface instanceof HTMLElement)
-  ) {
-    return null;
-  }
-
-  return {
-    host,
-    mode,
-    scrollport,
-    surface,
-  };
-}
-
-function overlayContextClassForMode(mode: ActiveDocumentZoomMode): string {
-  if (mode === "live") {
-    return "typora-live-editor-pane";
-  }
-
-  if (mode === "preview") {
-    return "markdown-preview";
-  }
-
-  return "editor-pane";
-}
-
-function beginActiveDocumentVisualZoom(
-  target: ActiveDocumentZoomTarget,
-  focus: ContinuousZoomFocus,
-  baseZoom: number,
-  input: ContinuousZoomInput,
-): ContinuousZoomSession {
-  const scrollportRect = target.scrollport.getBoundingClientRect();
-  const surfaceRect = target.surface.getBoundingClientRect();
-  const overlay = document.createElement("div");
-  const cloneWrapper = document.createElement("div");
-  const clone = target.surface.cloneNode(true) as HTMLElement;
-
-  overlay.className = [
-    "active-document-zoom-overlay",
-    `active-document-zoom-overlay-${target.mode}`,
-    overlayContextClassForMode(target.mode),
-  ].join(" ");
-  overlay.setAttribute("data-active-document-zoom-overlay", "true");
-  overlay.setAttribute("data-editor-document-mode", target.mode);
-  overlay.style.position = "fixed";
-  overlay.style.left = `${scrollportRect.left}px`;
-  overlay.style.top = `${scrollportRect.top}px`;
-  overlay.style.width = `${scrollportRect.width}px`;
-  overlay.style.height = `${scrollportRect.height}px`;
-  overlay.style.padding = "0";
-  overlay.style.margin = "0";
-  overlay.style.border = "0";
-  overlay.style.borderRadius = "0";
-  overlay.style.background = "transparent";
-  overlay.style.overflow = "hidden";
-  overlay.style.pointerEvents = "none";
-  overlay.style.zIndex = "2147483000";
-
-  cloneWrapper.className = "active-document-zoom-clone-wrapper";
-  cloneWrapper.style.position = "absolute";
-  cloneWrapper.style.left = `${surfaceRect.left - scrollportRect.left}px`;
-  cloneWrapper.style.top = `${surfaceRect.top - scrollportRect.top}px`;
-  cloneWrapper.style.width = `${surfaceRect.width}px`;
-  cloneWrapper.style.minHeight = `${surfaceRect.height}px`;
-  cloneWrapper.style.transformOrigin = "0 0";
-  cloneWrapper.style.willChange = "transform";
-
-  clone.classList.add("active-document-zoom-clone");
-  clone.setAttribute("aria-hidden", "true");
-  clone.style.pointerEvents = "none";
-
-  cloneWrapper.appendChild(clone);
-  overlay.appendChild(cloneWrapper);
-  document.body.appendChild(overlay);
-
-  const originalSurfaceVisibility = target.surface.style.visibility;
-  target.surface.style.visibility = "hidden";
-  target.host.setAttribute("data-active-document-zooming", "true");
-
-  return {
-    ...focus,
-    baseZoom,
-    cloneWrapper,
-    input,
-    originalSurfaceVisibility,
-    overlay,
-    target,
-    visualZoom: baseZoom,
-  };
-}
-
-function updateActiveDocumentVisualZoom(session: ContinuousZoomSession, nextZoom: number) {
-  const safeBaseZoom = session.baseZoom > 0 ? session.baseZoom : EDITOR_ZOOM_DEFAULT;
-  const visualScale = nextZoom / safeBaseZoom;
-  const translateX = session.focusX * (1 - visualScale);
-  const translateY = session.focusY * (1 - visualScale);
-  const oldScrollLeft = session.target.scrollport.scrollLeft;
-  const oldScrollTop = session.target.scrollport.scrollTop;
-  const newScrollLeft = session.docX * nextZoom - session.focusX;
-  const newScrollTop = session.docY * nextZoom - session.focusY;
-
-  session.visualZoom = nextZoom;
-  session.cloneWrapper.style.transform =
-    `translate(${translateX}px, ${translateY}px) scale(${visualScale})`;
-
-  console.table({
-    changedFontSizeThisFrame: false,
-    changedPaddingThisFrame: false,
-    changedWidthThisFrame: false,
-    docX: Number(session.docX.toFixed(2)),
-    docY: Number(session.docY.toFixed(2)),
-    focusSource: session.focusSource,
-    focusX: Number(session.focusX.toFixed(2)),
-    focusY: Number(session.focusY.toFixed(2)),
-    input: session.input,
-    mermaidRenderThisFrame: 0,
-    mode: session.target.mode,
-    newScale: Number(nextZoom.toFixed(4)),
-    newScrollLeft: Number(newScrollLeft.toFixed(2)),
-    newScrollTop: Number(newScrollTop.toFixed(2)),
-    oldScale: Number(safeBaseZoom.toFixed(4)),
-    oldScrollLeft: Number(oldScrollLeft.toFixed(2)),
-    oldScrollTop: Number(oldScrollTop.toFixed(2)),
-    phase: "continuous-zoom",
-    reactStateUpdateThisFrame: false,
-    requestMeasureThisFrame: 0,
-    usingOverlay: true,
-  });
-}
-
-function cleanupActiveDocumentVisualZoom(session: ContinuousZoomSession) {
-  session.target.surface.style.visibility = session.originalSurfaceVisibility;
-  session.target.host.removeAttribute("data-active-document-zooming");
-  session.overlay.remove();
-}
 
 function clampInteractionZoom(value: number): number {
   if (!Number.isFinite(value)) {
@@ -563,6 +147,8 @@ function dispatchAppZoomDebug(
   const viewport = params.viewport ?? null;
   const canvasSize = params.canvasSize ?? null;
   const canvas = params.canvas ?? null;
+  const liveScroller = document.querySelector(".typora-live-editor-pane .cm-scroller");
+  const liveScrollerElement = liveScroller instanceof HTMLElement ? liveScroller : null;
   const note = [
     `phase=${phase}`,
     `zoom=${Number((params.zoom ?? 1).toFixed(4))}`,
@@ -575,6 +161,7 @@ function dispatchAppZoomDebug(
     `canvasOffset=${canvas ? `${canvas.offsetLeft},${canvas.offsetTop}` : "n/a"}`,
     `canvasSize=${canvas ? `${canvas.clientWidth}x${canvas.clientHeight}` : "n/a"}`,
     `transform=${canvas?.style.transform || "n/a"}`,
+    `liveScroll=${liveScrollerElement ? `${Math.round(liveScrollerElement.scrollLeft)},${Math.round(liveScrollerElement.scrollTop)}` : "n/a"}`,
   ].join(" ");
 
   window.dispatchEvent(new CustomEvent("polarbear-app-zoom-debug", {
@@ -592,13 +179,13 @@ function setAppCanvasZoomDataset(zoom: number): void {
 }
 
 function shouldIgnoreAppZoomEvent(event: Event): boolean {
-  if (document.querySelector(".image-viewer-overlay, .mermaid-zoom-overlay")) {
+  if (document.querySelector(".image-viewer-overlay")) {
     return true;
   }
 
   const target = event.target;
   return target instanceof Element && Boolean(target.closest(
-    ".image-viewer-overlay, .mermaid-zoom-overlay",
+    ".image-viewer-overlay",
   ));
 }
 
@@ -638,6 +225,12 @@ type AppCanvasSize = {
   height: number;
 };
 
+type AppCanvasTransform = {
+  scale: number;
+  x: number;
+  y: number;
+};
+
 type AppCanvasPlacement = {
   canvasHeight: number;
   canvasWidth: number;
@@ -652,63 +245,10 @@ type ZoomAnchor = {
   canvasY: number;
 };
 
-type ZoomDocumentTextAnchor = {
-  type: "text";
-  focusClientX: number;
-  focusClientY: number;
-  offsetX: number;
-  offsetY: number;
-  pos: number;
-  scroller: HTMLElement;
-  view: EditorView;
+type InnerScrollLock = {
+  left: number;
+  top: number;
 };
-
-type ZoomDocumentBlockAnchor = {
-  type: "block";
-  blockElement: HTMLElement;
-  blockId: string;
-  focusClientX: number;
-  focusClientY: number;
-  locked: true;
-  relativeX: number;
-  relativeY: number;
-  scroller: HTMLElement;
-  view: EditorView;
-};
-
-type ZoomDocumentTableCellAnchor = {
-  type: "table-cell";
-  cellIndex: number;
-  focusClientX: number;
-  focusClientY: number;
-  locked: true;
-  relativeX: number;
-  relativeY: number;
-  rowIndex: number;
-  scroller: HTMLElement;
-  tableBlockElement: HTMLElement;
-  tableBlockId: string;
-  view: EditorView;
-};
-
-type ZoomDocumentAnchor =
-  | ZoomDocumentBlockAnchor
-  | ZoomDocumentTableCellAnchor
-  | ZoomDocumentTextAnchor;
-
-const ZOOM_ANCHOR_BLOCK_SELECTOR = [
-  "[data-zoom-anchor-block]",
-  "[data-markdown-block-id]",
-  ".mermaid-block",
-  ".plantuml-block",
-  ".markdown-image-block",
-  ".markdown-table-block",
-  ".cm-typora-diagram-preview",
-  ".cm-typora-image-preview",
-  ".cm-typora-table-preview",
-  ".cm-typora-math-block",
-  ".cm-preview-widget",
-].join(",");
 
 function readAppCanvasSize(): AppCanvasSize {
   return {
@@ -762,88 +302,31 @@ function isNativePinchEndPhase(phase: unknown): boolean {
   ].includes(phase.toLowerCase());
 }
 
-function escapeAttributeSelectorValue(value: string): string {
-  if (
-    typeof CSS !== "undefined" &&
-    typeof CSS.escape === "function"
-  ) {
-    return CSS.escape(value);
-  }
-
-  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-}
-
-function findZoomAnchorBlockById(
-  blockId: string,
-  root: ParentNode = document,
-): HTMLElement | null {
-  if (!blockId) {
-    return null;
-  }
-
-  const element = root.querySelector(
-    `[data-markdown-block-id="${escapeAttributeSelectorValue(blockId)}"]`,
-  );
-
-  return element instanceof HTMLElement ? element : null;
-}
-
-function findTableCellForZoomAnchor(
-  anchor: ZoomDocumentTableCellAnchor,
-): HTMLElement | null {
-  const tableBlockElement = anchor.tableBlockElement.isConnected
-    ? anchor.tableBlockElement
-    : findZoomAnchorBlockById(anchor.tableBlockId, anchor.view.dom);
-
-  if (!tableBlockElement || !anchor.view.dom.contains(tableBlockElement)) {
-    return null;
-  }
-
-  const table = tableBlockElement instanceof HTMLTableElement
-    ? tableBlockElement
-    : tableBlockElement.querySelector("table");
-  if (!(table instanceof HTMLTableElement)) {
-    return null;
-  }
-
-  const row = table.rows.item(anchor.rowIndex);
-  const cell = row?.cells.item(anchor.cellIndex) ?? null;
-
-  return cell instanceof HTMLElement ? cell : null;
-}
-
 export function App() {
   const editorViewRef = useRef<MarkdownEditorView | null>(null);
-  const appZoomManagerRef = useRef<AppZoomManager | null>(null);
   const zoomViewportRef = useRef<HTMLDivElement | null>(null);
   const zoomCanvasSizeRef = useRef<HTMLDivElement | null>(null);
   const zoomCanvasRef = useRef<HTMLDivElement | null>(null);
   const appZoomRef = useRef(1);
   const appCanvasSizeRef = useRef<AppCanvasSize>(readAppCanvasSize());
+  const appCanvasTransformRef = useRef<AppCanvasTransform>({
+    scale: NORMAL_APP_ZOOM,
+    x: 0,
+    y: 0,
+  });
   const appCanvasPlacementRef = useRef<AppCanvasPlacement | null>(null);
   const appZoomInteractionSurfacePreparedRef = useRef(false);
   const zoomRafRef = useRef(0);
   const pendingZoomRef = useRef(1);
   const pendingAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const activeZoomAnchorRef = useRef<ZoomAnchor | null>(null);
-  const activeDocumentZoomAnchorRef = useRef<ZoomDocumentAnchor | null>(null);
-  const documentAnchorRestoreFrameRef = useRef(0);
-  const documentAnchorSecondRestoreFrameRef = useRef(0);
-  const documentAnchorThirdRestoreFrameRef = useRef(0);
   const lastNativeGestureAtRef = useRef(0);
   const lastZoomClientRef = useRef<{ x: number; y: number } | null>(null);
   const zoomScrollUnlockTimerRef = useRef<number | null>(null);
   const zoomScrollLockUntilRef = useRef(0);
+  const zoomInnerScrollLocksRef = useRef<Map<HTMLElement, InnerScrollLock>>(new Map());
   const zoomSettleTimerRef = useRef<number | null>(null);
   const zoomSnapAnimationRef = useRef(0);
-  const editorZoomRef = useRef(EDITOR_ZOOM_DEFAULT);
-  const lastEditorNativeGestureAtRef = useRef(0);
-  const activeContinuousZoomRef = useRef<ContinuousZoomSession | null>(null);
-  const continuousZoomIdleTimerRef = useRef<number | null>(null);
-  const continuousZoomRafRef = useRef(0);
-  const continuousZoomRestoreFrameRef = useRef(0);
-  const continuousZoomSecondRestoreFrameRef = useRef(0);
-  const pendingContinuousZoomRef = useRef<ContinuousZoomRequest | null>(null);
   const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
   const [workspaceItems, setWorkspaceItems] = useState(initialWorkspace);
   const [documents, setDocuments] = useState(initialDocuments);
@@ -853,8 +336,6 @@ export function App() {
   );
   const [untitledCounter, setUntitledCounter] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("live"); // split、live
-  const [appZoom, setAppZoom] = useState(1);
-  const [editorZoom, setEditorZoom] = useState(EDITOR_ZOOM_DEFAULT);
   const [appCanvasSize, setAppCanvasSize] = useState<AppCanvasSize>(() =>
     appCanvasSizeRef.current,
   );
@@ -905,37 +386,74 @@ export function App() {
     const zoom = clampCommittedZoom(nextZoom);
     appZoomRef.current = zoom;
     setAppCanvasZoomDataset(zoom);
-    setAppZoom((currentZoom) =>
-      Math.abs(currentZoom - zoom) < 0.0005 ? currentZoom : zoom,
-    );
   }, []);
 
-  const applyCanvasZoom = useCallback((nextZoom: number, allowElasticZoom = true) => {
-    const zoom = allowElasticZoom
-      ? clampInteractionZoom(nextZoom)
-      : clampCommittedZoom(nextZoom);
-    const size = appCanvasSizeRef.current;
+  const clampCanvasTranslate = useCallback((
+    scale: number,
+    x: number,
+    y: number,
+  ): { x: number; y: number } => {
     const viewport = zoomViewportRef.current;
-    const viewportClientWidth = viewport?.clientWidth ?? 0;
-    const viewportClientHeight = viewport?.clientHeight ?? 0;
+    const size = appCanvasSizeRef.current;
+    const viewportWidth = viewport?.clientWidth ?? size.width;
+    const viewportHeight = viewport?.clientHeight ?? size.height;
+    const scaledWidth = size.width * scale;
+    const scaledHeight = size.height * scale;
 
-    appZoomRef.current = zoom;
-    setAppCanvasZoomDataset(zoom);
+    const clampAxis = (value: number, viewportSize: number, scaledSize: number) => {
+      if (scaledSize <= viewportSize) {
+        return Math.max(0, Math.min(viewportSize - scaledSize, value));
+      }
+
+      return Math.min(0, Math.max(viewportSize - scaledSize, value));
+    };
+
+    return {
+      x: clampAxis(x, viewportWidth, scaledWidth),
+      y: clampAxis(y, viewportHeight, scaledHeight),
+    };
+  }, []);
+
+  const applyCanvasTransform = useCallback((
+    nextTransform: AppCanvasTransform,
+    allowElasticZoom = true,
+  ) => {
+    const scale = allowElasticZoom
+      ? clampInteractionZoom(nextTransform.scale)
+      : clampCommittedZoom(nextTransform.scale);
+    const resetToNormal = !allowElasticZoom && scale <= NORMAL_APP_ZOOM + 0.0005;
+    const nextTranslate = resetToNormal
+      ? { x: 0, y: 0 }
+      : clampCanvasTranslate(scale, nextTransform.x, nextTransform.y);
+    const size = appCanvasSizeRef.current;
+
+    appZoomRef.current = scale;
+    appCanvasTransformRef.current = {
+      scale,
+      x: nextTranslate.x,
+      y: nextTranslate.y,
+    };
+    setAppCanvasZoomDataset(scale);
+
     if (!allowElasticZoom) {
       appZoomInteractionSurfacePreparedRef.current = false;
     }
 
     if (zoomCanvasSizeRef.current) {
-      const canvasWidth = Math.max(viewportClientWidth, Math.ceil(size.width * zoom));
-      const canvasHeight = Math.max(viewportClientHeight, Math.ceil(size.height * zoom));
-      appCanvasPlacementRef.current = {
-        canvasHeight,
-        canvasWidth,
-        offsetLeft: 0,
-        offsetTop: 0,
-      };
-      zoomCanvasSizeRef.current.style.width = `${canvasWidth}px`;
-      zoomCanvasSizeRef.current.style.height = `${canvasHeight}px`;
+      zoomCanvasSizeRef.current.style.width = "100%";
+      zoomCanvasSizeRef.current.style.height = "100%";
+    }
+
+    appCanvasPlacementRef.current = {
+      canvasHeight: size.height,
+      canvasWidth: size.width,
+      offsetLeft: 0,
+      offsetTop: 0,
+    };
+
+    if (zoomViewportRef.current) {
+      zoomViewportRef.current.scrollLeft = 0;
+      zoomViewportRef.current.scrollTop = 0;
     }
 
     if (zoomCanvasRef.current) {
@@ -944,16 +462,17 @@ export function App() {
       zoomCanvasRef.current.style.width = `${size.width}px`;
       zoomCanvasRef.current.style.height = `${size.height}px`;
       zoomCanvasRef.current.style.transformOrigin = "top left";
-      zoomCanvasRef.current.style.transform = `scale(${zoom})`;
+      zoomCanvasRef.current.style.transform =
+        `translate3d(${nextTranslate.x}px, ${nextTranslate.y}px, 0) scale(${scale})`;
     }
+  }, [clampCanvasTranslate]);
 
-    if (viewport && zoomCanvasSizeRef.current && !allowElasticZoom) {
-      const maxScrollLeft = Math.max(0, zoomCanvasSizeRef.current.scrollWidth - viewport.clientWidth);
-      const maxScrollTop = Math.max(0, zoomCanvasSizeRef.current.scrollHeight - viewport.clientHeight);
-      viewport.scrollLeft = Math.max(0, Math.min(maxScrollLeft, viewport.scrollLeft));
-      viewport.scrollTop = Math.max(0, Math.min(maxScrollTop, viewport.scrollTop));
-    }
-  }, []);
+  const applyCanvasZoom = useCallback((nextZoom: number, allowElasticZoom = true) => {
+    applyCanvasTransform({
+      ...appCanvasTransformRef.current,
+      scale: nextZoom,
+    }, allowElasticZoom);
+  }, [applyCanvasTransform]);
 
   const prepareAppZoomInteractionSurface = useCallback(() => {
     if (appZoomInteractionSurfacePreparedRef.current) {
@@ -962,16 +481,14 @@ export function App() {
 
     appZoomInteractionSurfacePreparedRef.current = true;
     const size = appCanvasSizeRef.current;
-    const preparedWidth = Math.ceil(size.width * MAX_APP_ZOOM);
-    const preparedHeight = Math.ceil(size.height * MAX_APP_ZOOM);
 
     if (zoomCanvasSizeRef.current) {
-      zoomCanvasSizeRef.current.style.width = `${preparedWidth}px`;
-      zoomCanvasSizeRef.current.style.height = `${preparedHeight}px`;
+      zoomCanvasSizeRef.current.style.width = "100%";
+      zoomCanvasSizeRef.current.style.height = "100%";
     }
     appCanvasPlacementRef.current = {
-      canvasHeight: preparedHeight,
-      canvasWidth: preparedWidth,
+      canvasHeight: size.height,
+      canvasWidth: size.width,
       offsetLeft: 0,
       offsetTop: 0,
     };
@@ -1003,430 +520,40 @@ export function App() {
     const pointerX = Math.max(0, Math.min(rect.width, rawPointerX));
     const pointerY = Math.max(0, Math.min(rect.height, rawPointerY));
     const safeZoom = Number.isFinite(zoom) && zoom > 0 ? zoom : NORMAL_APP_ZOOM;
-    const canvasOffsetLeft = zoomCanvasRef.current?.offsetLeft ?? 0;
-    const canvasOffsetTop = zoomCanvasRef.current?.offsetTop ?? 0;
+    const transform = appCanvasTransformRef.current;
 
     return {
       pointerX,
       pointerY,
-      canvasX: (viewport.scrollLeft + pointerX - canvasOffsetLeft) / safeZoom,
-      canvasY: (viewport.scrollTop + pointerY - canvasOffsetTop) / safeZoom,
+      canvasX: (pointerX - transform.x) / safeZoom,
+      canvasY: (pointerY - transform.y) / safeZoom,
     };
   }, []);
-
-  const getCurrentCodeMirrorView = useCallback((): EditorView | null => {
-    const view = editorViewRef.current as unknown as EditorView | null;
-    if (
-      !view ||
-      typeof view.posAtCoords !== "function" ||
-      typeof view.coordsAtPos !== "function" ||
-      !view.scrollDOM
-    ) {
-      return null;
-    }
-
-    return view;
-  }, []);
-
-  const captureDocumentZoomAnchor = useCallback((
-    clientX?: number,
-    clientY?: number,
-  ): ZoomDocumentAnchor | null => {
-    const view = getCurrentCodeMirrorView();
-    if (!view || !view.dom.isConnected || !view.scrollDOM.isConnected) {
-      return null;
-    }
-
-    const scroller = view.scrollDOM;
-    const scrollerRect = scroller.getBoundingClientRect();
-    const hasClientPoint =
-      typeof clientX === "number" &&
-      Number.isFinite(clientX) &&
-      typeof clientY === "number" &&
-      Number.isFinite(clientY);
-
-    if (
-      hasClientPoint &&
-      (
-        clientX < scrollerRect.left ||
-        clientX > scrollerRect.right ||
-        clientY < scrollerRect.top ||
-        clientY > scrollerRect.bottom
-      )
-    ) {
-      return null;
-    }
-
-    const focusClientX = hasClientPoint
-      ? (clientX as number)
-      : scrollerRect.left + scrollerRect.width / 2;
-    const focusClientY = hasClientPoint
-      ? (clientY as number)
-      : scrollerRect.top + scrollerRect.height / 2;
-
-    const target = document.elementFromPoint(focusClientX, focusClientY);
-    const tableCell = target instanceof Element
-      ? target.closest("td, th")
-      : null;
-    const tableBlockElement = tableCell instanceof HTMLElement
-      ? tableCell.closest("[data-markdown-block-id].markdown-table-block, .cm-typora-table-preview[data-markdown-block-id]")
-      : null;
-
-    if (
-      tableCell instanceof HTMLTableCellElement &&
-      tableBlockElement instanceof HTMLElement &&
-      view.dom.contains(tableCell) &&
-      view.dom.contains(tableBlockElement)
-    ) {
-      const row = tableCell.parentElement instanceof HTMLTableRowElement
-        ? tableCell.parentElement
-        : null;
-      const table = tableCell.closest("table");
-      const rowIndex = table instanceof HTMLTableElement && row
-        ? Array.prototype.indexOf.call(table.rows, row)
-        : -1;
-      const cellIndex = tableCell.cellIndex;
-      const rect = tableCell.getBoundingClientRect();
-
-      if (rowIndex >= 0 && cellIndex >= 0 && rect.width > 0 && rect.height > 0) {
-        return {
-          type: "table-cell",
-          cellIndex,
-          focusClientX,
-          focusClientY,
-          locked: true,
-          relativeX: (focusClientX - rect.left) / Math.max(1, rect.width),
-          relativeY: (focusClientY - rect.top) / Math.max(1, rect.height),
-          rowIndex,
-          scroller,
-          tableBlockElement,
-          tableBlockId: tableBlockElement.dataset.markdownBlockId ?? "",
-          view,
-        };
-      }
-    }
-
-    const blockElement = target instanceof Element
-      ? target.closest(ZOOM_ANCHOR_BLOCK_SELECTOR)
-      : null;
-
-    if (
-      blockElement instanceof HTMLElement &&
-      view.dom.contains(blockElement)
-    ) {
-      const rect = blockElement.getBoundingClientRect();
-
-      if (rect.width > 0 && rect.height > 0) {
-        return {
-          type: "block",
-          blockElement,
-          blockId: blockElement.dataset.markdownBlockId ?? "",
-          focusClientX,
-          focusClientY,
-          locked: true,
-          relativeX: (focusClientX - rect.left) / Math.max(1, rect.width),
-          relativeY: (focusClientY - rect.top) / Math.max(1, rect.height),
-          scroller,
-          view,
-        };
-      }
-    }
-
-    const pos = view.posAtCoords({
-      x: focusClientX,
-      y: focusClientY,
-    });
-
-    if (pos === null) {
-      return null;
-    }
-
-    const beforeRect = view.coordsAtPos(pos);
-
-    return {
-      type: "text",
-      focusClientX,
-      focusClientY,
-      offsetX: beforeRect ? focusClientX - beforeRect.left : 0,
-      offsetY: beforeRect ? focusClientY - beforeRect.top : 0,
-      pos,
-      scroller,
-      view,
-    };
-  }, [getCurrentCodeMirrorView]);
-
-  const restoreDocumentZoomAnchor = useCallback((anchor: ZoomDocumentAnchor | null) => {
-    if (!anchor || !anchor.view.dom.isConnected || !anchor.scroller.isConnected) {
-      return;
-    }
-
-    const visualZoom = Math.max(0.0001, appZoomRef.current);
-
-    if (anchor.type === "table-cell") {
-      const cell = findTableCellForZoomAnchor(anchor);
-      if (!cell) {
-        return;
-      }
-
-      const rect = cell.getBoundingClientRect();
-      const currentFocusX = rect.left + rect.width * anchor.relativeX;
-      const currentFocusY = rect.top + rect.height * anchor.relativeY;
-      const deltaX = currentFocusX - anchor.focusClientX;
-      const deltaY = currentFocusY - anchor.focusClientY;
-
-      if (Math.abs(deltaY) > 0.5) {
-        anchor.scroller.scrollTop += deltaY / visualZoom;
-      }
-
-      if (
-        Math.abs(deltaX) > 0.5 &&
-        anchor.scroller.scrollWidth > anchor.scroller.clientWidth
-      ) {
-        anchor.scroller.scrollLeft += deltaX / visualZoom;
-      }
-      return;
-    }
-
-    if (anchor.type === "block") {
-      const blockElement = anchor.blockElement.isConnected
-        ? anchor.blockElement
-        : findZoomAnchorBlockById(anchor.blockId, anchor.view.dom);
-
-      if (!blockElement || !anchor.view.dom.contains(blockElement)) {
-        return;
-      }
-
-      const rect = blockElement.getBoundingClientRect();
-      const currentFocusX = rect.left + rect.width * anchor.relativeX;
-      const currentFocusY = rect.top + rect.height * anchor.relativeY;
-      const deltaX = currentFocusX - anchor.focusClientX;
-      const deltaY = currentFocusY - anchor.focusClientY;
-
-      if (Math.abs(deltaY) > 0.5) {
-        anchor.scroller.scrollTop += deltaY / visualZoom;
-      }
-
-      if (
-        Math.abs(deltaX) > 0.5 &&
-        anchor.scroller.scrollWidth > anchor.scroller.clientWidth
-      ) {
-        anchor.scroller.scrollLeft += deltaX / visualZoom;
-      }
-      return;
-    }
-
-    const view = anchor.view;
-    const pos = Math.max(0, Math.min(view.state.doc.length, anchor.pos));
-    const afterRect = view.coordsAtPos(pos);
-
-    if (!afterRect) {
-      return;
-    }
-
-    const expectedTop = anchor.focusClientY - anchor.offsetY;
-    const expectedLeft = anchor.focusClientX - anchor.offsetX;
-    const deltaY = afterRect.top - expectedTop;
-    const deltaX = afterRect.left - expectedLeft;
-
-    if (Math.abs(deltaY) > 0.5) {
-      anchor.scroller.scrollTop += deltaY / visualZoom;
-    }
-
-    if (
-      Math.abs(deltaX) > 0.5 &&
-      anchor.scroller.scrollWidth > anchor.scroller.clientWidth
-    ) {
-      anchor.scroller.scrollLeft += deltaX / visualZoom;
-    }
-  }, []);
-
-  const requestDocumentZoomAnchorMeasure = useCallback((anchor: ZoomDocumentAnchor | null) => {
-    if (!anchor || !anchor.view.dom.isConnected || !anchor.scroller.isConnected) {
-      return;
-    }
-
-    if (anchor.type !== "text") {
-      restoreDocumentZoomAnchor(anchor);
-      return;
-    }
-
-    const view = anchor.view;
-    const pos = Math.max(0, Math.min(view.state.doc.length, anchor.pos));
-    view.requestMeasure({
-      read() {
-        return view.coordsAtPos(pos);
-      },
-      write(afterRect) {
-        if (!afterRect || !anchor.scroller.isConnected) {
-          return;
-        }
-
-        const visualZoom = Math.max(0.0001, appZoomRef.current);
-        const expectedTop = anchor.focusClientY - anchor.offsetY;
-        const expectedLeft = anchor.focusClientX - anchor.offsetX;
-        const deltaY = afterRect.top - expectedTop;
-        const deltaX = afterRect.left - expectedLeft;
-
-        if (Math.abs(deltaY) > 0.5) {
-          anchor.scroller.scrollTop += deltaY / visualZoom;
-        }
-
-        if (
-          Math.abs(deltaX) > 0.5 &&
-          anchor.scroller.scrollWidth > anchor.scroller.clientWidth
-        ) {
-          anchor.scroller.scrollLeft += deltaX / visualZoom;
-        }
-      },
-    });
-  }, [restoreDocumentZoomAnchor]);
-
-  const scheduleDocumentZoomAnchorRestore = useCallback((anchor: ZoomDocumentAnchor | null) => {
-    if (!anchor) {
-      return;
-    }
-
-    if (documentAnchorRestoreFrameRef.current) {
-      window.cancelAnimationFrame(documentAnchorRestoreFrameRef.current);
-      documentAnchorRestoreFrameRef.current = 0;
-    }
-
-    if (documentAnchorSecondRestoreFrameRef.current) {
-      window.cancelAnimationFrame(documentAnchorSecondRestoreFrameRef.current);
-      documentAnchorSecondRestoreFrameRef.current = 0;
-    }
-
-    if (documentAnchorThirdRestoreFrameRef.current) {
-      window.cancelAnimationFrame(documentAnchorThirdRestoreFrameRef.current);
-      documentAnchorThirdRestoreFrameRef.current = 0;
-    }
-
-    restoreDocumentZoomAnchor(anchor);
-    requestDocumentZoomAnchorMeasure(anchor);
-
-    documentAnchorRestoreFrameRef.current = window.requestAnimationFrame(() => {
-      documentAnchorRestoreFrameRef.current = 0;
-      restoreDocumentZoomAnchor(anchor);
-      requestDocumentZoomAnchorMeasure(anchor);
-
-      documentAnchorSecondRestoreFrameRef.current = window.requestAnimationFrame(() => {
-        documentAnchorSecondRestoreFrameRef.current = 0;
-        restoreDocumentZoomAnchor(anchor);
-        requestDocumentZoomAnchorMeasure(anchor);
-
-        if (anchor.type === "table-cell") {
-          documentAnchorThirdRestoreFrameRef.current = window.requestAnimationFrame(() => {
-            documentAnchorThirdRestoreFrameRef.current = 0;
-            restoreDocumentZoomAnchor(anchor);
-            requestDocumentZoomAnchorMeasure(anchor);
-          });
-        }
-      });
-    });
-  }, [requestDocumentZoomAnchorMeasure, restoreDocumentZoomAnchor]);
 
   const applyVisualZoomAtAnchor = useCallback((nextZoom: number, anchor: ZoomAnchor) => {
-    const viewport = zoomViewportRef.current;
     const zoom = clampInteractionZoom(nextZoom);
-
-    appZoomRef.current = zoom;
-    setAppCanvasZoomDataset(zoom);
     prepareAppZoomInteractionSurface();
-
-    if (zoomCanvasRef.current) {
-      const scrollLeft = viewport?.scrollLeft ?? 0;
-      const scrollTop = viewport?.scrollTop ?? 0;
-      const translateX = anchor.pointerX + scrollLeft - anchor.canvasX * zoom;
-      const translateY = anchor.pointerY + scrollTop - anchor.canvasY * zoom;
-
-      zoomCanvasRef.current.style.left = "0px";
-      zoomCanvasRef.current.style.top = "0px";
-      zoomCanvasRef.current.style.transformOrigin = "top left";
-      zoomCanvasRef.current.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${zoom})`;
-    }
-  }, [prepareAppZoomInteractionSurface]);
+    applyCanvasTransform({
+      scale: zoom,
+      x: anchor.pointerX - anchor.canvasX * zoom,
+      y: anchor.pointerY - anchor.canvasY * zoom,
+    });
+  }, [applyCanvasTransform, prepareAppZoomInteractionSurface]);
 
   const applyZoomAtAnchor = useCallback((
     nextZoom: number,
     anchor: ZoomAnchor,
     allowElasticZoom = true,
   ) => {
-    const viewport = zoomViewportRef.current;
     const zoom = allowElasticZoom
       ? clampInteractionZoom(nextZoom)
       : clampCommittedZoom(nextZoom);
-
-    if (!viewport) {
-      applyCanvasZoom(zoom, allowElasticZoom);
-      return;
-    }
-
-    const size = appCanvasSizeRef.current;
-    const viewportClientWidth = viewport.clientWidth;
-    const viewportClientHeight = viewport.clientHeight;
-    const desiredScrollLeft = anchor.canvasX * zoom - anchor.pointerX;
-    const desiredScrollTop = anchor.canvasY * zoom - anchor.pointerY;
-    const shouldUseElasticOffset = allowElasticZoom && zoom < MIN_COMMITTED_APP_ZOOM;
-    const usePreparedInteractionSurface =
-      appZoomInteractionSurfacePreparedRef.current &&
-      zoom > NORMAL_APP_ZOOM + 0.0005;
-    const canvasOffsetLeft = shouldUseElasticOffset
-      ? Math.max(0, -desiredScrollLeft)
-      : 0;
-    const canvasOffsetTop = shouldUseElasticOffset
-      ? Math.max(0, -desiredScrollTop)
-      : 0;
-    const canvasSizeWidth = usePreparedInteractionSurface
-      ? Math.max(viewportClientWidth, Math.ceil(size.width * MAX_APP_ZOOM))
-      : Math.max(
-          viewportClientWidth,
-          Math.ceil(size.width * zoom + canvasOffsetLeft),
-        );
-    const canvasSizeHeight = usePreparedInteractionSurface
-      ? Math.max(viewportClientHeight, Math.ceil(size.height * MAX_APP_ZOOM))
-      : Math.max(
-          viewportClientHeight,
-          Math.ceil(size.height * zoom + canvasOffsetTop),
-        );
-    const maxScrollLeft = Math.max(0, canvasSizeWidth - viewportClientWidth);
-    const maxScrollTop = Math.max(0, canvasSizeHeight - viewportClientHeight);
-    const nextScrollLeft = Math.max(
-      0,
-      Math.min(maxScrollLeft, desiredScrollLeft + canvasOffsetLeft),
-    );
-    const nextScrollTop = Math.max(
-      0,
-      Math.min(maxScrollTop, desiredScrollTop + canvasOffsetTop),
-    );
-
-    appZoomRef.current = zoom;
-    setAppCanvasZoomDataset(zoom);
-
-    if (zoomCanvasSizeRef.current && !usePreparedInteractionSurface) {
-      appCanvasPlacementRef.current = {
-        canvasHeight: canvasSizeHeight,
-        canvasWidth: canvasSizeWidth,
-        offsetLeft: canvasOffsetLeft,
-        offsetTop: canvasOffsetTop,
-      };
-      zoomCanvasSizeRef.current.style.width = `${canvasSizeWidth}px`;
-      zoomCanvasSizeRef.current.style.height = `${canvasSizeHeight}px`;
-    }
-
-    if (zoomCanvasRef.current) {
-      zoomCanvasRef.current.style.left = `${canvasOffsetLeft}px`;
-      zoomCanvasRef.current.style.top = `${canvasOffsetTop}px`;
-      if (!usePreparedInteractionSurface) {
-        zoomCanvasRef.current.style.width = `${size.width}px`;
-        zoomCanvasRef.current.style.height = `${size.height}px`;
-      }
-      zoomCanvasRef.current.style.transformOrigin = "top left";
-      zoomCanvasRef.current.style.transform = `scale(${zoom})`;
-    }
-
-    viewport.scrollLeft = nextScrollLeft;
-    viewport.scrollTop = nextScrollTop;
-  }, [applyCanvasZoom]);
+    applyCanvasTransform({
+      scale: zoom,
+      x: anchor.pointerX - anchor.canvasX * zoom,
+      y: anchor.pointerY - anchor.canvasY * zoom,
+    }, allowElasticZoom);
+  }, [applyCanvasTransform]);
 
   const syncCanvasBaseSizePreservingAnchor = useCallback(() => {
     if (activeZoomAnchorRef.current || zoomRafRef.current || zoomSnapAnimationRef.current) {
@@ -1479,12 +606,68 @@ export function App() {
     }
   }, []);
 
+  const getInnerScrollLockElements = useCallback((): HTMLElement[] => {
+    const root = zoomCanvasRef.current;
+    if (!root) {
+      return [];
+    }
+
+    const elements = root.querySelectorAll(
+      ".cm-scroller, .markdown-preview, .workspace-tree-shell",
+    );
+    return Array.from(elements).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
+  }, []);
+
+  const captureInnerScrollLocks = useCallback(() => {
+    const locks = zoomInnerScrollLocksRef.current;
+    for (const element of Array.from(locks.keys())) {
+      if (!element.isConnected) {
+        locks.delete(element);
+      }
+    }
+
+    for (const element of getInnerScrollLockElements()) {
+      if (!locks.has(element)) {
+        locks.set(element, {
+          left: element.scrollLeft,
+          top: element.scrollTop,
+        });
+      }
+    }
+  }, [getInnerScrollLockElements]);
+
+  const restoreInnerScrollLocks = useCallback(() => {
+    const locks = zoomInnerScrollLocksRef.current;
+    for (const [element, position] of Array.from(locks.entries())) {
+      if (!element.isConnected) {
+        locks.delete(element);
+        continue;
+      }
+
+      if (Math.abs(element.scrollLeft - position.left) > 0.5) {
+        element.scrollLeft = position.left;
+      }
+
+      if (Math.abs(element.scrollTop - position.top) > 0.5) {
+        element.scrollTop = position.top;
+      }
+    }
+  }, []);
+
+  const releaseInnerScrollLocks = useCallback(() => {
+    zoomInnerScrollLocksRef.current.clear();
+  }, []);
+
   const lockAppZoomScroll = useCallback(() => {
     zoomScrollLockUntilRef.current = Math.max(
       zoomScrollLockUntilRef.current,
       Date.now() + APP_ZOOM_SCROLL_LOCK_MS,
     );
     document.documentElement.dataset.appCanvasZooming = "true";
+    captureInnerScrollLocks();
+    restoreInnerScrollLocks();
 
     if (zoomScrollUnlockTimerRef.current !== null) {
       window.clearTimeout(zoomScrollUnlockTimerRef.current);
@@ -1496,8 +679,13 @@ export function App() {
       }
 
       zoomScrollUnlockTimerRef.current = null;
-      if (appZoomRef.current <= NORMAL_APP_ZOOM + 0.0005) {
+      const isAtNormalZoom = appZoomRef.current <= NORMAL_APP_ZOOM + 0.0005;
+      if (isAtNormalZoom) {
         applyCanvasZoom(NORMAL_APP_ZOOM, false);
+        restoreInnerScrollLocks();
+        releaseInnerScrollLocks();
+      } else {
+        restoreInnerScrollLocks();
       }
       dispatchAppZoomDebug("unlock", {
         canvas: zoomCanvasRef.current,
@@ -1507,9 +695,16 @@ export function App() {
         zoom: appZoomRef.current,
       });
       delete document.documentElement.dataset.appCanvasZooming;
-      window.dispatchEvent(new CustomEvent("polarbear-app-canvas-zoom-settled"));
+      if (isAtNormalZoom) {
+        window.dispatchEvent(new CustomEvent("polarbear-app-canvas-zoom-settled"));
+      }
     }, APP_ZOOM_SCROLL_LOCK_MS + 40);
-  }, [applyCanvasZoom]);
+  }, [
+    applyCanvasZoom,
+    captureInnerScrollLocks,
+    releaseInnerScrollLocks,
+    restoreInnerScrollLocks,
+  ]);
 
   const animateZoomTo = useCallback((
     targetZoom: number,
@@ -1579,7 +774,6 @@ export function App() {
       });
       animateZoomTo(NORMAL_APP_ZOOM, anchor);
       activeZoomAnchorRef.current = null;
-      activeDocumentZoomAnchorRef.current = null;
       return;
     }
 
@@ -1603,7 +797,6 @@ export function App() {
       zoom: currentZoom,
     });
     activeZoomAnchorRef.current = null;
-    activeDocumentZoomAnchorRef.current = null;
   }, [
     animateZoomTo,
     applyZoomAtAnchor,
@@ -1707,24 +900,32 @@ export function App() {
   ]);
 
   const panZoomViewport = useCallback((deltaX: number, deltaY: number): boolean => {
-    const viewport = zoomViewportRef.current;
-    if (!viewport) {
+    const current = appCanvasTransformRef.current;
+    if (current.scale <= NORMAL_APP_ZOOM + 0.0005) {
       return false;
     }
 
-    const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-    const maxScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
-    const beforeLeft = viewport.scrollLeft;
-    const beforeTop = viewport.scrollTop;
+    const nextX = current.x - deltaX;
+    const nextY = current.y - deltaY;
+    const clamped = clampCanvasTranslate(current.scale, nextX, nextY);
+    const moved =
+      Math.abs(clamped.x - current.x) > 0.01 ||
+      Math.abs(clamped.y - current.y) > 0.01;
 
-    viewport.scrollLeft = Math.max(0, Math.min(maxScrollLeft, beforeLeft + deltaX));
-    viewport.scrollTop = Math.max(0, Math.min(maxScrollTop, beforeTop + deltaY));
+    if (!moved) {
+      return false;
+    }
 
-    return viewport.scrollLeft !== beforeLeft || viewport.scrollTop !== beforeTop;
-  }, []);
+    applyCanvasTransform({
+      scale: current.scale,
+      x: clamped.x,
+      y: clamped.y,
+    });
+    return true;
+  }, [applyCanvasTransform, clampCanvasTranslate]);
 
   useLayoutEffect(() => {
-    if (!APP_CANVAS_ZOOM_ENABLED || EDITOR_WORKSPACE_ZOOM_ENABLED) {
+    if (!APP_CANVAS_ZOOM_ENABLED) {
       return undefined;
     }
 
@@ -1765,39 +966,6 @@ export function App() {
         window.cancelAnimationFrame(zoomSnapAnimationRef.current);
       }
 
-      if (documentAnchorRestoreFrameRef.current) {
-        window.cancelAnimationFrame(documentAnchorRestoreFrameRef.current);
-      }
-
-      if (documentAnchorSecondRestoreFrameRef.current) {
-        window.cancelAnimationFrame(documentAnchorSecondRestoreFrameRef.current);
-      }
-
-      if (documentAnchorThirdRestoreFrameRef.current) {
-        window.cancelAnimationFrame(documentAnchorThirdRestoreFrameRef.current);
-      }
-
-      if (continuousZoomRafRef.current) {
-        window.cancelAnimationFrame(continuousZoomRafRef.current);
-      }
-
-      if (continuousZoomRestoreFrameRef.current) {
-        window.cancelAnimationFrame(continuousZoomRestoreFrameRef.current);
-      }
-
-      if (continuousZoomSecondRestoreFrameRef.current) {
-        window.cancelAnimationFrame(continuousZoomSecondRestoreFrameRef.current);
-      }
-
-      if (continuousZoomIdleTimerRef.current !== null) {
-        window.clearTimeout(continuousZoomIdleTimerRef.current);
-      }
-
-      if (activeContinuousZoomRef.current) {
-        cleanupActiveDocumentVisualZoom(activeContinuousZoomRef.current);
-        activeContinuousZoomRef.current = null;
-      }
-
       delete document.documentElement.dataset.appCanvasZooming;
     };
   }, []);
@@ -1832,25 +1000,6 @@ export function App() {
   }, [themeName]);
 
   useEffect(() => {
-    if (APP_CANVAS_ZOOM_ENABLED || EDITOR_WORKSPACE_ZOOM_ENABLED) {
-      return undefined;
-    }
-
-    setAppCanvasZoomDataset(NORMAL_APP_ZOOM);
-    delete document.documentElement.dataset.appCanvasZooming;
-    const manager = new AppZoomManager();
-    appZoomManagerRef.current = manager;
-    void manager.init();
-
-    return () => {
-      manager.dispose();
-      if (appZoomManagerRef.current === manager) {
-        appZoomManagerRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     if (!APP_CANVAS_ZOOM_ENABLED) {
       return;
     }
@@ -1860,10 +1009,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (
-      !APP_CANVAS_ZOOM_ENABLED ||
-      EDITOR_WORKSPACE_ZOOM_ENABLED
-    ) {
+    if (!APP_CANVAS_ZOOM_ENABLED) {
       return undefined;
     }
 
@@ -1886,17 +1032,22 @@ export function App() {
         !isZoomWheel &&
         (isNativePinchWheelNoise || isAppZoomScrollLocked || isCanvasZoomInProgress)
       ) {
+        restoreInnerScrollLocks();
         consumeAppZoomWheelEvent(event);
         return;
       }
 
       if (!isZoomWheel) {
-        if (shouldLetEditorHandleWheel(event)) {
+        if (appZoomRef.current > NORMAL_APP_ZOOM + 0.0005) {
+          captureInnerScrollLocks();
+          panZoomViewport(event.deltaX, event.deltaY);
+          restoreInnerScrollLocks();
+          consumeAppZoomWheelEvent(event);
           return;
         }
 
-        if (appZoomRef.current > 1 && panZoomViewport(event.deltaX, event.deltaY)) {
-          consumeAppZoomWheelEvent(event);
+        if (shouldLetEditorHandleWheel(event)) {
+          return;
         }
         return;
       }
@@ -1922,7 +1073,7 @@ export function App() {
     };
 
     const handleNativePinchPayload = (detail: NativePinchPayload) => {
-      if (document.querySelector(".image-viewer-overlay, .mermaid-zoom-overlay")) {
+      if (document.querySelector(".image-viewer-overlay")) {
         return;
       }
 
@@ -1987,11 +1138,50 @@ export function App() {
       unlistenNativePinch?.();
     };
   }, [
+    captureInnerScrollLocks,
     lockAppZoomScroll,
     panZoomViewport,
+    restoreInnerScrollLocks,
     scheduleZoomAtPoint,
     scheduleZoomSettle,
   ]);
+
+  useEffect(() => {
+    if (!APP_CANVAS_ZOOM_ENABLED) {
+      return undefined;
+    }
+
+    const isInnerScrollFrozen = () =>
+      Date.now() < zoomScrollLockUntilRef.current ||
+      appZoomRef.current > NORMAL_APP_ZOOM + 0.0005 ||
+      Boolean(activeZoomAnchorRef.current) ||
+      zoomRafRef.current !== 0 ||
+      zoomSettleTimerRef.current !== null ||
+      zoomSnapAnimationRef.current !== 0;
+
+    const handleScrollCapture = (event: Event) => {
+      if (!isInnerScrollFrozen()) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        zoomInnerScrollLocksRef.current.has(target)
+      ) {
+        restoreInnerScrollLocks();
+      }
+    };
+
+    document.addEventListener("scroll", handleScrollCapture, {
+      capture: true,
+      passive: true,
+    });
+
+    return () => {
+      document.removeEventListener("scroll", handleScrollCapture, { capture: true });
+    };
+  }, [restoreInnerScrollLocks]);
 
   useEffect(() => {
     void refreshRepositoryState();
@@ -2014,334 +1204,8 @@ export function App() {
     });
   };
 
-  const commitEditorZoom = useCallback((nextZoom: number) => {
-    const zoom = clampEditorZoom(nextZoom);
-    editorZoomRef.current = zoom;
-    setEditorZoom((currentZoom) =>
-      Math.abs(currentZoom - zoom) < 0.0005 ? currentZoom : zoom,
-    );
-    return zoom;
-  }, []);
-
-  const restoreContinuousZoomScroll = useCallback((session: ContinuousZoomSession, zoom: number) => {
-    const target = resolveActiveDocumentZoomTarget(session.target.mode) ?? session.target;
-    target.scrollport.scrollLeft = session.docX * zoom - session.focusX;
-    target.scrollport.scrollTop = session.docY * zoom - session.focusY;
-  }, []);
-
-  const cancelActiveDocumentContinuousZoom = useCallback(() => {
-    if (continuousZoomRafRef.current) {
-      window.cancelAnimationFrame(continuousZoomRafRef.current);
-      continuousZoomRafRef.current = 0;
-    }
-
-    if (continuousZoomRestoreFrameRef.current) {
-      window.cancelAnimationFrame(continuousZoomRestoreFrameRef.current);
-      continuousZoomRestoreFrameRef.current = 0;
-    }
-
-    if (continuousZoomSecondRestoreFrameRef.current) {
-      window.cancelAnimationFrame(continuousZoomSecondRestoreFrameRef.current);
-      continuousZoomSecondRestoreFrameRef.current = 0;
-    }
-
-    if (continuousZoomIdleTimerRef.current !== null) {
-      window.clearTimeout(continuousZoomIdleTimerRef.current);
-      continuousZoomIdleTimerRef.current = null;
-    }
-
-    pendingContinuousZoomRef.current = null;
-
-    if (activeContinuousZoomRef.current) {
-      cleanupActiveDocumentVisualZoom(activeContinuousZoomRef.current);
-      activeContinuousZoomRef.current = null;
-    }
-  }, []);
-
-  const finishActiveDocumentContinuousZoom = useCallback(() => {
-    const session = activeContinuousZoomRef.current;
-    if (!session) {
-      return editorZoomRef.current;
-    }
-
-    if (continuousZoomRafRef.current) {
-      window.cancelAnimationFrame(continuousZoomRafRef.current);
-      continuousZoomRafRef.current = 0;
-    }
-
-    if (continuousZoomIdleTimerRef.current !== null) {
-      window.clearTimeout(continuousZoomIdleTimerRef.current);
-      continuousZoomIdleTimerRef.current = null;
-    }
-
-    pendingContinuousZoomRef.current = null;
-
-    const oldZoom = editorZoomRef.current;
-    const finalZoom = commitEditorZoom(session.visualZoom);
-    scheduleEditorZoomDebug({
-      mode: session.target.mode,
-      nextZoom: finalZoom,
-      oldZoom,
-      source: session.input,
-    });
-
-    if (continuousZoomRestoreFrameRef.current) {
-      window.cancelAnimationFrame(continuousZoomRestoreFrameRef.current);
-    }
-
-    if (continuousZoomSecondRestoreFrameRef.current) {
-      window.cancelAnimationFrame(continuousZoomSecondRestoreFrameRef.current);
-    }
-
-    continuousZoomRestoreFrameRef.current = window.requestAnimationFrame(() => {
-      restoreContinuousZoomScroll(session, finalZoom);
-      cleanupActiveDocumentVisualZoom(session);
-      if (activeContinuousZoomRef.current === session) {
-        activeContinuousZoomRef.current = null;
-      }
-
-      continuousZoomSecondRestoreFrameRef.current = window.requestAnimationFrame(() => {
-        restoreContinuousZoomScroll(session, finalZoom);
-        continuousZoomSecondRestoreFrameRef.current = 0;
-      });
-      continuousZoomRestoreFrameRef.current = 0;
-    });
-
-    return finalZoom;
-  }, [commitEditorZoom, restoreContinuousZoomScroll]);
-
-  const resolveContinuousZoomFocus = useCallback((
-    target: ActiveDocumentZoomTarget,
-    input: ContinuousZoomInput,
-    clientX?: number,
-    clientY?: number,
-  ): ContinuousZoomFocus => {
-    const scrollportRect = target.scrollport.getBoundingClientRect();
-    const hasClientPoint =
-      typeof clientX === "number" &&
-      Number.isFinite(clientX) &&
-      typeof clientY === "number" &&
-      Number.isFinite(clientY) &&
-      clientX >= scrollportRect.left &&
-      clientX <= scrollportRect.right &&
-      clientY >= scrollportRect.top &&
-      clientY <= scrollportRect.bottom;
-    const lastPointer = lastPointerClientRef.current;
-    const hasLastPointer =
-      Boolean(lastPointer) &&
-      lastPointer!.x >= scrollportRect.left &&
-      lastPointer!.x <= scrollportRect.right &&
-      lastPointer!.y >= scrollportRect.top &&
-      lastPointer!.y <= scrollportRect.bottom;
-    const focusClientX = hasClientPoint
-      ? clientX!
-      : hasLastPointer
-        ? lastPointer!.x
-        : scrollportRect.left + scrollportRect.width / 2;
-    const focusClientY = hasClientPoint
-      ? clientY!
-      : hasLastPointer
-        ? lastPointer!.y
-        : scrollportRect.top + scrollportRect.height / 2;
-    const focusSource: ContinuousZoomFocusSource = hasClientPoint
-      ? input === "native-pinch"
-        ? "native-pinch"
-        : "wheel-client"
-      : hasLastPointer
-        ? "last-pointer"
-        : "viewport-center";
-    const focusX = focusClientX - scrollportRect.left;
-    const focusY = focusClientY - scrollportRect.top;
-    const baseZoom = Math.max(EDITOR_ZOOM_MIN, editorZoomRef.current);
-
-    return {
-      clientX: focusClientX,
-      clientY: focusClientY,
-      docX: (target.scrollport.scrollLeft + focusX) / baseZoom,
-      docY: (target.scrollport.scrollTop + focusY) / baseZoom,
-      focusSource,
-      focusX,
-      focusY,
-    };
-  }, []);
-
-  const scheduleContinuousZoomFrame = useCallback((request: ContinuousZoomRequest) => {
-    pendingContinuousZoomRef.current = request;
-
-    if (continuousZoomRafRef.current) {
-      return;
-    }
-
-    continuousZoomRafRef.current = window.requestAnimationFrame(() => {
-      continuousZoomRafRef.current = 0;
-      const nextRequest = pendingContinuousZoomRef.current;
-      const session = activeContinuousZoomRef.current;
-      pendingContinuousZoomRef.current = null;
-
-      if (!nextRequest || !session) {
-        return;
-      }
-
-      updateActiveDocumentVisualZoom(session, nextRequest.nextZoom);
-    });
-  }, []);
-
-  const beginOrUpdateActiveDocumentContinuousZoom = useCallback((params: {
-    clientX?: number;
-    clientY?: number;
-    factor: number;
-    input: ContinuousZoomInput;
-  }) => {
-    const mode = toEditorZoomMode(viewMode);
-    if (mode === "split") {
-      setStatusMessage("Split Mode zoom is not implemented yet.");
-      return editorZoomRef.current;
-    }
-
-    const target = resolveActiveDocumentZoomTarget(mode);
-    if (!target) {
-      console.table({
-        adapterFound: false,
-        event: "editor-zoom",
-        input: params.input,
-        mode,
-        phase: "continuous-zoom-target",
-        targetFound: false,
-      });
-      return editorZoomRef.current;
-    }
-
-    let session = activeContinuousZoomRef.current;
-    if (!session || session.target.mode !== mode || !session.target.host.isConnected) {
-      if (session) {
-        cancelActiveDocumentContinuousZoom();
-      }
-
-      const focus = resolveContinuousZoomFocus(
-        target,
-        params.input,
-        params.clientX,
-        params.clientY,
-      );
-      session = beginActiveDocumentVisualZoom(
-        target,
-        focus,
-        editorZoomRef.current,
-        params.input,
-      );
-      activeContinuousZoomRef.current = session;
-    }
-
-    const currentZoom = session.visualZoom;
-    const rawNextZoom = currentZoom * params.factor;
-    const maxStep = 1.08;
-    const step = Math.max(1 / maxStep, Math.min(maxStep, rawNextZoom / currentZoom));
-    const nextZoom = clampEditorZoom(currentZoom * step);
-    scheduleContinuousZoomFrame({
-      input: params.input,
-      nextZoom,
-    });
-
-    return nextZoom;
-  }, [
-    cancelActiveDocumentContinuousZoom,
-    resolveContinuousZoomFocus,
-    scheduleContinuousZoomFrame,
-    viewMode,
-  ]);
-
-  useEffect(() => {
-    cancelActiveDocumentContinuousZoom();
-  }, [cancelActiveDocumentContinuousZoom, viewMode]);
-
-  const applyEditorWorkspaceZoom = useCallback((
-    nextZoom: number,
-    options: {
-      clientX?: number;
-      clientY?: number;
-      settleNow?: boolean;
-      source?: EditorZoomDebugSource;
-    } = {},
-  ) => {
-    const oldZoom = editorZoomRef.current;
-    const zoom = clampEditorZoom(nextZoom);
-    const mode = toEditorZoomMode(viewMode);
-    const debugSource = options.source ?? "menu";
-
-    if (mode === "split") {
-      setStatusMessage("Split Mode zoom is not implemented yet.");
-      scheduleEditorZoomDebug({
-        mode,
-        nextZoom: oldZoom,
-        oldZoom,
-        source: debugSource,
-      });
-      return editorZoomRef.current;
-    }
-
-    const committedZoom = commitEditorZoom(zoom);
-    cancelActiveDocumentContinuousZoom();
-    scheduleEditorZoomDebug({
-      mode,
-      nextZoom: committedZoom,
-      oldZoom,
-      source: debugSource,
-    });
-    return committedZoom;
-  }, [cancelActiveDocumentContinuousZoom, commitEditorZoom, viewMode]);
-
-  const zoomEditorAtWorkspaceCenter = useCallback((
-    nextZoom: number,
-    source: EditorZoomDebugSource = "menu",
-  ) => {
-    const workspace = document.querySelector(".editor-workspace");
-    const rect = workspace instanceof HTMLElement
-      ? workspace.getBoundingClientRect()
-      : null;
-
-    return applyEditorWorkspaceZoom(nextZoom, {
-      clientX: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
-      clientY: rect ? rect.top + rect.height / 2 : window.innerHeight / 2,
-      settleNow: true,
-      source,
-    });
-  }, [applyEditorWorkspaceZoom]);
-
   const runAppZoomCommand = useCallback((action: "in" | "out" | "reset") => {
-    cancelActiveDocumentContinuousZoom();
     cancelZoomSnapAnimation();
-
-    if (!APP_CANVAS_ZOOM_ENABLED) {
-      const manager = appZoomManagerRef.current;
-      const zoomPromise =
-        action === "in"
-          ? manager?.zoomIn()
-          : action === "out"
-            ? manager?.zoomOut()
-            : manager?.resetZoom();
-
-      if (!zoomPromise) {
-        setStatusMessage("App zoom is still starting.");
-        return;
-      }
-
-      void zoomPromise.then((zoom) => {
-        appZoomRef.current = zoom;
-        setAppZoom((currentZoom) =>
-          Math.abs(currentZoom - zoom) < 0.0005 ? currentZoom : zoom,
-        );
-        setAppCanvasZoomDataset(NORMAL_APP_ZOOM);
-        delete document.documentElement.dataset.appCanvasZooming;
-        setStatusMessage(`App zoom ${Math.round(zoom * 100)}%.`);
-      }).catch((error) => {
-        console.error("Failed to apply app zoom", error);
-        setStatusMessage("Failed to apply app zoom.");
-      });
-
-      setEditorZoom(EDITOR_ZOOM_DEFAULT);
-      editorZoomRef.current = EDITOR_ZOOM_DEFAULT;
-      return;
-    }
 
     const viewport = zoomViewportRef.current;
     const rect = viewport?.getBoundingClientRect();
@@ -2366,145 +1230,25 @@ export function App() {
       commitZoom(zoom);
     }
 
-    setEditorZoom(EDITOR_ZOOM_DEFAULT);
-    editorZoomRef.current = EDITOR_ZOOM_DEFAULT;
+    if (zoom > NORMAL_APP_ZOOM + 0.0005) {
+      captureInnerScrollLocks();
+      restoreInnerScrollLocks();
+    } else {
+      restoreInnerScrollLocks();
+      releaseInnerScrollLocks();
+    }
+
     setStatusMessage(`App zoom ${Math.round(zoom * 100)}%.`);
   }, [
     applyCanvasZoom,
     applyZoomAtAnchor,
-    cancelActiveDocumentContinuousZoom,
     cancelZoomSnapAnimation,
     commitZoom,
+    captureInnerScrollLocks,
     getAnchorCanvasPoint,
+    releaseInnerScrollLocks,
+    restoreInnerScrollLocks,
   ]);
-
-  useEffect(() => {
-    if (!EDITOR_WORKSPACE_ZOOM_ENABLED) {
-      return undefined;
-    }
-
-    const isInsideEditorWorkspace = (target: EventTarget | null) =>
-      target instanceof Element && Boolean(target.closest(".editor-workspace"));
-
-    const handleEditorZoomWheel = (event: WheelEvent) => {
-      if (shouldIgnoreAppZoomEvent(event) || !isInsideEditorWorkspace(event.target)) {
-        return;
-      }
-
-      if (!isAppZoomWheelEvent(event)) {
-        return;
-      }
-
-      if (Date.now() - lastEditorNativeGestureAtRef.current < NATIVE_GESTURE_WHEEL_SUPPRESS_MS) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      const safeDeltaY = Math.max(
-        -WHEEL_ZOOM_DELTA_LIMIT,
-        Math.min(WHEEL_ZOOM_DELTA_LIMIT, event.deltaY),
-      );
-      beginOrUpdateActiveDocumentContinuousZoom({
-        clientX: event.clientX,
-        clientY: event.clientY,
-        factor: Math.exp(-safeDeltaY * WHEEL_ZOOM_SENSITIVITY),
-        input: "wheel",
-      });
-
-      if (continuousZoomIdleTimerRef.current !== null) {
-        window.clearTimeout(continuousZoomIdleTimerRef.current);
-      }
-      continuousZoomIdleTimerRef.current = window.setTimeout(() => {
-        continuousZoomIdleTimerRef.current = null;
-        finishActiveDocumentContinuousZoom();
-      }, 220);
-    };
-
-    const handleEditorNativePinch = (event: Event) => {
-      if (shouldIgnoreAppZoomEvent(event)) {
-        return;
-      }
-
-      const workspace = document.querySelector(".editor-workspace");
-      if (!(workspace instanceof HTMLElement)) {
-        return;
-      }
-
-      const pinchEvent = event as NativePinchEventLike;
-      const detail = pinchEvent.detail ?? {};
-      const workspaceRect = workspace.getBoundingClientRect();
-      const focusX = typeof detail.x === "number" && Number.isFinite(detail.x)
-        ? detail.x
-        : workspaceRect.left + workspaceRect.width / 2;
-      const focusY = typeof detail.y === "number" && Number.isFinite(detail.y)
-        ? detail.y
-        : workspaceRect.top + workspaceRect.height / 2;
-
-      if (
-        focusX < workspaceRect.left ||
-        focusX > workspaceRect.right ||
-        focusY < workspaceRect.top ||
-        focusY > workspaceRect.bottom
-      ) {
-        return;
-      }
-
-      lastEditorNativeGestureAtRef.current = Date.now();
-
-      const delta = typeof detail.delta === "number" && Number.isFinite(detail.delta)
-        ? detail.delta
-        : typeof detail.magnification === "number" && Number.isFinite(detail.magnification)
-          ? detail.magnification
-          : 0;
-      const scale = typeof detail.scale === "number" && Number.isFinite(detail.scale)
-        ? detail.scale
-        : null;
-
-      if (isNativePinchEndPhase(detail.phase) || isNativePinchEndPhase(detail.state)) {
-        finishActiveDocumentContinuousZoom();
-        return;
-      }
-
-      const factor = Math.abs(delta) > 0.000001
-        ? Math.exp(delta * NATIVE_PINCH_ZOOM_SENSITIVITY)
-        : scale && scale > 0
-          ? Math.pow(scale, NATIVE_PINCH_SCALE_SENSITIVITY)
-          : 1;
-
-      if (Math.abs(factor - 1) < 0.000001) {
-        return;
-      }
-
-      beginOrUpdateActiveDocumentContinuousZoom({
-        clientX: focusX,
-        clientY: focusY,
-        factor,
-        input: "native-pinch",
-      });
-
-      if (continuousZoomIdleTimerRef.current !== null) {
-        window.clearTimeout(continuousZoomIdleTimerRef.current);
-      }
-      continuousZoomIdleTimerRef.current = window.setTimeout(() => {
-        continuousZoomIdleTimerRef.current = null;
-        finishActiveDocumentContinuousZoom();
-      }, 220);
-    };
-
-    window.addEventListener("wheel", handleEditorZoomWheel, {
-      capture: true,
-      passive: false,
-    });
-    window.addEventListener("polarbear-native-pinch", handleEditorNativePinch as EventListener);
-
-    return () => {
-      window.removeEventListener("wheel", handleEditorZoomWheel, { capture: true });
-      window.removeEventListener("polarbear-native-pinch", handleEditorNativePinch as EventListener);
-    };
-  }, [beginOrUpdateActiveDocumentContinuousZoom, finishActiveDocumentContinuousZoom]);
 
   const loadWorkspace = async (nextWorkspaceRoot: string): Promise<boolean> => {
     try {
@@ -3596,20 +2340,19 @@ export function App() {
     repositoryBinding,
   });
 
-  const shouldUseAppCanvasZoom = APP_CANVAS_ZOOM_ENABLED && !EDITOR_WORKSPACE_ZOOM_ENABLED;
+  const shouldUseAppCanvasZoom = APP_CANVAS_ZOOM_ENABLED;
   const renderedAppZoom = shouldUseAppCanvasZoom
     ? appZoomRef.current
     : NORMAL_APP_ZOOM;
   const renderedCanvasPlacement = shouldUseAppCanvasZoom
     ? appCanvasPlacementRef.current
     : null;
+  const renderedCanvasTransform = shouldUseAppCanvasZoom
+    ? appCanvasTransformRef.current
+    : { scale: NORMAL_APP_ZOOM, x: 0, y: 0 };
   const appZoomCanvasSizeStyle = {
-    width: shouldUseAppCanvasZoom
-      ? `${renderedCanvasPlacement?.canvasWidth ?? Math.ceil(appCanvasSize.width * renderedAppZoom)}px`
-      : "100%",
-    height: shouldUseAppCanvasZoom
-      ? `${renderedCanvasPlacement?.canvasHeight ?? Math.ceil(appCanvasSize.height * renderedAppZoom)}px`
-      : "100%",
+    width: "100%",
+    height: "100%",
   } satisfies CSSProperties;
 
   const appZoomCanvasStyle = {
@@ -3617,7 +2360,9 @@ export function App() {
     top: `${renderedCanvasPlacement?.offsetTop ?? 0}px`,
     width: shouldUseAppCanvasZoom ? `${appCanvasSize.width}px` : "100%",
     height: shouldUseAppCanvasZoom ? `${appCanvasSize.height}px` : "100%",
-    transform: shouldUseAppCanvasZoom ? `scale(${renderedAppZoom})` : "none",
+    transform: shouldUseAppCanvasZoom
+      ? `translate3d(${renderedCanvasTransform.x}px, ${renderedCanvasTransform.y}px, 0) scale(${renderedAppZoom})`
+      : "none",
   } satisfies CSSProperties;
 
   return (
@@ -3679,7 +2424,6 @@ export function App() {
                       <MarkdownEditor
                         activeFileName={activeFileName}
                         markdownContent={markdownContent}
-                        zoom={EDITOR_ZOOM_DEFAULT}
                         onEditorReady={(editorView) => {
                           editorViewRef.current = editorView;
                         }}
@@ -3715,7 +2459,6 @@ export function App() {
                         }}
                         onMarkdownChange={updateActiveDocument}
                         workspaceRoot={workspaceRoot}
-                        zoom={EDITOR_ZOOM_DEFAULT}
                       />
                     ) : null}
                     {viewMode === "preview" || viewMode === "split" ? (
@@ -3724,7 +2467,6 @@ export function App() {
                         activeFileName={activeFileName}
                         markdownContent={markdownContent}
                         workspaceRoot={workspaceRoot}
-                        zoom={EDITOR_ZOOM_DEFAULT}
                       />
                     ) : null}
                   </>

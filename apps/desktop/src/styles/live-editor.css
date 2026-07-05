@@ -236,7 +236,6 @@ h6.live-editor-typora-heading {
 .live-editor-pane .code-block figcaption button,
 .live-editor-pane .plantuml-card button,
 .live-editor-pane .markdown-image-delete,
-.mermaid-zoom-toolbar button,
 .image-viewer-toolbar button {
   color: #111827;
   border: 1px solid #9ca3af;
@@ -248,7 +247,6 @@ h6.live-editor-typora-heading {
 .live-editor-pane .code-block figcaption button:hover,
 .live-editor-pane .plantuml-card button:hover,
 .live-editor-pane .markdown-image-delete:hover,
-.mermaid-zoom-toolbar button:hover,
 .image-viewer-toolbar button:hover {
   color: #0f172a;
   border-color: #2563eb;

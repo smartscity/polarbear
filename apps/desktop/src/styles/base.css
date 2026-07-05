@@ -57,9 +57,10 @@ button:disabled {
 .app-zoom-viewport {
   width: 100vw;
   height: 100vh;
-  overflow: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  overscroll-behavior: none;
   scroll-behavior: auto;
+  touch-action: none;
   background: #0b111d;
 }
 
@@ -69,7 +70,7 @@ button:disabled {
   height: 100%;
   min-width: 100%;
   min-height: 100%;
-  overflow: visible;
+  overflow: hidden;
   background: #0b111d;
 }
 
@@ -83,38 +84,6 @@ button:disabled {
   will-change: transform;
   transform-origin: top left;
   background: #0b111d;
-}
-
-.active-document-zoom-overlay {
-  box-sizing: border-box;
-  contain: paint;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.active-document-zoom-clone-wrapper {
-  box-sizing: border-box;
-}
-
-.active-document-zoom-clone {
-  box-sizing: border-box;
-  pointer-events: none !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-}
-
-.active-document-zoom-overlay-source,
-.active-document-zoom-overlay-live,
-.active-document-zoom-overlay-preview {
-  background: transparent !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  display: block !important;
-  margin: 0 !important;
-  min-height: 0 !important;
-  padding: 0 !important;
 }
 
 .top-bar {
@@ -646,7 +615,7 @@ button:disabled {
   height: 100%;
   color: #111827;
   background: #f8fafc;
-  font-size: var(--source-editor-font-size, 14px);
+  font-size: 14px;
 }
 
 .editor-pane .cm-scroller {
@@ -657,7 +626,7 @@ button:disabled {
 .editor-pane .cm-content,
 .editor-pane .cm-line {
   color: #111827;
-  line-height: var(--source-editor-line-height, 1.55);
+  line-height: 1.55;
 }
 
 .editor-pane .cm-gutters {
@@ -688,7 +657,6 @@ button:disabled {
 .markdown-preview-surface {
   width: fit-content;
   min-width: 100%;
-  zoom: var(--preview-document-zoom, 1);
 }
 
 .markdown-preview-segment {
@@ -981,7 +949,6 @@ button:disabled {
   border: 1px solid rgba(137, 151, 174, 0.18);
   border-radius: 8px;
   background: #f8fafc;
-  cursor: zoom-in;
 }
 
 .mermaid-render-target svg {
@@ -1039,7 +1006,6 @@ button:disabled {
   border: 1px solid rgba(137, 151, 174, 0.18);
   border-radius: 8px;
   background: #f8fafc;
-  cursor: zoom-in;
 }
 
 .plantuml-render-target svg {
@@ -1160,82 +1126,6 @@ button:disabled {
 .live-editor-edit-source {
   margin-top: 6px;
   font-size: 12px;
-}
-
-.mermaid-zoom-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(2, 6, 23, 0.92);
-  display: flex;
-  flex-direction: column;
-  touch-action: none;
-  overscroll-behavior: contain;
-}
-
-.mermaid-zoom-toolbar {
-  height: 44px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.86);
-}
-
-.mermaid-zoom-scale,
-.mermaid-zoom-status {
-  color: #cbd5e1;
-  font-size: 13px;
-}
-
-.mermaid-zoom-canvas {
-  flex: 1;
-  overflow: hidden;
-  touch-action: none;
-  overscroll-behavior: contain;
-  cursor: grab;
-  position: relative;
-}
-
-.mermaid-zoom-canvas.dragging {
-  cursor: grabbing;
-}
-
-.mermaid-zoom-content {
-  position: absolute;
-  left: 0;
-  top: 0;
-  transform-origin: 0 0;
-  will-change: transform;
-}
-
-.mermaid-zoom-content svg {
-  max-width: none;
-  height: auto;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.mermaid-zoom-source {
-  max-height: 150px;
-  overflow: auto;
-  padding: 8px 14px 12px;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-  background: #0f172a;
-}
-
-.mermaid-zoom-source summary {
-  cursor: pointer;
-  color: #93c5fd;
-  font-size: 13px;
-}
-
-.mermaid-zoom-source pre {
-  margin: 10px 0 0;
-  color: #cbd5e1;
-  white-space: pre-wrap;
 }
 
 .status-bar {
@@ -1435,10 +1325,6 @@ button:disabled {
     overflow-x: auto;
   }
 
-  .mermaid-zoom-toolbar {
-    justify-content: flex-start;
-    overflow-x: auto;
-  }
 }
 
 :root {

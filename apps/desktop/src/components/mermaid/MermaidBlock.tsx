@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import { MermaidZoomOverlay } from "./MermaidZoomOverlay";
 
 export type MermaidBlockProps = {
   source: string;
@@ -26,7 +25,6 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const renderVersionRef = useRef(0);
   const [svgContent, setSvgContent] = useState("");
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
@@ -92,13 +90,6 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
         {copyStatus ? <span>{copyStatus}</span> : null}
       </figcaption>
       <div className="mermaid-block-toolbar">
-        <button
-          type="button"
-          disabled={!svgContent}
-          onClick={() => setIsOverlayOpen(true)}
-        >
-          Zoom
-        </button>
         <button type="button" onClick={() => void copySource()}>
           Copy Source
         </button>
@@ -106,31 +97,21 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
           Export SVG
         </button>
       </div>
-      <button
-        type="button"
+      <div
         className="mermaid-render-target"
-        disabled={!svgContent}
-        onClick={() => setIsOverlayOpen(true)}
       >
         {svgContent ? (
           <span dangerouslySetInnerHTML={{ __html: svgContent }} />
         ) : (
           <span className="mermaid-loading">Rendering Mermaid diagram...</span>
         )}
-      </button>
+      </div>
       <details className="mermaid-source">
         <summary>Mermaid source</summary>
         <pre>
           <code>{source}</code>
         </pre>
       </details>
-      {isOverlayOpen && svgContent ? (
-        <MermaidZoomOverlay
-          source={source}
-          svgContent={svgContent}
-          onClose={() => setIsOverlayOpen(false)}
-        />
-      ) : null}
     </figure>
   );
 }

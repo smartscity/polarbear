@@ -1,5 +1,4 @@
 import CodeMirror from "@uiw/react-codemirror";
-import type { CSSProperties } from "react";
 import { markdown } from "@codemirror/lang-markdown";
 import { search } from "@codemirror/search";
 import { macNavigationKeymap } from "./macNavigationKeymap";
@@ -31,7 +30,6 @@ type DroppedFile = File & {
 type MarkdownEditorProps = {
   activeFileName: string;
   markdownContent: string;
-  zoom?: number;
   onImageDrop: (filePaths: string[]) => void;
   onImagePaste: (items: DataTransferItemList) => void;
   onEditorReady: (editorView: MarkdownEditorView) => void;
@@ -41,24 +39,17 @@ type MarkdownEditorProps = {
 export function MarkdownEditor({
   activeFileName,
   markdownContent,
-  zoom = 1,
   onImageDrop,
   onImagePaste,
   onEditorReady,
   onMarkdownChange
 }: MarkdownEditorProps) {
-  const editorStyle = {
-    "--source-editor-font-size": `${14 * zoom}px`,
-    "--source-editor-line-height": `${22 * zoom}px`,
-  } as CSSProperties;
-
   return (
     <section
       className="editor-pane"
       data-editor-document-host="true"
       data-editor-document-mode="source"
       data-editor-document-surface="true"
-      style={editorStyle}
       onDragOver={(event) => {
         event.preventDefault();
       }}
