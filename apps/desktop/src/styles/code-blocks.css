@@ -1,0 +1,182 @@
+/* Code fence styles for Typora-like Live Preview v5
+ * 语言相关样式集中在这里统一管理：java/json/ts/rust/sql/bash 等。
+ */
+.live-editor-code-card {
+  width: min(900px, 100%);
+  max-width: 900px;
+  margin: 22px auto;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  color: #111827;
+  background: #f8fafc;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.live-editor-code-card:focus-within {
+  border-color: #2563eb;
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.08),
+    0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.live-editor-code-card figcaption {
+  min-height: 34px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #111827;
+  border-bottom: 1px solid #d1d5db;
+  background: #f3f4f6;
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.live-editor-code-hint {
+  color: #6b7280;
+  font-weight: 520;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.live-editor-code-card pre {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  background: #ffffff;
+}
+
+.live-editor-code-card code {
+  display: block;
+  min-width: max-content;
+  min-height: 64px;
+  padding: 16px 18px;
+  color: #111827;
+  background: transparent;
+  font-family: var(--type-code-font-family);
+  font-size: 13.5px;
+  line-height: 1.72;
+  white-space: pre;
+  tab-size: 2;
+  outline: none;
+  caret-color: #111827;
+}
+
+.live-editor-code-card code:focus {
+  outline: none;
+}
+
+.live-editor-code-language-java figcaption {
+  color: #991b1b;
+  background: #fff1f2;
+}
+
+.live-editor-code-language-json figcaption {
+  color: #065f46;
+  background: #ecfdf5;
+}
+
+.live-editor-code-language-rust figcaption,
+.live-editor-code-language-rs figcaption {
+  color: #9a3412;
+  background: #fff7ed;
+}
+
+.live-editor-code-language-typescript figcaption,
+.live-editor-code-language-ts figcaption,
+.live-editor-code-language-tsx figcaption,
+.live-editor-code-language-javascript figcaption,
+.live-editor-code-language-js figcaption,
+.live-editor-code-language-jsx figcaption {
+  color: #854d0e;
+  background: #fefce8;
+}
+
+.live-editor-code-language-sql figcaption {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.live-editor-code-language-bash figcaption,
+.live-editor-code-language-sh figcaption,
+.live-editor-code-language-shell figcaption {
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.syntax-keyword {
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.syntax-string {
+  color: #047857;
+}
+
+.syntax-key {
+  color: #1d4ed8;
+  font-weight: 650;
+}
+
+.syntax-number {
+  color: #b45309;
+}
+
+.syntax-literal {
+  color: #be123c;
+  font-weight: 650;
+}
+
+.syntax-comment {
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Live Preview v6: inline language switcher, Typora-like bottom-right control. */
+.live-editor-code-card {
+  position: relative;
+  padding-bottom: 36px;
+}
+
+.live-editor-code-card figcaption {
+  padding-right: 13px;
+}
+
+.live-editor-code-language-control {
+  position: absolute;
+  right: 12px;
+  bottom: 9px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.live-editor-code-language-control input {
+  width: 92px;
+  height: 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 2px 9px;
+  color: #111827;
+  background: #ffffff;
+  font: 12px/1.2 var(--type-code-font-family);
+  outline: none;
+}
+
+.live-editor-code-language-control input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.live-editor-code-card pre {
+  min-height: 86px;
+}

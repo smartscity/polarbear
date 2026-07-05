@@ -6,9 +6,15 @@
     "apps/desktop"
   ],
   "scripts": {
-    "lint": "node scripts/check-frontend-content.mjs",
-    "typecheck": "node scripts/check-typescript-syntax.mjs",
-    "build": "node scripts/build-desktop.mjs",
-    "tauri": "npm --workspace apps/desktop run tauri"
+    "lint": "npm --workspace apps/desktop run lint",
+    "typecheck": "npm --workspace apps/desktop run typecheck",
+    "build": "npm --workspace apps/desktop run build",
+    "tauri": "npm --workspace apps/desktop run tauri --",
+    "tauri:dev": "npm --workspace apps/desktop run tauri -- dev",
+    "tauri:build": "npm --workspace apps/desktop run tauri -- build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2",
+    "nanoid": "^3.3.8"
   }
 }

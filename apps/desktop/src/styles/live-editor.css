@@ -1,0 +1,402 @@
+/* Typora-like Live Preview v8
+ * 只管理 Live Preview 文档、表格、空行、图片和复杂块。
+ * 代码块语言视觉样式统一放在 code-blocks.css。
+ */
+.live-editor-pane {
+  --live-paper-bg: #ffffff;
+  --live-paper-bg-soft: #ffffff;
+  --live-text: #111827;
+  --live-text-strong: #030712;
+  --live-text-muted: #4b5563;
+  --live-border: #d1d5db;
+  --live-border-strong: #9ca3af;
+  --live-table-border: #9ca3af;
+  --live-table-header: #f3f4f6;
+  --live-selection: rgba(37, 99, 235, 0.22);
+  --live-button-bg: #ffffff;
+  --live-button-bg-hover: #eff6ff;
+  --live-button-text: #111827;
+  --live-button-border: #9ca3af;
+
+  color: var(--live-text);
+  border-color: var(--live-border);
+  background: var(--live-paper-bg);
+}
+
+.live-editor-pane .pane-title {
+  color: #111827;
+  border-color: var(--live-border);
+  background: #ffffff;
+}
+
+.live-editor-pane .pane-title span + span {
+  color: #4b5563;
+}
+
+.live-editor-document,
+.live-editor-typora-document {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 44px max(48px, 12vw) 88px;
+  color: var(--live-text);
+  background: #ffffff;
+  font-family: var(--type-preview-font-family);
+  font-size: 15.5px;
+  line-height: 1.78;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.live-editor-typora-document:focus,
+.live-editor-typora-document:focus-visible {
+  outline: none;
+}
+
+.live-editor-typora-document * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.live-editor-typora-document ::selection {
+  background: var(--live-selection);
+}
+
+.live-editor-typora-row {
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+.live-editor-typora-block {
+  width: 100%;
+  max-width: 900px;
+  min-height: 1.78em;
+  margin: 0 auto;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  display: block;
+  color: var(--live-text);
+  background: transparent;
+  outline: none;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: text;
+  caret-color: var(--live-text-strong);
+}
+
+.live-editor-typora-block:hover,
+.live-editor-typora-block:focus,
+.live-editor-typora-block:focus-visible {
+  border: 0;
+  background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+
+.live-editor-typora-heading {
+  color: var(--live-text-strong);
+  font-weight: 780;
+  letter-spacing: -0.02em;
+  line-height: 1.22;
+}
+
+h1.live-editor-typora-heading {
+  margin: 0 auto 24px;
+  font-size: 36px;
+}
+
+h2.live-editor-typora-heading {
+  margin: 0 auto 20px;
+  font-size: 29px;
+}
+
+h3.live-editor-typora-heading {
+  margin: 0 auto 18px;
+  font-size: 23px;
+}
+
+h4.live-editor-typora-heading,
+h5.live-editor-typora-heading,
+h6.live-editor-typora-heading {
+  margin: 0 auto 16px;
+  font-size: 18px;
+}
+
+.live-editor-typora-paragraph,
+.live-editor-typora-list,
+.live-editor-typora-blockquote,
+.live-editor-typora-pending,
+.live-editor-typora-blank {
+  color: var(--live-text);
+}
+
+.live-editor-typora-blank,
+.live-editor-typora-pending,
+.live-editor-typora-pending.compact {
+  min-height: 1.78em;
+  margin-bottom: 0;
+  opacity: 1;
+}
+
+.live-editor-typora-blank:empty::before,
+.live-editor-typora-pending:empty::before {
+  content: "\00a0";
+  color: transparent;
+}
+
+.live-editor-typora-blank:focus,
+.live-editor-typora-pending:focus,
+.live-editor-typora-blank:focus-visible,
+.live-editor-typora-pending:focus-visible {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.live-editor-complex-block {
+  width: min(900px, 100%);
+  max-width: 900px;
+  margin: 20px auto;
+  cursor: default;
+}
+
+.live-editor-complex-block:focus,
+.live-editor-complex-block:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.live-editor-edit-source {
+  display: none !important;
+}
+
+.live-editor-typora-table {
+  width: min(900px, 100%);
+  max-width: 900px;
+  margin: 22px auto;
+  border-collapse: collapse;
+  color: #000000;
+  background: #ffffff;
+  font-size: 14.5px;
+}
+
+.live-editor-typora-table th,
+.live-editor-typora-table td {
+  min-width: 88px;
+  border: 1px solid var(--live-table-border);
+  padding: 9px 11px;
+  color: #000000;
+  vertical-align: top;
+  outline: none;
+  cursor: text;
+  caret-color: #000000;
+}
+
+.live-editor-typora-table th {
+  color: #000000;
+  background: var(--live-table-header);
+  font-weight: 740;
+}
+
+.live-editor-typora-table th:focus,
+.live-editor-typora-table td:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.34);
+}
+
+.live-editor-block-source {
+  width: min(900px, 100%);
+  min-height: 180px;
+  margin: 20px auto;
+  border: 1px solid var(--live-border-strong);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: block;
+  color: #111827;
+  background: #ffffff;
+  font: 14px/1.68 var(--type-code-font-family);
+  resize: vertical;
+}
+
+.live-editor-block-source:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.live-editor-image-block .markdown-image-card {
+  color: #111827;
+  background: #ffffff;
+}
+
+/* Light-theme readable action buttons inside preview widgets. */
+.live-editor-pane .mermaid-block-toolbar button,
+.live-editor-pane .code-block figcaption button,
+.live-editor-pane .plantuml-card button,
+.live-editor-pane .markdown-image-delete,
+.mermaid-zoom-toolbar button,
+.image-viewer-toolbar button {
+  color: #111827;
+  border: 1px solid #9ca3af;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.live-editor-pane .mermaid-block-toolbar button:hover,
+.live-editor-pane .code-block figcaption button:hover,
+.live-editor-pane .plantuml-card button:hover,
+.live-editor-pane .markdown-image-delete:hover,
+.mermaid-zoom-toolbar button:hover,
+.image-viewer-toolbar button:hover {
+  color: #0f172a;
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.live-editor-pane .mermaid-card,
+.live-editor-pane .plantuml-card {
+  color: #111827;
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.live-editor-pane .mermaid-card figcaption,
+.live-editor-pane .plantuml-card figcaption {
+  color: #111827;
+}
+
+.live-editor-pane .mermaid-render-target,
+.live-editor-pane .plantuml-render-target {
+  color: #111827;
+  border-color: #d1d5db;
+  background: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .live-editor-document,
+  .live-editor-typora-document {
+    padding: 24px 18px 68px;
+    font-size: 14.5px;
+  }
+}
+
+/* Live Preview v6: stable blank-line cursor and non-jumpy focus behavior. */
+.live-editor-typora-blank,
+.live-editor-typora-pending {
+  min-height: 1.78em;
+  position: relative;
+}
+
+.live-editor-typora-blank:empty::before,
+.live-editor-typora-pending:empty::before {
+  content: "\00a0";
+  display: inline-block;
+  min-width: 1px;
+  color: transparent;
+}
+
+.live-editor-typora-blank:focus::before,
+.live-editor-typora-pending:focus::before {
+  color: transparent;
+}
+
+.live-editor-typora-document:focus-visible,
+.live-editor-typora-block:focus-visible,
+.live-editor-code-card code:focus-visible,
+.live-editor-typora-table th:focus-visible,
+.live-editor-typora-table td:focus-visible {
+  outline: none;
+}
+
+.live-editor-image-block {
+  min-height: 28px;
+}
+
+/* Live Preview v7: stabilize blank-line rhythm and invisible focus behavior. */
+.live-editor-typora-row {
+  min-height: 1.78em;
+}
+
+.live-editor-typora-row:has(.live-editor-typora-blank) {
+  height: 1.78em;
+}
+
+.live-editor-typora-blank {
+  height: 1.78em;
+  min-height: 1.78em;
+  margin: 0 auto;
+  line-height: 1.78;
+}
+
+.live-editor-typora-blank:empty::before {
+  content: "\00a0";
+  display: inline-block;
+  width: 1px;
+  color: transparent;
+}
+
+.live-editor-typora-block {
+  scroll-margin: 88px;
+}
+
+
+/* Live Preview v8: editor-like line rhythm and safer hit targets. */
+.live-editor-typora-document {
+  line-height: 1.72;
+}
+
+.live-editor-typora-row {
+  width: min(900px, 100%);
+  min-height: 1.72em;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.live-editor-typora-block {
+  min-height: 1.72em;
+  margin: 0 auto;
+  line-height: 1.72;
+}
+
+p.live-editor-typora-block,
+div.live-editor-typora-block,
+.live-editor-typora-paragraph,
+.live-editor-typora-list,
+.live-editor-typora-blank {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.live-editor-typora-row:has(.live-editor-typora-blank),
+.live-editor-typora-blank {
+  height: 1.72em;
+  min-height: 1.72em;
+  line-height: 1.72;
+}
+
+.live-editor-typora-blank {
+  display: block;
+  width: 100%;
+}
+
+.live-editor-typora-blank:empty::before {
+  content: "\00a0";
+  display: inline-block;
+  width: 1px;
+  color: transparent;
+}
+
+.live-editor-typora-heading {
+  line-height: 1.25;
+}
+
+h1.live-editor-typora-heading,
+h2.live-editor-typora-heading,
+h3.live-editor-typora-heading,
+h4.live-editor-typora-heading,
+h5.live-editor-typora-heading,
+h6.live-editor-typora-heading {
+  margin-top: 0;
+}

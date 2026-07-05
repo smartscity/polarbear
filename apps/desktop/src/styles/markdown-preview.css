@@ -1,0 +1,38 @@
+.markdown-preview {
+  color: #24292f;
+  background: #ffffff;
+}
+
+.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #24292f;
+  margin: 16px 0;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid #d8dee4;
+  padding: 6px 10px;
+}
+
+.markdown-preview th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.markdown-preview pre {
+  background: #f6f8fa;
+  color: #24292f;
+}
+
+.markdown-preview code {
+  color: #24292f;
+  background: #f6f8fa;
+}

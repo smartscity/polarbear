@@ -1,6 +1,6 @@
 # Polarbear Architecture
 
-Polarbear is a local-first Markdown editor built with Rust, Tauri, and TypeScript.
+Polarbear is a local-first Markdown editor built with Rust, Tauri, and TypeScript. It targets macOS and iOS first.
 
 The architecture is designed around a simple rule:
 
@@ -12,13 +12,16 @@ The architecture is designed around a simple rule:
 
 - Provide a calm local-first Markdown writing workspace.
 - Keep Markdown editing, Mermaid rendering, GitHub sync, export, and settings as separate capabilities.
-- Make core behavior testable without a running desktop shell.
+- Make core behavior testable without a running macOS or iOS shell.
 - Keep application state explicit and auditable.
 - Prepare for macOS and iOS first, with room for Windows, Linux, and Android later.
+- Use Tauri v2 with mobile compatibility.
+- Keep UI and command boundaries suitable for desktop and mobile screen sizes.
 
 ## Non-Goals for MVP
 
 - Dynamic third-party plugin execution.
+- Dynamic native library plugin loading.
 - Full Git client replacement.
 - Collaborative editing.
 - Cloud-hosted document storage.
@@ -39,7 +42,12 @@ polarbear/
     desktop/
       package.json
       src/
+      src-tauri/
+        Cargo.toml
+        src/
 ```
+
+`apps/desktop` is the first app shell. `apps/desktop/src-tauri` is the native Tauri app crate that packages the WebView UI and starts the app. The architecture must not assume macOS-only behavior; shared UI, Rust core capabilities, and Tauri command contracts should remain suitable for an iOS target.
 
 ## Module Responsibilities
 
@@ -47,12 +55,38 @@ polarbear/
 |---|---|
 | `polarbear-core` | Domain logic for Markdown, plugins, settings, sync, and secrets |
 | `polarbear-tauri` | Tauri command adapters and application state |
-| `apps/desktop` | React and TypeScript user interface |
+| `apps/desktop` | React and TypeScript user interface plus desktop/mobile app scripts |
+| `apps/desktop/src-tauri` | Native Tauri v2 app shell, bundle configuration, and platform entry point |
 | `markdown` | Markdown document model and parsing abstraction |
 | `plugin` | Plugin metadata, registry, capability filtering |
 | `sync` | GitHub sync request and sync service |
 | `secret` | Token and secret storage abstraction |
 | `settings` | User settings and repository configuration |
+
+## Platform Targets
+
+MVP targets:
+
+- macOS desktop app.
+- iOS app, experimental but structurally supported.
+
+Future targets:
+
+- Windows.
+- Linux.
+- Android.
+
+Platform rules:
+
+- Use Tauri v2 and keep mobile compatibility in every app-shell decision.
+- Keep UI responsive for desktop and mobile screen sizes.
+- Do not rely on macOS-only APIs inside `polarbear-core`.
+- Put platform-specific logic behind traits or adapter modules.
+- Keep GitHub sync on the GitHub REST API so it can run on iOS.
+- Treat local file access as an adapter capability because iOS uses sandboxed document access.
+- Keep Mermaid rendering in the WebView layer so it works on macOS and iOS.
+- Do not use dynamic native library loading for MVP plugins.
+- Keep Tauri commands thin and free of platform-specific business logic.
 
 ## Rust Core
 
@@ -66,11 +100,13 @@ Core modules include:
 - `secret`: `SecretStore` trait and token retrieval behavior.
 - `settings`: user settings and repository configuration.
 
+The core must remain platform-neutral. It should define traits for file access, secret storage, and platform services instead of calling macOS or iOS APIs directly.
+
 Production Rust code should avoid `unwrap()` and `expect()`. Errors should be represented with explicit error types.
 
 ## Tauri Adapter Layer
 
-The Tauri layer adapts desktop and mobile shell events into calls against `polarbear-core`.
+The Tauri layer adapts macOS and iOS shell events into calls against `polarbear-core`.
 
 Tauri commands should:
 
@@ -78,6 +114,7 @@ Tauri commands should:
 - Call core services.
 - Convert core errors into UI-safe responses.
 - Own application state wiring.
+- Delegate platform-specific work to adapter modules.
 
 Tauri commands should not:
 
@@ -85,10 +122,11 @@ Tauri commands should not:
 - Contain GitHub sync business logic.
 - Print secrets or tokens.
 - Bypass the `SecretStore` abstraction.
+- Depend on macOS-only behavior when the command contract should also work on iOS.
 
 ## Frontend Layer
 
-The frontend owns interaction and presentation. It should remain focused on:
+The frontend owns interaction and presentation. It should remain responsive across desktop and mobile layouts, and focused on:
 
 - Markdown editing views.
 - Live preview and preview modes.
@@ -96,7 +134,7 @@ The frontend owns interaction and presentation. It should remain focused on:
 - GitHub settings screens.
 - Plugin management screens.
 
-The first desktop app uses React, TypeScript, Vite, CodeMirror 6, and Mermaid.
+The first app shell uses React, TypeScript, Vite, CodeMirror 6, and Mermaid through Tauri WebView. Mermaid rendering stays in the WebView layer for macOS and iOS compatibility.
 
 ## Plugin Model
 
@@ -117,6 +155,8 @@ Initial plugin capabilities:
 
 The MVP uses built-in plugins and metadata-based plugin management. Dynamic third-party plugin loading should wait until the security model, permission model, and sandbox boundaries are mature.
 
+MVP plugins must not rely on dynamic native library loading because that model is not iOS-friendly. Plugin capabilities should be represented as metadata and Rust/TypeScript extension points that can be compiled into the app.
+
 ## Mermaid Rendering Flow
 
 1. The Markdown preview detects fenced `mermaid` code blocks.
@@ -125,6 +165,8 @@ The MVP uses built-in plugins and metadata-based plugin management. Dynamic thir
 4. The user can open a diagram in a zoomable viewer.
 5. The viewer supports zoom, pan, source copy, and SVG export.
 6. PNG export remains reserved for a future version.
+
+Mermaid rendering should remain in the WebView layer rather than platform-native drawing code, so the same behavior can run on macOS and iOS.
 
 ## GitHub Sync Flow
 
@@ -135,6 +177,18 @@ The MVP uses built-in plugins and metadata-based plugin management. Dynamic thir
 5. Polarbear prepares an update request with a commit message such as `docs: update {file_path}`.
 6. The sync service commits the update back to GitHub.
 7. Errors are returned as structured, UI-safe messages.
+
+The sync flow should avoid shelling out to local Git for MVP because GitHub REST API access is portable to iOS.
+
+## Local File Access
+
+Local-first behavior must account for both desktop file systems and iOS sandbox rules.
+
+- macOS can use file picker and direct document access through Tauri adapters.
+- iOS must use sandbox-aware document access and app-scoped storage.
+- `polarbear-core` should model file operations through traits or service interfaces.
+- Tauri commands adapt platform file access into core document operations.
+- Core Markdown logic should not assume arbitrary absolute paths are always available.
 
 ## Secret Management
 
@@ -147,6 +201,7 @@ Rules:
 - Do not pass token values into frontend logs or analytics.
 - macOS should use Keychain in the future.
 - iOS should use Keychain in the future.
+- `polarbear-core` should depend on `SecretStore`, not Keychain APIs directly.
 - The first MVP may use an in-memory implementation with a clear TODO.
 
 ## Error Handling

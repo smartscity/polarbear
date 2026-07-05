@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "crates/polarbear-core",
-    "crates/polarbear-tauri"
+    "crates/polarbear-tauri",
+    "apps/desktop/src-tauri"
 ]
 resolver = "2"
 

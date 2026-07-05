@@ -43,6 +43,11 @@ It focuses on clean writing, live preview, Mermaid diagrams, plugin-based extens
 
 中文名称：**北极熊**
 
+MVP platform targets:
+
+- macOS desktop app
+- iOS app, experimental but structurally supported from the beginning
+
 ---
 
 ## Why Polarbear?
@@ -62,6 +67,8 @@ It aims to become a local-first writing workspace with:
 
 Write locally. Preview clearly. Sync with GitHub.
 
+Polarbear is not designed as a macOS-only app. The MVP targets macOS and iOS first, using Tauri v2 with mobile compatibility in mind. Platform-specific behavior must stay behind traits or adapter modules so the Rust core remains portable.
+
 ---
 
 ## Features
@@ -75,6 +82,7 @@ Write locally. Preview clearly. Sync with GitHub.
 - Preview-only mode
 - Editor-only mode
 - Unsaved change indicator
+- Local file access designed with desktop permissions and iOS sandbox limitations in mind
 
 ### Mermaid Diagram Support
 
@@ -85,6 +93,7 @@ Write locally. Preview clearly. Sync with GitHub.
 - Copy Mermaid source
 - Export SVG
 - Reserve export PNG capability for future versions
+- Keep Mermaid rendering in the WebView layer for macOS and iOS compatibility
 
 ### GitHub Workflow
 
@@ -92,6 +101,7 @@ Write locally. Preview clearly. Sync with GitHub.
 - Browse Markdown files from a repository
 - Read remote Markdown files
 - Edit and commit changes back to GitHub
+- Sync through the GitHub REST API so the workflow can run on both macOS and iOS
 - Use commit messages such as:
 
 ```text
@@ -118,12 +128,14 @@ Initial plugin capabilities:
 The first version uses built-in plugins and metadata-based plugin management.
 Dynamic third-party plugin loading will be considered after the security model is mature.
 
+The MVP plugin model does not rely on dynamic native library loading because that is not iOS-friendly.
+
 ---
 
 ## Tech Stack
 
 - Rust
-- Tauri v2
+- Tauri v2 with mobile compatibility
 - React
 - TypeScript
 - Vite
@@ -147,9 +159,13 @@ polarbear/
     polarbear-tauri/
   apps/
     desktop/
+      package.json
       src/
       src-tauri/
+        Cargo.toml
 ```
+
+The `apps/desktop` package is the first application shell. Its `src-tauri` crate is the native Tauri app entry point, while shared UI and core architecture must remain suitable for an iOS Tauri target.
 
 ---
 
@@ -159,6 +175,7 @@ Polarbear follows these principles:
 
 - Local-first by default
 - Rust core, TypeScript UI
+- macOS and iOS first
 - Clear module boundaries
 - Plugin-oriented design
 - No business logic inside Tauri commands
@@ -166,8 +183,39 @@ Polarbear follows these principles:
 - Testable core logic
 - Explicit error handling
 - No token leakage in logs
+- Platform-specific logic behind traits or adapter modules
+- No macOS-only APIs inside `polarbear-core`
 - Small, meaningful modules
 - Descriptive naming
+
+---
+
+## Platform Support
+
+Polarbear targets macOS and iOS first.
+
+MVP targets:
+
+- macOS desktop app
+- iOS app, experimental but structurally supported
+
+Future targets:
+
+- Windows
+- Linux
+- Android
+
+Platform rules:
+
+- Use Tauri v2 and keep mobile compatibility in mind.
+- Keep UI responsive across desktop and mobile screen sizes.
+- Do not rely on macOS-only APIs directly inside `polarbear-core`.
+- Put platform-specific behavior behind traits or adapter modules.
+- Keep Tauri commands thin and free of platform-specific business logic.
+- Use GitHub REST API for sync so it can work on iOS.
+- Treat local file access as capability-based because iOS runs inside an app sandbox.
+- Keep Mermaid rendering in the WebView layer.
+- Avoid dynamic native plugin loading for the MVP.
 
 ---
 
@@ -199,7 +247,7 @@ Use explicit error types and return meaningful errors.
 - Rust stable
 - Node.js LTS
 - pnpm or npm
-- Tauri prerequisites for macOS
+- Tauri v2 prerequisites for macOS and iOS
 - Xcode for iOS development
 
 ### Install Dependencies
@@ -210,25 +258,39 @@ npm install
 
 This installs frontend workspace dependencies. Rust dependencies are resolved by Cargo when you run Rust commands.
 
-### Run Frontend Scaffold
+### Run Shared Frontend Scaffold
 
 ```bash
 npm run build
 ```
 
-The current scaffold writes a static desktop preview bundle to:
+The current scaffold writes a static app preview bundle to:
 
 ```text
 apps/desktop/dist/
 ```
 
-### Run Desktop App
+### Run macOS App
 
 ```bash
-npm run tauri dev
+npm run tauri -- dev
 ```
 
-This starts the Tauri desktop app in development mode after the desktop Tauri package is fully wired.
+This starts the Tauri macOS app in development mode after the Tauri package is fully wired.
+
+You can also run the workspace script directly:
+
+```bash
+npm --workspace apps/desktop run tauri:dev
+```
+
+### Run iOS App
+
+```bash
+npm run tauri -- ios dev
+```
+
+This starts the experimental iOS target after Tauri mobile setup is complete and Xcode is configured.
 
 ### Run Rust Binary
 
@@ -256,7 +318,7 @@ The release binary is generated under:
 target/release/
 ```
 
-### Build Desktop Frontend
+### Build Shared Frontend
 
 ```bash
 npm run build
@@ -268,13 +330,13 @@ The frontend bundle is generated under:
 apps/desktop/dist/
 ```
 
-### Package Desktop App
+### Package macOS App
 
 ```bash
-npm run tauri build
+npm run tauri -- build
 ```
 
-This creates native desktop packages through Tauri after the desktop shell is fully wired.
+This creates native macOS packages through Tauri after the app shell is fully wired.
 
 Expected package outputs are generated under the Tauri target directory, commonly:
 
@@ -284,29 +346,31 @@ apps/desktop/src-tauri/target/release/bundle/
 
 For macOS, expected artifacts may include `.app` and `.dmg` packages depending on the Tauri bundler configuration.
 
+### Build iOS App
+
+```bash
+npm run tauri -- ios build
+```
+
+This builds the experimental iOS app after Tauri mobile setup is complete. The iOS target should share Rust core capabilities and WebView UI behavior with the macOS app.
+
 ### Install Locally
 
 For development, run the app directly:
 
 ```bash
-npm run tauri dev
+npm run tauri -- dev
 ```
 
 For local installation on macOS after packaging:
 
-1. Build the app with `npm run tauri build`.
+1. Build the app with `npm run tauri -- build`.
 2. Open the generated `.dmg` or `.app` from the bundle output directory.
 3. Move `Polarbear.app` to `/Applications`.
 
-### Mobile Targets
+### Mobile Notes
 
-Polarbear targets macOS and iOS in the first stage. iOS support requires Tauri mobile setup and Xcode.
-
-Future target platforms:
-
-- Windows
-- Linux
-- Android
+iOS support requires Tauri mobile setup and Xcode. The app must account for iOS sandboxed file access, iOS Keychain-backed secrets, responsive layouts, and WebView-based Mermaid rendering.
 
 ### Run Rust Checks
 
@@ -337,6 +401,7 @@ Security rules:
 - Token access must go through the `SecretStore` abstraction
 - macOS should use Keychain in the future
 - iOS should use Keychain in the future
+- `polarbear-core` should depend on the `SecretStore` trait, not platform keychain APIs directly
 - The first MVP may use an in-memory implementation with a clear TODO
 
 ---
@@ -364,6 +429,8 @@ graph TD
 - Built-in plugin registry
 - GitHub settings page
 - GitHub file read and update skeleton
+- macOS desktop app
+- Experimental iOS app structure
 
 ### Next
 
@@ -390,3 +457,21 @@ graph TD
 
 MIT or Apache-2.0.
 Please keep the license decision explicit before publishing the first release.
+
+npm --workspace apps/desktop run tauri -- dev
+
+npm --workspace apps/desktop run typecheck
+npm --workspace apps/desktop run build
+cargo test --workspace
+cargo build --workspace
+
+
+---
+npm --workspace apps/desktop run tauri -- build --bundles dmg
+
+cd apps/desktop
+npm run tauri -- build --bundles dmg
+
+npm run tauri build -- --bundles dmg
+
+---

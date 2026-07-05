@@ -30,7 +30,10 @@ impl PluginRegistry {
                 PluginMetadata {
                     id: "mermaid-renderer",
                     description: "Renders Mermaid diagrams and enables zoomable diagram viewing.",
-                    capabilities: &[PluginCapability::DiagramRenderer, PluginCapability::Exporter],
+                    capabilities: &[
+                        PluginCapability::DiagramRenderer,
+                        PluginCapability::Exporter,
+                    ],
                 },
                 PluginMetadata {
                     id: "github-sync",

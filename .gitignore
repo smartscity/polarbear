@@ -1,0 +1,238 @@
+```gitignore
+# =========================
+# OS
+# =========================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =========================
+# Editors / IDE
+# =========================
+
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# =========================
+# Rust
+# =========================
+
+/target/
+**/target/
+
+# Keep Cargo.lock for application projects.
+# Do NOT ignore Cargo.lock for Polarbear.
+
+# Rust backup files
+**/*.rs.bk
+
+# =========================
+# Tauri
+# =========================
+
+src-tauri/target/
+apps/desktop/src-tauri/target/
+
+# Tauri generated icons / bundles can be regenerated
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/target/
+
+# Tauri build output
+apps/desktop/src-tauri/target/release/bundle/
+apps/desktop/src-tauri/target/debug/bundle/
+
+# =========================
+# Node / TypeScript / Vite
+# =========================
+
+node_modules/
+**/node_modules/
+
+dist/
+build/
+out/
+.cache/
+.parcel-cache/
+.vite/
+vite.config.*.timestamp-*
+vite.config.*.mts.timestamp-*
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Package manager caches
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# =========================
+# Environment / Secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+*.local
+*.token
+*.secret
+secrets/
+.secret/
+
+# GitHub token or local sync config must not be committed
+github-token.txt
+polarbear.local.toml
+polarbear.local.json
+
+# =========================
+# Logs
+# =========================
+
+logs/
+*.log
+
+# =========================
+# Test / Coverage
+# =========================
+
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+playwright-report/
+
+# =========================
+# macOS / Xcode / iOS
+# =========================
+
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# iOS archives / build products
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcarchive
+
+# Provisioning / certificates
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p12
+
+# =========================
+# CodeGraph / Local AI Index
+# =========================
+
+.codegraph/
+.codex/
+.claude/
+.mcp/
+.ai-cache/
+
+# =========================
+# Temporary Files
+# =========================
+
+tmp/
+temp/
+.tmp/
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# =========================
+# Local Database / App State
+# =========================
+
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+
+# =========================
+# Generated Documentation
+# =========================
+
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+site/
+public/export/
+exports/
+
+# =========================
+# Mermaid / Diagram Exports
+# =========================
+
+*.generated.svg
+*.generated.png
+*.generated.pdf
+
+# =========================
+# Do Not Ignore These
+# =========================
+
+!README.md
+!ARCHITECTURE.md
+!CONTRIBUTING.md
+!LICENSE
+!Cargo.toml
+!Cargo.lock
+!package.json
+!package-lock.json
+!pnpm-lock.yaml
+!yarn.lock
+!.editorconfig
+!.gitignore
+!rustfmt.toml
+!clippy.toml
+```
+
