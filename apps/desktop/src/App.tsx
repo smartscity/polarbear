@@ -142,9 +142,9 @@ function consumeAppZoomPointerEvent(event: Event): void {
 
 function isAppZoomDebugOverlayEnabled(): boolean {
   try {
-    return window.localStorage.getItem("polarbear.liveDebugScroll") === "1";
+    return window.localStorage.getItem("polarbear.liveDebugScroll") !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -154,9 +154,9 @@ function writeAppZoomDebugOverlay(note: string): void {
   }
 
   const overlayId = "polarbear-app-zoom-debug-overlay";
-  let overlay = document.getElementById(overlayId);
+  let overlay = document.getElementById(overlayId) as HTMLDivElement | null;
   if (!overlay) {
-    overlay = document.createElement("pre");
+    overlay = document.createElement("div");
     overlay.id = overlayId;
     overlay.style.position = "fixed";
     overlay.style.right = "12px";
@@ -174,10 +174,34 @@ function writeAppZoomDebugOverlay(note: string): void {
     overlay.style.font = "12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace";
     overlay.style.pointerEvents = "none";
     overlay.style.whiteSpace = "pre-wrap";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.debugCopy = "true";
+    button.textContent = "Copy";
+    button.style.float = "right";
+    button.style.margin = "0 0 8px 12px";
+    button.style.pointerEvents = "auto";
+    button.style.cursor = "pointer";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const text = overlay?.querySelector("pre")?.textContent ?? "";
+      void navigator.clipboard.writeText(text);
+    });
+
+    const pre = document.createElement("pre");
+    pre.style.margin = "0";
+    pre.style.whiteSpace = "pre-wrap";
+    pre.style.font = "inherit";
+    overlay.append(button, pre);
     document.body.appendChild(overlay);
   }
 
-  overlay.textContent = `APP ZOOM DEBUG\n${note}`;
+  const pre = overlay.querySelector("pre");
+  if (pre) {
+    pre.textContent = `APP ZOOM DEBUG\n${note}`;
+  }
 }
 
 function dispatchAppZoomDebug(
@@ -249,6 +273,19 @@ function shouldIgnoreAppZoomEvent(event: Event): boolean {
   return target instanceof Element && Boolean(target.closest(
     ".image-viewer-overlay",
   ));
+}
+
+function resolveScrollableElementFromTarget(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  const scroller =
+    target.closest(".cm-scroller") ??
+    target.closest(".markdown-preview") ??
+    target.closest(".workspace-tree-shell");
+
+  return scroller instanceof HTMLElement ? scroller : null;
 }
 
 function shouldLetEditorHandleWheel(event: WheelEvent): boolean {
@@ -759,6 +796,60 @@ export function App() {
     zoomInnerScrollLocksRef.current.clear();
   }, []);
 
+  const controlledInnerScroll = useCallback((
+    target: EventTarget | null,
+    deltaX: number,
+    deltaY: number,
+  ): boolean => {
+    const element = resolveScrollableElementFromTarget(target);
+    if (!element) {
+      return false;
+    }
+
+    const beforeLeft = element.scrollLeft;
+    const beforeTop = element.scrollTop;
+    element.scrollLeft += deltaX;
+    element.scrollTop += deltaY;
+
+    const moved =
+      Math.abs(element.scrollLeft - beforeLeft) > 0.5 ||
+      Math.abs(element.scrollTop - beforeTop) > 0.5;
+
+    if (moved) {
+      zoomInnerScrollLocksRef.current.set(element, {
+        left: element.scrollLeft,
+        top: element.scrollTop,
+      });
+    }
+
+    return moved;
+  }, []);
+
+  const preserveCurrentInnerScrollPosition = useCallback((target: EventTarget | null): boolean => {
+    const element = resolveScrollableElementFromTarget(target);
+    if (!element) {
+      return false;
+    }
+
+    const left = element.scrollLeft;
+    const top = element.scrollTop;
+    const restore = () => {
+      element.scrollLeft = left;
+      element.scrollTop = top;
+      zoomInnerScrollLocksRef.current.set(element, {
+        left,
+        top,
+      });
+    };
+
+    restore();
+    window.requestAnimationFrame(() => {
+      restore();
+      window.requestAnimationFrame(restore);
+    });
+    return true;
+  }, []);
+
   const lockAppZoomScroll = useCallback(() => {
     zoomScrollLockUntilRef.current = Math.max(
       zoomScrollLockUntilRef.current,
@@ -1194,7 +1285,10 @@ export function App() {
       if (!isZoomWheel) {
         if (appZoomRef.current > NORMAL_APP_ZOOM + 0.0005) {
           captureInnerScrollLocks();
-          panZoomViewport(event.deltaX, event.deltaY);
+          const didPanCanvas = panZoomViewport(event.deltaX, event.deltaY);
+          if (!didPanCanvas) {
+            controlledInnerScroll(event.target, event.deltaX, event.deltaY);
+          }
           restoreInnerScrollLocks();
           consumeAppZoomWheelEvent(event);
           return;
@@ -1293,6 +1387,7 @@ export function App() {
     };
   }, [
     captureInnerScrollLocks,
+    controlledInnerScroll,
     lockAppZoomScroll,
     panZoomViewport,
     restoreInnerScrollLocks,
@@ -1344,7 +1439,6 @@ export function App() {
 
     const isAppCanvasInteractionLocked = () =>
       Date.now() < zoomScrollLockUntilRef.current ||
-      appZoomRef.current > NORMAL_APP_ZOOM + 0.0005 ||
       Boolean(activeZoomAnchorRef.current) ||
       zoomRafRef.current !== 0 ||
       zoomSettleTimerRef.current !== null ||
@@ -1352,6 +1446,14 @@ export function App() {
 
     const handlePointerCapture = (event: Event) => {
       if (!isAppCanvasInteractionLocked()) {
+        const target = event.target;
+        if (
+          appZoomRef.current > NORMAL_APP_ZOOM + 0.0005 &&
+          target instanceof Node &&
+          zoomCanvasRef.current?.contains(target)
+        ) {
+          preserveCurrentInnerScrollPosition(event.target);
+        }
         return;
       }
 
@@ -1390,7 +1492,7 @@ export function App() {
         window.removeEventListener(eventName, handlePointerCapture, { capture: true });
       });
     };
-  }, [restoreInnerScrollLocks]);
+  }, [preserveCurrentInnerScrollPosition, restoreInnerScrollLocks]);
 
   useEffect(() => {
     void refreshRepositoryState();

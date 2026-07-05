@@ -474,4 +474,13 @@ npm run tauri -- build --bundles dmg
 
 npm run tauri build -- --bundles dmg
 
+npm --workspace apps/desktop run tauri -- build
+
+npm --workspace apps/desktop run tauri -- icon ./app-icon.svg
+
+
+
+npm install
+npm --workspace apps/desktop run typecheck
+npm --workspace apps/desktop run tauri -- build --bundles dmg
 ---

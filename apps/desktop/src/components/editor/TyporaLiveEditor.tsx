@@ -213,7 +213,15 @@ function isAppCanvasTransformActive(): boolean {
 
 function isLiveDebugEnabled(): boolean {
   try {
-    return window.localStorage.getItem("polarbear.liveDebug") === "1";
+    return window.localStorage.getItem("polarbear.liveDebug") !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function isLiveDebugPanelEnabled(): boolean {
+  try {
+    return window.localStorage.getItem("polarbear.liveDebugPanel") === "1";
   } catch {
     return false;
   }
@@ -221,9 +229,61 @@ function isLiveDebugEnabled(): boolean {
 
 function isLiveScrollDebugEnabled(): boolean {
   try {
-    return window.localStorage.getItem("polarbear.liveDebugScroll") === "1";
+    return window.localStorage.getItem("polarbear.liveDebugScroll") !== "0";
   } catch {
-    return false;
+    return true;
+  }
+}
+
+function writeLiveDebugOverlay(text: string): void {
+  const overlayId = "polarbear-live-debug-overlay";
+  let overlay = document.getElementById(overlayId) as HTMLDivElement | null;
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = overlayId;
+    overlay.style.position = "fixed";
+    overlay.style.left = "12px";
+    overlay.style.bottom = "12px";
+    overlay.style.zIndex = "2147483646";
+    overlay.style.maxWidth = "760px";
+    overlay.style.maxHeight = "38vh";
+    overlay.style.margin = "0";
+    overlay.style.padding = "10px 12px";
+    overlay.style.overflow = "auto";
+    overlay.style.border = "1px solid rgba(148, 163, 184, 0.45)";
+    overlay.style.borderRadius = "8px";
+    overlay.style.background = "rgba(15, 23, 42, 0.88)";
+    overlay.style.color = "#e5edf8";
+    overlay.style.font = "12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace";
+    overlay.style.pointerEvents = "none";
+    overlay.style.whiteSpace = "pre-wrap";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.debugCopy = "true";
+    button.textContent = "Copy";
+    button.style.float = "right";
+    button.style.margin = "0 0 8px 12px";
+    button.style.pointerEvents = "auto";
+    button.style.cursor = "pointer";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const debugText = overlay?.querySelector("pre")?.textContent ?? "";
+      void navigator.clipboard.writeText(debugText);
+    });
+
+    const pre = document.createElement("pre");
+    pre.style.margin = "0";
+    pre.style.whiteSpace = "pre-wrap";
+    pre.style.font = "inherit";
+    overlay.append(button, pre);
+    document.body.appendChild(overlay);
+  }
+
+  const pre = overlay.querySelector("pre");
+  if (pre) {
+    pre.textContent = text;
   }
 }
 
@@ -631,6 +691,7 @@ export function TyporaLiveEditor({
   const editorViewRef = useRef<EditorView | null>(null);
   const onEditorReadyRef = useRef(onEditorReady);
   const liveDebugEnabled = useMemo(() => isLiveDebugEnabled(), []);
+  const liveDebugPanelEnabled = useMemo(() => isLiveDebugPanelEnabled(), []);
   const [debugState, setDebugState] = useState<LiveDebugState>(() => createInitialLiveDebugState());
 
   useEffect(() => {
@@ -638,26 +699,31 @@ export function TyporaLiveEditor({
   }, [onEditorReady]);
 
   const reportLiveDebug = useCallback((source: string, extra: Partial<LiveDebugState> = {}) => {
-    if (!liveDebugEnabled || isAppCanvasTransformActive()) {
+    if (!liveDebugEnabled) {
       return;
     }
 
     const pane = paneRef.current;
     const view = editorViewRef.current;
-    setDebugState((previous) => collectLiveDebugState(
+    const nextState = collectLiveDebugState(
       pane,
       view,
-      previous.zoom,
-      previous,
+      debugState.zoom,
+      debugState,
       source,
       extra,
-    ));
-  }, [liveDebugEnabled]);
+    );
+    writeLiveDebugOverlay(formatLiveDebugState(nextState));
+    if (liveDebugPanelEnabled && !isAppCanvasTransformActive()) {
+      setDebugState(nextState);
+    }
+  }, [debugState, liveDebugEnabled, liveDebugPanelEnabled]);
 
   const editorExtensions = useMemo(
     () => [
       typoraLiveKeymap(),
       trimSingleLineBreakSelectionExtension,
+      preserveLargeEnterScrollJumpExtension,
       markdownLanguage(),
       search({ top: true }),
       linkClickExtension(),
@@ -966,7 +1032,7 @@ export function TyporaLiveEditor({
           <span>Live Edit</span>
         </div>
       </div>
-      {liveDebugEnabled ? (
+      {liveDebugPanelEnabled ? (
         <div className="typora-live-debug-panel">
           <div className="typora-live-debug-header">
             <strong>Scroll Debug</strong>
@@ -1224,6 +1290,33 @@ function clipDecoratedSelectionBackgroundExtension() {
     scheduleClip(update.view);
   });
 }
+
+const preserveLargeEnterScrollJumpExtension = EditorView.domEventHandlers({
+  keydown(event, view) {
+    if (event.key !== "Enter" || event.defaultPrevented) {
+      return false;
+    }
+
+    const scrollDOM = view.scrollDOM;
+    const scrollTop = scrollDOM.scrollTop;
+    const scrollLeft = scrollDOM.scrollLeft;
+    const restoreIfLargeJump = () => {
+      if (Math.abs(scrollDOM.scrollTop - scrollTop) > 80) {
+        scrollDOM.scrollTop = scrollTop;
+      }
+      if (Math.abs(scrollDOM.scrollLeft - scrollLeft) > 80) {
+        scrollDOM.scrollLeft = scrollLeft;
+      }
+    };
+
+    window.requestAnimationFrame(() => {
+      restoreIfLargeJump();
+      window.requestAnimationFrame(restoreIfLargeJump);
+    });
+
+    return false;
+  },
+});
 
 function clipDecoratedSelectionBackgrounds(view: EditorView) {
   const selectionLayer = view.dom.querySelector(".cm-selectionLayer");
@@ -2864,16 +2957,35 @@ function allowEditorVerticalScroll(element: HTMLElement) {
 }
 
 function scheduleEditorMeasureFromDom(element: HTMLElement) {
-  const requestMeasure = () => {
+  const requestMeasure = (restoreFrames = 1) => {
     const view = EditorView.findFromDOM(element);
-    view?.requestMeasure();
+    if (!view) {
+      return;
+    }
+
+    const scrollDOM = view.scrollDOM;
+    const scrollTop = scrollDOM.scrollTop;
+    const scrollLeft = scrollDOM.scrollLeft;
+    const restoreScroll = () => {
+      scrollDOM.scrollTop = scrollTop;
+      scrollDOM.scrollLeft = scrollLeft;
+    };
+
+    view.requestMeasure();
+    restoreScroll();
+
+    let remainingFrames = restoreFrames;
+    const restoreAfterFrame = () => {
+      restoreScroll();
+      remainingFrames -= 1;
+      if (remainingFrames > 0) {
+        window.requestAnimationFrame(restoreAfterFrame);
+      }
+    };
+    window.requestAnimationFrame(restoreAfterFrame);
   };
 
-  requestMeasure();
-  window.requestAnimationFrame(() => {
-    requestMeasure();
-    window.requestAnimationFrame(requestMeasure);
-  });
+  requestMeasure(2);
 }
 
 function initializeMermaid(): void {
@@ -3942,7 +4054,7 @@ class MermaidPreviewWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
@@ -3960,7 +4072,6 @@ class PlantUmlPreviewWidget extends WidgetType {
     wrapper.className = "cm-typora-diagram-preview cm-typora-plantuml-preview";
     markMarkdownPreviewBlock(wrapper, this.block, "plantuml-block");
     allowEditorVerticalScroll(wrapper);
-    wrapper.addEventListener("dblclick", () => revealSource(wrapper, this.block));
 
     const toolbar = document.createElement("div");
     toolbar.className = "cm-typora-diagram-toolbar";
@@ -3999,7 +4110,7 @@ class PlantUmlPreviewWidget extends WidgetType {
   }
 
   ignoreEvent(): boolean {
-    return false;
+    return true;
   }
 }
 
