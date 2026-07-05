@@ -213,9 +213,9 @@ function isAppCanvasTransformActive(): boolean {
 
 function isLiveDebugEnabled(): boolean {
   try {
-    return window.localStorage.getItem("polarbear.liveDebug") !== "0";
+    return window.localStorage.getItem("polarbear.liveDebug") === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 

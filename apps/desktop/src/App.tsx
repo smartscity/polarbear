@@ -134,6 +134,12 @@ function consumeAppZoomWheelEvent(event: WheelEvent): void {
   event.stopImmediatePropagation();
 }
 
+function consumeAppZoomPointerEvent(event: Event): void {
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+}
+
 function isAppZoomDebugOverlayEnabled(): boolean {
   try {
     return window.localStorage.getItem("polarbear.liveDebugScroll") === "1";
@@ -218,6 +224,20 @@ function setAppCanvasZoomDataset(zoom: number): void {
   document.documentElement.dataset.appCanvasZoom = Number.isFinite(zoom)
     ? zoom.toFixed(6)
     : "1.000000";
+}
+
+function setAppCanvasZoomingDataset(isZooming: boolean): void {
+  if (isZooming) {
+    document.documentElement.dataset.appCanvasZooming = "true";
+    return;
+  }
+
+  delete document.documentElement.dataset.appCanvasZooming;
+}
+
+function syncAppCanvasZoomDataset(zoom: number, forceZooming = false): void {
+  setAppCanvasZoomDataset(zoom);
+  setAppCanvasZoomingDataset(forceZooming || zoom > NORMAL_APP_ZOOM + 0.0005);
 }
 
 function shouldIgnoreAppZoomEvent(event: Event): boolean {
@@ -428,7 +448,7 @@ export function App() {
   const commitZoom = useCallback((nextZoom: number) => {
     const zoom = clampCommittedZoom(nextZoom);
     appZoomRef.current = zoom;
-    setAppCanvasZoomDataset(zoom);
+    syncAppCanvasZoomDataset(zoom);
   }, []);
 
   const clampCanvasTranslate = useCallback((
@@ -476,7 +496,7 @@ export function App() {
       x: nextTranslate.x,
       y: nextTranslate.y,
     };
-    setAppCanvasZoomDataset(scale);
+    syncAppCanvasZoomDataset(scale, allowElasticZoom);
 
     if (!allowElasticZoom) {
       appZoomInteractionSurfacePreparedRef.current = false;
@@ -764,6 +784,7 @@ export function App() {
         restoreInnerScrollLocks();
         releaseInnerScrollLocks();
       } else {
+        setAppCanvasZoomingDataset(true);
         restoreInnerScrollLocks();
       }
       dispatchAppZoomDebug("unlock", {
@@ -781,10 +802,10 @@ export function App() {
         zoom: appZoomRef.current,
       });
       if (isAtNormalZoom) {
-        delete document.documentElement.dataset.appCanvasZooming;
+        setAppCanvasZoomingDataset(false);
         window.dispatchEvent(new CustomEvent("polarbear-app-canvas-zoom-settled"));
       } else {
-        document.documentElement.dataset.appCanvasZooming = "true";
+        setAppCanvasZoomingDataset(true);
       }
     }, APP_ZOOM_SCROLL_LOCK_MS + 40);
   }, [
@@ -1099,7 +1120,7 @@ export function App() {
         window.cancelAnimationFrame(zoomSnapAnimationRef.current);
       }
 
-      delete document.documentElement.dataset.appCanvasZooming;
+      setAppCanvasZoomingDataset(false);
     };
   }, []);
 
@@ -1317,6 +1338,61 @@ export function App() {
   }, [restoreInnerScrollLocks]);
 
   useEffect(() => {
+    if (!APP_CANVAS_ZOOM_ENABLED) {
+      return undefined;
+    }
+
+    const isAppCanvasInteractionLocked = () =>
+      Date.now() < zoomScrollLockUntilRef.current ||
+      appZoomRef.current > NORMAL_APP_ZOOM + 0.0005 ||
+      Boolean(activeZoomAnchorRef.current) ||
+      zoomRafRef.current !== 0 ||
+      zoomSettleTimerRef.current !== null ||
+      zoomSnapAnimationRef.current !== 0;
+
+    const handlePointerCapture = (event: Event) => {
+      if (!isAppCanvasInteractionLocked()) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (!zoomCanvasRef.current?.contains(target)) {
+        return;
+      }
+
+      restoreInnerScrollLocks();
+      consumeAppZoomPointerEvent(event);
+    };
+
+    const eventNames = [
+      "pointerdown",
+      "pointerup",
+      "mousedown",
+      "mouseup",
+      "click",
+      "dblclick",
+      "contextmenu",
+    ] as const;
+
+    eventNames.forEach((eventName) => {
+      window.addEventListener(eventName, handlePointerCapture, {
+        capture: true,
+        passive: false,
+      });
+    });
+
+    return () => {
+      eventNames.forEach((eventName) => {
+        window.removeEventListener(eventName, handlePointerCapture, { capture: true });
+      });
+    };
+  }, [restoreInnerScrollLocks]);
+
+  useEffect(() => {
     void refreshRepositoryState();
   }, [workspaceRoot]);
 
@@ -1364,13 +1440,13 @@ export function App() {
     }
 
     if (zoom > NORMAL_APP_ZOOM + 0.0005) {
-      document.documentElement.dataset.appCanvasZooming = "true";
+      setAppCanvasZoomingDataset(true);
       captureInnerScrollLocks();
       restoreInnerScrollLocks();
     } else {
       restoreInnerScrollLocks();
       releaseInnerScrollLocks();
-      delete document.documentElement.dataset.appCanvasZooming;
+      setAppCanvasZoomingDataset(false);
     }
 
     setStatusMessage(`App zoom ${Math.round(zoom * 100)}%.`);
