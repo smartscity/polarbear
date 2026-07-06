@@ -298,6 +298,23 @@ function shouldIgnoreAppZoomEditorPointerTarget(target: EventTarget | null): boo
   ));
 }
 
+type AppZoomPointerLikeEvent = Event & {
+  button?: number;
+  clientX: number;
+  clientY: number;
+  shiftKey?: boolean;
+};
+
+function isAppZoomPointerLikeEvent(event: Event): event is AppZoomPointerLikeEvent {
+  const pointer = event as Partial<AppZoomPointerLikeEvent>;
+  return (
+    typeof pointer.clientX === "number" &&
+    Number.isFinite(pointer.clientX) &&
+    typeof pointer.clientY === "number" &&
+    Number.isFinite(pointer.clientY)
+  );
+}
+
 function shouldLetEditorHandleWheel(event: WheelEvent): boolean {
   if (isAppZoomWheelEvent(event)) {
     return false;
@@ -357,6 +374,25 @@ type ZoomAnchor = {
 type InnerScrollLock = {
   left: number;
   top: number;
+};
+
+type AppZoomCursorPlacementDebug = {
+  adjustedClientX: number;
+  adjustedClientY: number;
+  afterDispatchScrollLeft: number;
+  afterDispatchScrollTop: number;
+  beforeScrollLeft: number;
+  beforeScrollTop: number;
+  cursorPos: number;
+  eventType: string;
+  rawClientX: number;
+  rawClientY: number;
+  transformScale: number;
+  transformX: number;
+  transformY: number;
+  viewportLeft: number | null;
+  viewportTop: number | null;
+  when: number;
 };
 
 function readAppCanvasSize(): AppCanvasSize {
@@ -435,6 +471,8 @@ export function App() {
   const zoomScrollLockUntilRef = useRef(0);
   const zoomInnerScrollLocksRef = useRef<Map<HTMLElement, InnerScrollLock>>(new Map());
   const lastInnerScrollRestoreDebugAtRef = useRef(0);
+  const lastAppZoomCursorPlacementAtRef = useRef(0);
+  const lastAppZoomCursorPlacementDebugRef = useRef<AppZoomCursorPlacementDebug | null>(null);
   const zoomSettleTimerRef = useRef<number | null>(null);
   const zoomSnapAnimationRef = useRef(0);
   const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
@@ -790,6 +828,23 @@ export function App() {
         canvasSize: zoomCanvasSizeRef.current,
         extra: {
           innerLocks: locks.size,
+          lastCursorAgeMs: lastAppZoomCursorPlacementDebugRef.current
+            ? Math.round(now - lastAppZoomCursorPlacementDebugRef.current.when)
+            : "n/a",
+          lastCursorEvent: lastAppZoomCursorPlacementDebugRef.current?.eventType ?? "n/a",
+          lastCursorPos: lastAppZoomCursorPlacementDebugRef.current?.cursorPos ?? "n/a",
+          lastCursorRaw: lastAppZoomCursorPlacementDebugRef.current
+            ? `${Math.round(lastAppZoomCursorPlacementDebugRef.current.rawClientX)},${Math.round(lastAppZoomCursorPlacementDebugRef.current.rawClientY)}`
+            : "n/a",
+          lastCursorAdjusted: lastAppZoomCursorPlacementDebugRef.current
+            ? `${Math.round(lastAppZoomCursorPlacementDebugRef.current.adjustedClientX)},${Math.round(lastAppZoomCursorPlacementDebugRef.current.adjustedClientY)}`
+            : "n/a",
+          lastCursorScrollBefore: lastAppZoomCursorPlacementDebugRef.current
+            ? `${Math.round(lastAppZoomCursorPlacementDebugRef.current.beforeScrollLeft)},${Math.round(lastAppZoomCursorPlacementDebugRef.current.beforeScrollTop)}`
+            : "n/a",
+          lastCursorScrollAfterDispatch: lastAppZoomCursorPlacementDebugRef.current
+            ? `${Math.round(lastAppZoomCursorPlacementDebugRef.current.afterDispatchScrollLeft)},${Math.round(lastAppZoomCursorPlacementDebugRef.current.afterDispatchScrollTop)}`
+            : "n/a",
           liveAfter,
           liveBefore,
           restoredCount,
@@ -860,8 +915,9 @@ export function App() {
     return true;
   }, []);
 
-  const placeEditorCursorDuringAppZoom = useCallback((event: MouseEvent): boolean => {
-    if (event.button !== 0 || shouldIgnoreAppZoomEditorPointerTarget(event.target)) {
+  const placeEditorCursorDuringAppZoom = useCallback((event: AppZoomPointerLikeEvent): boolean => {
+    const button = typeof event.button === "number" ? event.button : 0;
+    if (button !== 0 || shouldIgnoreAppZoomEditorPointerTarget(event.target)) {
       return false;
     }
 
@@ -878,9 +934,20 @@ export function App() {
     const scrollDOM = editorView.scrollDOM;
     const scrollTop = scrollDOM.scrollTop;
     const scrollLeft = scrollDOM.scrollLeft;
+    const viewportRect = zoomViewportRef.current?.getBoundingClientRect() ?? null;
+    const transform = appCanvasTransformRef.current;
+    const safeScale = Number.isFinite(transform.scale) && transform.scale > 0
+      ? transform.scale
+      : NORMAL_APP_ZOOM;
+    const adjustedClientX = viewportRect
+      ? viewportRect.left + ((event.clientX - viewportRect.left - transform.x) / safeScale)
+      : event.clientX;
+    const adjustedClientY = viewportRect
+      ? viewportRect.top + ((event.clientY - viewportRect.top - transform.y) / safeScale)
+      : event.clientY;
     const pos = editorView.posAtCoords({
-      x: event.clientX,
-      y: event.clientY,
+      x: adjustedClientX,
+      y: adjustedClientY,
     });
 
     if (pos === null) {
@@ -890,6 +957,10 @@ export function App() {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+    zoomScrollLockUntilRef.current = Math.max(
+      zoomScrollLockUntilRef.current,
+      Date.now() + 180,
+    );
 
     const currentSelection = editorView.state.selection.main;
     editorView.dispatch({
@@ -903,7 +974,27 @@ export function App() {
           },
       scrollIntoView: false,
     });
-    editorView.focus();
+    lastAppZoomCursorPlacementAtRef.current = Date.now();
+    const afterDispatchScrollTop = scrollDOM.scrollTop;
+    const afterDispatchScrollLeft = scrollDOM.scrollLeft;
+    lastAppZoomCursorPlacementDebugRef.current = {
+      adjustedClientX,
+      adjustedClientY,
+      afterDispatchScrollLeft,
+      afterDispatchScrollTop,
+      beforeScrollLeft: scrollLeft,
+      beforeScrollTop: scrollTop,
+      cursorPos: pos,
+      eventType: event.type,
+      rawClientX: event.clientX,
+      rawClientY: event.clientY,
+      transformScale: transform.scale,
+      transformX: transform.x,
+      transformY: transform.y,
+      viewportLeft: viewportRect?.left ?? null,
+      viewportTop: viewportRect?.top ?? null,
+      when: lastAppZoomCursorPlacementAtRef.current,
+    };
 
     const restoreScroll = () => {
       scrollDOM.scrollTop = scrollTop;
@@ -917,6 +1008,30 @@ export function App() {
     window.requestAnimationFrame(() => {
       restoreScroll();
       window.requestAnimationFrame(restoreScroll);
+    });
+    window.setTimeout(restoreScroll, 0);
+    dispatchAppZoomDebug("cursor-place", {
+      canvas: zoomCanvasRef.current,
+      canvasSize: zoomCanvasSizeRef.current,
+      extra: {
+        afterDispatchScrollLeft: Math.round(afterDispatchScrollLeft),
+        afterDispatchScrollTop: Math.round(afterDispatchScrollTop),
+        beforeScrollLeft: Math.round(scrollLeft),
+        beforeScrollTop: Math.round(scrollTop),
+        cursorPos: pos,
+        rawClientX: Math.round(event.clientX),
+        rawClientY: Math.round(event.clientY),
+        adjustedClientX: Math.round(adjustedClientX),
+        adjustedClientY: Math.round(adjustedClientY),
+        transformScale: transform.scale.toFixed(4),
+        transformX: Math.round(transform.x),
+        transformY: Math.round(transform.y),
+        viewportLeft: viewportRect ? Math.round(viewportRect.left) : "n/a",
+        viewportTop: viewportRect ? Math.round(viewportRect.top) : "n/a",
+      },
+      prepared: appZoomInteractionSurfacePreparedRef.current,
+      viewport: zoomViewportRef.current,
+      zoom: appZoomRef.current,
     });
 
     return true;
@@ -1519,14 +1634,40 @@ export function App() {
     const handlePointerCapture = (event: Event) => {
       if (!isAppCanvasInteractionLocked()) {
         if (appZoomRef.current > NORMAL_APP_ZOOM + 0.0005) {
-          if (event instanceof MouseEvent && event.type === "mousedown") {
+          if (
+            isAppZoomPointerLikeEvent(event) &&
+            event.type === "mousedown" &&
+            Date.now() - lastAppZoomCursorPlacementAtRef.current < 120 &&
+            event.target instanceof Node &&
+            editorViewRef.current &&
+            (editorViewRef.current as unknown as EditorView).dom.contains(event.target)
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            return;
+          }
+
+          if (
+            isAppZoomPointerLikeEvent(event) &&
+            (event.type === "pointerdown" || event.type === "mousedown")
+          ) {
             if (placeEditorCursorDuringAppZoom(event)) {
+              return;
+            }
+            if (
+              event.target instanceof Node &&
+              editorViewRef.current &&
+              (editorViewRef.current as unknown as EditorView).dom.contains(event.target)
+            ) {
+              preserveCurrentInnerScrollPosition(event.target);
+              consumeAppZoomPointerEvent(event);
               return;
             }
           }
 
           if (
-            event instanceof MouseEvent &&
+            isAppZoomPointerLikeEvent(event) &&
             (event.type === "mouseup" || event.type === "click" || event.type === "dblclick") &&
             event.target instanceof Node &&
             editorViewRef.current &&

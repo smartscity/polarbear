@@ -129,6 +129,7 @@ body,
   font-family: inherit;
   overflow-x: auto;
   overflow-y: auto !important;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   touch-action: pan-x pan-y;
 }
@@ -138,6 +139,7 @@ body,
   min-width: var(--typora-live-content-width);
   max-width: none;
   min-height: 100%;
+  overflow-anchor: none;
   box-sizing: content-box;
   margin: 0 auto;
   padding: var(--typora-live-content-padding-top) var(--typora-live-content-padding-x) var(--typora-live-content-padding-bottom);
