@@ -288,6 +288,16 @@ function resolveScrollableElementFromTarget(target: EventTarget | null): HTMLEle
   return scroller instanceof HTMLElement ? scroller : null;
 }
 
+function shouldIgnoreAppZoomEditorPointerTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return true;
+  }
+
+  return Boolean(target.closest(
+    "button, input, select, textarea, [contenteditable='true'], .cm-typora-diagram-preview, .cm-typora-table-preview, .cm-typora-image-preview",
+  ));
+}
+
 function shouldLetEditorHandleWheel(event: WheelEvent): boolean {
   if (isAppZoomWheelEvent(event)) {
     return false;
@@ -847,6 +857,68 @@ export function App() {
       restore();
       window.requestAnimationFrame(restore);
     });
+    return true;
+  }, []);
+
+  const placeEditorCursorDuringAppZoom = useCallback((event: MouseEvent): boolean => {
+    if (event.button !== 0 || shouldIgnoreAppZoomEditorPointerTarget(event.target)) {
+      return false;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Node) || !zoomCanvasRef.current?.contains(target)) {
+      return false;
+    }
+
+    const editorView = editorViewRef.current as unknown as EditorView | null;
+    if (!editorView?.dom.contains(target)) {
+      return false;
+    }
+
+    const scrollDOM = editorView.scrollDOM;
+    const scrollTop = scrollDOM.scrollTop;
+    const scrollLeft = scrollDOM.scrollLeft;
+    const pos = editorView.posAtCoords({
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    if (pos === null) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const currentSelection = editorView.state.selection.main;
+    editorView.dispatch({
+      selection: event.shiftKey
+        ? {
+            anchor: currentSelection.from,
+            head: pos,
+          }
+        : {
+            anchor: pos,
+          },
+      scrollIntoView: false,
+    });
+    editorView.focus();
+
+    const restoreScroll = () => {
+      scrollDOM.scrollTop = scrollTop;
+      scrollDOM.scrollLeft = scrollLeft;
+      zoomInnerScrollLocksRef.current.set(scrollDOM, {
+        left: scrollLeft,
+        top: scrollTop,
+      });
+    };
+    restoreScroll();
+    window.requestAnimationFrame(() => {
+      restoreScroll();
+      window.requestAnimationFrame(restoreScroll);
+    });
+
     return true;
   }, []);
 
@@ -1446,13 +1518,33 @@ export function App() {
 
     const handlePointerCapture = (event: Event) => {
       if (!isAppCanvasInteractionLocked()) {
-        const target = event.target;
-        if (
-          appZoomRef.current > NORMAL_APP_ZOOM + 0.0005 &&
-          target instanceof Node &&
-          zoomCanvasRef.current?.contains(target)
-        ) {
-          preserveCurrentInnerScrollPosition(event.target);
+        if (appZoomRef.current > NORMAL_APP_ZOOM + 0.0005) {
+          if (event instanceof MouseEvent && event.type === "mousedown") {
+            if (placeEditorCursorDuringAppZoom(event)) {
+              return;
+            }
+          }
+
+          if (
+            event instanceof MouseEvent &&
+            (event.type === "mouseup" || event.type === "click" || event.type === "dblclick") &&
+            event.target instanceof Node &&
+            editorViewRef.current &&
+            (editorViewRef.current as unknown as EditorView).dom.contains(event.target)
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            return;
+          }
+
+          const target = event.target;
+          if (
+            target instanceof Node &&
+            zoomCanvasRef.current?.contains(target)
+          ) {
+            preserveCurrentInnerScrollPosition(event.target);
+          }
         }
         return;
       }
@@ -1492,7 +1584,7 @@ export function App() {
         window.removeEventListener(eventName, handlePointerCapture, { capture: true });
       });
     };
-  }, [preserveCurrentInnerScrollPosition, restoreInnerScrollLocks]);
+  }, [placeEditorCursorDuringAppZoom, preserveCurrentInnerScrollPosition, restoreInnerScrollLocks]);
 
   useEffect(() => {
     void refreshRepositoryState();
