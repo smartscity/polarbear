@@ -14,6 +14,16 @@ export function useAppShortcuts(executeCommand: ExecuteAppCommand): void {
       }
 
       const key = event.key.toLowerCase();
+      if (!event.shiftKey && /^[0-9]$/.test(key)) {
+        event.preventDefault();
+        const tabIndex = key === "0" ? 9 : Number(key) - 1;
+        executeCommand("window.selectTab", {
+          commandSource: "shortcut",
+          tabIndex,
+        });
+        return;
+      }
+
       const shortcut = shortcuts.find((candidate) => {
         if (candidate.command === "view.zoomIn" && (key === "+" || key === "=")) {
           return true;

@@ -1,4 +1,5 @@
 export type AppCommand =
+  | "app.about"
   | "file.newFile"
   | "file.newFolder"
   | "file.openFile"
@@ -62,13 +63,15 @@ export type AppCommand =
   | "repository.syncNow"
   | "repository.viewSyncStatus"
   | "theme.light"
-  | "theme.dark";
+  | "theme.dark"
+  | "window.selectTab";
 
 export type AppCommandPayload = {
   commandSource?: "menu" | "shortcut";
   sourcePath?: string;
   targetParentPath?: string | null;
   targetPath?: string;
+  tabIndex?: number;
   workspaceCreate?: boolean;
 };
 
