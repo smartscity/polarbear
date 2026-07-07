@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-macos:
-    name: Build macOS Universal DMG
+    name: Build macOS DMG
     runs-on: macos-latest
 
     steps:
@@ -41,49 +41,71 @@ jobs:
 
       - name: Typecheck
         run: npm --workspace apps/desktop run typecheck
+
       - name: Sync Tauri version from tag
         run: |
-          VERSION="${GITHUB_REF_NAME#app-v}"
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$TAG" ]; then
+            echo "Invalid tag: $TAG"
+            echo "Expected tag format: v0.1.7"
+            exit 1
+          fi
+
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+
+          export APP_VERSION="$VERSION"
 
           node <<'NODE'
           const fs = require('fs');
 
           const version = process.env.APP_VERSION;
 
-          const tauriConfigPath = 'apps/desktop/src-tauri/tauri.conf.json';
-          const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8'));
-          tauriConfig.version = version;
-          fs.writeFileSync(tauriConfigPath, JSON.stringify(tauriConfig, null, 2) + '\n');
-
-          const packageJsonPath = 'apps/desktop/package.json';
-          if (fs.existsSync(packageJsonPath)) {
-            const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-            pkg.version = version;
-            fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+          if (!version) {
+            console.error('APP_VERSION is empty');
+            process.exit(1);
           }
 
-          console.log(`Synced Polarbear version to ${version}`);
+          const jsonFiles = [
+            'apps/desktop/src-tauri/tauri.conf.json',
+            'apps/desktop/package.json',
+            'package.json'
+          ];
+
+          for (const file of jsonFiles) {
+            if (!fs.existsSync(file)) continue;
+
+            const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+            json.version = version;
+            fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
+
+            console.log(`Updated ${file} -> ${version}`);
+          }
           NODE
 
-      - name: Build macOS Universal DMG
+      - name: Verify version before build
+        run: |
+          echo "APP_VERSION=$APP_VERSION"
+          echo "RELEASE_TAG=$RELEASE_TAG"
+
+          echo "---- tauri.conf.json ----"
+          grep -n '"version"' apps/desktop/src-tauri/tauri.conf.json || true
+
+          echo "---- apps/desktop/package.json ----"
+          grep -n '"version"' apps/desktop/package.json || true
+
+          echo "---- root package.json ----"
+          grep -n '"version"' package.json || true
+
+      - name: Build macOS DMG
         run: |
           cd apps/desktop
           npx tauri build --target universal-apple-darwin --bundles dmg
 
-      - name: Show bundle files
+      - name: Locate and rename DMG
         run: |
-          echo "DMG files:"
-          find . -type f -path "*/bundle/dmg/*.dmg" -print
-
-          echo "macOS app bundles:"
-          find . -type d -path "*/bundle/macos/*.app" -print
-
-      - name: Upload DMG to GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${GITHUB_REF_NAME}"
           DMG_FILE=$(find . -type f -path "*/bundle/dmg/*.dmg" | head -n 1)
 
           if [ -z "$DMG_FILE" ]; then
@@ -92,12 +114,36 @@ jobs:
             exit 1
           fi
 
+          echo "Original DMG: $DMG_FILE"
+
+          RENAMED_DMG="Polarbear_${APP_VERSION}.dmg"
+          cp "$DMG_FILE" "$RENAMED_DMG"
+
+          echo "DMG_FILE=$RENAMED_DMG" >> "$GITHUB_ENV"
+
+          echo "Renamed DMG:"
+          ls -la "$RENAMED_DMG"
+
+      - name: Show bundle files
+        run: |
+          echo "DMG files:"
+          find . -type f -name "*.dmg" -print
+
+          echo "macOS app bundles:"
+          find . -type d -path "*/bundle/macos/*.app" -print
+
+      - name: Upload DMG to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${RELEASE_TAG}"
+
           echo "Uploading $DMG_FILE to release $TAG"
 
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" \
-              --title "Polarbear ${TAG#app-v}" \
-              --notes "Polarbear macOS Universal DMG release." \
+              --title "Polarbear ${APP_VERSION}" \
+              --notes "Polarbear macOS DMG release." \
               --draft
 
           gh release upload "$TAG" "$DMG_FILE" --clobber
