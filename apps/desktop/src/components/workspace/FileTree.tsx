@@ -50,6 +50,7 @@ export function FileTree({
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const autoExpandTimerRef = useRef<number | null>(null);
   const draggedPathRef = useRef("");
+  const treeShellRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (collapseVersion > 0) {
@@ -68,6 +69,27 @@ export function FileTree({
       return nextFolderIds;
     });
   }, [folderRevealRequest]);
+
+  useEffect(() => {
+    const selectedId = selectedTreeItemId || activeFileId;
+    if (!selectedId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const shell = treeShellRef.current;
+      const selectedItem = Array.from(
+        shell?.querySelectorAll<HTMLElement>("[data-tree-item-id]") ?? [],
+      ).find((itemElement) => itemElement.dataset.treeItemId === selectedId);
+
+      selectedItem?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeFileId, selectedTreeItemId]);
 
   useEffect(() => {
     function closeContextMenu(event: PointerEvent) {
@@ -204,6 +226,7 @@ export function FileTree({
 
   return (
     <div
+      ref={treeShellRef}
       className={`workspace-tree-shell ${dropTargetId === "" ? "drop-target" : ""}`}
       onContextMenu={(event) =>
         openContextMenu(event, {
@@ -266,6 +289,7 @@ export function FileTree({
             <>
               <button
                 type="button"
+                data-tree-item-id={item.id}
                 className={`tree-item folder-item ${isSelected ? "selected" : ""} ${
                   dropTargetId === item.id ? "drop-target" : ""
                 }`}
@@ -359,7 +383,8 @@ export function FileTree({
                   })
                 }
               >
-                <span aria-hidden="true">{isCollapsed ? "▸" : "▾"}</span>
+                <span className="tree-caret" aria-hidden="true">{isCollapsed ? "▸" : "▾"}</span>
+                <FolderTreeIcon />
                 {isRenaming ? (
                   <RenameInput
                     item={item}
@@ -367,7 +392,7 @@ export function FileTree({
                     onConfirm={onRenameConfirm}
                   />
                 ) : (
-                  <span>{item.name}</span>
+                  <span className="tree-item-name">{item.name}</span>
                 )}
               </button>
               {!isCollapsed && item.children ? (
@@ -377,6 +402,7 @@ export function FileTree({
           ) : (
             <button
               type="button"
+              data-tree-item-id={item.id}
               className={`tree-item file-item ${
                 item.id === activeFileId || isSelected ? "selected" : ""
               }`}
@@ -417,7 +443,7 @@ export function FileTree({
                 })
               }
             >
-              <span aria-hidden="true">#</span>
+              <FileTreeIcon />
               {isRenaming ? (
                 <RenameInput
                   item={item}
@@ -426,7 +452,7 @@ export function FileTree({
                 />
               ) : (
                 <>
-                  <span>{item.name}</span>
+                  <span className="tree-item-name">{item.name}</span>
                   {dirtyFileIds.has(item.id) ? (
                     <span className="dirty-dot" aria-label="Unsaved changes">
                       •
@@ -440,6 +466,49 @@ export function FileTree({
       );
     });
   }
+}
+
+function FolderTreeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="tree-icon tree-svg-icon tree-folder-icon"
+      viewBox="0 0 20 16"
+    >
+      <path d="M1.75 2.5A1.75 1.75 0 0 1 3.5.75h4.2c.48 0 .93.2 1.25.56l1.2 1.34h6.35A1.75 1.75 0 0 1 18.25 4.4v8.1a2.75 2.75 0 0 1-2.75 2.75h-12A2.75 2.75 0 0 1 .75 12.5V3.5c0-.55.45-1 1-1Z" />
+    </svg>
+  );
+}
+
+function FileTreeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="tree-icon tree-svg-icon tree-file-icon"
+      viewBox="0 0 18 22"
+    >
+      <path
+        d="M3.5 1.75h7.25L16.25 7v11.5a1.75 1.75 0 0 1-1.75 1.75h-11A1.75 1.75 0 0 1 1.75 18.5v-15A1.75 1.75 0 0 1 3.5 1.75Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M10.5 2.25V7.5H16"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M5 11h8M5 14.5h8M5 18h5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.35"
+      />
+    </svg>
+  );
 }
 
 type RenameInputProps = {

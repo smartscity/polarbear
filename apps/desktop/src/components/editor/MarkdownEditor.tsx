@@ -28,7 +28,6 @@ type DroppedFile = File & {
 };
 
 type MarkdownEditorProps = {
-  activeFileName: string;
   markdownContent: string;
   onImageDrop: (filePaths: string[]) => void;
   onImagePaste: (items: DataTransferItemList) => void;
@@ -37,7 +36,6 @@ type MarkdownEditorProps = {
 };
 
 export function MarkdownEditor({
-  activeFileName,
   markdownContent,
   onImageDrop,
   onImagePaste,
@@ -74,10 +72,6 @@ export function MarkdownEditor({
         }
       }}
     >
-      <div className="pane-title">
-        <span>Markdown Editor</span>
-        <span>{activeFileName}</span>
-      </div>
       <CodeMirror
         value={markdownContent}
         height="100%"

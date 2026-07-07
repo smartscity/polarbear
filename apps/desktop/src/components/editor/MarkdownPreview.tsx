@@ -7,14 +7,12 @@ import { splitMarkdownIntoSegments } from "../../markdown/splitMarkdownIntoSegme
 
 type MarkdownPreviewProps = {
   activeFileId: string;
-  activeFileName: string;
   markdownContent: string;
   workspaceRoot: string;
 };
 
 export function MarkdownPreview({
   activeFileId,
-  activeFileName,
   markdownContent,
   workspaceRoot
 }: MarkdownPreviewProps) {
@@ -79,10 +77,6 @@ export function MarkdownPreview({
 
   return (
     <section className="preview-pane">
-      <div className="pane-title">
-        <span>Preview</span>
-        <span>{activeFileName}</span>
-      </div>
       <article
         className="markdown-preview"
         data-editor-document-host="true"

@@ -26,7 +26,6 @@ export function Sidebar({
   dirtyFileIds,
   folderRevealRequest,
   sidebarOpen,
-  statusMessage,
   workspaceRoot,
   workspaceItems,
   executeCommand,
@@ -37,19 +36,11 @@ export function Sidebar({
   onSelectFile,
   onSelectTreeItem
 }: SidebarProps) {
-  const workspaceName = workspaceRoot
-    ? workspaceRoot.split(/[\\/]/).filter(Boolean).at(-1) ?? "Workspace"
-    : "No Workspace";
-
   return (
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
       <div className="sidebar-header">
-        <div>
-          <strong>{workspaceName}</strong>
-          <span>{workspaceRoot ? "File Tree" : "Open a folder to start"}</span>
-        </div>
+        <strong>{workspaceRoot ? "FILES" : "OPEN A FOLDER"}</strong>
       </div>
-      {statusMessage ? <p className="workspace-status">{statusMessage}</p> : null}
       <FileTree
         activeFileId={activeFileId}
         collapseVersion={collapseVersion}
@@ -66,7 +57,7 @@ export function Sidebar({
       />
       <div className="sidebar-bottom">
         <span className="workspace-path" title={workspaceRoot}>
-          {workspaceRoot || "No folder selected"}
+          {workspaceRoot || ""}
         </span>
       </div>
     </aside>

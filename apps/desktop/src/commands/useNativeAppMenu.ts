@@ -26,7 +26,13 @@ export function useNativeAppMenu(
             {
               id: "app",
               text: "Polarbear",
-              items: []
+              items: [
+                {
+                  id: "app.about",
+                  text: "About Polarbear",
+                  action: () => executeCommand("app.about")
+                }
+              ]
             },
             {
               id: "file",

@@ -43,7 +43,6 @@ type DroppedFile = File & {
 
 type TyporaLiveEditorProps = {
   activeFileId: string;
-  activeFileName: string;
   markdown?: string;
   markdownContent?: string;
   onChange?: (nextMarkdown: string) => void;
@@ -213,9 +212,9 @@ function isAppCanvasTransformActive(): boolean {
 
 function isLiveDebugEnabled(): boolean {
   try {
-    return window.localStorage.getItem("polarbear.liveDebug") !== "0";
+    return window.localStorage.getItem("polarbear.liveDebug") === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -229,9 +228,9 @@ function isLiveDebugPanelEnabled(): boolean {
 
 function isLiveScrollDebugEnabled(): boolean {
   try {
-    return window.localStorage.getItem("polarbear.liveDebugScroll") !== "0";
+    return window.localStorage.getItem("polarbear.liveDebugScroll") === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -241,6 +240,7 @@ function writeLiveDebugOverlay(text: string): void {
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = overlayId;
+    overlay.dataset.polarbearDebugOverlay = "true";
     overlay.style.position = "fixed";
     overlay.style.left = "12px";
     overlay.style.bottom = "12px";
@@ -270,7 +270,7 @@ function writeLiveDebugOverlay(text: string): void {
       event.preventDefault();
       event.stopPropagation();
       const debugText = overlay?.querySelector("pre")?.textContent ?? "";
-      void navigator.clipboard.writeText(debugText);
+      void copyDebugText(debugText);
     });
 
     const pre = document.createElement("pre");
@@ -284,6 +284,14 @@ function writeLiveDebugOverlay(text: string): void {
   const pre = overlay.querySelector("pre");
   if (pre) {
     pre.textContent = text;
+  }
+}
+
+async function copyDebugText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard?.writeText(text);
+  } catch {
+    // Debug copy is best-effort and must not crash the editor.
   }
 }
 
@@ -675,7 +683,6 @@ let mermaidInitialized = false;
 
 export function TyporaLiveEditor({
   activeFileId,
-  activeFileName,
   markdown,
   markdownContent,
   onChange,
@@ -690,9 +697,22 @@ export function TyporaLiveEditor({
   const paneRef = useRef<HTMLElement | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const onEditorReadyRef = useRef(onEditorReady);
-  const liveDebugEnabled = useMemo(() => isLiveDebugEnabled(), []);
-  const liveDebugPanelEnabled = useMemo(() => isLiveDebugPanelEnabled(), []);
+  const [debugRevision, setDebugRevision] = useState(0);
+  const liveDebugEnabled = useMemo(() => isLiveDebugEnabled(), [debugRevision]);
+  const liveDebugPanelEnabled = useMemo(() => isLiveDebugPanelEnabled(), [debugRevision]);
   const [debugState, setDebugState] = useState<LiveDebugState>(() => createInitialLiveDebugState());
+
+  useEffect(() => {
+    const handleDebugChange = () => setDebugRevision((revision) => revision + 1);
+    window.addEventListener("polarbear-debug-changed", handleDebugChange);
+    return () => window.removeEventListener("polarbear-debug-changed", handleDebugChange);
+  }, []);
+
+  useEffect(() => {
+    if (!liveDebugEnabled) {
+      document.getElementById("polarbear-live-debug-overlay")?.remove();
+    }
+  }, [liveDebugEnabled]);
 
   useEffect(() => {
     onEditorReadyRef.current = onEditorReady;
@@ -1026,20 +1046,14 @@ export function TyporaLiveEditor({
         }
       }}
     >
-      <div className="pane-title typora-live-title">
-        <span>{activeFileName}</span>
-        <div className="typora-live-title-actions">
-          <span>Live Edit</span>
-        </div>
-      </div>
-      {liveDebugPanelEnabled ? (
+      {liveDebugEnabled && liveDebugPanelEnabled ? (
         <div className="typora-live-debug-panel">
           <div className="typora-live-debug-header">
             <strong>Scroll Debug</strong>
             <button
               type="button"
               onClick={() => {
-                void navigator.clipboard.writeText(formatLiveDebugState(debugState));
+                void copyDebugText(formatLiveDebugState(debugState));
               }}
             >
               Copy
@@ -3384,7 +3398,7 @@ class TablePreviewWidget extends WidgetType {
     const leftTools = document.createElement("div");
     leftTools.className = "cm-typora-table-toolbar-left";
 
-    const gridButton = createTableToolbarButton("▦", "Table size");
+    const gridButton = createTableToolbarButton("grid", "Table size");
     gridButton.classList.add("cm-typora-table-grid-button");
     gridButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3392,7 +3406,7 @@ class TablePreviewWidget extends WidgetType {
       openTableSizeMenu(wrapper, this.block, gridButton);
     });
 
-    const alignLeftButton = createTableToolbarButton("≡", "Align Left");
+    const alignLeftButton = createTableToolbarButton("align-left", "Align Left");
     alignLeftButton.classList.add("cm-typora-table-align-left-button");
     alignLeftButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3402,7 +3416,7 @@ class TablePreviewWidget extends WidgetType {
       );
     });
 
-    const alignCenterButton = createTableToolbarButton("≡", "Align Center");
+    const alignCenterButton = createTableToolbarButton("align-center", "Align Center");
     alignCenterButton.classList.add("cm-typora-table-align-center-button");
     alignCenterButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3412,7 +3426,7 @@ class TablePreviewWidget extends WidgetType {
       );
     });
 
-    const alignRightButton = createTableToolbarButton("≡", "Align Right");
+    const alignRightButton = createTableToolbarButton("align-right", "Align Right");
     alignRightButton.classList.add("cm-typora-table-align-right-button");
     alignRightButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3424,7 +3438,7 @@ class TablePreviewWidget extends WidgetType {
 
     leftTools.append(gridButton, alignLeftButton, alignCenterButton, alignRightButton);
 
-    const deleteButton = createTableToolbarButton("⌫", "Delete table");
+    const deleteButton = createTableToolbarButton("delete", "Delete table");
     deleteButton.className = "cm-typora-table-delete-button";
     deleteButton.setAttribute("aria-label", "Delete table");
     deleteButton.addEventListener("click", (event) => {
@@ -3500,14 +3514,14 @@ function makeTableCellEditable(
 ) {
   cell.contentEditable = "true";
   cell.spellcheck = true;
-  cell.textContent = params.value;
+  renderTableCellValue(cell, params.value);
   cell.setAttribute("role", "textbox");
   cell.setAttribute("aria-label", "Edit table cell");
 
   let committedValue = params.value;
 
   const commit = () => {
-    const nextValue = normalizeTableCellText(cell.textContent ?? "");
+    const nextValue = markdownFromTableCellElement(cell);
     if (nextValue === committedValue) {
       return;
     }
@@ -3569,27 +3583,63 @@ function makeTableCellEditable(
 
     if (event.key === "Enter") {
       event.preventDefault();
+      if (event.metaKey || event.ctrlKey) {
+        insertTextAtCurrentSelection("\n");
+        return;
+      }
       commit();
       cell.blur();
       return;
     }
 
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+      event.preventDefault();
+      document.execCommand("bold");
+      return;
+    }
+
     if (event.key === "Escape") {
       event.preventDefault();
-      cell.textContent = committedValue;
+      renderTableCellValue(cell, committedValue);
       cell.blur();
     }
   });
 }
 
-function createTableToolbarButton(label: string, ariaLabel: string): HTMLButtonElement {
+function createTableToolbarButton(iconName: string, ariaLabel: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "cm-typora-table-tool-button";
-  button.textContent = label;
   button.title = ariaLabel;
   button.setAttribute("aria-label", ariaLabel);
+  button.append(createTableIcon(iconName));
   return button;
+}
+
+function createTableIcon(iconName: string): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 18 18");
+  svg.setAttribute("aria-hidden", "true");
+
+  const addPath = (d: string) => {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  };
+
+  if (iconName === "grid") {
+    addPath("M3 3.5h4.5V8H3zM10.5 3.5H15V8h-4.5zM3 10h4.5v4.5H3zM10.5 10H15v4.5h-4.5z");
+  } else if (iconName === "align-left") {
+    addPath("M4 5h10M4 9h7M4 13h10");
+  } else if (iconName === "align-center") {
+    addPath("M4 5h10M5.5 9h7M4 13h10");
+  } else if (iconName === "align-right") {
+    addPath("M4 5h10M7 9h7M4 13h10");
+  } else {
+    addPath("M6.5 4.5V3h5v1.5M4.5 5.5h9M6 7v7M9 7v7M12 7v7");
+  }
+
+  return svg;
 }
 
 function activeTableColumn(wrapper: HTMLElement): number {
@@ -3845,11 +3895,79 @@ function updateMarkdownTableCell(
 }
 
 function normalizeTableCellText(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+  return text.replace(/\u00a0/g, " ").trim();
 }
 
 function escapeMarkdownTableCell(text: string): string {
-  return text.replace(/\|/g, "\\|");
+  return text.replace(/\|/g, "\\|").replace(/\n/g, "<br>");
+}
+
+function renderTableCellValue(cell: HTMLElement, markdown: string): void {
+  cell.replaceChildren();
+  const pattern = /(<br\s*\/?>|\*\*([^*]+)\*\*)/gi;
+  let cursor = 0;
+  let match: RegExpExecArray | null = null;
+
+  while ((match = pattern.exec(markdown)) !== null) {
+    if (match.index > cursor) {
+      cell.append(document.createTextNode(markdown.slice(cursor, match.index)));
+    }
+
+    if (/^<br/i.test(match[0])) {
+      cell.append(document.createElement("br"));
+    } else {
+      const strong = document.createElement("strong");
+      strong.textContent = match[2] ?? "";
+      cell.append(strong);
+    }
+
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < markdown.length) {
+    cell.append(document.createTextNode(markdown.slice(cursor)));
+  }
+}
+
+function markdownFromTableCellElement(cell: HTMLElement): string {
+  const serialize = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? "";
+    }
+
+    if (!(node instanceof HTMLElement)) {
+      return "";
+    }
+
+    if (node.tagName === "BR") {
+      return "\n";
+    }
+
+    const text = Array.from(node.childNodes).map(serialize).join("");
+    if (node.tagName === "B" || node.tagName === "STRONG") {
+      return text ? `**${text}**` : "";
+    }
+
+    return text;
+  };
+
+  return normalizeTableCellText(Array.from(cell.childNodes).map(serialize).join(""));
+}
+
+function insertTextAtCurrentSelection(text: string): void {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  const node = document.createTextNode(text);
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.setEndAfter(node);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function serializeMarkdownTableRow(cells: string[]): string {
@@ -4027,14 +4145,16 @@ class MermaidPreviewWidget extends WidgetType {
     const title = document.createElement("span");
     title.textContent = "Mermaid";
 
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.textContent = "Edit Source";
+    const editButton = createDiagramIconButton(
+      "Edit Source",
+      "M4 14.25V17h2.75L15.1 8.65l-2.75-2.75L4 14.25Zm12.35-8.85a.95.95 0 0 0 0-1.35l-1.4-1.4a.95.95 0 0 0-1.35 0l-1.1 1.1 2.75 2.75 1.1-1.1Z",
+    );
     editButton.addEventListener("click", () => revealSource(wrapper, this.block));
 
-    const copyButton = document.createElement("button");
-    copyButton.type = "button";
-    copyButton.textContent = "Copy Source";
+    const copyButton = createDiagramIconButton(
+      "Copy Source",
+      "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
+    );
     copyButton.addEventListener("click", () => {
       void navigator.clipboard.writeText(this.block.source);
     });
@@ -4079,14 +4199,16 @@ class PlantUmlPreviewWidget extends WidgetType {
     const title = document.createElement("span");
     title.textContent = "PlantUML";
 
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.textContent = "Edit Source";
+    const editButton = createDiagramIconButton(
+      "Edit Source",
+      "M4 14.25V17h2.75L15.1 8.65l-2.75-2.75L4 14.25Zm12.35-8.85a.95.95 0 0 0 0-1.35l-1.4-1.4a.95.95 0 0 0-1.35 0l-1.1 1.1 2.75 2.75 1.1-1.1Z",
+    );
     editButton.addEventListener("click", () => revealSource(wrapper, this.block));
 
-    const copyButton = document.createElement("button");
-    copyButton.type = "button";
-    copyButton.textContent = "Copy Source";
+    const copyButton = createDiagramIconButton(
+      "Copy Source",
+      "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
+    );
     copyButton.addEventListener("click", () => {
       void navigator.clipboard.writeText(this.block.source);
     });
@@ -4112,6 +4234,16 @@ class PlantUmlPreviewWidget extends WidgetType {
   ignoreEvent(): boolean {
     return true;
   }
+}
+
+function createDiagramIconButton(label: string, pathData: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "cm-typora-diagram-icon-button";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 20 20"><path d="${pathData}"/></svg>`;
+  return button;
 }
 
 async function renderPlantUmlPreview(
