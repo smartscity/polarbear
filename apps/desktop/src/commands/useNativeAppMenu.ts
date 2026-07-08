@@ -31,6 +31,13 @@ export function useNativeAppMenu(
                   id: "app.about",
                   text: "About Polarbear",
                   action: () => executeCommand("app.about")
+                },
+                { item: "Separator" },
+                {
+                  id: "app.newWindow",
+                  text: "New Window",
+                  accelerator: acceleratorForCommand("app.newWindow"),
+                  action: () => executeCommand("app.newWindow")
                 }
               ]
             },
@@ -38,6 +45,13 @@ export function useNativeAppMenu(
               id: "file",
               text: "File",
               items: [
+                {
+                  id: "file.newWindow",
+                  text: "New Window",
+                  accelerator: acceleratorForCommand("app.newWindow"),
+                  action: () => executeCommand("app.newWindow")
+                },
+                { item: "Separator" },
                 {
                   id: "file.newFile",
                   text: "New",

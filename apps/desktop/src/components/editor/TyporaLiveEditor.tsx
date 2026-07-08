@@ -31,6 +31,13 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { resolveMarkdownAsset } from "../../tauri/workspaceCommands";
 import { macNavigationKeyBindings } from "./macNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
+import {
+  escapeMarkdownTableCell,
+  insertLineBreakAtCurrentSelection,
+  markdownFromTableCellElement,
+  placeCaretAtEnd,
+  renderTableCellValue,
+} from "./live/tableCellMarkdown";
 
 type ImagePasteHandler = (
   items: DataTransferItemList,
@@ -101,11 +108,17 @@ function hashPreviewBlockSource(source: string): string {
 
 function markMarkdownPreviewBlock(
   element: HTMLElement,
-  block: Pick<PreviewBlock, "id" | "type">,
+  block: Pick<PreviewBlock, "id" | "type"> & Partial<Pick<PreviewBlock, "from" | "to">>,
   className?: string,
 ) {
   element.dataset.markdownBlockId = block.id;
   element.dataset.markdownBlockType = block.type;
+  if (typeof block.from === "number") {
+    element.dataset.markdownBlockFrom = String(block.from);
+  }
+  if (typeof block.to === "number") {
+    element.dataset.markdownBlockTo = String(block.to);
+  }
   if (className) {
     element.classList.add(className);
   }
@@ -569,6 +582,8 @@ const tableLineDecoration = Decoration.line({
 const collapsedMarkdownMarkerDecoration = Decoration.mark({
   class: "cm-typora-markdown-marker-hidden",
 });
+
+const collapsedHeadingMarkerDecoration = Decoration.replace({});
 
 const hiddenCodeFenceLineDecoration = Decoration.line({
   attributes: {
@@ -1410,12 +1425,24 @@ function restoreSelectionBackgroundGeometry(background: HTMLElement) {
 }
 
 function measureTextRectsForLine(line: HTMLElement): DOMRect[] {
-  const range = document.createRange();
-  range.selectNodeContents(line);
-  const rects = Array.from(range.getClientRects()).filter(
-    (rect) => rect.width > 1 && rect.height > 1,
-  );
-  range.detach();
+  const rects: DOMRect[] = [];
+  const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+  let textNode = walker.nextNode();
+
+  while (textNode) {
+    const text = textNode.textContent ?? "";
+    if (text.length > 0) {
+      const range = document.createRange();
+      range.selectNodeContents(textNode);
+      rects.push(
+        ...Array.from(range.getClientRects()).filter(
+          (rect) => rect.width > 1 && rect.height > 1,
+        ),
+      );
+      range.detach();
+    }
+    textNode = walker.nextNode();
+  }
 
   return rects.length > 0 ? rects : [line.getBoundingClientRect()];
 }
@@ -2399,8 +2426,8 @@ function decorateMarkdownLine(
     addDecorationRange(
       ranges,
       lineFrom,
-      lineFrom + headingMatch[1].length,
-      hiddenMarkdownMarkerDecoration,
+      lineFrom + headingMatch[1].length + headingMatch[2].length,
+      collapsedHeadingMarkerDecoration,
     );
   }
 
@@ -2440,7 +2467,7 @@ function decorateMarkdownLine(
         markerFrom,
         markerTo,
         Decoration.replace({
-          widget: new ListMarkerWidget("bullet"),
+          widget: new ListMarkerWidget("•"),
         }),
       );
     }
@@ -2448,7 +2475,17 @@ function decorateMarkdownLine(
 
   const orderedListMatch = /^(\s*)(\d+[.)])\s+/.exec(lineText);
   if (orderedListMatch) {
+    const markerFrom = lineFrom + orderedListMatch[1].length;
+    const markerTo = markerFrom + orderedListMatch[2].length + 1;
     addDecorationRange(ranges, lineFrom, lineFrom, orderedListLineDecoration);
+    addDecorationRange(
+      ranges,
+      markerFrom,
+      markerTo,
+      Decoration.replace({
+        widget: new ListMarkerWidget(orderedListMatch[2]),
+      }),
+    );
   }
 
   if (isTableLine(lineText)) {
@@ -3026,18 +3063,18 @@ function diagramIdForSource(source: string): string {
 }
 
 class ListMarkerWidget extends WidgetType {
-  constructor(private readonly type: "bullet") {
+  constructor(private readonly label: string) {
     super();
   }
 
   eq(other: ListMarkerWidget): boolean {
-    return other.type === this.type;
+    return other.label === this.label;
   }
 
   toDOM(): HTMLElement {
     const marker = document.createElement("span");
     marker.className = "cm-typora-list-marker";
-    marker.textContent = this.type === "bullet" ? "•" : "";
+    marker.textContent = this.label;
     return marker;
   }
 }
@@ -3455,6 +3492,7 @@ class TablePreviewWidget extends WidgetType {
     const table = document.createElement("table");
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
+    let tableFocusIndex = 0;
 
     headers.forEach((header, columnIndex) => {
       const th = document.createElement("th");
@@ -3462,10 +3500,12 @@ class TablePreviewWidget extends WidgetType {
       makeTableCellEditable(th, {
         block: this.block,
         columnIndex,
+        focusIndex: tableFocusIndex,
         sourceLineIndex: 0,
         value: header,
         wrapper,
       });
+      tableFocusIndex += 1;
       headerRow.append(th);
     });
 
@@ -3484,10 +3524,12 @@ class TablePreviewWidget extends WidgetType {
         makeTableCellEditable(td, {
           block: this.block,
           columnIndex,
+          focusIndex: tableFocusIndex,
           sourceLineIndex: bodyIndex + 2,
           value: cell,
           wrapper,
         });
+        tableFocusIndex += 1;
         row.append(td);
       });
       tbody.append(row);
@@ -3509,6 +3551,7 @@ function makeTableCellEditable(
   params: {
     block: PreviewBlock;
     columnIndex: number;
+    focusIndex: number;
     sourceLineIndex: number;
     value: string;
     wrapper: HTMLElement;
@@ -3519,19 +3562,20 @@ function makeTableCellEditable(
   renderTableCellValue(cell, params.value);
   cell.setAttribute("role", "textbox");
   cell.setAttribute("aria-label", "Edit table cell");
+  cell.dataset.tableFocusIndex = String(params.focusIndex);
 
   let committedValue = params.value;
 
-  const commit = () => {
+  const commit = (): boolean => {
     const nextValue = markdownFromTableCellElement(cell);
     if (nextValue === committedValue) {
-      return;
+      return true;
     }
 
     const view = EditorView.findFromDOM(params.wrapper);
     if (!view) {
-      cell.textContent = committedValue;
-      return;
+      renderTableCellValue(cell, committedValue);
+      return false;
     }
 
     const nextRaw = updateMarkdownTableCell(
@@ -3542,8 +3586,8 @@ function makeTableCellEditable(
     );
 
     if (nextRaw === params.block.raw) {
-      cell.textContent = committedValue;
-      return;
+      renderTableCellValue(cell, committedValue);
+      return false;
     }
 
     committedValue = nextValue;
@@ -3563,6 +3607,7 @@ function makeTableCellEditable(
 
     scrollDOM.scrollTop = scrollTop;
     scrollDOM.scrollLeft = scrollLeft;
+    return true;
   };
 
   cell.addEventListener("mousedown", (event) => event.stopPropagation());
@@ -3583,10 +3628,19 @@ function makeTableCellEditable(
   cell.addEventListener("keydown", (event) => {
     event.stopPropagation();
 
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const nextFocusIndex = params.focusIndex + (event.shiftKey ? -1 : 1);
+      if (commit()) {
+        focusTableCellAfterCommit(params.wrapper, params.block.from, nextFocusIndex);
+      }
+      return;
+    }
+
     if (event.key === "Enter") {
       event.preventDefault();
       if (event.metaKey || event.ctrlKey) {
-        insertTextAtCurrentSelection("\n");
+        insertLineBreakAtCurrentSelection();
         return;
       }
       commit();
@@ -3896,80 +3950,39 @@ function updateMarkdownTableCell(
   return lines.join("\n");
 }
 
-function normalizeTableCellText(text: string): string {
-  return text.replace(/\u00a0/g, " ").trim();
-}
-
-function escapeMarkdownTableCell(text: string): string {
-  return text.replace(/\|/g, "\\|").replace(/\n/g, "<br>");
-}
-
-function renderTableCellValue(cell: HTMLElement, markdown: string): void {
-  cell.replaceChildren();
-  const pattern = /(<br\s*\/?>|\*\*([^*]+)\*\*)/gi;
-  let cursor = 0;
-  let match: RegExpExecArray | null = null;
-
-  while ((match = pattern.exec(markdown)) !== null) {
-    if (match.index > cursor) {
-      cell.append(document.createTextNode(markdown.slice(cursor, match.index)));
-    }
-
-    if (/^<br/i.test(match[0])) {
-      cell.append(document.createElement("br"));
-    } else {
-      const strong = document.createElement("strong");
-      strong.textContent = match[2] ?? "";
-      cell.append(strong);
-    }
-
-    cursor = match.index + match[0].length;
-  }
-
-  if (cursor < markdown.length) {
-    cell.append(document.createTextNode(markdown.slice(cursor)));
-  }
-}
-
-function markdownFromTableCellElement(cell: HTMLElement): string {
-  const serialize = (node: Node): string => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return node.textContent ?? "";
-    }
-
-    if (!(node instanceof HTMLElement)) {
-      return "";
-    }
-
-    if (node.tagName === "BR") {
-      return "\n";
-    }
-
-    const text = Array.from(node.childNodes).map(serialize).join("");
-    if (node.tagName === "B" || node.tagName === "STRONG") {
-      return text ? `**${text}**` : "";
-    }
-
-    return text;
-  };
-
-  return normalizeTableCellText(Array.from(cell.childNodes).map(serialize).join(""));
-}
-
-function insertTextAtCurrentSelection(text: string): void {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) {
+function focusTableCellAfterCommit(
+  wrapper: HTMLElement,
+  blockFrom: number,
+  focusIndex: number,
+) {
+  if (focusIndex < 0) {
     return;
   }
 
-  const range = selection.getRangeAt(0);
-  range.deleteContents();
-  const node = document.createTextNode(text);
-  range.insertNode(node);
-  range.setStartAfter(node);
-  range.setEndAfter(node);
-  selection.removeAllRanges();
-  selection.addRange(range);
+  const view = EditorView.findFromDOM(wrapper);
+  if (!view) {
+    return;
+  }
+
+  const focusCell = () => {
+    const nextWrapper = view.dom.querySelector<HTMLElement>(
+      `.cm-typora-table-preview[data-markdown-block-from="${blockFrom}"]`,
+    );
+    const nextCell = nextWrapper?.querySelector<HTMLElement>(
+      `[data-table-focus-index="${focusIndex}"]`,
+    );
+    if (!nextCell) {
+      return;
+    }
+
+    nextCell.focus();
+    placeCaretAtEnd(nextCell);
+  };
+
+  window.requestAnimationFrame(() => {
+    focusCell();
+    window.requestAnimationFrame(focusCell);
+  });
 }
 
 function serializeMarkdownTableRow(cells: string[]): string {

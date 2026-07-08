@@ -17,6 +17,11 @@ export const appCommandRegistry: Partial<Record<AppCommand, CommandDefinition>> 
   "app.about": {
     label: "About Polarbear",
   },
+  "app.newWindow": {
+    label: "New Window",
+    accelerator: "Shift+CmdOrCtrl+N",
+    shortcut: { key: "n", shiftKey: true, command: "app.newWindow" },
+  },
   "file.newFile": {
     label: "New",
     accelerator: "CmdOrCtrl+N",

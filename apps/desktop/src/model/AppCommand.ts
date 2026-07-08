@@ -1,5 +1,6 @@
 export type AppCommand =
   | "app.about"
+  | "app.newWindow"
   | "file.newFile"
   | "file.newFolder"
   | "file.openFile"

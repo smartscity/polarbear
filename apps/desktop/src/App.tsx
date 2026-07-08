@@ -87,6 +87,7 @@ import {
   saveImageAsset,
   writeMarkdownFile,
 } from "./tauri/workspaceCommands";
+import { openNewAppWindow } from "./tauri/windowCommands";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -3108,6 +3109,13 @@ export function App() {
 
       if (command === "app.about") {
         setIsAboutDialogOpen(true);
+        return;
+      }
+
+      if (command === "app.newWindow") {
+        void openNewAppWindow().catch((error: unknown) => {
+          setStatusMessage(error instanceof Error ? error.message : String(error));
+        });
         return;
       }
 

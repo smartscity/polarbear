@@ -2,6 +2,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
@@ -973,6 +974,15 @@ fn open_external_url(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_new_app_window() -> Result<(), String> {
+    let executable = env::current_exe().map_err(|error| error.to_string())?;
+    Command::new(executable)
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 fn move_entry(
     workspace_root: String,
     source_relative_path: String,
@@ -1595,6 +1605,7 @@ fn main() -> tauri::Result<()> {
             open_markdown_file,
             reveal_in_file_manager,
             open_external_url,
+            open_new_app_window,
             move_entry,
             copy_image_asset,
             save_image_asset,
