@@ -934,6 +934,11 @@ button:disabled {
   line-height: 1.55;
 }
 
+.editor-pane .cm-cursor,
+.editor-pane .cm-dropCursor {
+  border-left-color: var(--color-text-primary, #2f3437) !important;
+}
+
 .editor-pane .cm-gutters {
   color: var(--color-text-muted, #8a8f98);
   background: var(--color-sidebar-background, #f7f7f7);
@@ -1234,6 +1239,7 @@ button:disabled {
 }
 
 .mermaid-card:hover .mermaid-block-toolbar,
+.plantuml-card:hover .mermaid-block-toolbar,
 .mermaid-block-toolbar:focus-within {
   opacity: 1;
   transform: translateY(0);

@@ -192,7 +192,7 @@ h6.live-editor-typora-heading {
   vertical-align: top;
   outline: none;
   cursor: text;
-  caret-color: #000000;
+  caret-color: currentColor;
 }
 
 .live-editor-typora-table th {

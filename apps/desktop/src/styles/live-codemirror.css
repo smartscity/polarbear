@@ -155,6 +155,11 @@ body,
   -webkit-user-select: text;
 }
 
+.typora-live-editor-pane .cm-cursor,
+.typora-live-editor-pane .cm-dropCursor {
+  border-left-color: var(--color-text-primary, #2f3437) !important;
+}
+
 .typora-live-editor-pane .cm-line {
   padding: 1px 0;
   cursor: text;
@@ -760,6 +765,7 @@ body,
   white-space: pre-wrap;
   word-break: normal;
   overflow-wrap: normal;
+  caret-color: var(--color-text-primary, #2f3437);
 }
 
 .cm-typora-table-preview th[contenteditable="true"],

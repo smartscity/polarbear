@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
+import {
+  exportSvgElementAsSvg,
+  findRenderedSvg,
+} from "../editor/diagramExport";
 
 export type MermaidBlockProps = {
   source: string;
@@ -23,6 +27,7 @@ function initializeMermaid(): void {
 
 export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const renderVersionRef = useRef(0);
+  const renderTargetRef = useRef<HTMLDivElement | null>(null);
   const [svgContent, setSvgContent] = useState("");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
@@ -60,18 +65,8 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   };
 
   const exportSvg = () => {
-    if (!svgContent) {
-      return;
-    }
-
-    const blob = new Blob([svgContent], { type: "image/svg+xml" });
-    const objectUrl = URL.createObjectURL(blob);
-    const downloadLink = document.createElement("a");
-
-    downloadLink.href = objectUrl;
-    downloadLink.download = `${diagramId}.svg`;
-    downloadLink.click();
-    URL.revokeObjectURL(objectUrl);
+    const svg = findRenderedSvg(renderTargetRef.current);
+    if (svg) exportSvgElementAsSvg(svg, diagramId);
   };
 
   if (renderError) {
@@ -99,6 +94,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       </div>
       <div
         className="mermaid-render-target"
+        ref={renderTargetRef}
       >
         {svgContent ? (
           <span dangerouslySetInnerHTML={{ __html: svgContent }} />

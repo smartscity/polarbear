@@ -63,7 +63,7 @@
   white-space: pre;
   tab-size: 2;
   outline: none;
-  caret-color: #111827;
+  caret-color: currentColor;
 }
 
 .live-editor-code-card code:focus {
