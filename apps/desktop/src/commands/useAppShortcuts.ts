@@ -7,30 +7,26 @@ const shortcuts = shortcutDefinitions();
 export function useAppShortcuts(executeCommand: ExecuteAppCommand): void {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented) {
+        return;
+      }
+
       const usesModKey = event.metaKey || event.ctrlKey;
 
-      if (!usesModKey || event.altKey) {
+      if (!usesModKey) {
         return;
       }
 
       const key = event.key.toLowerCase();
-      if (!event.shiftKey && /^[0-9]$/.test(key)) {
-        event.preventDefault();
-        const tabIndex = key === "0" ? 9 : Number(key) - 1;
-        executeCommand("window.selectTab", {
-          commandSource: "shortcut",
-          tabIndex,
-        });
-        return;
-      }
-
+      const codeKey = keyFromKeyboardCode(event.code);
       const shortcut = shortcuts.find((candidate) => {
         if (candidate.command === "view.zoomIn" && (key === "+" || key === "=")) {
-          return true;
+          return !event.altKey;
         }
 
         return (
-          candidate.key === key &&
+          (candidate.key === key || candidate.key === codeKey) &&
+          Boolean(candidate.altKey) === event.altKey &&
           Boolean(candidate.shiftKey) === event.shiftKey
         );
       });
@@ -56,4 +52,16 @@ function isInsideCodeMirror(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(
     target.closest(".typora-live-editor-pane .cm-editor"),
   );
+}
+
+function keyFromKeyboardCode(code: string): string {
+  if (/^Key[A-Z]$/.test(code)) {
+    return code.slice(3).toLowerCase();
+  }
+
+  if (/^Digit[0-9]$/.test(code)) {
+    return code.slice(5);
+  }
+
+  return "";
 }

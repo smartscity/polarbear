@@ -49,21 +49,21 @@ body,
   flex: 1 1 auto;
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
-  background: #ffffff;
+  background: var(--color-preview-background, #ffffff);
 }
 
 .typora-live-title {
   display: none;
   flex: 0 0 auto;
-  background: #ffffff;
-  color: #2f3437;
+  background: var(--color-preview-background, #ffffff);
+  color: var(--color-text-primary, #2f3437);
 }
 
 .typora-live-title-actions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #6b7280;
+  color: var(--color-text-secondary, #5f666d);
   font-family:
     Inter,
     ui-sans-serif,
@@ -73,17 +73,17 @@ body,
 }
 
 .typora-live-title-actions button {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   padding: 3px 8px;
-  color: #374151;
-  background: #ffffff;
+  color: var(--color-text-primary, #2f3437);
+  background: var(--color-editor-background, #ffffff);
   font-size: 12px;
   cursor: pointer;
 }
 
 .typora-live-title-actions button:hover {
-  background: #f9fafb;
+  background: var(--color-hover-background, #f0f2f5);
 }
 
 .typora-live-editor-pane .cm-theme {
@@ -105,8 +105,8 @@ body,
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #ffffff;
-  color: #24292f;
+  background: var(--color-preview-background, #ffffff);
+  color: var(--color-text-primary, #2f3437);
   font-family:
     -apple-system,
     BlinkMacSystemFont,
@@ -149,7 +149,7 @@ body,
   box-sizing: content-box;
   margin: 0 auto;
   padding: var(--typora-live-content-padding-top) var(--typora-live-content-padding-x) var(--typora-live-content-padding-bottom);
-  caret-color: #111827;
+  caret-color: var(--color-text-primary, #2f3437);
   cursor: text;
   user-select: text;
   -webkit-user-select: text;
@@ -188,7 +188,7 @@ body,
 }
 
 .cm-typora-markdown-marker {
-  color: #9ca3af;
+  color: var(--color-text-muted, #8a8f98);
   font-weight: 400;
 }
 
@@ -202,7 +202,7 @@ body,
 }
 
 .cm-typora-heading-line {
-  color: #111827;
+  color: var(--color-text-primary, #2f3437);
   font-family:
     Inter,
     ui-sans-serif,
@@ -314,7 +314,7 @@ body,
 
 .cm-typora-bold {
   font-weight: 700;
-  color: #111827;
+  color: var(--color-text-primary, #2f3437);
 }
 
 .cm-typora-italic {
@@ -327,17 +327,17 @@ body,
 }
 
 .cm-typora-strike {
-  color: #6b7280;
+  color: var(--color-text-muted, #8a8f98);
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
 }
 
 .cm-typora-inline-code {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 4px;
   padding: 1px 5px;
-  color: #be123c;
-  background: #f6f8fa;
+  color: var(--color-code-text, #24292f);
+  background: var(--color-code-background, #f6f8fa);
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 0.88em;
 }
@@ -357,13 +357,13 @@ body,
 .cm-typora-kbd {
   display: inline-block;
   min-width: 1.6em;
-  border: 1px solid #cbd5e1;
-  border-bottom-color: #94a3b8;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-bottom-color: color-mix(in srgb, var(--color-border, #e5e7eb) 72%, #000000);
   border-radius: 5px;
   padding: 1px 6px;
-  color: #111827;
-  background: linear-gradient(#ffffff, #f1f5f9);
-  box-shadow: 0 1px 0 #cbd5e1;
+  color: var(--color-text-primary, #2f3437);
+  background: linear-gradient(var(--color-editor-background, #ffffff), var(--color-hover-background, #f0f2f5));
+  box-shadow: 0 1px 0 var(--color-border, #e5e7eb);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 0.82em;
   text-align: center;
@@ -372,16 +372,16 @@ body,
 .cm-typora-inline-math {
   border-radius: 5px;
   padding: 1px 5px;
-  color: #374151;
+  color: var(--color-text-primary, #2f3437);
   background: transparent;
   font-family: "Times New Roman", "New York", serif;
   font-style: italic;
 }
 
 .cm-typora-frontmatter-line {
-  color: #8a8f98;
+  color: var(--color-text-muted, #8a8f98);
   background: transparent;
-  box-shadow: inset 3px 0 #e5e7eb;
+  box-shadow: inset 3px 0 var(--color-border, #e5e7eb);
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 0.88em;
   user-select: text;
@@ -393,8 +393,8 @@ body,
 }
 
 .cm-typora-blockquote-line {
-  box-shadow: inset 4px 0 #d1d5db;
-  color: #4b5563;
+  box-shadow: inset 4px 0 var(--color-blockquote-border, #d0d7de);
+  color: var(--color-blockquote-text, #57606a);
   background: transparent;
   user-select: text;
   -webkit-user-select: text;
@@ -407,7 +407,7 @@ body,
 .cm-typora-list-marker {
   display: inline-block;
   width: 1.4em;
-  color: #111827;
+  color: var(--color-text-primary, #2f3437);
   text-align: center;
 }
 
@@ -417,10 +417,10 @@ body,
   width: 1.05em;
   height: 1.05em;
   margin-right: 0.45em;
-  border: 1.5px solid #9ca3af;
+  border: 1.5px solid var(--color-text-muted, #8a8f98);
   border-radius: 4px;
   color: #ffffff;
-  background: #ffffff;
+  background: var(--color-preview-background, #ffffff);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 0.72em;
   font-weight: 800;
@@ -445,7 +445,7 @@ body,
 .cm-typora-horizontal-rule hr {
   height: 1px;
   border: 0;
-  background: #d1d5db;
+  background: var(--color-border, #e5e7eb);
 }
 
 .cm-typora-math-block pre {
@@ -456,7 +456,7 @@ body,
 .cm-typora-math-block {
   margin: 28px 0;
   padding: 8px 16px;
-  color: #374151;
+  color: var(--color-text-primary, #2f3437);
   background: transparent;
   font-family: "Times New Roman", "New York", serif;
   font-size: 1.22em;
@@ -482,7 +482,7 @@ body,
 }
 
 .cm-typora-math-brace {
-  color: #374151;
+  color: var(--color-text-primary, #2f3437);
   font-family: "Times New Roman", "New York", serif;
   font-size: 4.6em;
   font-style: normal;
@@ -560,13 +560,13 @@ body,
 }
 
 .cm-typora-table-line {
-  color: #111827;
+  color: var(--color-text-primary, #2f3437);
   font-family:
     "SFMono-Regular",
     Consolas,
     "Liberation Mono",
     monospace;
-  background: #fafafa;
+  background: var(--color-editor-background, #ffffff);
 }
 
 .cm-typora-table-preview {
@@ -591,7 +591,7 @@ body,
   transform: translateY(-4px);
   min-height: 31px;
   padding: 3px 8px;
-  background: rgba(235, 236, 238, 0.92);
+  background: color-mix(in srgb, var(--color-sidebar-background, #f7f7f7) 92%, transparent);
   transition:
     opacity 120ms ease,
     transform 120ms ease;
@@ -617,7 +617,7 @@ body,
   border: 0;
   border-radius: 2px;
   padding: 0;
-  color: #2f3437;
+  color: var(--color-text-primary, #2f3437);
   background: transparent;
   font: inherit;
   font-size: 14px;
@@ -645,12 +645,12 @@ body,
 .cm-typora-table-tool-button:hover,
 .cm-typora-table-delete-button:hover,
 .cm-typora-table-menu button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--color-hover-background, #f0f2f5);
 }
 
 .cm-typora-table-delete-button {
   margin: 0;
-  color: #2f3437;
+  color: var(--color-text-primary, #2f3437);
 }
 
 .cm-typora-table-grid-button,
@@ -670,10 +670,10 @@ body,
   z-index: 22;
   display: grid;
   gap: 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 7px;
   padding: 14px 18px 16px;
-  background: #ffffff;
+  background: var(--color-preview-background, #ffffff);
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
 }
 
@@ -686,8 +686,8 @@ body,
 .cm-typora-table-size-grid button {
   width: 20px;
   height: 20px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-editor-background, #ffffff);
 }
 
 .cm-typora-table-size-grid button.cm-typora-table-size-cell-active {
@@ -696,7 +696,7 @@ body,
 }
 
 .cm-typora-table-size-label {
-  color: #4b5563;
+  color: var(--color-text-secondary, #5f666d);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 13px;
   text-align: center;
@@ -708,10 +708,10 @@ body,
   width: 190px;
   display: grid;
   gap: 2px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
   padding: 6px;
-  background: #ffffff;
+  background: var(--color-preview-background, #ffffff);
   box-shadow: 0 16px 44px rgba(15, 23, 42, 0.16);
 }
 
@@ -724,21 +724,21 @@ body,
 }
 
 .cm-typora-table-menu button:disabled {
-  color: #9ca3af;
+  color: var(--color-text-muted, #8a8f98);
 }
 
 .cm-typora-table-menu-separator {
   height: 1px;
   margin: 4px 2px;
-  background: #e5e7eb;
+  background: var(--color-divider, #eceff3);
 }
 
 .cm-typora-table-preview table {
   width: 100%;
   margin-top: 0;
   border-collapse: collapse;
-  color: #111827;
-  background: #ffffff;
+  color: var(--color-text-primary, #2f3437);
+  background: var(--color-preview-background, #ffffff);
   font-family:
     Inter,
     ui-sans-serif,
@@ -750,7 +750,7 @@ body,
 
 .cm-typora-table-preview th,
 .cm-typora-table-preview td {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-table-border, #d8dee4);
   padding: 7px 10px;
   text-align: left;
   vertical-align: middle;
@@ -769,30 +769,30 @@ body,
 
 .cm-typora-table-preview th[contenteditable="true"]:focus,
 .cm-typora-table-preview td[contenteditable="true"]:focus {
-  background: #eff6ff;
-  box-shadow: inset 0 0 0 2px #60a5fa;
+  background: color-mix(in srgb, var(--color-accent, #2f80ed) 12%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-accent, #2f80ed) 72%, transparent);
 }
 
 .cm-typora-table-preview th {
-  background: #f3f4f6;
+  background: var(--color-table-header-background, #f6f8fa);
   font-weight: 650;
 }
 
 .cm-typora-table-preview tr:nth-child(even) td {
-  background: #fafafa;
+  background: color-mix(in srgb, var(--color-preview-background, #ffffff) 92%, var(--color-hover-background, #f0f2f5));
 }
 
 .cm-typora-image-line {
-  color: #4b5563;
+  color: var(--color-text-secondary, #5f666d);
 }
 
 .cm-typora-image-preview {
   max-width: 100%;
   margin: 0;
   padding: 12px 10px 18px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--color-preview-background, #ffffff);
 }
 
 .cm-typora-image-preview img {
@@ -804,7 +804,7 @@ body,
 
 .cm-typora-image-preview figcaption {
   margin-top: 8px;
-  color: #6b7280;
+  color: var(--color-text-muted, #8a8f98);
   font-family:
     Inter,
     ui-sans-serif,
@@ -831,7 +831,7 @@ body,
     monospace;
   font-size: var(--typora-live-code-font-size);
   line-height: 1.62;
-  background: rgba(246, 248, 250, 0.38);
+  background: color-mix(in srgb, var(--color-code-background, #f6f8fa) 64%, transparent);
 }
 
 .cm-typora-code-language {
@@ -862,11 +862,11 @@ body,
   top: 8px;
   right: 12px;
   min-width: 104px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   padding: 3px 9px;
-  color: #374151;
-  background: rgba(255, 255, 255, 0.96);
+  color: var(--color-text-primary, #2f3437);
+  background: color-mix(in srgb, var(--color-preview-background, #ffffff) 96%, transparent);
   font: inherit;
   font-size: 12px;
   line-height: 1.35;
@@ -895,8 +895,8 @@ body,
 
 .cm-typora-code-language input:focus,
 .cm-typora-code-language select:focus {
-  border-color: #60a5fa;
-  outline: 2px solid rgba(96, 165, 250, 0.24);
+  border-color: var(--color-accent, #2f80ed);
+  outline: 2px solid color-mix(in srgb, var(--color-accent, #2f80ed) 24%, transparent);
 }
 
 .cm-typora-code-fence-line-hidden {
@@ -917,10 +917,10 @@ body,
 }
 
 .cm-typora-code-line {
-  color: #1f2937;
-  background: rgba(251, 250, 247, 0.42);
-  border-left: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
+  color: var(--color-code-text, #24292f);
+  background: color-mix(in srgb, var(--color-code-background, #f6f8fa) 58%, transparent);
+  border-left: 1px solid var(--color-border, #e5e7eb);
+  border-right: 1px solid var(--color-border, #e5e7eb);
   padding-left: 14px;
   padding-right: 14px;
   background-clip: padding-box;
@@ -928,7 +928,7 @@ body,
 
 .cm-typora-code-line-first {
   padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px 8px 0 0;
 }
 
@@ -940,32 +940,32 @@ body,
 .cm-typora-code-line-last,
 .cm-typora-code-line-single {
   padding-bottom: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
   border-radius: 0 0 8px 8px;
 }
 
 .cm-typora-code-line-single {
   min-height: 36px;
   padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
 }
 
 .cm-typora-code-fence-line {
-  color: #6b7280;
-  border-left: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
+  color: var(--color-text-muted, #8a8f98);
+  border-left: 1px solid var(--color-border, #e5e7eb);
+  border-right: 1px solid var(--color-border, #e5e7eb);
   padding-left: 14px;
   padding-right: 14px;
 }
 
 .cm-typora-code-fence-line:first-child {
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border, #e5e7eb);
 }
 
 .cm-typora-code-line-json,
 .cm-typora-code-fence-line-json {
-  background: rgba(248, 250, 252, 0.42);
+  background: color-mix(in srgb, var(--color-code-background, #f6f8fa) 56%, transparent);
 }
 
 .cm-typora-code-line-java,
@@ -1005,6 +1005,13 @@ body,
   background: rgba(251, 250, 247, 0.42);
 }
 
+:root[data-theme="dark"] .cm-typora-code-line,
+:root[data-theme="dark"] .cm-typora-code-fence-line,
+:root[data-theme="dark"] .typora-live-editor-pane .cm-line[class*="cm-typora-code-line"],
+:root[data-theme="dark"] .typora-live-editor-pane .cm-line[class*="cm-typora-code-fence-line"] {
+  background: color-mix(in srgb, var(--color-code-background, #10141c) 72%, transparent);
+}
+
 .cm-typora-code-token-keyword,
 .cm-typora-code-token-boolean {
   color: #7c3aed;
@@ -1036,10 +1043,10 @@ body,
 .cm-typora-diagram-preview {
   margin: 0;
   padding: 14px 12px 18px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  color: #111827;
-  background: #ffffff;
+  color: var(--color-text-primary, #2f3437);
+  background: var(--color-preview-background, #ffffff);
   font-family:
     Inter,
     ui-sans-serif,
@@ -1056,7 +1063,7 @@ body,
 
 .cm-typora-diagram-toolbar span {
   margin-right: auto;
-  color: #374151;
+  color: var(--color-text-secondary, #5f666d);
   font-size: 13px;
   font-weight: 650;
 }
@@ -1065,13 +1072,13 @@ body,
 .cm-typora-plantuml-preview button {
   width: 28px;
   height: 28px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 5px;
   padding: 0;
   display: grid;
   place-items: center;
-  color: #1f2937;
-  background: #ffffff;
+  color: var(--color-text-primary, #2f3437);
+  background: var(--color-editor-background, #ffffff);
   cursor: pointer;
 }
 
@@ -1090,7 +1097,7 @@ body,
   overflow: auto;
   padding: 12px;
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--color-editor-background, #ffffff);
 }
 
 .cm-typora-diagram-content svg {
@@ -1108,7 +1115,7 @@ body,
 
 .cm-typora-plantuml-preview p {
   margin: 8px 0 10px;
-  color: #4b5563;
+  color: var(--color-text-secondary, #5f666d);
   font-size: 13px;
 }
 

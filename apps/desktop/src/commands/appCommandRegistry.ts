@@ -3,6 +3,7 @@ import type { AppCommand } from "../model/AppCommand";
 export type ShortcutDefinition = {
   command: AppCommand;
   key: string;
+  altKey?: boolean;
   shiftKey?: boolean;
   editorHandled?: boolean;
 };
@@ -64,21 +65,33 @@ export const appCommandRegistry: Partial<Record<AppCommand, CommandDefinition>> 
   },
   "format.heading1": {
     label: "Heading 1",
+    accelerator: "CmdOrCtrl+1",
+    shortcut: { key: "1", command: "format.heading1" },
   },
   "format.heading2": {
     label: "Heading 2",
+    accelerator: "CmdOrCtrl+2",
+    shortcut: { key: "2", command: "format.heading2" },
   },
   "format.heading3": {
     label: "Heading 3",
+    accelerator: "CmdOrCtrl+3",
+    shortcut: { key: "3", command: "format.heading3" },
   },
   "format.heading4": {
     label: "Heading 4",
+    accelerator: "CmdOrCtrl+4",
+    shortcut: { key: "4", command: "format.heading4" },
   },
   "format.heading5": {
     label: "Heading 5",
+    accelerator: "CmdOrCtrl+5",
+    shortcut: { key: "5", command: "format.heading5" },
   },
   "format.heading6": {
     label: "Heading 6",
+    accelerator: "CmdOrCtrl+6",
+    shortcut: { key: "6", command: "format.heading6" },
   },
   "format.bold": {
     label: "Bold",
@@ -114,6 +127,11 @@ export const appCommandRegistry: Partial<Record<AppCommand, CommandDefinition>> 
     label: "Math Block",
     accelerator: "Shift+CmdOrCtrl+M",
     shortcut: { key: "m", shiftKey: true, command: "format.mathBlock", editorHandled: true },
+  },
+  "editor.insertTable": {
+    label: "Insert Table...",
+    accelerator: "CmdOrCtrl+Alt+T",
+    shortcut: { key: "t", altKey: true, command: "editor.insertTable" },
   },
   "view.toggleSidebar": {
     label: "Toggle Sidebar",

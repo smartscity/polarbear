@@ -3,20 +3,20 @@
  * 代码块语言视觉样式统一放在 code-blocks.css。
  */
 .live-editor-pane {
-  --live-paper-bg: #ffffff;
-  --live-paper-bg-soft: #ffffff;
-  --live-text: #111827;
-  --live-text-strong: #030712;
-  --live-text-muted: #4b5563;
-  --live-border: #d1d5db;
-  --live-border-strong: #9ca3af;
-  --live-table-border: #9ca3af;
-  --live-table-header: #f3f4f6;
+  --live-paper-bg: var(--color-preview-background);
+  --live-paper-bg-soft: var(--color-editor-background);
+  --live-text: var(--color-text-primary);
+  --live-text-strong: var(--color-text-primary);
+  --live-text-muted: var(--color-text-muted);
+  --live-border: var(--color-border);
+  --live-border-strong: var(--color-table-border);
+  --live-table-border: var(--color-table-border);
+  --live-table-header: var(--color-table-header-background);
   --live-selection: rgba(37, 99, 235, 0.22);
-  --live-button-bg: #ffffff;
-  --live-button-bg-hover: #eff6ff;
-  --live-button-text: #111827;
-  --live-button-border: #9ca3af;
+  --live-button-bg: var(--color-editor-background);
+  --live-button-bg-hover: var(--color-hover-background);
+  --live-button-text: var(--color-text-primary);
+  --live-button-border: var(--color-border);
 
   color: var(--live-text);
   border-color: var(--live-border);
@@ -24,13 +24,13 @@
 }
 
 .live-editor-pane .pane-title {
-  color: #111827;
+  color: var(--color-text-primary);
   border-color: var(--live-border);
-  background: #ffffff;
+  background: var(--color-sidebar-background);
 }
 
 .live-editor-pane .pane-title span + span {
-  color: #4b5563;
+  color: var(--color-text-muted);
 }
 
 .live-editor-document,
@@ -40,7 +40,7 @@
   overflow: auto;
   padding: 44px max(48px, 12vw) 88px;
   color: var(--live-text);
-  background: #ffffff;
+  background: var(--live-paper-bg);
   font-family: var(--type-preview-font-family);
   font-size: 15.5px;
   line-height: 1.78;

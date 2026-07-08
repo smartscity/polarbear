@@ -50,7 +50,7 @@ export type ThemeTokens = {
 const sharedTypography = {
   editorFontFamily: '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
   previewFontFamily:
-    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif',
   codeFontFamily: '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
   baseFontSize: "14px",
   lineHeight: "1.72"
@@ -158,7 +158,13 @@ export function applyThemeTokens(themeName: ThemeName): void {
 
 export function readStoredTheme(): ThemeName {
   const storedTheme = window.localStorage.getItem("polarbear.theme");
-  return storedTheme === "light" || storedTheme === "dark" ? storedTheme : "dark";
+  if (storedTheme === "light" || storedTheme === "dark") {
+    return storedTheme;
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 export function storeTheme(themeName: ThemeName): void {

@@ -64,15 +64,13 @@ export type AppCommand =
   | "repository.syncNow"
   | "repository.viewSyncStatus"
   | "theme.light"
-  | "theme.dark"
-  | "window.selectTab";
+  | "theme.dark";
 
 export type AppCommandPayload = {
   commandSource?: "menu" | "shortcut";
   sourcePath?: string;
   targetParentPath?: string | null;
   targetPath?: string;
-  tabIndex?: number;
   workspaceCreate?: boolean;
 };
 

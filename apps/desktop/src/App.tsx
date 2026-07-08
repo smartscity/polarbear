@@ -3162,21 +3162,6 @@ export function App() {
         return;
       }
 
-      if (command === "window.selectTab") {
-        const tabIndex = payload?.tabIndex;
-        if (typeof tabIndex !== "number") {
-          return;
-        }
-
-        const tabId = openFileIds[tabIndex];
-        if (!tabId) {
-          return;
-        }
-
-        void activateTab(tabId);
-        return;
-      }
-
       if (command === "format.insertImage") {
         void insertImageFromDialog();
         return;

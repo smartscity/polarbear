@@ -131,6 +131,7 @@ export function useNativeAppMenu(
                 { item: "Separator" },
                 {
                   text: "Insert Table...",
+                  accelerator: acceleratorForCommand("editor.insertTable"),
                   action: () => executeCommand("editor.insertTable")
                 },
                 {

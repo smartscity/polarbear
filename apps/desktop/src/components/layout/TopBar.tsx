@@ -29,11 +29,11 @@ export function TopBar({
     <header className="top-bar">
       <nav className="window-tabs" aria-label="Open files">
         <div className="window-tab-strip">
-          {tabs.length > 0 ? tabs.map((tab, index) => (
+          {tabs.length > 0 ? tabs.map((tab) => (
             <div
               key={tab.id}
               className={`window-tab ${tab.id === activeTabId ? "active" : ""}`}
-              title={`${index < 9 ? `Command+${index + 1}` : "Command+0"} · ${tab.name}`}
+              title={tab.name}
             >
               <button
                 type="button"
