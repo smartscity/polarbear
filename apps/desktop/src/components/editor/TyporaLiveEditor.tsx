@@ -26,6 +26,8 @@ import {
   keymap,
 } from "@codemirror/view";
 import mermaid from "mermaid";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { resolveMarkdownAsset } from "../../tauri/workspaceCommands";
 import { macNavigationKeyBindings } from "./macNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
@@ -4151,6 +4153,12 @@ class MermaidPreviewWidget extends WidgetType {
     );
     editButton.addEventListener("click", () => revealSource(wrapper, this.block));
 
+    const pngButton = createDiagramIconButton(
+        "Export PNG",
+        "M4 4.5A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-11ZM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 14.5l2.8-3.5a.75.75 0 0 1 1.15-.03L11 12.75l1.8-2.25a.75.75 0 0 1 1.17.02L15.5 13v1.5h-10Z", );
+    pngButton.addEventListener("click", () => {
+      exportDiagramAsPng(content, this.block.id);
+    });
     const copyButton = createDiagramIconButton(
       "Copy Source",
       "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
@@ -4159,7 +4167,7 @@ class MermaidPreviewWidget extends WidgetType {
       void navigator.clipboard.writeText(this.block.source);
     });
 
-    toolbar.append(title, editButton, copyButton);
+    toolbar.append(title, editButton, pngButton, copyButton);
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
@@ -4244,6 +4252,85 @@ function createDiagramIconButton(label: string, pathData: string): HTMLButtonEle
   button.setAttribute("aria-label", label);
   button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 20 20"><path d="${pathData}"/></svg>`;
   return button;
+}
+
+function exportDiagramAsPng(contentElement: HTMLElement, diagramId: string): void {
+  const svg = contentElement.querySelector("svg");
+  if (!svg) {
+    return;
+  }
+
+  const defaultName = `${diagramId.replace(/[^a-z0-9_-]/gi, "_")}.png`;
+
+  void (async () => {
+    const selectedPath = await save({
+      defaultPath: defaultName,
+      filters: [{ name: "PNG Image", extensions: ["png"] }],
+      title: "Export PNG",
+    });
+    if (!selectedPath) return;
+
+    const rect = svg.getBoundingClientRect();
+    const width = Math.ceil(rect.width) || 800;
+    const height = Math.ceil(rect.height) || 600;
+
+    const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
+    clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clonedSvg.setAttribute("width", String(width));
+    clonedSvg.setAttribute("height", String(height));
+
+    sanitizeSvgForCanvas(clonedSvg);
+
+    const svgData = new XMLSerializer().serializeToString(clonedSvg);
+    const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`;
+
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        void (async () => {
+          const arrayBuffer = await blob.arrayBuffer();
+          const imageBytes = Array.from(new Uint8Array(arrayBuffer));
+          await invoke("export_png_file", { path: selectedPath, imageBytes });
+        })();
+      }, "image/png");
+    };
+
+    img.src = svgDataUrl;
+  })();
+}
+
+function sanitizeSvgForCanvas(svg: SVGSVGElement): void {
+  const foreignObjects = svg.querySelectorAll("foreignObject");
+  for (const fo of foreignObjects) {
+    const textContent = (fo.textContent || "").trim();
+    const x = Number.parseFloat(fo.getAttribute("x") || "0");
+    const y = Number.parseFloat(fo.getAttribute("y") || "0");
+    const foWidth = Number.parseFloat(fo.getAttribute("width") || "100");
+    const foHeight = Number.parseFloat(fo.getAttribute("height") || "20");
+
+    const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    textEl.setAttribute("x", String(x + foWidth / 2));
+    textEl.setAttribute("y", String(y + foHeight / 2));
+    textEl.setAttribute("text-anchor", "middle");
+    textEl.setAttribute("dominant-baseline", "central");
+    textEl.setAttribute("font-size", "14");
+    textEl.setAttribute("fill", "#ccc");
+    textEl.textContent = textContent;
+
+    fo.parentNode?.replaceChild(textEl, fo);
+  }
 }
 
 async function renderPlantUmlPreview(

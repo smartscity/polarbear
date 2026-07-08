@@ -1063,6 +1063,11 @@ fn copy_image_asset(
 }
 
 #[tauri::command]
+fn export_png_file(path: String, image_bytes: Vec<u8>) -> Result<(), String> {
+    fs::write(&path, image_bytes).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn save_image_asset(
     workspace_root: String,
     markdown_relative_path: String,
@@ -1593,6 +1598,7 @@ fn main() -> tauri::Result<()> {
             move_entry,
             copy_image_asset,
             save_image_asset,
+            export_png_file,
             resolve_markdown_asset,
             repository_validate_github_token,
             repository_disconnect_github,
