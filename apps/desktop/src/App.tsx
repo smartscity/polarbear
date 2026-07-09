@@ -15,6 +15,7 @@ import {
 import type { EditorView } from "@codemirror/view";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { ask } from "@tauri-apps/plugin-dialog";
 import {
   MarkdownEditor,
   type MarkdownEditorView,
@@ -1684,6 +1685,13 @@ export function App() {
       zoomSettleTimerRef.current !== null ||
       zoomSnapAnimationRef.current !== 0;
 
+    const isTransientZoomScrollLocked = () =>
+      Date.now() < zoomScrollLockUntilRef.current ||
+      Boolean(activeZoomAnchorRef.current) ||
+      zoomRafRef.current !== 0 ||
+      zoomSettleTimerRef.current !== null ||
+      zoomSnapAnimationRef.current !== 0;
+
     const handleScrollCapture = (event: Event) => {
       if (!isInnerScrollFrozen()) {
         return;
@@ -1694,7 +1702,15 @@ export function App() {
         target instanceof HTMLElement &&
         zoomInnerScrollLocksRef.current.has(target)
       ) {
-        restoreInnerScrollLocks();
+        if (isTransientZoomScrollLocked()) {
+          restoreInnerScrollLocks();
+          return;
+        }
+
+        zoomInnerScrollLocksRef.current.set(target, {
+          left: target.scrollLeft,
+          top: target.scrollTop,
+        });
       }
     };
 
@@ -2402,24 +2418,26 @@ export function App() {
     let fileIdToClose = fileId;
 
     if (dirtyFileIds.has(fileId)) {
-      const shouldSave = window.confirm(`Save changes to ${tabName} before closing?`);
-      if (!shouldSave) {
-        return;
-      }
+      const shouldSave = await ask(`Save changes to ${tabName} before closing?`, {
+        kind: "warning",
+        title: "Close Tab",
+      });
 
-      lastSavedFileIdRef.current = null;
-      let savedFileId: string | null = null;
-      try {
-        savedFileId = await saveTab(fileId);
-      } catch (error) {
-        setStatusMessage(error instanceof Error ? error.message : String(error));
-        return;
-      }
-      if (!savedFileId) {
-        return;
-      }
+      if (shouldSave) {
+        lastSavedFileIdRef.current = null;
+        let savedFileId: string | null = null;
+        try {
+          savedFileId = await saveTab(fileId);
+        } catch (error) {
+          setStatusMessage(error instanceof Error ? error.message : String(error));
+          return;
+        }
+        if (!savedFileId) {
+          return;
+        }
 
-      fileIdToClose = savedFileId;
+        fileIdToClose = savedFileId;
+      }
     }
 
     const currentTabIds = openFileIds;

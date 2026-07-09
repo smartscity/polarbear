@@ -11,6 +11,7 @@ export function exportSvgElementAsSvg(svg: SVGSVGElement, diagramId: string): vo
     if (!selectedPath) return;
 
     const clonedSvg = cloneSvgForExport(svg);
+    sanitizeSvgForXmlExport(clonedSvg);
     const svgContent = new XMLSerializer().serializeToString(clonedSvg);
     await invoke("export_svg_file", { path: selectedPath, svgContent });
   })();
@@ -29,6 +30,7 @@ export function exportSvgElementAsPng(svg: SVGSVGElement, diagramId: string): vo
     const width = Number.parseFloat(clonedSvg.getAttribute("width") || "800") || 800;
     const height = Number.parseFloat(clonedSvg.getAttribute("height") || "600") || 600;
 
+    sanitizeSvgForXmlExport(clonedSvg);
     sanitizeSvgForCanvas(clonedSvg);
 
     const svgData = new XMLSerializer().serializeToString(clonedSvg);
@@ -58,6 +60,9 @@ export function exportSvgElementAsPng(svg: SVGSVGElement, diagramId: string): vo
     };
 
     img.src = svgDataUrl;
+    img.onerror = () => {
+      console.error("Failed to load diagram SVG for PNG export.");
+    };
   })();
 }
 
@@ -154,6 +159,20 @@ function addExportContrastStyles(svg: SVGSVGElement): void {
     }
   `;
   svg.append(style);
+}
+
+function sanitizeSvgForXmlExport(svg: SVGSVGElement): void {
+  const walker = document.createTreeWalker(svg, NodeFilter.SHOW_COMMENT);
+  const comments: Comment[] = [];
+  let node = walker.nextNode();
+  while (node) {
+    comments.push(node as Comment);
+    node = walker.nextNode();
+  }
+
+  for (const comment of comments) {
+    comment.remove();
+  }
 }
 
 function sanitizeSvgForCanvas(svg: SVGSVGElement): void {

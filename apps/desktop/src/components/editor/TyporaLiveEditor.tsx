@@ -3829,19 +3829,19 @@ function openTableActionMenu(
   };
 
   const bodyLineIndex = Math.max(2, position.sourceLineIndex);
-  addAction("Add Row Above", () =>
+  addAction("Insert Row Above", () =>
     applyTableOperation(wrapper, block, (lines) =>
       insertTableRow(lines, bodyLineIndex, position.columnIndex),
     ));
-  addAction("Add Row Below", () =>
+  addAction("Insert Row Below", () =>
     applyTableOperation(wrapper, block, (lines) =>
       insertTableRow(lines, bodyLineIndex + 1, position.columnIndex),
     ));
-  addAction("Add Column Before", () =>
+  addAction("Insert Column Left", () =>
     applyTableOperation(wrapper, block, (lines) =>
       insertTableColumn(lines, position.columnIndex),
     ));
-  addAction("Add Column After", () =>
+  addAction("Insert Column Right", () =>
     applyTableOperation(wrapper, block, (lines) =>
       insertTableColumn(lines, position.columnIndex + 1),
     ));
@@ -3854,27 +3854,6 @@ function openTableActionMenu(
     applyTableOperation(wrapper, block, (lines) =>
       deleteTableColumn(lines, position.columnIndex),
     ));
-  addSeparator();
-  addAction("Align Left", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      setTableColumnAlignment(lines, position.columnIndex, "left"),
-    ));
-  addAction("Align Center", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      setTableColumnAlignment(lines, position.columnIndex, "center"),
-    ));
-  addAction("Align Right", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      setTableColumnAlignment(lines, position.columnIndex, "right"),
-    ));
-  addSeparator();
-  addAction("Copy Table", () => {
-    void navigator.clipboard?.writeText(block.raw);
-  });
-  addAction("Prettify Source Code", () =>
-    applyTableOperation(wrapper, block, prettifyMarkdownTable),
-  );
-  addAction("Delete Table", () => applyTableEdit(wrapper, block, ""));
 
   document.body.append(menu);
 
