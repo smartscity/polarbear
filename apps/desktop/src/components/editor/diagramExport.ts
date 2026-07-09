@@ -84,21 +84,54 @@ function cloneSvgForExport(svg: SVGSVGElement): SVGSVGElement {
 function sanitizeSvgForCanvas(svg: SVGSVGElement): void {
   const foreignObjects = svg.querySelectorAll("foreignObject");
   for (const foreignObject of foreignObjects) {
-    const textContent = (foreignObject.textContent || "").trim();
     const x = Number.parseFloat(foreignObject.getAttribute("x") || "0");
     const y = Number.parseFloat(foreignObject.getAttribute("y") || "0");
     const width = Number.parseFloat(foreignObject.getAttribute("width") || "100");
     const height = Number.parseFloat(foreignObject.getAttribute("height") || "20");
 
+    const lines = extractLinesFromForeignObject(foreignObject);
+    const centerX = x + width / 2;
+    const lineHeight = 18;
+    const totalTextHeight = lines.length * lineHeight;
+    const startY = y + (height - totalTextHeight) / 2 + lineHeight * 0.75;
+
     const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    textElement.setAttribute("x", String(x + width / 2));
-    textElement.setAttribute("y", String(y + height / 2));
     textElement.setAttribute("text-anchor", "middle");
-    textElement.setAttribute("dominant-baseline", "central");
     textElement.setAttribute("font-size", "14");
     textElement.setAttribute("fill", "#ccc");
-    textElement.textContent = textContent;
+
+    for (let i = 0; i < lines.length; i++) {
+      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      tspan.setAttribute("x", String(centerX));
+      tspan.setAttribute("y", String(startY + i * lineHeight));
+      tspan.textContent = lines[i];
+      textElement.appendChild(tspan);
+    }
 
     foreignObject.parentNode?.replaceChild(textElement, foreignObject);
   }
+}
+
+function extractLinesFromForeignObject(fo: Element): string[] {
+  const html = fo.innerHTML;
+  if (!html.trim()) {
+    const text = (fo.textContent || "").trim();
+    return text ? [text] : [""];
+  }
+
+  const normalized = html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(?:div|p|li)>/gi, "\n")
+      .replace(/<[^>]+>/g, "");
+
+  const decoded = normalized
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, " ");
+
+  const lines = decoded.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+  return lines.length > 0 ? lines : [""];
 }
