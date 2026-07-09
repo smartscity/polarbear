@@ -33,6 +33,8 @@ export function useNativeAppMenu(
                   action: () => executeCommand("app.about")
                 },
                 { item: "Separator" },
+                { item: "Quit" },
+                { item: "Separator" },
                 {
                   id: "app.newWindow",
                   text: "New Window",

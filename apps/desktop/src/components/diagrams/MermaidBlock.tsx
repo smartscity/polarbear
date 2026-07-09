@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import {
+  exportSvgElementAsPng,
   exportSvgElementAsSvg,
   findRenderedSvg,
-} from "../editor/diagramExport";
+} from "./diagramExport";
+import { mermaidDiagramConfig } from "./mermaidDiagramConfig";
 
 export type MermaidBlockProps = {
   source: string;
@@ -18,9 +20,7 @@ function initializeMermaid(): void {
   }
 
   mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: "strict",
-    theme: "dark"
+    ...mermaidDiagramConfig,
   });
   mermaidInitialized = true;
 }
@@ -69,6 +69,11 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
     if (svg) exportSvgElementAsSvg(svg, diagramId);
   };
 
+  const exportPng = () => {
+    const svg = findRenderedSvg(renderTargetRef.current);
+    if (svg) exportSvgElementAsPng(svg, diagramId);
+  };
+
   if (renderError) {
     return (
       <figure className="mermaid-card mermaid-card-error">
@@ -88,8 +93,11 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
         <button type="button" aria-label="Copy source" title="Copy Source" onClick={() => void copySource()}>
           <CopyIcon />
         </button>
-        <button type="button" aria-label="Export SVG" title="Export SVG" disabled={!svgContent} onClick={exportSvg}>
+        <button type="button" aria-label="Export PNG" title="Export PNG" disabled={!svgContent} onClick={exportPng}>
           <ExportIcon />
+        </button>
+        <button type="button" aria-label="Export SVG" title="Export SVG" disabled={!svgContent} onClick={exportSvg}>
+          <SvgIcon />
         </button>
       </div>
       <div
@@ -124,6 +132,14 @@ function ExportIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 20 20">
       <path d="M10 3.25 6.5 6.75l1.05 1.05 1.7-1.7v6.15h1.5V6.1l1.7 1.7 1.05-1.05L10 3.25ZM5 13.5h1.5v1.75h7V13.5H15v2.25A1.25 1.25 0 0 1 13.75 17h-7.5A1.25 1.25 0 0 1 5 15.75V13.5Z" />
+    </svg>
+  );
+}
+
+function SvgIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20">
+      <path d="M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Zm2 4.25h6V9H7V7.75Zm0 3h6V12H7v-1.25Zm0 3h4V15H7v-1.25Z" />
     </svg>
   );
 }

@@ -671,8 +671,8 @@ body,
 }
 
 .cm-typora-table-size-menu {
-  position: absolute;
-  z-index: 22;
+  position: fixed;
+  z-index: 10020;
   display: grid;
   gap: 14px;
   border: 1px solid var(--color-border, #e5e7eb);
@@ -708,8 +708,8 @@ body,
 }
 
 .cm-typora-table-menu {
-  position: absolute;
-  z-index: 20;
+  position: fixed;
+  z-index: 10020;
   width: 190px;
   display: grid;
   gap: 2px;
@@ -1103,7 +1103,8 @@ body,
   overflow: auto;
   padding: 12px;
   border-radius: 6px;
-  background: var(--color-editor-background, #ffffff);
+  color: #1f2937;
+  background: #ffffff;
 }
 
 .cm-typora-diagram-content svg {

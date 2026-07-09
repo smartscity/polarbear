@@ -78,7 +78,82 @@ function cloneSvgForExport(svg: SVGSVGElement): SVGSVGElement {
   clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clonedSvg.setAttribute("width", String(width));
   clonedSvg.setAttribute("height", String(height));
+  clonedSvg.setAttribute("viewBox", clonedSvg.getAttribute("viewBox") || `0 0 ${width} ${height}`);
+  addExportBackground(clonedSvg, width, height);
+  addExportContrastStyles(clonedSvg);
   return clonedSvg;
+}
+
+function addExportBackground(svg: SVGSVGElement, width: number, height: number): void {
+  const viewBox = parseSvgViewBox(svg.getAttribute("viewBox"), width, height);
+  const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  background.setAttribute("x", String(viewBox.x));
+  background.setAttribute("y", String(viewBox.y));
+  background.setAttribute("width", String(viewBox.width));
+  background.setAttribute("height", String(viewBox.height));
+  background.setAttribute("fill", "#ffffff");
+  svg.insertBefore(background, svg.firstChild);
+}
+
+function parseSvgViewBox(
+  viewBox: string | null,
+  fallbackWidth: number,
+  fallbackHeight: number,
+): { x: number; y: number; width: number; height: number } {
+  const parts = viewBox?.trim().split(/[\s,]+/).map(Number) ?? [];
+  if (parts.length === 4 && parts.every(Number.isFinite)) {
+    const [x, y, width, height] = parts;
+    return { x, y, width, height };
+  }
+  return { x: 0, y: 0, width: fallbackWidth, height: fallbackHeight };
+}
+
+function addExportContrastStyles(svg: SVGSVGElement): void {
+  const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  style.textContent = `
+    text,
+    tspan,
+    .label,
+    .nodeLabel,
+    .edgeLabel,
+    .entityLabel {
+      color: #111827 !important;
+      fill: #111827 !important;
+    }
+
+    .entityBox,
+    .node rect,
+    .node polygon,
+    .node circle,
+    .node ellipse {
+      fill: #ffffff !important;
+      stroke: #475569 !important;
+    }
+
+    .attributeBoxOdd {
+      fill: #ffffff !important;
+      stroke: #cbd5e1 !important;
+    }
+
+    .attributeBoxEven {
+      fill: #f8fafc !important;
+      stroke: #cbd5e1 !important;
+    }
+
+    .relationshipLine,
+    .edgePath path,
+    path.relation,
+    line {
+      stroke: #475569 !important;
+    }
+
+    marker path,
+    marker polygon {
+      fill: #475569 !important;
+      stroke: #475569 !important;
+    }
+  `;
+  svg.append(style);
 }
 
 function sanitizeSvgForCanvas(svg: SVGSVGElement): void {
@@ -98,7 +173,7 @@ function sanitizeSvgForCanvas(svg: SVGSVGElement): void {
     const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
     textElement.setAttribute("text-anchor", "middle");
     textElement.setAttribute("font-size", "14");
-    textElement.setAttribute("fill", "#ccc");
+    textElement.setAttribute("fill", "#111827");
 
     for (let i = 0; i < lines.length; i++) {
       const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
@@ -120,17 +195,17 @@ function extractLinesFromForeignObject(fo: Element): string[] {
   }
 
   const normalized = html
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/(?:div|p|li)>/gi, "\n")
-      .replace(/<[^>]+>/g, "");
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:div|p|li)>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
 
   const decoded = normalized
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, " ");
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
 
   const lines = decoded.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
   return lines.length > 0 ? lines : [""];

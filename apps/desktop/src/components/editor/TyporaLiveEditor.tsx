@@ -31,7 +31,8 @@ import {
   exportSvgElementAsPng,
   exportSvgElementAsSvg,
   findRenderedSvg,
-} from "./diagramExport";
+} from "../diagrams/diagramExport";
+import { mermaidDiagramConfig } from "../diagrams/mermaidDiagramConfig";
 import { macNavigationKeyBindings } from "./macNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
 import {
@@ -3059,9 +3060,7 @@ function initializeMermaid(): void {
   }
 
   mermaid.initialize({
-    securityLevel: "strict",
-    startOnLoad: false,
-    theme: "default",
+    ...mermaidDiagramConfig,
   });
   mermaidInitialized = true;
 }
@@ -3772,12 +3771,10 @@ function openTableSizeMenu(
 
   updateGrid(selectedRows, selectedColumns);
   menu.append(grid, label);
-  wrapper.append(menu);
+  document.body.append(menu);
 
-  const wrapperRect = wrapper.getBoundingClientRect();
   const anchorRect = anchorElement.getBoundingClientRect();
-  menu.style.left = `${Math.max(0, anchorRect.left - wrapperRect.left)}px`;
-  menu.style.top = `${Math.max(8, anchorRect.bottom - wrapperRect.top + 4)}px`;
+  positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
   const closeOnOutsidePointer = (event: PointerEvent) => {
     if (event.target instanceof Node && menu.contains(event.target)) {
@@ -3879,12 +3876,10 @@ function openTableActionMenu(
   );
   addAction("Delete Table", () => applyTableEdit(wrapper, block, ""));
 
-  wrapper.append(menu);
+  document.body.append(menu);
 
-  const wrapperRect = wrapper.getBoundingClientRect();
   const anchorRect = anchorElement.getBoundingClientRect();
-  menu.style.left = `${Math.max(8, anchorRect.left - wrapperRect.left)}px`;
-  menu.style.top = `${Math.max(8, anchorRect.bottom - wrapperRect.top + 4)}px`;
+  positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
   const closeOnOutsidePointer = (event: PointerEvent) => {
     if (event.target instanceof Node && menu.contains(event.target)) {
@@ -3899,8 +3894,17 @@ function openTableActionMenu(
   });
 }
 
+function positionTablePortalMenu(menu: HTMLElement, left: number, top: number): void {
+  const margin = 8;
+  const maxLeft = Math.max(margin, window.innerWidth - menu.offsetWidth - margin);
+  const maxTop = Math.max(margin, window.innerHeight - menu.offsetHeight - margin);
+  menu.style.left = `${Math.min(Math.max(margin, left), maxLeft)}px`;
+  menu.style.top = `${Math.min(Math.max(margin, top), maxTop)}px`;
+}
+
 function closeTableActionMenus(wrapper: HTMLElement) {
-  for (const menu of wrapper.querySelectorAll(".cm-typora-table-menu, .cm-typora-table-size-menu")) {
+  void wrapper;
+  for (const menu of document.querySelectorAll(".cm-typora-table-menu, .cm-typora-table-size-menu")) {
     menu.remove();
   }
 }

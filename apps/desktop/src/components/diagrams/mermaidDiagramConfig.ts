@@ -1,0 +1,25 @@
+export const mermaidDiagramConfig = {
+  startOnLoad: false,
+  securityLevel: "strict",
+  theme: "base",
+  themeVariables: {
+    background: "#ffffff",
+    mainBkg: "#ffffff",
+    secondBkg: "#f8fafc",
+    tertiaryColor: "#ffffff",
+    primaryColor: "#ffffff",
+    primaryTextColor: "#111827",
+    primaryBorderColor: "#475569",
+    secondaryColor: "#f8fafc",
+    secondaryTextColor: "#111827",
+    secondaryBorderColor: "#64748b",
+    tertiaryTextColor: "#111827",
+    lineColor: "#475569",
+    textColor: "#111827",
+    labelTextColor: "#111827",
+    edgeLabelBackground: "#ffffff",
+    nodeTextColor: "#111827",
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+  },
+} as const;

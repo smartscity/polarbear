@@ -1,8 +1,8 @@
 import { useMemo, type MouseEvent } from "react";
 import MarkdownIt from "markdown-it";
 import { MarkdownImage } from "./MarkdownImage";
-import { MermaidBlock } from "../mermaid/MermaidBlock";
-import { PlantUmlBlock } from "../mermaid/PlantUmlBlock";
+import { MermaidBlock } from "../diagrams/MermaidBlock";
+import { PlantUmlBlock } from "../diagrams/PlantUmlBlock";
 import { splitMarkdownIntoSegments } from "../../markdown/splitMarkdownIntoSegments";
 
 type MarkdownPreviewProps = {

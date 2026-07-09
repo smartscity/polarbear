@@ -3,7 +3,7 @@ import {
   exportSvgElementAsPng,
   exportSvgElementAsSvg,
   findRenderedSvg,
-} from "../editor/diagramExport";
+} from "./diagramExport";
 
 export type PlantUmlBlockProps = {
   diagramId: string;

@@ -1267,9 +1267,10 @@ button:disabled {
   display: grid;
   place-items: center;
   overflow: auto;
+  color: #1f2937;
   border: 1px solid rgba(137, 151, 174, 0.18);
   border-radius: 8px;
-  background: #f8fafc;
+  background: #ffffff;
 }
 
 .mermaid-render-target svg {
@@ -1323,10 +1324,10 @@ button:disabled {
   display: grid;
   place-items: center;
   overflow: auto;
-  color: #334155;
+  color: #1f2937;
   border: 1px solid rgba(137, 151, 174, 0.18);
   border-radius: 8px;
-  background: #f8fafc;
+  background: #ffffff;
 }
 
 .plantuml-render-target svg {
@@ -2062,9 +2063,42 @@ button.active {
 
 .mermaid-render-target,
 .plantuml-render-target {
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
-  background: var(--color-editor-background);
+  color: #1f2937;
+  border-color: #d8dee4;
+  background: #ffffff;
+}
+
+.mermaid-render-target svg,
+.plantuml-render-target svg,
+.cm-typora-diagram-content svg {
+  color: #1f2937;
+}
+
+.mermaid-render-target svg text,
+.mermaid-render-target svg tspan,
+.plantuml-render-target svg text,
+.plantuml-render-target svg tspan,
+.cm-typora-diagram-content svg text,
+.cm-typora-diagram-content svg tspan {
+  fill: #1f2937 !important;
+}
+
+.mermaid-render-target svg .entityBox,
+.cm-typora-diagram-content svg .entityBox {
+  fill: #ffffff !important;
+  stroke: #475569 !important;
+}
+
+.mermaid-render-target svg .attributeBoxOdd,
+.cm-typora-diagram-content svg .attributeBoxOdd {
+  fill: #ffffff !important;
+  stroke: #cbd5e1 !important;
+}
+
+.mermaid-render-target svg .attributeBoxEven,
+.cm-typora-diagram-content svg .attributeBoxEven {
+  fill: #f8fafc !important;
+  stroke: #cbd5e1 !important;
 }
 
 .mermaid-card-error,
