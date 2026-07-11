@@ -16,8 +16,8 @@ export const builtInPlugins: PluginDescriptor[] = [
     status: "enabled"
   },
   {
-    id: "github-sync",
-    label: "GitHub sync",
-    status: "planned"
+    id: "cloud-sync",
+    label: "Cloud sync",
+    status: "enabled"
   }
 ];

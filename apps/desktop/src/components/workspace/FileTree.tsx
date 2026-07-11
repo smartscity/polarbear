@@ -12,6 +12,7 @@ import {
   FileTreeContextMenu,
   type FileTreeContextMenuState
 } from "./FileTreeContextMenu";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type FileTreeProps = {
   activeFileId: string;
@@ -42,6 +43,7 @@ export function FileTree({
   onSelectFile,
   onSelectTreeItem
 }: FileTreeProps) {
+  const { t } = useI18n();
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(
     new Set()
   );
@@ -211,8 +213,8 @@ export function FileTree({
         onDragLeave={() => setDropTargetId(null)}
         onDrop={handleRootDrop}
       >
-        <strong>No Markdown files yet</strong>
-        <span>Use File / New File to start this workspace.</span>
+        <strong>{t("tree.emptyTitle")}</strong>
+        <span>{t("tree.emptyHint")}</span>
         {contextMenu ? (
           <FileTreeContextMenu
             executeCommand={executeCommand}
@@ -239,6 +241,14 @@ export function FileTree({
         if ((event.key === "F2" || event.key === "Enter") && selectedTreeItemId) {
           event.preventDefault();
           executeCommand("file.rename", { targetPath: selectedTreeItemId });
+          return;
+        }
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          selectedTreeItemId
+        ) {
+          event.preventDefault();
+          executeCommand("file.delete", { targetPath: selectedTreeItemId });
         }
       }}
       onDragOver={(event) => {
@@ -454,7 +464,7 @@ export function FileTree({
                 <>
                   <span className="tree-item-name">{item.name}</span>
                   {dirtyFileIds.has(item.id) ? (
-                    <span className="dirty-dot" aria-label="Unsaved changes">
+                    <span className="dirty-dot" aria-label={t("tree.unsavedChanges")}>
                       •
                     </span>
                   ) : null}

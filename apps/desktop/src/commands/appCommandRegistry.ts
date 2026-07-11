@@ -133,6 +133,11 @@ export const appCommandRegistry: Partial<Record<AppCommand, CommandDefinition>> 
     accelerator: "CmdOrCtrl+Alt+T",
     shortcut: { key: "t", altKey: true, command: "editor.insertTable" },
   },
+  "repository.syncNow": {
+    label: "Sync Now",
+    accelerator: "CmdOrCtrl+Alt+S",
+    shortcut: { key: "s", altKey: true, command: "repository.syncNow" },
+  },
   "view.toggleSidebar": {
     label: "Toggle Sidebar",
     accelerator: "Shift+CmdOrCtrl+L",

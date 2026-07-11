@@ -4,6 +4,7 @@ import type { WorkspaceItem } from "../../model/WorkspaceFile";
 import { Sidebar } from "./Sidebar";
 import { StatusBar } from "./StatusBar";
 import { TopBar } from "./TopBar";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type AppShellProps = {
   activeFileId: string;
@@ -22,6 +23,8 @@ type AppShellProps = {
   selectedTreeItemId: string;
   sidebarOpen: boolean;
   statusMessage: string;
+  syncMessage: string;
+  syncState: "idle" | "busy" | "success" | "error";
   tabs: Array<{
     id: string;
     isDirty: boolean;
@@ -39,6 +42,7 @@ type AppShellProps = {
   onSelectTab: (tabId: string) => void;
   onSelectTreeItem: (itemId: string) => void;
   onSidebarClose: () => void;
+  onSync: () => void;
   onToggleDocumentStructure: () => void;
   onToggleSidebar: () => void;
 };
@@ -67,6 +71,8 @@ export function AppShell({
   selectedTreeItemId,
   sidebarOpen,
   statusMessage,
+  syncMessage,
+  syncState,
   tabs,
   workspaceRoot,
   workspaceItems,
@@ -80,9 +86,11 @@ export function AppShell({
   onSelectTab,
   onSelectTreeItem,
   onSidebarClose,
+  onSync,
   onToggleDocumentStructure,
   onToggleSidebar
 }: AppShellProps) {
+  const { t } = useI18n();
   return (
     <main id="polarbear-app" className="app-shell">
       <TopBar
@@ -105,7 +113,7 @@ export function AppShell({
           <button
             type="button"
             className="mobile-sidebar-mask"
-            aria-label="Close sidebar"
+            aria-label={t("sidebar.close")}
             onClick={onSidebarClose}
           />
         ) : null}
@@ -129,9 +137,9 @@ export function AppShell({
         {children}
         {isDocumentStructureOpen ? (
           <aside className="document-structure-panel">
-            <strong>STRUCTURE</strong>
+            <strong>{t("structure.title")}</strong>
             {documentStructureItems.length > 0 ? (
-              <nav aria-label="Document structure">
+              <nav aria-label={t("structure.label")}>
                 {documentStructureItems.map((item) => (
                   <button
                     type="button"
@@ -144,7 +152,7 @@ export function AppShell({
                 ))}
               </nav>
             ) : (
-              <span className="document-structure-empty">No headings</span>
+              <span className="document-structure-empty">{t("structure.empty")}</span>
             )}
           </aside>
         ) : null}
@@ -154,7 +162,10 @@ export function AppShell({
         characterCount={characterCount}
         debugEnabled={debugEnabled}
         isDirty={isDirty}
+        syncMessage={syncMessage}
+        syncState={syncState}
         onDebugToggle={onDebugToggle}
+        onSync={onSync}
       />
     </main>
   );

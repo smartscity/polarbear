@@ -1487,6 +1487,81 @@ button:disabled {
   margin-left: auto;
 }
 
+.status-sync-message {
+  max-width: min(520px, 42vw);
+  overflow: hidden;
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.status-sync-message.success {
+  color: var(--color-text-secondary);
+}
+
+.status-sync-message.error {
+  color: var(--color-danger);
+}
+
+.status-sync-state-icon {
+  display: inline-grid;
+  width: 14px;
+  margin-right: 4px;
+  place-items: center;
+  font-weight: 700;
+}
+
+.status-sync-button {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  flex: 0 0 22px;
+  padding: 0;
+  place-items: center;
+  color: var(--color-text-muted);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.status-sync-button:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-hover-background);
+}
+
+.status-sync-button.busy span {
+  animation: status-sync-spin 0.8s linear infinite;
+}
+
+.status-language-select {
+  width: 48px;
+  height: 20px;
+  flex: 0 0 48px;
+  border: 0;
+  border-radius: 4px;
+  padding: 0 3px;
+  color: var(--color-text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.status-language-select:hover,
+.status-language-select:focus-visible {
+  color: var(--color-text-primary);
+  background: var(--color-hover-background);
+  outline: none;
+}
+
+@keyframes status-sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .status-debug-toggle {
   height: 20px;
   border: 1px solid rgba(137, 151, 174, 0.28);
@@ -1701,6 +1776,90 @@ button:disabled {
 
 .repository-workspace-path {
   word-break: break-all;
+}
+
+.repository-dialog-error,
+.repository-dialog-note {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.repository-dialog-error {
+  color: var(--color-danger);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 38%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 9%, transparent);
+}
+
+.repository-dialog-note {
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  background: var(--color-hover-background);
+}
+
+.repository-operation-toast {
+  position: fixed;
+  right: 14px;
+  bottom: 38px;
+  z-index: 1300;
+  width: min(360px, calc(100vw - 28px));
+  display: grid;
+  gap: 7px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-editor-background) 94%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
+}
+
+.repository-operation-toast strong {
+  font-size: 13px;
+}
+
+.repository-operation-toast span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.repository-operation-message {
+  min-width: 0;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+
+.repository-operation-progress {
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-hover-background);
+}
+
+.repository-operation-progress::after {
+  content: "";
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  animation: repository-operation-progress 1s ease-in-out infinite alternate;
+}
+
+@keyframes repository-operation-progress {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(138%);
+  }
 }
 
 .repository-status-grid {

@@ -1,3 +1,5 @@
+import { useI18n } from "../../i18n/I18nProvider";
+
 type TopBarProps = {
   activeTabId: string;
   isDocumentStructureOpen: boolean;
@@ -25,9 +27,10 @@ export function TopBar({
   onToggleDocumentStructure,
   onToggleSidebar
 }: TopBarProps) {
+  const { t } = useI18n();
   return (
     <header className="top-bar">
-      <nav className="window-tabs" aria-label="Open files">
+      <nav className="window-tabs" aria-label={t("top.openFiles")}>
         <div className="window-tab-strip">
           {tabs.length > 0 ? tabs.map((tab) => (
             <div
@@ -46,31 +49,31 @@ export function TopBar({
               <button
                 type="button"
                 className="window-tab-close"
-                aria-label={`Close ${tab.name}`}
+                aria-label={t("top.closeTab", { name: tab.name })}
                 onClick={() => onCloseTab(tab.id)}
               >
                 <CloseIcon />
               </button>
             </div>
           )) : (
-            <span className="window-tab-placeholder">Untitled</span>
+            <span className="window-tab-placeholder">{t("top.untitled")}</span>
           )}
         </div>
         <button
           type="button"
           className="window-tab-add"
-          aria-label="New tab"
+          aria-label={t("top.newTab")}
           onClick={onNewTab}
         >
           +
         </button>
-        <div className="window-view-controls" aria-label="View toggles">
+        <div className="window-view-controls" aria-label={t("top.viewToggles")}>
           <button
             type="button"
             className={`window-view-button ${isDocumentStructureOpen ? "active" : ""}`}
-            aria-label="Toggle document structure"
+            aria-label={t("top.structure")}
             aria-pressed={isDocumentStructureOpen}
-            title="Document Structure"
+            title={t("top.structure")}
             onClick={onToggleDocumentStructure}
           >
             <StructureIcon />
@@ -78,9 +81,9 @@ export function TopBar({
           <button
             type="button"
             className={`window-view-button ${isSidebarOpen ? "active" : ""}`}
-            aria-label="Toggle file tree"
+            aria-label={t("top.fileTree")}
             aria-pressed={isSidebarOpen}
-            title="File Tree"
+            title={t("top.fileTree")}
             onClick={onToggleSidebar}
           >
             <FileTreePanelIcon />
@@ -101,9 +104,9 @@ function CloseIcon() {
           d="M3.25 3.25L8.75 8.75M8.75 3.25L3.25 8.75"
           fill="none"
           stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
       />
     </svg>
   );

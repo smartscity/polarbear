@@ -1,14 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export type RepositoryProvider = "github" | "gitlab";
+
 export type RepositoryAccount = {
-  provider: string;
+  provider: RepositoryProvider;
   accountId: string;
   login: string;
   avatarUrl?: string | null;
+  baseUrl?: string | null;
   connectedAt: number;
 };
 
-export type GithubRepository = {
+export type RepositoryInfo = {
+  provider: RepositoryProvider;
   owner: string;
   name: string;
   fullName: string;
@@ -18,13 +22,15 @@ export type GithubRepository = {
 
 export type RepositoryBinding = {
   workspaceRef: string;
-  provider: string;
+  provider: RepositoryProvider;
   owner: string;
   repo: string;
   branch: string;
   remotePath: string;
+  baseUrl?: string | null;
   lastSyncCommitSha?: string | null;
   lastSyncAt?: number | null;
+  hasSynced?: boolean;
   manifest: Record<string, string>;
 };
 
@@ -36,32 +42,43 @@ export type RepositorySyncStatus = {
   conflicts: string[];
 };
 
-export async function validateGithubToken(
-  token: string
-): Promise<RepositoryAccount> {
-  return invoke<RepositoryAccount>("repository_validate_github_token", {
-    request: { token }
+export type RepositorySyncProgress = {
+  phase: string;
+  message: string;
+  current?: number | null;
+  total?: number | null;
+};
+
+export async function connectRepositoryProvider(params: {
+  provider: RepositoryProvider;
+  token: string;
+  baseUrl?: string;
+}): Promise<RepositoryAccount> {
+  return invoke<RepositoryAccount>("repository_connect_provider", {
+    request: params
   });
 }
 
-export async function disconnectGithub(): Promise<void> {
-  await invoke("repository_disconnect_github");
+export async function disconnectRepositoryProvider(): Promise<void> {
+  await invoke("repository_disconnect_provider");
 }
 
 export async function getRepositoryAccount(): Promise<RepositoryAccount | null> {
   return invoke<RepositoryAccount | null>("repository_get_account");
 }
 
-export async function listGithubRepositories(): Promise<GithubRepository[]> {
-  return invoke<GithubRepository[]>("repository_list_github_repositories");
+export async function listRepositories(): Promise<RepositoryInfo[]> {
+  return invoke<RepositoryInfo[]>("repository_list_repositories");
 }
 
-export async function linkWorkspaceToGithub(params: {
+export async function linkWorkspaceToRepository(params: {
   workspaceRef: string;
+  provider: RepositoryProvider;
   owner: string;
   repo: string;
   branch: string;
   remotePath: string;
+  baseUrl?: string | null;
 }): Promise<RepositoryBinding> {
   return invoke<RepositoryBinding>("repository_link_workspace", {
     request: params
@@ -110,4 +127,8 @@ export async function syncWorkspaceNow(params: {
   return invoke<RepositorySyncStatus>("repository_sync_now", {
     request: params
   });
+}
+
+export function repositoryProviderLabel(provider?: string | null): string {
+  return provider === "gitlab" ? "GitLab" : "GitHub";
 }

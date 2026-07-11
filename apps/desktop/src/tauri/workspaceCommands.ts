@@ -21,6 +21,14 @@ type RenameEntryResponseDto = {
   newRelativePath: string;
 };
 
+type DeleteEntryResponseDto = {
+  deletedRelativePaths: string[];
+};
+
+type DuplicateEntryResponseDto = {
+  newRelativePath: string;
+};
+
 type AssetWriteResponseDto = {
   assetRelativePath: string;
   markdownInsertText: string;
@@ -110,6 +118,12 @@ export async function listWorkspaceFiles(
   return items.map(mapWorkspaceItem);
 }
 
+export async function refreshWorkspaceSyncIndex(
+  workspaceRoot: string
+): Promise<number> {
+  return invoke<number>("refresh_workspace_sync_index", { workspaceRoot });
+}
+
 export async function loadMarkdownFile(params: {
   workspaceRoot: string;
   relativePath: string;
@@ -144,6 +158,20 @@ export async function createWorkspaceDirectory(params: {
   relativePath: string;
 }): Promise<void> {
   await invoke("create_workspace_directory", params);
+}
+
+export async function deleteWorkspaceEntry(params: {
+  workspaceRoot: string;
+  relativePath: string;
+}): Promise<DeleteEntryResponseDto> {
+  return invoke<DeleteEntryResponseDto>("delete_workspace_entry", params);
+}
+
+export async function duplicateWorkspaceEntry(params: {
+  workspaceRoot: string;
+  relativePath: string;
+}): Promise<DuplicateEntryResponseDto> {
+  return invoke<DuplicateEntryResponseDto>("duplicate_workspace_entry", params);
 }
 
 export async function renameEntry(params: {

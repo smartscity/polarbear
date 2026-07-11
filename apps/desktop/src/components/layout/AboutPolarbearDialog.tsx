@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import appIconUrl from "../../../src-tauri/icons/128x128.png";
 import { openExternalUrl } from "../../tauri/externalLinks";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type AboutPolarbearDialogProps = {
   onClose: () => void;
@@ -9,6 +10,7 @@ type AboutPolarbearDialogProps = {
 const projectUrl = "https://github.com/smartscity/polarbear";
 
 export function AboutPolarbearDialog({ onClose }: AboutPolarbearDialogProps) {
+  const { t } = useI18n();
   const openProjectLink = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     void openExternalUrl(projectUrl);
@@ -37,8 +39,8 @@ export function AboutPolarbearDialog({ onClose }: AboutPolarbearDialogProps) {
         {/*</div>*/}
         <img className="about-app-icon" src={appIconUrl} alt="" aria-hidden="true" />
         <h1 id="about-polarbear-title">Polarbear</h1>
-        <p className="about-version">Version 0.1.0</p>
-        <p className="about-tagline">a minimal Markdown editor and reader</p>
+        <p className="about-version">{t("about.version")}</p>
+        <p className="about-tagline">{t("about.tagline")}</p>
         <a href={projectUrl} onClick={openProjectLink} target="_blank" rel="noreferrer">
           {projectUrl}
         </a>
@@ -46,7 +48,7 @@ export function AboutPolarbearDialog({ onClose }: AboutPolarbearDialogProps) {
           Copyright © 2020-2026 smartscity. All rights reserved.
         </p>
         <button type="button" className="about-close-button" onClick={onClose}>
-          Close
+          {t("common.close")}
         </button>
       </section>
     </div>

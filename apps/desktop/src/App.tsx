@@ -45,24 +45,28 @@ import {
   type ThemeName,
 } from "./theme/themeTokens";
 import {
-  ConnectGithubDialog,
-  LinkGithubWorkspaceDialog,
+  ConnectRepositoryDialog,
+  LinkRepositoryWorkspaceDialog,
+  RepositoryOperationDialog,
   RepositorySyncStatusDialog,
 } from "./repository/RepositoryDialogs";
 import {
-  disconnectGithub,
+  connectRepositoryProvider,
+  disconnectRepositoryProvider,
   getRepositoryAccount,
   getRepositorySyncStatus,
   getWorkspaceRepositoryBinding,
-  linkWorkspaceToGithub,
-  listGithubRepositories,
+  linkWorkspaceToRepository,
+  listRepositories,
   pullWorkspace,
   pushWorkspace,
+  repositoryProviderLabel,
   syncWorkspaceNow,
-  validateGithubToken,
-  type GithubRepository,
   type RepositoryAccount,
   type RepositoryBinding,
+  type RepositoryInfo,
+  type RepositoryProvider,
+  type RepositorySyncProgress,
   type RepositorySyncStatus,
 } from "./repository/repositoryApi";
 import {
@@ -78,17 +82,21 @@ import {
   copyImageAsset,
   createMarkdownFile,
   createWorkspaceDirectory,
+  deleteWorkspaceEntry,
+  duplicateWorkspaceEntry,
   listWorkspaceFiles,
   loadMarkdownFile,
   moveEntry,
   openMarkdownFile,
   renameEntry,
   revealInFileManager,
+  refreshWorkspaceSyncIndex,
   saveMarkdownFile,
   saveImageAsset,
   writeMarkdownFile,
 } from "./tauri/workspaceCommands";
 import { openNewAppWindow } from "./tauri/windowCommands";
+import { useI18n } from "./i18n/I18nProvider";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -484,6 +492,7 @@ function isNativePinchEndPhase(phase: unknown): boolean {
 }
 
 export function App() {
+  const { t } = useI18n();
   const editorViewRef = useRef<MarkdownEditorView | null>(null);
   const zoomViewportRef = useRef<HTMLDivElement | null>(null);
   const zoomCanvasSizeRef = useRef<HTMLDivElement | null>(null);
@@ -554,17 +563,122 @@ export function App() {
     useState<RepositoryAccount | null>(null);
   const [repositoryBinding, setRepositoryBinding] =
     useState<RepositoryBinding | null>(null);
-  const [githubRepositories, setGithubRepositories] = useState<
-    GithubRepository[]
-  >([]);
+  const [repositories, setRepositories] = useState<RepositoryInfo[]>([]);
   const [repositorySyncStatus, setRepositorySyncStatus] =
     useState<RepositorySyncStatus | null>(null);
   const [repositoryDialog, setRepositoryDialog] = useState<
-    "connect" | "link" | "status" | null
+    "connect" | "link" | "status" | "operation" | null
   >(null);
+  const [repositoryLinkWorkspaceRoot, setRepositoryLinkWorkspaceRoot] =
+    useState("");
+  const [repositoryError, setRepositoryError] = useState("");
+  const [repositoryOperation, setRepositoryOperation] = useState<{
+    title: string;
+    message: string;
+    isBusy: boolean;
+    status: "idle" | "busy" | "success" | "error";
+  }>({
+    title: "Cloud Sync",
+    message: "",
+    isBusy: false,
+    status: "idle",
+  });
   const [isRepositoryBusy, setIsRepositoryBusy] = useState(false);
+  const repositoryBusyRef = useRef(false);
+  const dirtyFileIdsRef = useRef(dirtyFileIds);
+  const openFileIdsRef = useRef(openFileIds);
   const [statusMessage, setStatusMessage] = useState("");
   const [debugEnabled, setDebugEnabled] = useState(readStoredDebugEnabled);
+
+  useEffect(() => {
+    dirtyFileIdsRef.current = dirtyFileIds;
+  }, [dirtyFileIds]);
+
+  useEffect(() => {
+    openFileIdsRef.current = openFileIds;
+  }, [openFileIds]);
+
+  useEffect(() => {
+    if (!workspaceRoot) {
+      return;
+    }
+
+    let disposed = false;
+    let refreshInProgress = false;
+    const refreshFileTree = async () => {
+      if (disposed || refreshInProgress || document.visibilityState !== "visible") {
+        return;
+      }
+      refreshInProgress = true;
+      try {
+        const [items] = await Promise.all([
+          listWorkspaceFiles(workspaceRoot),
+          refreshWorkspaceSyncIndex(workspaceRoot),
+        ]);
+        if (disposed) {
+          return;
+        }
+        setWorkspaceItems((currentItems) =>
+          JSON.stringify(currentItems) === JSON.stringify(items) ? currentItems : items,
+        );
+        setWorkspaceItemsByRoot((currentTrees) => {
+          const currentItems = currentTrees[workspaceRoot] ?? [];
+          if (JSON.stringify(currentItems) === JSON.stringify(items)) {
+            return currentTrees;
+          }
+          return { ...currentTrees, [workspaceRoot]: items };
+        });
+      } catch {
+        // A transient filesystem change is retried on the next focus/poll cycle.
+      } finally {
+        refreshInProgress = false;
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshFileTree();
+      }
+    };
+    const intervalId = window.setInterval(() => void refreshFileTree(), 2500);
+    void refreshFileTree();
+    window.addEventListener("focus", refreshFileTree);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshFileTree);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [workspaceRoot]);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+    void listen<RepositorySyncProgress>(
+      "repository-sync-progress",
+      ({ payload }) => {
+        if (!repositoryBusyRef.current) {
+          return;
+        }
+        const count =
+          payload.current != null && payload.total != null && payload.total > 0
+            ? ` (${payload.current}/${payload.total})`
+            : "";
+        setRepositoryOperation((current) => ({
+          ...current,
+          message: `${payload.message}${count} [${payload.phase}]`,
+          isBusy: true,
+          status: "busy",
+        }));
+      },
+    ).then((stopListening) => {
+      unlisten = stopListening;
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, []);
 
   const markdownContent = documents[activeFileId] ?? "";
   const activeRelativePath = documentRelativePathForId(activeFileId, documentRelativePaths);
@@ -2019,125 +2133,342 @@ export function App() {
     }
   };
 
-  const connectGithub = async (token: string) => {
-    setIsRepositoryBusy(true);
+  const repositoryErrorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
 
-    try {
-      const account = await validateGithubToken(token);
-      setRepositoryAccount(account);
-      setRepositoryDialog(null);
-      setStatusMessage(`Connected GitHub as ${account.login}.`);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsRepositoryBusy(false);
+  const isRepositoryAuthenticationError = (message: string): boolean =>
+    /credentials are missing|connect (github|gitlab).*before|\b(401|403)\b/i.test(
+      message,
+    );
+
+  const showRepositoryOperation = (
+    title: string,
+    message: string,
+    isBusy: boolean,
+  ) => {
+    setRepositoryOperation({
+      title,
+      message,
+      isBusy,
+      status: isBusy ? "busy" : "error",
+    });
+    if (isBusy) {
+      setRepositoryDialog((current) =>
+        current === "operation" ? null : current,
+      );
+    } else {
+      setRepositoryDialog("operation");
     }
   };
 
-  const disconnectGithubAccount = async () => {
-    setIsRepositoryBusy(true);
+  const openLinkWorkspaceDialog = async (
+    accountOverride?: RepositoryAccount,
+    workspaceRootOverride?: string,
+  ) => {
+    let targetWorkspaceRoot = workspaceRootOverride || workspaceRoot;
+    setRepositoryError("");
 
-    try {
-      await disconnectGithub();
-      setRepositoryAccount(null);
-      setRepositoryBinding(null);
-      setRepositoryDialog(null);
-      setStatusMessage("Disconnected GitHub.");
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsRepositoryBusy(false);
-    }
-  };
-
-  const openLinkWorkspaceDialog = async () => {
-    if (!workspaceRoot) {
-      setStatusMessage("Open a workspace before linking a repository.");
-      return;
-    }
-
-    if (!repositoryAccount) {
+    if (!accountOverride && !repositoryAccount) {
+      setRepositoryLinkWorkspaceRoot(targetWorkspaceRoot);
       setRepositoryDialog("connect");
       return;
     }
 
+    if (!targetWorkspaceRoot) {
+      const selectedFolder = await chooseWorkspaceFolder();
+      if (!selectedFolder) {
+        setStatusMessage("Choose a local workspace before linking cloud sync.");
+        setRepositoryDialog(null);
+        return;
+      }
+
+      const didOpenWorkspace = await loadWorkspace(selectedFolder);
+      if (!didOpenWorkspace) {
+        setRepositoryDialog(null);
+        return;
+      }
+      targetWorkspaceRoot = selectedFolder;
+    }
+
+    setRepositories([]);
+    setRepositoryLinkWorkspaceRoot(targetWorkspaceRoot);
+    setRepositoryDialog("link");
     setIsRepositoryBusy(true);
 
     try {
-      const repositories = await listGithubRepositories();
-      setGithubRepositories(repositories);
-      setRepositoryDialog("link");
+      const [repositories, binding] = await Promise.all([
+        listRepositories(),
+        getWorkspaceRepositoryBinding(targetWorkspaceRoot),
+      ]);
+      setRepositories(repositories);
+      setRepositoryBinding(binding);
+      if (repositories.length === 0) {
+        setRepositoryError(
+          "No repositories are visible to this token. Give the token access to at least one repository with Metadata read and Contents read/write permissions, then reconnect Cloud Sync.",
+        );
+      }
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      const message = repositoryErrorMessage(error);
+      if (isRepositoryAuthenticationError(message)) {
+        setRepositoryAccount(null);
+        setRepositoryBinding(null);
+        setRepositories([]);
+        setRepositoryError(
+          "Your saved Cloud Sync credentials are no longer available. Connect GitHub again to load your repositories.",
+        );
+        setRepositoryDialog("connect");
+      } else {
+        setRepositoryError(message);
+      }
+      setStatusMessage(message);
+    } finally {
+      setIsRepositoryBusy(false);
+    }
+  };
+
+  const connectRepository = async (params: {
+    provider: RepositoryProvider;
+    token: string;
+    baseUrl?: string;
+  }) => {
+    setRepositoryError("");
+    setIsRepositoryBusy(true);
+
+    try {
+      const account = await connectRepositoryProvider(params);
+      setRepositoryAccount(account);
+      setStatusMessage(
+        `Connected ${repositoryProviderLabel(account.provider)} as ${account.login}.`
+      );
+      await openLinkWorkspaceDialog(account);
+    } catch (error) {
+      const message = repositoryErrorMessage(error);
+      setRepositoryError(message);
+      setRepositoryDialog("connect");
+      setStatusMessage(message);
+    } finally {
+      setIsRepositoryBusy(false);
+    }
+  };
+
+  const disconnectRepositoryAccount = async () => {
+    setIsRepositoryBusy(true);
+
+    try {
+      await disconnectRepositoryProvider();
+      setRepositoryAccount(null);
+      setRepositoryBinding(null);
+      setRepositoryLinkWorkspaceRoot("");
+      setRepositoryError("");
+      setRepositoryDialog(null);
+      setStatusMessage("Disconnected cloud sync.");
+    } catch (error) {
+      const message = repositoryErrorMessage(error);
+      showRepositoryOperation("Cloud Sync", message, false);
+      setStatusMessage(message);
     } finally {
       setIsRepositoryBusy(false);
     }
   };
 
   const linkCurrentWorkspace = async (params: {
+    provider: RepositoryProvider;
     owner: string;
     repo: string;
     branch: string;
     remotePath: string;
+    baseUrl?: string | null;
   }) => {
-    if (!workspaceRoot) {
+    const syncWorkspaceRoot = repositoryLinkWorkspaceRoot || workspaceRoot;
+    if (!syncWorkspaceRoot) {
       setStatusMessage("Open a workspace before linking a repository.");
       return;
     }
 
+    setRepositoryError("");
     setIsRepositoryBusy(true);
 
     try {
-      const binding = await linkWorkspaceToGithub({
-        workspaceRef: workspaceRoot,
+      const binding = await linkWorkspaceToRepository({
+        workspaceRef: syncWorkspaceRoot,
         ...params,
       });
       setRepositoryBinding(binding);
-      setRepositoryDialog(null);
-      setStatusMessage(`Linked workspace to ${binding.owner}/${binding.repo}.`);
+      setRepositoryLinkWorkspaceRoot("");
+      const status = await getRepositorySyncStatus({
+        workspaceRef: syncWorkspaceRoot,
+        dirty: false,
+      });
+      setRepositorySyncStatus(status);
+      setRepositoryDialog("status");
+      setStatusMessage(`Cloud Sync is ready for ${binding.owner}/${binding.repo}.`);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      const message = repositoryErrorMessage(error);
+      setRepositoryError(message);
+      setRepositoryDialog("link");
+      setStatusMessage(message);
     } finally {
       setIsRepositoryBusy(false);
     }
   };
 
-  const refreshSyncStatus = async () => {
-    if (!workspaceRoot) {
-      setStatusMessage("Open a workspace before viewing sync status.");
-      return;
+  const dirtyDocumentIdsForWorkspace = (targetWorkspaceRoot: string): string[] =>
+    Array.from(dirtyFileIds).filter((fileId) => {
+      if (isUntitledDocument(fileId)) {
+        return false;
+      }
+      return (
+        documentWorkspaceRootForId(
+          fileId,
+          documentWorkspaceRoots,
+          workspaceRoot,
+        ) === targetWorkspaceRoot
+      );
+    });
+
+  const saveDirtyDocumentsForWorkspace = async (targetWorkspaceRoot: string) => {
+    const dirtyIds = dirtyDocumentIdsForWorkspace(targetWorkspaceRoot);
+    for (const fileId of dirtyIds) {
+      const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+      const content = documents[fileId];
+      if (!relativePath || content === undefined) {
+        continue;
+      }
+      await saveMarkdownFile({
+        workspaceRoot: targetWorkspaceRoot,
+        relativePath,
+        markdownContent: content,
+      });
+    }
+    if (dirtyIds.length > 0) {
+      setDirtyFileIds((currentDirtyFileIds) => {
+        const nextDirtyFileIds = new Set(currentDirtyFileIds);
+        dirtyIds.forEach((fileId) => nextDirtyFileIds.delete(fileId));
+        return nextDirtyFileIds;
+      });
+    }
+  };
+
+  const reloadWorkspaceAfterDownload = async (targetWorkspaceRoot: string) => {
+    const items = await listWorkspaceFiles(targetWorkspaceRoot);
+    if (targetWorkspaceRoot === workspaceRoot) {
+      setWorkspaceItems(items);
+    }
+    setWorkspaceItemsByRoot((currentTrees) => ({
+      ...currentTrees,
+      [targetWorkspaceRoot]: items,
+    }));
+
+    const reloadableDocuments = openFileIdsRef.current.filter((fileId) => {
+      const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+      return (
+        !isUntitledDocument(fileId) &&
+        !dirtyFileIdsRef.current.has(fileId) &&
+        documentWorkspaceRootForId(
+          fileId,
+          documentWorkspaceRoots,
+          workspaceRoot,
+        ) === targetWorkspaceRoot &&
+        Boolean(findWorkspaceItem(items, relativePath))
+      );
+    });
+    const reloadedEntries = await Promise.all(
+      reloadableDocuments.map(async (fileId) => {
+        const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+        const content = await loadMarkdownFile({
+          workspaceRoot: targetWorkspaceRoot,
+          relativePath,
+        });
+        return [fileId, content] as const;
+      }),
+    );
+    if (reloadedEntries.length > 0) {
+      setDocuments((currentDocuments) => ({
+        ...currentDocuments,
+        ...Object.fromEntries(reloadedEntries),
+      }));
+    }
+  };
+
+  const resolveRepositoryContext = async () => {
+    const account = await getRepositoryAccount();
+    setRepositoryAccount(account);
+    if (!account) {
+      setRepositoryError("");
+      setRepositoryDialog("connect");
+      return null;
     }
 
+    if (!workspaceRoot) {
+      await openLinkWorkspaceDialog(account);
+      return null;
+    }
+
+    const binding = await getWorkspaceRepositoryBinding(workspaceRoot);
+    setRepositoryBinding(binding);
+    if (!binding) {
+      await openLinkWorkspaceDialog(account, workspaceRoot);
+      return null;
+    }
+
+    return { account, binding, workspaceRoot };
+  };
+
+  const refreshSyncStatus = async () => {
+    showRepositoryOperation(
+      "Checking Cloud Sync",
+      "Checking local and remote changes...",
+      true,
+    );
     setIsRepositoryBusy(true);
 
     try {
+      const context = await resolveRepositoryContext();
+      if (!context) {
+        return;
+      }
       const status = await getRepositorySyncStatus({
-        workspaceRef: workspaceRoot,
-        dirty: dirtyFileIds.size > 0,
+        workspaceRef: context.workspaceRoot,
+        dirty: dirtyDocumentIdsForWorkspace(context.workspaceRoot).length > 0,
       });
       setRepositorySyncStatus(status);
       setRepositoryAccount(status.account ?? null);
       setRepositoryBinding(status.binding ?? null);
       setRepositoryDialog("status");
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      const message = repositoryErrorMessage(error);
+      showRepositoryOperation("Cloud Sync Status", message, false);
+      setStatusMessage(message);
     } finally {
       setIsRepositoryBusy(false);
     }
   };
 
   const runRepositorySyncAction = async (action: "pull" | "push" | "sync") => {
-    if (!workspaceRoot) {
-      setStatusMessage("Open a workspace before syncing.");
+    if (repositoryBusyRef.current) {
+      setStatusMessage("Cloud Sync is already running in the background.");
       return;
     }
-
+    const operation =
+      action === "push"
+        ? { title: "Uploading Local Changes", message: "Saving and uploading your workspace..." }
+        : action === "pull"
+          ? { title: "Downloading Remote Changes", message: "Checking and downloading remote changes..." }
+          : { title: "Syncing Workspace", message: "Merging local and remote changes..." };
+    showRepositoryOperation(operation.title, operation.message, true);
+    repositoryBusyRef.current = true;
     setIsRepositoryBusy(true);
 
     try {
+      const context = await resolveRepositoryContext();
+      if (!context) {
+        return;
+      }
+      showRepositoryOperation(operation.title, operation.message, true);
+      await saveDirtyDocumentsForWorkspace(context.workspaceRoot);
       const params = {
-        workspaceRef: workspaceRoot,
-        dirty: dirtyFileIds.size > 0,
+        workspaceRef: context.workspaceRoot,
+        dirty: false,
       };
       const status =
         action === "pull"
@@ -2150,17 +2481,35 @@ export function App() {
       setRepositoryAccount(status.account ?? null);
       setRepositoryBinding(status.binding ?? null);
       if (action === "pull" || action === "sync") {
-        const items = await listWorkspaceFiles(workspaceRoot);
-        setWorkspaceItems(items);
-        setWorkspaceItemsByRoot((currentTrees) => ({
-          ...currentTrees,
-          [workspaceRoot]: items,
-        }));
+        await reloadWorkspaceAfterDownload(context.workspaceRoot);
       }
-      setStatusMessage(`Repository ${action} completed.`);
+      setRepositoryDialog(status.conflicts.length > 0 ? "status" : null);
+      setRepositoryOperation({
+        title: operation.title,
+        message:
+          status.conflicts.length > 0
+            ? `Cloud Sync found ${status.conflicts.length} conflict(s).`
+            : `${operation.title} completed.`,
+        isBusy: false,
+        status: status.conflicts.length > 0 ? "error" : "success",
+      });
+      setStatusMessage(
+        status.conflicts.length > 0
+          ? `Cloud Sync found ${status.conflicts.length} conflict(s).`
+          : `${operation.title} completed.`,
+      );
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      const message = repositoryErrorMessage(error);
+      setRepositoryOperation({
+        title: operation.title,
+        message,
+        isBusy: false,
+        status: "error",
+      });
+      setRepositoryDialog(null);
+      setStatusMessage(message);
     } finally {
+      repositoryBusyRef.current = false;
       setIsRepositoryBusy(false);
     }
   };
@@ -2787,6 +3136,142 @@ export function App() {
     setRenameItemId(targetItem.id);
   };
 
+  const deleteWorkspaceItem = async (targetPath?: string) => {
+    const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
+    const targetItem = findWorkspaceItem(workspaceItems, targetId);
+    if (!workspaceRoot || !targetItem) {
+      setStatusMessage("Select a file or folder before deleting.");
+      return;
+    }
+    const isDeletedPath = (path: string) =>
+      path === targetItem.id || path.startsWith(`${targetItem.id}/`);
+    const hasDirtyTarget = Array.from(dirtyFileIds).some((fileId) => {
+      return (
+        documentWorkspaceRootForId(
+          fileId,
+          documentWorkspaceRoots,
+          workspaceRoot,
+        ) === workspaceRoot &&
+        isDeletedPath(documentRelativePathForId(fileId, documentRelativePaths))
+      );
+    });
+    if (hasDirtyTarget) {
+      setStatusMessage("Save or close modified files before deleting.");
+      return;
+    }
+
+    const confirmed = await ask(
+      `Delete ${targetItem.name}? This action cannot be undone.`,
+      { kind: "warning", title: "Delete from Workspace" },
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteWorkspaceEntry({
+        workspaceRoot,
+        relativePath: targetItem.id,
+      });
+      const items = await listWorkspaceFiles(workspaceRoot);
+      const remainingOpenFileIds = openFileIds.filter((fileId) => {
+        const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+        const root = documentWorkspaceRootForId(
+          fileId,
+          documentWorkspaceRoots,
+          workspaceRoot,
+        );
+        return root !== workspaceRoot || !isDeletedPath(relativePath);
+      });
+
+      setWorkspaceItems(items);
+      setWorkspaceItemsByRoot((currentTrees) => ({
+        ...currentTrees,
+        [workspaceRoot]: items,
+      }));
+      setOpenFileIds(remainingOpenFileIds);
+      setDocuments((currentDocuments) =>
+        Object.fromEntries(
+          Object.entries(currentDocuments).filter(([fileId]) => {
+            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+            const root = documentWorkspaceRootForId(
+              fileId,
+              documentWorkspaceRoots,
+              workspaceRoot,
+            );
+            return root !== workspaceRoot || !isDeletedPath(relativePath);
+          }),
+        ),
+      );
+      setDirtyFileIds((currentDirtyIds) =>
+        new Set(
+          Array.from(currentDirtyIds).filter((fileId) => {
+            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+            const root = documentWorkspaceRootForId(
+              fileId,
+              documentWorkspaceRoots,
+              workspaceRoot,
+            );
+            return root !== workspaceRoot || !isDeletedPath(relativePath);
+          }),
+        ),
+      );
+      setDocumentWorkspaceRoots((currentRoots) =>
+        Object.fromEntries(
+          Object.entries(currentRoots).filter(([fileId, root]) => {
+            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+            return root !== workspaceRoot || !isDeletedPath(relativePath);
+          }),
+        ),
+      );
+      setDocumentRelativePaths((currentPaths) =>
+        Object.fromEntries(
+          Object.entries(currentPaths).filter(([fileId, relativePath]) => {
+            const root = documentWorkspaceRootForId(
+              fileId,
+              documentWorkspaceRoots,
+              workspaceRoot,
+            );
+            return root !== workspaceRoot || !isDeletedPath(relativePath);
+          }),
+        ),
+      );
+      setSelectedTreeItemId("");
+      if (isDeletedPath(documentRelativePathForId(activeFileId, documentRelativePaths))) {
+        setActiveFileId(remainingOpenFileIds.at(-1) ?? "");
+      }
+      setStatusMessage(`Deleted ${targetItem.id}. Sync to remove it from the remote.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const duplicateWorkspaceItem = async (targetPath?: string) => {
+    const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
+    const targetItem = findWorkspaceItem(workspaceItems, targetId);
+    if (!workspaceRoot || !targetItem) {
+      setStatusMessage("Select a file or folder before duplicating.");
+      return;
+    }
+    try {
+      const result = await duplicateWorkspaceEntry({
+        workspaceRoot,
+        relativePath: targetItem.id,
+      });
+      const items = await listWorkspaceFiles(workspaceRoot);
+      setWorkspaceItems(items);
+      setWorkspaceItemsByRoot((currentTrees) => ({
+        ...currentTrees,
+        [workspaceRoot]: items,
+      }));
+      setSelectedTreeItemId(result.newRelativePath);
+      revealFolder(parentFolderIdOf(result.newRelativePath));
+      setStatusMessage(`Duplicated as ${result.newRelativePath}.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   const confirmRename = async (item: WorkspaceItem, nextName: string) => {
     if (!workspaceRoot) {
       return;
@@ -3200,6 +3685,16 @@ export function App() {
         return;
       }
 
+      if (command === "file.delete") {
+        void deleteWorkspaceItem(commandTargetPath);
+        return;
+      }
+
+      if (command === "file.duplicate") {
+        void duplicateWorkspaceItem(commandTargetPath);
+        return;
+      }
+
       if (command === "file.move") {
         const sourcePath = payload?.sourcePath;
         const targetParentPath = payload?.targetParentPath ?? null;
@@ -3339,7 +3834,7 @@ export function App() {
       }
 
       if (command === "repository.disconnectGithub") {
-        void disconnectGithubAccount();
+        void disconnectRepositoryAccount();
         return;
       }
 
@@ -3453,6 +3948,12 @@ export function App() {
               selectedTreeItemId={selectedTreeItemId}
               sidebarOpen={sidebarOpen}
               statusMessage={statusMessage}
+              syncMessage={
+                repositoryOperation.message
+                  ? `${repositoryOperation.title}: ${repositoryOperation.message}`
+                  : ""
+              }
+              syncState={repositoryOperation.status}
               tabs={openTabs}
               workspaceRoot={workspaceRoot}
               workspaceItems={workspaceItems}
@@ -3466,6 +3967,7 @@ export function App() {
               onSelectTab={(tabId) => void activateTab(tabId)}
               onSelectTreeItem={setSelectedTreeItemId}
               onSidebarClose={() => setSidebarOpen(false)}
+              onSync={() => executeCommand("repository.syncNow")}
               onToggleDocumentStructure={() =>
                 setIsDocumentStructureOpen((isOpen) => !isOpen)
               }
@@ -3475,20 +3977,13 @@ export function App() {
                 {!activeFileId && !workspaceRoot ? (
                   <section className="editor-empty-state">
                     <h1>Polarbear</h1>
-                    <p>
-                      A local-first Markdown editor. Open a folder to start writing
-                      with your local Markdown files.
-                    </p>
-                    <p className="empty-state-hint">
-                      Use File / Open... or File / New.
-                    </p>
+                    <p>{t("empty.startDescription")}</p>
+                    <p className="empty-state-hint">{t("empty.startHint")}</p>
                   </section>
                 ) : workspaceRoot && !activeFileId ? (
                   <section className="editor-empty-state">
-                    <h2>This workspace has no Markdown files.</h2>
-                    <p>
-                      Use the File menu or right-click the file tree to create one.
-                    </p>
+                    <h2>{t("empty.workspaceTitle")}</h2>
+                    <p>{t("empty.workspaceHint")}</p>
                   </section>
                 ) : (
                   <>
@@ -3569,19 +4064,29 @@ export function App() {
         />
       ) : null}
       {repositoryDialog === "connect" ? (
-        <ConnectGithubDialog
+        <ConnectRepositoryDialog
+          errorMessage={repositoryError}
           isBusy={isRepositoryBusy}
-          onCancel={() => setRepositoryDialog(null)}
-          onConnect={(token) => void connectGithub(token)}
+          onCancel={() => {
+            setRepositoryError("");
+            setRepositoryDialog(null);
+          }}
+          onConnect={(params) => void connectRepository(params)}
         />
       ) : null}
       {repositoryDialog === "link" && repositoryAccount ? (
-        <LinkGithubWorkspaceDialog
+        <LinkRepositoryWorkspaceDialog
           account={repositoryAccount}
+          binding={repositoryBinding}
+          errorMessage={repositoryError}
           isBusy={isRepositoryBusy}
-          repositories={githubRepositories}
-          workspaceRoot={workspaceRoot}
-          onCancel={() => setRepositoryDialog(null)}
+          repositories={repositories}
+          workspaceRoot={repositoryLinkWorkspaceRoot || workspaceRoot}
+          onCancel={() => {
+            setRepositoryLinkWorkspaceRoot("");
+            setRepositoryError("");
+            setRepositoryDialog(null);
+          }}
           onLink={(params) => void linkCurrentWorkspace(params)}
         />
       ) : null}
@@ -3589,9 +4094,15 @@ export function App() {
         <RepositorySyncStatusDialog
           status={repositorySyncStatus}
           onClose={() => setRepositoryDialog(null)}
-          onPull={() => void runRepositorySyncAction("pull")}
-          onPush={() => void runRepositorySyncAction("push")}
           onSync={() => void runRepositorySyncAction("sync")}
+        />
+      ) : null}
+      {repositoryDialog === "operation" ? (
+        <RepositoryOperationDialog
+          isBusy={repositoryOperation.isBusy}
+          message={repositoryOperation.message}
+          title={repositoryOperation.title}
+          onClose={() => setRepositoryDialog(null)}
         />
       ) : null}
       {isAboutDialogOpen ? (

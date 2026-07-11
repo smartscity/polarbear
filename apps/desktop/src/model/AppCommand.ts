@@ -11,6 +11,7 @@ export type AppCommand =
   | "file.rename"
   | "file.move"
   | "file.delete"
+  | "file.duplicate"
   | "file.revealInFinder"
   | "file.copyPath"
   | "workspace.refresh"

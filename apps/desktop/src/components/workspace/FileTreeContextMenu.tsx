@@ -1,5 +1,6 @@
 import type { AppCommand, ExecuteAppCommand } from "../../model/AppCommand";
 import type { WorkspaceItem } from "../../model/WorkspaceFile";
+import { useI18n } from "../../i18n/I18nProvider";
 
 export type FileTreeContextMenuTarget =
   | { type: "blank" }
@@ -29,8 +30,9 @@ export function FileTreeContextMenu({
   executeCommand,
   onClose
 }: FileTreeContextMenuProps) {
+  const { t } = useI18n();
   const targetPath = menu.target.type === "item" ? menu.target.item.id : "";
-  const items = getContextMenuItems(menu.target);
+  const items = getContextMenuItems(menu.target, t);
 
   return (
     <div
@@ -72,38 +74,44 @@ export function FileTreeContextMenu({
 }
 
 function getContextMenuItems(
-  target: FileTreeContextMenuTarget
+  target: FileTreeContextMenuTarget,
+  t: (key: string) => string
 ): ContextMenuItem[] {
   if (target.type === "blank") {
     return [
-      { label: "New File", command: "file.newFile" },
-      { label: "New Folder", command: "file.newFolder" },
+      { label: t("tree.newFile"), command: "file.newFile" },
+      { label: t("tree.newFolder"), command: "file.newFolder" },
       { type: "separator" },
-      { label: "File Tree (Tree View)", command: "view.fileTree" },
+      { label: t("top.fileTree"), command: "view.fileTree" },
       { type: "separator" },
-      { label: "Open Folder...", command: "file.openFolder" },
-      { label: "Refresh", command: "workspace.refresh" },
-      { label: "Collapse All", command: "workspace.collapseAll" },
-      { label: "Reveal in Finder", command: "file.revealInFinder" },
-      { label: "Copy Workspace Path", command: "file.copyPath" }
+      { label: t("tree.openFolder"), command: "file.openFolder" },
+      { label: t("tree.refresh"), command: "workspace.refresh" },
+      { label: t("tree.collapseAll"), command: "workspace.collapseAll" },
+      { label: t("tree.reveal"), command: "file.revealInFinder" },
+      { label: t("tree.copyWorkspacePath"), command: "file.copyPath" }
     ];
   }
 
   if (target.item.type === "folder") {
     return [
-      { label: "New File", command: "file.newFile" },
-      { label: "New Folder", command: "file.newFolder" },
-      { label: "Rename", command: "file.rename" },
+      { label: t("tree.newFile"), command: "file.newFile" },
+      { label: t("tree.newFolder"), command: "file.newFolder" },
+      { label: t("tree.rename"), command: "file.rename" },
+      { label: t("tree.duplicate"), command: "file.duplicate" },
+      { label: t("tree.deleteFolder"), command: "file.delete" },
       { type: "separator" },
-      { label: "Reveal in Finder", command: "file.revealInFinder" },
-      { label: "Copy Folder Path", command: "file.copyPath" }
+      { label: t("tree.reveal"), command: "file.revealInFinder" },
+      { label: t("tree.copyFolderPath"), command: "file.copyPath" }
     ];
   }
 
   return [
-    { label: "Open", command: "file.openFile" },
-    { label: "Rename", command: "file.rename" },
-    { label: "Reveal in Finder", command: "file.revealInFinder" },
-    { label: "Copy File Path", command: "file.copyPath" }
+    { label: t("menu.open"), command: "file.openFile" },
+    { label: t("tree.rename"), command: "file.rename" },
+    { label: t("tree.duplicate"), command: "file.duplicate" },
+    { label: t("tree.deleteFile"), command: "file.delete" },
+    { type: "separator" },
+    { label: t("tree.reveal"), command: "file.revealInFinder" },
+    { label: t("tree.copyFilePath"), command: "file.copyPath" }
   ];
 }

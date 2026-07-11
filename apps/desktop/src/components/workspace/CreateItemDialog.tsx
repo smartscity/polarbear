@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 
 export type CreateItemType = "file" | "folder";
 
@@ -15,6 +16,7 @@ export function CreateItemDialog({
   onCancel,
   onConfirm
 }: CreateItemDialogProps) {
+  const { t } = useI18n();
   const [name, setName] = useState(defaultName);
 
   useEffect(() => {
@@ -33,11 +35,11 @@ export function CreateItemDialog({
   }, [onCancel]);
 
   const title =
-    itemType === "file" ? "Create Markdown file" : "Create folder";
+    itemType === "file" ? t("create.fileTitle") : t("create.folderTitle");
   const description =
     itemType === "file"
-      ? "Create a .md file in the current workspace."
-      : "Create a directory in the current workspace.";
+      ? t("create.fileDescription")
+      : t("create.folderDescription");
 
   return (
     <section
@@ -62,7 +64,7 @@ export function CreateItemDialog({
           <p>{description}</p>
         </header>
         <label>
-          Name
+          {t("create.name")}
           <input
             autoFocus
             placeholder={itemType === "file" ? "notes.md" : "docs"}
@@ -73,9 +75,9 @@ export function CreateItemDialog({
         </label>
         <footer>
           <button type="button" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
-          <button type="submit">Create</button>
+          <button type="submit">{t("common.create")}</button>
         </footer>
       </form>
     </section>

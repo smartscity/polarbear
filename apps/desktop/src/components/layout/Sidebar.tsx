@@ -1,6 +1,7 @@
 import type { ExecuteAppCommand } from "../../model/AppCommand";
 import type { WorkspaceItem } from "../../model/WorkspaceFile";
 import { FileTree } from "../workspace/FileTree";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type SidebarProps = {
   activeFileId: string;
@@ -36,10 +37,11 @@ export function Sidebar({
   onSelectFile,
   onSelectTreeItem
 }: SidebarProps) {
+  const { t } = useI18n();
   return (
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
       <div className="sidebar-header">
-        <strong>{workspaceRoot ? "FILES" : "OPEN A FOLDER"}</strong>
+        <strong>{workspaceRoot ? t("tree.files") : t("tree.openFolder")}</strong>
       </div>
       <FileTree
         activeFileId={activeFileId}

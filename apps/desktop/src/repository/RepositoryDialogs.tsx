@@ -1,21 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
-  GithubRepository,
   RepositoryAccount,
   RepositoryBinding,
+  RepositoryInfo,
+  RepositoryProvider,
   RepositorySyncStatus
 } from "./repositoryApi";
+import { repositoryProviderLabel } from "./repositoryApi";
+import { useI18n } from "../i18n/I18nProvider";
 
-export function ConnectGithubDialog({
+export function ConnectRepositoryDialog({
   isBusy,
+  errorMessage,
   onCancel,
   onConnect
 }: {
   isBusy: boolean;
+  errorMessage?: string;
   onCancel: () => void;
-  onConnect: (token: string) => void;
+  onConnect: (params: {
+    provider: RepositoryProvider;
+    token: string;
+    baseUrl?: string;
+  }) => void;
 }) {
+  const { t } = useI18n();
+  const [provider, setProvider] = useState<RepositoryProvider>("github");
   const [token, setToken] = useState("");
+  const [baseUrl, setBaseUrl] = useState("https://gitlab.com");
+  const providerLabel = repositoryProviderLabel(provider);
 
   return (
     <section className="create-dialog-overlay" role="dialog" aria-modal="true">
@@ -23,32 +36,71 @@ export function ConnectGithubDialog({
         className="create-dialog repository-dialog"
         onSubmit={(event) => {
           event.preventDefault();
-          onConnect(token);
+          onConnect({
+            provider,
+            token,
+            baseUrl: provider === "gitlab" ? baseUrl : undefined
+          });
         }}
       >
         <header>
-          <h2>Connect GitHub</h2>
-          <p>Use a fine-grained GitHub personal access token.</p>
-          <ul>
-            <li>Repository metadata: read</li>
-            <li>Repository contents: read and write</li>
-          </ul>
+          <h2>{t("cloud.connectTitle")}</h2>
+          <p>{t("cloud.connectDescription")}</p>
+          {provider === "github" ? (
+            <ul>
+              <li>{t("cloud.githubRepositoryAccess")}</li>
+              <li>{t("cloud.githubContentsPermission")}</li>
+              <li>{t("cloud.githubMetadataPermission")}</li>
+            </ul>
+          ) : (
+            <ul>
+              <li>{t("cloud.gitlabTokenScope")}</li>
+              <li>{t("cloud.gitlabProjectRole")}</li>
+            </ul>
+          )}
         </header>
         <label>
-          Token
-          <input
+          {t("cloud.provider")}
+          <select
             autoFocus
+            value={provider}
+            onChange={(event) =>
+              setProvider(event.target.value as RepositoryProvider)
+            }
+          >
+            <option value="github">GitHub</option>
+            <option value="gitlab">GitLab</option>
+          </select>
+        </label>
+        {provider === "gitlab" ? (
+          <label>
+            GitLab URL
+            <input
+              value={baseUrl}
+              placeholder="https://gitlab.com"
+              onChange={(event) => setBaseUrl(event.target.value)}
+            />
+          </label>
+        ) : null}
+        <label>
+          {t("cloud.token", { provider: providerLabel })}
+          <input
             type="password"
             value={token}
             onChange={(event) => setToken(event.target.value)}
           />
         </label>
+        {errorMessage ? (
+          <p className="repository-dialog-error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
         <footer>
           <button type="button" disabled={isBusy} onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button type="submit" disabled={isBusy || !token.trim()}>
-            Connect
+            {t("common.connect")}
           </button>
         </footer>
       </form>
@@ -56,41 +108,78 @@ export function ConnectGithubDialog({
   );
 }
 
-export function LinkGithubWorkspaceDialog({
+export function LinkRepositoryWorkspaceDialog({
   account,
+  binding,
   isBusy,
+  errorMessage,
   repositories,
   workspaceRoot,
   onCancel,
   onLink
 }: {
   account: RepositoryAccount;
+  binding?: RepositoryBinding | null;
   isBusy: boolean;
-  repositories: GithubRepository[];
+  errorMessage?: string;
+  repositories: RepositoryInfo[];
   workspaceRoot: string;
   onCancel: () => void;
   onLink: (params: {
+    provider: RepositoryProvider;
     owner: string;
     repo: string;
     branch: string;
     remotePath: string;
+    baseUrl?: string | null;
   }) => void;
 }) {
+  const { t } = useI18n();
   const [selectedFullName, setSelectedFullName] = useState(
-    repositories[0]?.fullName ?? ""
+    binding ? `${binding.owner}/${binding.repo}` : repositories[0]?.fullName ?? ""
   );
   const selectedRepository = useMemo(
     () => repositories.find((repo) => repo.fullName === selectedFullName),
     [repositories, selectedFullName]
   );
-  const [branch, setBranch] = useState(selectedRepository?.defaultBranch ?? "main");
-  const [remotePath, setRemotePath] = useState("/");
+  const [branch, setBranch] = useState(
+    binding?.branch ?? selectedRepository?.defaultBranch ?? "main"
+  );
+  const [remotePath, setRemotePath] = useState(binding?.remotePath ?? "/");
+
+  useEffect(() => {
+    if (
+      repositories.length > 0 &&
+      !repositories.some((repo) => repo.fullName === selectedFullName)
+    ) {
+      const boundFullName = binding ? `${binding.owner}/${binding.repo}` : "";
+      setSelectedFullName(
+        repositories.some((repo) => repo.fullName === boundFullName)
+          ? boundFullName
+          : repositories[0].fullName
+      );
+    }
+  }, [binding, repositories, selectedFullName]);
 
   useEffect(() => {
     if (selectedRepository) {
-      setBranch(selectedRepository.defaultBranch);
+      if (
+        binding &&
+        selectedRepository.owner === binding.owner &&
+        selectedRepository.name === binding.repo
+      ) {
+        setBranch(binding.branch);
+      } else {
+        setBranch(selectedRepository.defaultBranch);
+      }
     }
-  }, [selectedRepository]);
+  }, [binding, selectedRepository]);
+
+  useEffect(() => {
+    if (binding) {
+      setRemotePath(binding.remotePath);
+    }
+  }, [binding]);
 
   return (
     <section className="create-dialog-overlay" role="dialog" aria-modal="true">
@@ -100,21 +189,25 @@ export function LinkGithubWorkspaceDialog({
           event.preventDefault();
           if (selectedRepository) {
             onLink({
+              provider: account.provider,
               owner: selectedRepository.owner,
               repo: selectedRepository.name,
               branch,
-              remotePath
+              remotePath,
+              baseUrl: account.baseUrl
             });
           }
         }}
       >
         <header>
-          <h2>Link Workspace to GitHub</h2>
-          <p>Account: {account.login}</p>
+          <h2>{t("cloud.settingsTitle")}</h2>
+          <p>
+            {repositoryProviderLabel(account.provider)} account: {account.login}
+          </p>
           <p className="repository-workspace-path">{workspaceRoot}</p>
         </header>
         <label>
-          Repository
+          {t("cloud.repository")}
           <select
             autoFocus
             value={selectedFullName}
@@ -127,29 +220,42 @@ export function LinkGithubWorkspaceDialog({
             ))}
           </select>
         </label>
+        {isBusy && repositories.length === 0 ? (
+          <p className="repository-dialog-note">{t("cloud.loadingRepositories")}</p>
+        ) : null}
+        {!isBusy && repositories.length === 0 ? (
+          <p className="repository-dialog-error" role="alert">
+            {errorMessage || t("cloud.noRepositories")}
+          </p>
+        ) : errorMessage ? (
+          <p className="repository-dialog-error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
         <label>
-          Branch
+          {t("cloud.branch")}
           <input
             value={branch}
             onChange={(event) => setBranch(event.target.value)}
           />
         </label>
         <label>
-          Remote Path
+          {t("cloud.remoteFolder")}
           <input
             value={remotePath}
+            placeholder="/"
             onChange={(event) => setRemotePath(event.target.value)}
           />
         </label>
         <footer>
           <button type="button" disabled={isBusy} onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={isBusy || !selectedRepository || !branch.trim()}
           >
-            Link
+            {t("cloud.saveSettings")}
           </button>
         </footer>
       </form>
@@ -157,44 +263,82 @@ export function LinkGithubWorkspaceDialog({
   );
 }
 
+export function RepositoryOperationDialog({
+  title,
+  message,
+  isBusy,
+  onClose
+}: {
+  title: string;
+  message: string;
+  isBusy: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  if (isBusy) {
+    return (
+      <aside className="repository-operation-toast" role="status" aria-live="polite">
+        <strong>{title}</strong>
+        <span className="repository-operation-message">{message}</span>
+        <div className="repository-operation-progress" aria-hidden="true" />
+      </aside>
+    );
+  }
+
+  return (
+    <section className="create-dialog-overlay" role="dialog" aria-modal="true">
+      <div className="create-dialog repository-dialog repository-operation-dialog">
+        <header>
+          <h2>{title}</h2>
+          <p role="alert">{message}</p>
+        </header>
+        <footer>
+          <button type="button" onClick={onClose}>
+            {t("common.close")}
+          </button>
+        </footer>
+      </div>
+    </section>
+  );
+}
+
 export function RepositorySyncStatusDialog({
   status,
   onClose,
-  onPull,
-  onPush,
   onSync
 }: {
   status: RepositorySyncStatus;
   onClose: () => void;
-  onPull: () => void;
-  onPush: () => void;
   onSync: () => void;
 }) {
+  const { t } = useI18n();
   const binding = status.binding;
 
   return (
     <section className="create-dialog-overlay" role="dialog" aria-modal="true">
       <div className="create-dialog repository-dialog">
         <header>
-          <h2>Repository Sync Status</h2>
-          <p>Provider: {binding?.provider ?? "Not linked"}</p>
+          <h2>{t("cloud.statusTitle")}</h2>
+          <p>
+            {t("cloud.provider")}: {binding ? repositoryProviderLabel(binding.provider) : t("cloud.notLinked")}
+          </p>
         </header>
         <dl className="repository-status-grid">
-          <dt>Account</dt>
-          <dd>{status.account?.login ?? "Not connected"}</dd>
-          <dt>Repository</dt>
-          <dd>{binding ? `${binding.owner}/${binding.repo}` : "Not linked"}</dd>
-          <dt>Branch</dt>
+          <dt>{t("cloud.account")}</dt>
+          <dd>{status.account?.login ?? t("cloud.notConnected")}</dd>
+          <dt>{t("cloud.repository")}</dt>
+          <dd>{binding ? `${binding.owner}/${binding.repo}` : t("cloud.notLinked")}</dd>
+          <dt>{t("cloud.branch")}</dt>
           <dd>{binding?.branch ?? "-"}</dd>
-          <dt>Remote Path</dt>
+          <dt>{t("cloud.remoteFolder")}</dt>
           <dd>{binding?.remotePath ?? "-"}</dd>
-          <dt>Last Sync</dt>
+          <dt>{t("cloud.lastSync")}</dt>
           <dd>{formatSyncTime(binding?.lastSyncAt)}</dd>
-          <dt>Local Changes</dt>
+          <dt>{t("cloud.localChanges")}</dt>
           <dd>{status.localChanges}</dd>
-          <dt>Remote Changed</dt>
-          <dd>{status.remoteChanged ? "Yes" : "No"}</dd>
-          <dt>Conflicts</dt>
+          <dt>{t("cloud.remoteChanged")}</dt>
+          <dd>{status.remoteChanged ? t("cloud.yes") : t("cloud.no")}</dd>
+          <dt>{t("cloud.conflicts")}</dt>
           <dd>{status.conflicts.length}</dd>
         </dl>
         {status.conflicts.length > 0 ? (
@@ -206,20 +350,12 @@ export function RepositorySyncStatusDialog({
         ) : null}
         <footer>
           {binding ? (
-            <>
-              <button type="button" onClick={onPull}>
-                Pull
-              </button>
-              <button type="button" onClick={onPush}>
-                Push
-              </button>
-              <button type="button" onClick={onSync}>
-                Sync Now
-              </button>
-            </>
+            <button type="button" onClick={onSync}>
+              {t("common.sync")}
+            </button>
           ) : null}
           <button type="button" onClick={onClose}>
-            Close
+            {t("common.close")}
           </button>
         </footer>
       </div>

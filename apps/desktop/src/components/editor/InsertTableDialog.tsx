@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type InsertTableDialogProps = {
   onCancel: () => void;
@@ -9,6 +10,7 @@ export function InsertTableDialog({
   onCancel,
   onConfirm
 }: InsertTableDialogProps) {
+  const { t } = useI18n();
   const [columns, setColumns] = useState(3);
   const [rows, setRows] = useState(4);
   const isValid = columns >= 1 && columns <= 20 && rows >= 1 && rows <= 50;
@@ -36,11 +38,11 @@ export function InsertTableDialog({
         }}
       >
         <header>
-          <h2>Insert Table</h2>
-          <p>Rows are body rows and do not include the header.</p>
+          <h2>{t("editor.insertTableTitle")}</h2>
+          <p>{t("editor.insertTableDescription")}</p>
         </header>
         <label>
-          Columns
+          {t("editor.columns")}
           <input
             autoFocus
             max={20}
@@ -51,7 +53,7 @@ export function InsertTableDialog({
           />
         </label>
         <label>
-          Rows
+          {t("editor.rows")}
           <input
             max={50}
             min={1}
@@ -62,10 +64,10 @@ export function InsertTableDialog({
         </label>
         <footer>
           <button type="button" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button type="submit" disabled={!isValid}>
-            OK
+            {t("common.ok")}
           </button>
         </footer>
       </form>

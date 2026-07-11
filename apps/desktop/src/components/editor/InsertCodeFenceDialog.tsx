@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 
 const languages = [
   "text",
@@ -24,6 +25,7 @@ export function InsertCodeFenceDialog({
   onCancel,
   onConfirm
 }: InsertCodeFenceDialogProps) {
+  const { t } = useI18n();
   const [language, setLanguage] = useState("text");
 
   useEffect(() => {
@@ -47,11 +49,11 @@ export function InsertCodeFenceDialog({
         }}
       >
         <header>
-          <h2>Insert Code Fence</h2>
-          <p>Choose a language for the fenced code block.</p>
+          <h2>{t("editor.insertCodeTitle")}</h2>
+          <p>{t("editor.insertCodeDescription")}</p>
         </header>
         <label>
-          Language
+          {t("editor.language")}
           <select
             autoFocus
             value={language}
@@ -66,9 +68,9 @@ export function InsertCodeFenceDialog({
         </label>
         <footer>
           <button type="button" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
-          <button type="submit">Insert</button>
+          <button type="submit">{t("common.insert")}</button>
         </footer>
       </form>
     </section>
