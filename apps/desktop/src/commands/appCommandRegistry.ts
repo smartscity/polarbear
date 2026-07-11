@@ -1,4 +1,9 @@
-import type { AppCommand } from "../model/AppCommand";
+import type { AppCommand } from "../shared/commands/appCommandTypes";
+import type {
+  MessageKey,
+  Translate,
+  TranslationValues,
+} from "../shared/i18n/I18nProvider";
 
 export type ShortcutDefinition = {
   command: AppCommand;
@@ -9,176 +14,297 @@ export type ShortcutDefinition = {
 };
 
 type CommandDefinition = {
-  label: string;
+  titleKey: MessageKey;
+  titleValues?: TranslationValues;
   accelerator?: string;
   shortcut?: ShortcutDefinition;
 };
 
-export const appCommandRegistry: Partial<Record<AppCommand, CommandDefinition>> = {
+export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "app.about": {
-    label: "About Polarbear",
+    titleKey: "menu.about",
   },
   "app.newWindow": {
-    label: "New Window",
+    titleKey: "menu.newWindow",
     accelerator: "Shift+CmdOrCtrl+N",
     shortcut: { key: "n", shiftKey: true, command: "app.newWindow" },
   },
+  "app.quit": {
+    titleKey: "menu.quit",
+    accelerator: "CmdOrCtrl+Q",
+  },
+  "edit.undo": {
+    titleKey: "menu.undo",
+  },
+  "edit.redo": {
+    titleKey: "menu.redo",
+  },
+  "edit.cut": {
+    titleKey: "menu.cut",
+  },
+  "edit.copy": {
+    titleKey: "menu.copy",
+  },
+  "edit.paste": {
+    titleKey: "menu.paste",
+  },
+  "edit.selectAll": {
+    titleKey: "menu.selectAll",
+  },
   "file.newFile": {
-    label: "New",
+    titleKey: "menu.new",
     accelerator: "CmdOrCtrl+N",
     shortcut: { key: "n", command: "file.newFile" },
   },
+  "file.newFolder": {
+    titleKey: "tree.newFolder",
+  },
   "file.openFile": {
-    label: "Open...",
+    titleKey: "menu.open",
     accelerator: "CmdOrCtrl+O",
     shortcut: { key: "o", command: "file.openFile" },
   },
+  "file.openFolder": {
+    titleKey: "tree.openFolder",
+  },
   "file.save": {
-    label: "Save",
+    titleKey: "menu.save",
     accelerator: "CmdOrCtrl+S",
     shortcut: { key: "s", command: "file.save" },
   },
   "file.saveAs": {
-    label: "Save As...",
+    titleKey: "menu.saveAs",
     accelerator: "Shift+CmdOrCtrl+S",
     shortcut: { key: "s", shiftKey: true, command: "file.saveAs" },
   },
   "file.close": {
-    label: "Close",
+    titleKey: "menu.close",
     accelerator: "CmdOrCtrl+W",
     shortcut: { key: "w", command: "file.close" },
   },
+  "file.rename": {
+    titleKey: "menu.rename",
+  },
+  "file.delete": {
+    titleKey: "menu.delete",
+  },
+  "file.duplicate": {
+    titleKey: "tree.duplicate",
+  },
+  "file.move": {
+    titleKey: "menu.move",
+  },
+  "file.revealInFinder": {
+    titleKey: "tree.reveal",
+  },
+  "file.copyPath": {
+    titleKey: "menu.copyPath",
+  },
   "edit.find": {
-    label: "Find",
+    titleKey: "menu.find",
     accelerator: "CmdOrCtrl+F",
     shortcut: { key: "f", command: "edit.find" },
   },
   "edit.findNext": {
-    label: "Find Next",
+    titleKey: "menu.findNext",
     accelerator: "CmdOrCtrl+G",
     shortcut: { key: "g", command: "edit.findNext" },
   },
   "edit.findPrevious": {
-    label: "Find Previous",
+    titleKey: "menu.findPrevious",
     accelerator: "Shift+CmdOrCtrl+G",
     shortcut: { key: "g", shiftKey: true, command: "edit.findPrevious" },
   },
+  "format.paragraph": {
+    titleKey: "menu.paragraph",
+  },
   "format.heading1": {
-    label: "Heading 1",
+    titleKey: "menu.heading",
+    titleValues: { level: 1 },
     accelerator: "CmdOrCtrl+1",
     shortcut: { key: "1", command: "format.heading1" },
   },
   "format.heading2": {
-    label: "Heading 2",
+    titleKey: "menu.heading",
+    titleValues: { level: 2 },
     accelerator: "CmdOrCtrl+2",
     shortcut: { key: "2", command: "format.heading2" },
   },
   "format.heading3": {
-    label: "Heading 3",
+    titleKey: "menu.heading",
+    titleValues: { level: 3 },
     accelerator: "CmdOrCtrl+3",
     shortcut: { key: "3", command: "format.heading3" },
   },
   "format.heading4": {
-    label: "Heading 4",
+    titleKey: "menu.heading",
+    titleValues: { level: 4 },
     accelerator: "CmdOrCtrl+4",
     shortcut: { key: "4", command: "format.heading4" },
   },
   "format.heading5": {
-    label: "Heading 5",
+    titleKey: "menu.heading",
+    titleValues: { level: 5 },
     accelerator: "CmdOrCtrl+5",
     shortcut: { key: "5", command: "format.heading5" },
   },
   "format.heading6": {
-    label: "Heading 6",
+    titleKey: "menu.heading",
+    titleValues: { level: 6 },
     accelerator: "CmdOrCtrl+6",
     shortcut: { key: "6", command: "format.heading6" },
   },
   "format.bold": {
-    label: "Bold",
+    titleKey: "menu.bold",
     accelerator: "CmdOrCtrl+B",
     shortcut: { key: "b", command: "format.bold", editorHandled: true },
   },
   "format.italic": {
-    label: "Italic",
+    titleKey: "menu.italic",
     accelerator: "CmdOrCtrl+I",
     shortcut: { key: "i", command: "format.italic", editorHandled: true },
   },
   "format.underline": {
-    label: "Underline",
+    titleKey: "menu.underline",
     accelerator: "CmdOrCtrl+U",
     shortcut: { key: "u", command: "format.underline", editorHandled: true },
   },
   "format.link": {
-    label: "Link",
+    titleKey: "menu.link",
     accelerator: "CmdOrCtrl+K",
     shortcut: { key: "k", command: "format.link", editorHandled: true },
   },
+  "format.code": {
+    titleKey: "menu.inlineCode",
+  },
+  "format.clearFormat": {
+    titleKey: "menu.clearFormat",
+  },
   "format.codeFence": {
-    label: "Code Block",
+    titleKey: "menu.codeFence",
     accelerator: "Shift+CmdOrCtrl+K",
     shortcut: { key: "k", shiftKey: true, command: "format.codeFence", editorHandled: true },
   },
   "format.insertImage": {
-    label: "Insert Image...",
+    titleKey: "menu.insertImage",
     accelerator: "Shift+CmdOrCtrl+I",
     shortcut: { key: "i", shiftKey: true, command: "format.insertImage" },
   },
   "format.mathBlock": {
-    label: "Math Block",
+    titleKey: "menu.mathBlock",
     accelerator: "Shift+CmdOrCtrl+M",
     shortcut: { key: "m", shiftKey: true, command: "format.mathBlock", editorHandled: true },
   },
+  "format.quote": {
+    titleKey: "menu.quote",
+  },
+  "format.orderedList": {
+    titleKey: "menu.orderedList",
+  },
+  "format.unorderedList": {
+    titleKey: "menu.unorderedList",
+  },
+  "format.taskList": {
+    titleKey: "menu.taskList",
+  },
   "editor.insertTable": {
-    label: "Insert Table...",
+    titleKey: "menu.insertTable",
     accelerator: "CmdOrCtrl+Alt+T",
     shortcut: { key: "t", altKey: true, command: "editor.insertTable" },
   },
+  "editor.insertCodeFence": {
+    titleKey: "menu.insertCodeFence",
+  },
+  "repository.connectGithub": {
+    titleKey: "cloud.connect",
+  },
+  "repository.disconnectGithub": {
+    titleKey: "cloud.disconnect",
+  },
+  "repository.linkWorkspace": {
+    titleKey: "cloud.settings",
+  },
   "repository.syncNow": {
-    label: "Sync Now",
+    titleKey: "cloud.syncNow",
     accelerator: "CmdOrCtrl+Alt+S",
     shortcut: { key: "s", altKey: true, command: "repository.syncNow" },
   },
+  "repository.pullWorkspace": {
+    titleKey: "cloud.downloadRemote",
+  },
+  "repository.pushWorkspace": {
+    titleKey: "cloud.uploadLocal",
+  },
+  "repository.viewSyncStatus": {
+    titleKey: "cloud.viewStatus",
+  },
   "view.toggleSidebar": {
-    label: "Toggle Sidebar",
+    titleKey: "menu.toggleSidebar",
     accelerator: "Shift+CmdOrCtrl+L",
     shortcut: { key: "l", shiftKey: true, command: "view.toggleSidebar" },
   },
   "view.sourceCode": {
-    label: "Source Code Mode",
+    titleKey: "menu.sourceMode",
     accelerator: "Shift+CmdOrCtrl+E",
     shortcut: { key: "e", shiftKey: true, command: "view.sourceCode" },
   },
+  "view.edit": {
+    titleKey: "menu.sourceMode",
+  },
+  "view.liveEdit": {
+    titleKey: "menu.liveMode",
+  },
   "view.split": {
-    label: "Split Mode",
+    titleKey: "menu.splitMode",
     accelerator: "CmdOrCtrl+\\",
     shortcut: { key: "\\", command: "view.split" },
   },
   "view.preview": {
-    label: "Preview Mode",
+    titleKey: "menu.previewMode",
     accelerator: "Shift+CmdOrCtrl+P",
     shortcut: { key: "p", shiftKey: true, command: "view.preview" },
   },
+  "view.fileTree": {
+    titleKey: "menu.fileTree",
+  },
   "view.resetZoom": {
-    label: "Actual Size",
+    titleKey: "menu.actualSize",
   },
   "view.zoomIn": {
-    label: "Zoom In",
+    titleKey: "menu.zoomIn",
     accelerator: "CmdOrCtrl+=",
     shortcut: { key: "=", command: "view.zoomIn" },
   },
   "view.zoomOut": {
-    label: "Zoom Out",
+    titleKey: "menu.zoomOut",
     accelerator: "CmdOrCtrl+-",
     shortcut: { key: "-", command: "view.zoomOut" },
   },
+  "theme.light": {
+    titleKey: "menu.light",
+  },
+  "theme.dark": {
+    titleKey: "menu.dark",
+  },
+  "workspace.refresh": {
+    titleKey: "tree.refresh",
+  },
+  "workspace.collapseAll": {
+    titleKey: "tree.collapseAll",
+  },
 };
 
+export function titleForCommand(command: AppCommand, t: Translate): string {
+  const definition = appCommandRegistry[command];
+  return t(definition.titleKey, definition.titleValues);
+}
+
 export function acceleratorForCommand(command: AppCommand): string | undefined {
-  return appCommandRegistry[command]?.accelerator;
+  return appCommandRegistry[command].accelerator;
 }
 
 export function shortcutDefinitions(): ShortcutDefinition[] {
   return Object.values(appCommandRegistry)
-    .map((definition) => definition?.shortcut)
+    .map((definition) => definition.shortcut)
     .filter((shortcut): shortcut is ShortcutDefinition => Boolean(shortcut));
 }

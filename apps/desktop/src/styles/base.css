@@ -2242,6 +2242,22 @@ button.active {
   fill: #1f2937 !important;
 }
 
+.mermaid-render-target svg foreignObject,
+.mermaid-render-target svg foreignObject *,
+.cm-typora-diagram-content svg foreignObject,
+.cm-typora-diagram-content svg foreignObject * {
+  color: #1f2937 !important;
+}
+
+.mermaid-render-target svg .titleText,
+.mermaid-render-target svg .pieTitleText,
+.cm-typora-diagram-content svg .titleText,
+.cm-typora-diagram-content svg .pieTitleText {
+  color: #111827 !important;
+  fill: #111827 !important;
+  font-weight: 700;
+}
+
 .mermaid-render-target svg .entityBox,
 .cm-typora-diagram-content svg .entityBox {
   fill: #ffffff !important;

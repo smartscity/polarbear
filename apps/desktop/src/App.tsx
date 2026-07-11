@@ -13,43 +13,55 @@ import {
   openSearchPanel,
 } from "@codemirror/search";
 import type { EditorView } from "@codemirror/view";
-import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
   MarkdownEditor,
   type MarkdownEditorView,
-} from "./components/editor/MarkdownEditor";
-import { InsertCodeFenceDialog } from "./components/editor/InsertCodeFenceDialog";
-import { InsertTableDialog } from "./components/editor/InsertTableDialog";
-import { MarkdownPreview } from "./components/editor/MarkdownPreview";
-import { TyporaLiveEditor } from "./components/editor/TyporaLiveEditor";
-import {
-  AppShell,
-  type DocumentStructureItem,
-} from "./components/layout/AppShell";
-import { AboutPolarbearDialog } from "./components/layout/AboutPolarbearDialog";
+} from "./features/editor/components/MarkdownEditor";
+import { InsertCodeFenceDialog } from "./features/editor/components/InsertCodeFenceDialog";
+import { InsertTableDialog } from "./features/editor/components/InsertTableDialog";
+import { MarkdownPreview } from "./features/editor/components/MarkdownPreview";
+import { TyporaLiveEditor } from "./features/editor/components/TyporaLiveEditor";
+import { AppShell } from "./app/layout/AppShell";
+import { AboutPolarbearDialog } from "./app/layout/AboutPolarbearDialog";
 import {
   CreateItemDialog,
   type CreateItemType,
-} from "./components/workspace/CreateItemDialog";
+} from "./features/workspace/components/CreateItemDialog";
 import { useAppShortcuts } from "./commands/useAppShortcuts";
 import { useNativeAppMenu } from "./commands/useNativeAppMenu";
-import { applyMarkdownFormat } from "./markdown/applyMarkdownFormat";
-import type { AppCommand, AppCommandPayload } from "./model/AppCommand";
-import type { ViewMode } from "./model/ViewMode";
+import { applyMarkdownFormat } from "./features/editor/markdown/applyMarkdownFormat";
+import { codeFenceTemplate } from "./features/editor/markdown/markdownTemplates";
+import {
+  deriveDefaultMarkdownFileName,
+  displayNameForDocumentId,
+  documentRelativePathForId,
+  documentWorkspaceRootForId,
+  extractDocumentStructure,
+  findOpenDocumentIdForWorkspaceFile,
+  isUntitledDocument,
+  makeWorkspaceDocumentId,
+  parentFolderIdOf,
+} from "./features/editor/documentModel";
+import type {
+  AppCommand,
+  AppCommandPayload,
+  ExecuteAppCommand,
+} from "./shared/commands/appCommandTypes";
+import type { ViewMode } from "./features/editor/viewMode";
 import {
   applyThemeTokens,
   readStoredTheme,
   storeTheme,
   type ThemeName,
-} from "./theme/themeTokens";
+} from "./features/theme/themeTokens";
 import {
   ConnectRepositoryDialog,
   LinkRepositoryWorkspaceDialog,
   RepositoryOperationDialog,
   RepositorySyncStatusDialog,
-} from "./repository/RepositoryDialogs";
+} from "./features/repository/RepositoryDialogs";
 import {
   connectRepositoryProvider,
   disconnectRepositoryProvider,
@@ -66,14 +78,29 @@ import {
   type RepositoryBinding,
   type RepositoryInfo,
   type RepositoryProvider,
-  type RepositorySyncProgress,
   type RepositorySyncStatus,
-} from "./repository/repositoryApi";
+} from "./features/repository/repositoryApi";
 import {
   findWorkspaceItem,
   type WorkspaceDocumentMap,
   type WorkspaceItem,
-} from "./model/WorkspaceFile";
+} from "./features/workspace/workspaceModel";
+import {
+  ensureMarkdownFilePath,
+  fileNameOf,
+  findFirstFile,
+  joinWorkspacePath,
+  normalizeMarkdownFileName,
+  normalizeWorkspacePath,
+  parentPathOf,
+  remapDirtyFileIds,
+  remapDocumentMetadataKeys,
+  remapDocumentMetadataPaths,
+  remapDocumentPaths,
+  remapPath,
+  targetAffectsDirtyFile,
+  timestampForFileName,
+} from "./features/workspace/workspacePaths";
 import {
   chooseMarkdownFile,
   chooseMarkdownSavePath,
@@ -90,13 +117,59 @@ import {
   openMarkdownFile,
   renameEntry,
   revealInFileManager,
-  refreshWorkspaceSyncIndex,
   saveMarkdownFile,
   saveImageAsset,
   writeMarkdownFile,
-} from "./tauri/workspaceCommands";
-import { openNewAppWindow } from "./tauri/windowCommands";
-import { useI18n } from "./i18n/I18nProvider";
+} from "./features/workspace/tauriWorkspaceAdapter";
+import { openNewAppWindow } from "./shared/tauri/openNewAppWindow";
+import { useI18n } from "./shared/i18n/I18nProvider";
+import {
+  APP_CANVAS_ZOOM_ENABLED,
+  APP_ZOOM_SCROLL_LOCK_MS,
+  APP_ZOOM_STEP,
+  MIN_COMMITTED_APP_ZOOM,
+  NATIVE_GESTURE_WHEEL_SUPPRESS_MS,
+  NATIVE_PINCH_SCALE_SENSITIVITY,
+  NATIVE_PINCH_ZOOM_SENSITIVITY,
+  NORMAL_APP_ZOOM,
+  WHEEL_ZOOM_DELTA_LIMIT,
+  WHEEL_ZOOM_SENSITIVITY,
+  ZOOM_SETTLE_DELAY_MS,
+  ZOOM_SNAP_DURATION_MS,
+  clampCommittedZoom,
+  clampInteractionZoom,
+  consumeAppZoomPointerEvent,
+  consumeAppZoomWheelEvent,
+  dispatchAppZoomDebug,
+  isAppZoomPointerLikeEvent,
+  isAppZoomWheelEvent,
+  isNativePinchEndPhase,
+  measureAppCanvasSize,
+  readAppCanvasSize,
+  readStoredDebugEnabled,
+  removePolarbearDebugOverlays,
+  resolveScrollableElementFromTarget,
+  setAppCanvasZoomingDataset,
+  shouldIgnoreAppZoomEditorPointerTarget,
+  shouldIgnoreAppZoomEvent,
+  shouldLetEditorHandleWheel,
+  syncAppCanvasZoomDataset,
+  type AppCanvasPlacement,
+  type AppCanvasSize,
+  type AppCanvasTransform,
+  type AppZoomCursorPlacementDebug,
+  type AppZoomPointerLikeEvent,
+  type InnerScrollLock,
+  type NativePinchPayload,
+  type ZoomAnchor,
+} from "./features/zoom/appZoomRuntime";
+import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
+import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
+import { STORAGE_KEYS } from "./shared/constants/storageKeys";
+import { APP_EVENTS } from "./shared/events/appEvents";
+import { TAURI_COMMANDS } from "./shared/tauri/commandIds";
+import { invokeTauri } from "./shared/tauri/invokeTauri";
+import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -107,389 +180,6 @@ const initialDocuments: WorkspaceDocumentMap = {
 const initialDocumentTitles: Record<string, string> = {
   "untitled:1": "Untitled",
 };
-
-const NORMAL_APP_ZOOM = 1;
-const MIN_COMMITTED_APP_ZOOM = 1;
-const MIN_INTERACTION_APP_ZOOM = 0.82;
-const MAX_APP_ZOOM = 3;
-const APP_ZOOM_STEP = 0.1;
-const ZOOM_SETTLE_DELAY_MS = 320;
-const ZOOM_SNAP_DURATION_MS = 120;
-const APP_ZOOM_SCROLL_LOCK_MS = 520;
-const WHEEL_ZOOM_DELTA_LIMIT = 80;
-const WHEEL_ZOOM_SENSITIVITY = 0.0045;
-const NATIVE_PINCH_ZOOM_SENSITIVITY = 2.35;
-const NATIVE_PINCH_SCALE_SENSITIVITY = 1.35;
-const NATIVE_GESTURE_WHEEL_SUPPRESS_MS = 160;
-const APP_CANVAS_ZOOM_ENABLED = true;
-
-function clampInteractionZoom(value: number): number {
-  if (!Number.isFinite(value)) {
-    return NORMAL_APP_ZOOM;
-  }
-
-  return Math.max(MIN_INTERACTION_APP_ZOOM, Math.min(MAX_APP_ZOOM, value));
-}
-
-function clampCommittedZoom(value: number): number {
-  if (!Number.isFinite(value)) {
-    return NORMAL_APP_ZOOM;
-  }
-
-  return Math.max(MIN_COMMITTED_APP_ZOOM, Math.min(MAX_APP_ZOOM, value));
-}
-
-function isAppZoomWheelEvent(event: WheelEvent): boolean {
-  return (event.metaKey || event.ctrlKey) && Math.abs(event.deltaY) > Math.abs(event.deltaX);
-}
-
-function consumeAppZoomWheelEvent(event: WheelEvent): void {
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-}
-
-function consumeAppZoomPointerEvent(event: Event): void {
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-}
-
-function isAppZoomDebugOverlayEnabled(): boolean {
-  try {
-    return window.localStorage.getItem("polarbear.liveDebugScroll") === "1";
-  } catch {
-    return false;
-  }
-}
-
-function readStoredDebugEnabled(): boolean {
-  try {
-    return window.localStorage.getItem("polarbear.debug") === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeAppZoomDebugOverlay(note: string): void {
-  if (!isAppZoomDebugOverlayEnabled()) {
-    return;
-  }
-
-  const overlayId = "polarbear-app-zoom-debug-overlay";
-  let overlay = document.getElementById(overlayId) as HTMLDivElement | null;
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = overlayId;
-    overlay.dataset.polarbearDebugOverlay = "true";
-    overlay.style.position = "fixed";
-    overlay.style.right = "12px";
-    overlay.style.bottom = "12px";
-    overlay.style.zIndex = "2147483647";
-    overlay.style.maxWidth = "760px";
-    overlay.style.maxHeight = "38vh";
-    overlay.style.margin = "0";
-    overlay.style.padding = "10px 12px";
-    overlay.style.overflow = "auto";
-    overlay.style.border = "1px solid rgba(148, 163, 184, 0.45)";
-    overlay.style.borderRadius = "8px";
-    overlay.style.background = "rgba(15, 23, 42, 0.92)";
-    overlay.style.color = "#e5edf8";
-    overlay.style.font = "12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace";
-    overlay.style.pointerEvents = "none";
-    overlay.style.whiteSpace = "pre-wrap";
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.debugCopy = "true";
-    button.textContent = "Copy";
-    button.style.float = "right";
-    button.style.margin = "0 0 8px 12px";
-    button.style.pointerEvents = "auto";
-    button.style.cursor = "pointer";
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const text = overlay?.querySelector("pre")?.textContent ?? "";
-      void copyDebugText(text);
-    });
-
-    const pre = document.createElement("pre");
-    pre.style.margin = "0";
-    pre.style.whiteSpace = "pre-wrap";
-    pre.style.font = "inherit";
-    overlay.append(button, pre);
-    document.body.appendChild(overlay);
-  }
-
-  const pre = overlay.querySelector("pre");
-  if (pre) {
-    pre.textContent = `APP ZOOM DEBUG\n${note}`;
-  }
-}
-
-async function copyDebugText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard?.writeText(text);
-  } catch {
-    // Debug copy is best-effort and must never take the app down.
-  }
-}
-
-function removePolarbearDebugOverlays(): void {
-  document.getElementById("polarbear-app-zoom-debug-overlay")?.remove();
-  document.getElementById("polarbear-live-debug-overlay")?.remove();
-  document
-    .querySelectorAll("[data-polarbear-debug-overlay='true'], .typora-live-debug-panel")
-    .forEach((element) => element.remove());
-}
-
-function dispatchAppZoomDebug(
-  phase: string,
-  params: {
-    canvas?: HTMLElement | null;
-    canvasSize?: HTMLElement | null;
-    extra?: Record<string, boolean | number | string | null | undefined>;
-    prepared?: boolean;
-    viewport?: HTMLElement | null;
-    zoom?: number;
-  } = {},
-): void {
-  const viewport = params.viewport ?? null;
-  const canvasSize = params.canvasSize ?? null;
-  const canvas = params.canvas ?? null;
-  const liveScroller = document.querySelector(".typora-live-editor-pane .cm-scroller");
-  const liveScrollerElement = liveScroller instanceof HTMLElement ? liveScroller : null;
-  const extraNote = params.extra
-    ? Object.entries(params.extra)
-        .filter(([, value]) => value !== undefined && value !== null)
-        .map(([key, value]) => `${key}=${String(value)}`)
-    : [];
-  const note = [
-    `phase=${phase}`,
-    `zoom=${Number((params.zoom ?? 1).toFixed(4))}`,
-    `prepared=${params.prepared ? 1 : 0}`,
-    `viewportScroll=${viewport ? `${Math.round(viewport.scrollLeft)},${Math.round(viewport.scrollTop)}` : "n/a"}`,
-    `viewportClient=${viewport ? `${viewport.clientWidth}x${viewport.clientHeight}` : "n/a"}`,
-    `viewportScrollSize=${viewport ? `${viewport.scrollWidth}x${viewport.scrollHeight}` : "n/a"}`,
-    `spacerClient=${canvasSize ? `${canvasSize.clientWidth}x${canvasSize.clientHeight}` : "n/a"}`,
-    `spacerScroll=${canvasSize ? `${canvasSize.scrollWidth}x${canvasSize.scrollHeight}` : "n/a"}`,
-    `canvasOffset=${canvas ? `${canvas.offsetLeft},${canvas.offsetTop}` : "n/a"}`,
-    `canvasSize=${canvas ? `${canvas.clientWidth}x${canvas.clientHeight}` : "n/a"}`,
-    `transform=${canvas?.style.transform || "n/a"}`,
-    `liveScroll=${liveScrollerElement ? `${Math.round(liveScrollerElement.scrollLeft)},${Math.round(liveScrollerElement.scrollTop)}` : "n/a"}`,
-    ...extraNote,
-  ].join(" ");
-
-  writeAppZoomDebugOverlay(note);
-}
-
-function setAppCanvasZoomDataset(zoom: number): void {
-  document.documentElement.dataset.appCanvasZoom = Number.isFinite(zoom)
-    ? zoom.toFixed(6)
-    : "1.000000";
-}
-
-function setAppCanvasZoomingDataset(isZooming: boolean): void {
-  if (isZooming) {
-    document.documentElement.dataset.appCanvasZooming = "true";
-    return;
-  }
-
-  delete document.documentElement.dataset.appCanvasZooming;
-}
-
-function syncAppCanvasZoomDataset(zoom: number, forceZooming = false): void {
-  setAppCanvasZoomDataset(zoom);
-  setAppCanvasZoomingDataset(forceZooming || zoom > NORMAL_APP_ZOOM + 0.0005);
-}
-
-function shouldIgnoreAppZoomEvent(event: Event): boolean {
-  if (document.querySelector(".image-viewer-overlay")) {
-    return true;
-  }
-
-  const target = event.target;
-  return target instanceof Element && Boolean(target.closest(
-    ".image-viewer-overlay",
-  ));
-}
-
-function resolveScrollableElementFromTarget(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof Element)) {
-    return null;
-  }
-
-  const scroller =
-    target.closest(".cm-scroller") ??
-    target.closest(".markdown-preview") ??
-    target.closest(".workspace-tree-shell");
-
-  return scroller instanceof HTMLElement ? scroller : null;
-}
-
-function shouldIgnoreAppZoomEditorPointerTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) {
-    return true;
-  }
-
-  if (target.closest(".cm-content, .cm-line")) {
-    return false;
-  }
-
-  return Boolean(target.closest(
-    "button, input, select, textarea, [contenteditable='true'], .cm-typora-diagram-preview, .cm-typora-table-preview, .cm-typora-image-preview",
-  ));
-}
-
-type AppZoomPointerLikeEvent = Event & {
-  button?: number;
-  clientX: number;
-  clientY: number;
-  shiftKey?: boolean;
-};
-
-function isAppZoomPointerLikeEvent(event: Event): event is AppZoomPointerLikeEvent {
-  const pointer = event as Partial<AppZoomPointerLikeEvent>;
-  return (
-    typeof pointer.clientX === "number" &&
-    Number.isFinite(pointer.clientX) &&
-    typeof pointer.clientY === "number" &&
-    Number.isFinite(pointer.clientY)
-  );
-}
-
-function shouldLetEditorHandleWheel(event: WheelEvent): boolean {
-  if (isAppZoomWheelEvent(event)) {
-    return false;
-  }
-
-  const target = event.target;
-  if (!(target instanceof Element)) {
-    return false;
-  }
-
-  const scroller =
-    target.closest(".cm-scroller") ??
-    target.closest(".typora-live-editor-pane, .editor-pane")?.querySelector(".cm-scroller");
-  if (!(scroller instanceof HTMLElement)) {
-    return false;
-  }
-
-  return Math.abs(event.deltaY) >= Math.abs(event.deltaX);
-}
-
-type NativePinchEventLike = CustomEvent<{
-  delta?: number;
-  magnification?: number;
-  phase?: number | string;
-  scale?: number;
-  state?: number | string;
-  x?: number;
-  y?: number;
-}>;
-type NativePinchPayload = NativePinchEventLike["detail"];
-
-type AppCanvasSize = {
-  width: number;
-  height: number;
-};
-
-type AppCanvasTransform = {
-  scale: number;
-  x: number;
-  y: number;
-};
-
-type AppCanvasPlacement = {
-  canvasHeight: number;
-  canvasWidth: number;
-  offsetLeft: number;
-  offsetTop: number;
-};
-
-type ZoomAnchor = {
-  pointerX: number;
-  pointerY: number;
-  canvasX: number;
-  canvasY: number;
-};
-
-type InnerScrollLock = {
-  left: number;
-  top: number;
-};
-
-type AppZoomCursorPlacementDebug = {
-  adjustedClientX: number;
-  adjustedClientY: number;
-  afterDispatchScrollLeft: number;
-  afterDispatchScrollTop: number;
-  beforeScrollLeft: number;
-  beforeScrollTop: number;
-  cursorPos: number;
-  eventType: string;
-  rawClientX: number;
-  rawClientY: number;
-  transformScale: number;
-  transformX: number;
-  transformY: number;
-  viewportLeft: number | null;
-  viewportTop: number | null;
-  when: number;
-};
-
-function readAppCanvasSize(): AppCanvasSize {
-  return {
-    width: Math.max(320, Math.floor(window.visualViewport?.width ?? window.innerWidth)),
-    height: Math.max(320, Math.floor(window.visualViewport?.height ?? window.innerHeight)),
-  };
-}
-
-function measureAppCanvasSize(canvas: HTMLElement | null): AppCanvasSize {
-  const viewportSize = readAppCanvasSize();
-  if (!canvas) {
-    return viewportSize;
-  }
-
-  const content = canvas.firstElementChild instanceof HTMLElement
-    ? canvas.firstElementChild
-    : canvas;
-  const width = Math.max(
-    viewportSize.width,
-    content.scrollWidth,
-    content.clientWidth,
-    canvas.scrollWidth,
-    canvas.clientWidth,
-  );
-  const height = Math.max(
-    viewportSize.height,
-    content.scrollHeight,
-    content.clientHeight,
-    canvas.scrollHeight,
-    canvas.clientHeight,
-  );
-
-  return {
-    width: Math.ceil(width),
-    height: Math.ceil(height),
-  };
-}
-
-function isNativePinchEndPhase(phase: unknown): boolean {
-  if (typeof phase === "number") {
-    // NSEventPhaseEnded = 8, NSEventPhaseCancelled = 16.
-    return (phase & 8) !== 0 || (phase & 16) !== 0;
-  }
-
-  return typeof phase === "string" && [
-    "ended",
-    "end",
-    "cancelled",
-    "canceled",
-    "failed",
-  ].includes(phase.toLowerCase());
-}
 
 export function App() {
   const { t } = useI18n();
@@ -578,7 +268,7 @@ export function App() {
     isBusy: boolean;
     status: "idle" | "busy" | "success" | "error";
   }>({
-    title: "Cloud Sync",
+    title: t("status.cloudSync"),
     message: "",
     isBusy: false,
     status: "idle",
@@ -598,87 +288,46 @@ export function App() {
     openFileIdsRef.current = openFileIds;
   }, [openFileIds]);
 
-  useEffect(() => {
-    if (!workspaceRoot) {
-      return;
-    }
+  const handleWorkspaceFileTreeRefresh = useCallback(
+    (refreshedWorkspaceRoot: string, items: WorkspaceItem[]) => {
+      setWorkspaceItems((currentItems) =>
+        JSON.stringify(currentItems) === JSON.stringify(items) ? currentItems : items,
+      );
+      setWorkspaceItemsByRoot((currentTrees) => {
+        const currentItems = currentTrees[refreshedWorkspaceRoot] ?? [];
+        return JSON.stringify(currentItems) === JSON.stringify(items)
+          ? currentTrees
+          : { ...currentTrees, [refreshedWorkspaceRoot]: items };
+      });
+    },
+    [],
+  );
+  useWorkspaceFileTreeRefresh({
+    workspaceRoot,
+    onRefresh: handleWorkspaceFileTreeRefresh,
+  });
 
-    let disposed = false;
-    let refreshInProgress = false;
-    const refreshFileTree = async () => {
-      if (disposed || refreshInProgress || document.visibilityState !== "visible") {
-        return;
-      }
-      refreshInProgress = true;
-      try {
-        const [items] = await Promise.all([
-          listWorkspaceFiles(workspaceRoot),
-          refreshWorkspaceSyncIndex(workspaceRoot),
-        ]);
-        if (disposed) {
-          return;
-        }
-        setWorkspaceItems((currentItems) =>
-          JSON.stringify(currentItems) === JSON.stringify(items) ? currentItems : items,
-        );
-        setWorkspaceItemsByRoot((currentTrees) => {
-          const currentItems = currentTrees[workspaceRoot] ?? [];
-          if (JSON.stringify(currentItems) === JSON.stringify(items)) {
-            return currentTrees;
-          }
-          return { ...currentTrees, [workspaceRoot]: items };
-        });
-      } catch {
-        // A transient filesystem change is retried on the next focus/poll cycle.
-      } finally {
-        refreshInProgress = false;
-      }
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        void refreshFileTree();
-      }
-    };
-    const intervalId = window.setInterval(() => void refreshFileTree(), 2500);
-    void refreshFileTree();
-    window.addEventListener("focus", refreshFileTree);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      disposed = true;
-      window.clearInterval(intervalId);
-      window.removeEventListener("focus", refreshFileTree);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [workspaceRoot]);
-
-  useEffect(() => {
-    let unlisten: UnlistenFn | null = null;
-    void listen<RepositorySyncProgress>(
-      "repository-sync-progress",
-      ({ payload }) => {
-        if (!repositoryBusyRef.current) {
-          return;
-        }
-        const count =
-          payload.current != null && payload.total != null && payload.total > 0
-            ? ` (${payload.current}/${payload.total})`
-            : "";
-        setRepositoryOperation((current) => ({
-          ...current,
-          message: `${payload.message}${count} [${payload.phase}]`,
-          isBusy: true,
-          status: "busy",
-        }));
-      },
-    ).then((stopListening) => {
-      unlisten = stopListening;
-    });
-
-    return () => {
-      unlisten?.();
-    };
+  const handleRepositorySyncProgress = useCallback((payload: {
+    phase: string;
+    message: string;
+    current?: number | null;
+    total?: number | null;
+  }) => {
+    const count =
+      payload.current != null && payload.total != null && payload.total > 0
+        ? ` (${payload.current}/${payload.total})`
+        : "";
+    setRepositoryOperation((current) => ({
+      ...current,
+      message: `${payload.message}${count} [${payload.phase}]`,
+      isBusy: true,
+      status: "busy",
+    }));
   }, []);
+  useRepositorySyncProgress({
+    busyRef: repositoryBusyRef,
+    onProgress: handleRepositorySyncProgress,
+  });
 
   const markdownContent = documents[activeFileId] ?? "";
   const activeRelativePath = documentRelativePathForId(activeFileId, documentRelativePaths);
@@ -706,10 +355,10 @@ export function App() {
   useEffect(() => {
     try {
       const value = debugEnabled ? "1" : "0";
-      window.localStorage.setItem("polarbear.debug", value);
-      window.localStorage.setItem("polarbear.liveDebug", value);
-      window.localStorage.setItem("polarbear.liveDebugScroll", value);
-      window.localStorage.setItem("polarbear.liveDebugPanel", debugEnabled ? "1" : "0");
+      window.localStorage.setItem(STORAGE_KEYS.debug, value);
+      window.localStorage.setItem(STORAGE_KEYS.liveDebug, value);
+      window.localStorage.setItem(STORAGE_KEYS.liveDebugScroll, value);
+      window.localStorage.setItem(STORAGE_KEYS.liveDebugPanel, debugEnabled ? "1" : "0");
     } catch {
       // Ignore storage errors; the toggle still reflects the current session.
     }
@@ -718,7 +367,7 @@ export function App() {
       removePolarbearDebugOverlays();
     }
 
-    window.dispatchEvent(new CustomEvent("polarbear-debug-changed"));
+    window.dispatchEvent(new CustomEvent(APP_EVENTS.debugChanged));
   }, [debugEnabled]);
 
   const addOpenTab = useCallback((fileId: string) => {
@@ -1285,7 +934,7 @@ export function App() {
       });
       if (isAtNormalZoom) {
         setAppCanvasZoomingDataset(false);
-        window.dispatchEvent(new CustomEvent("polarbear-app-canvas-zoom-settled"));
+        window.dispatchEvent(new CustomEvent(APP_EVENTS.appCanvasZoomSettled));
       } else {
         setAppCanvasZoomingDataset(true);
       }
@@ -1498,43 +1147,6 @@ export function App() {
     zoomAtPoint,
   ]);
 
-  const zoomAtViewportCenter = useCallback((nextZoom: number) => {
-    if (!APP_CANVAS_ZOOM_ENABLED) {
-      commitZoom(NORMAL_APP_ZOOM);
-      return;
-    }
-
-    const viewport = zoomViewportRef.current;
-    if (!viewport) {
-      applyCanvasZoom(nextZoom);
-      commitZoom(nextZoom);
-      return;
-    }
-
-    const rect = viewport.getBoundingClientRect();
-    const clientX = rect.left + rect.width / 2;
-    const clientY = rect.top + rect.height / 2;
-    const anchor = getAnchorCanvasPoint(viewport, appZoomRef.current, clientX, clientY);
-    const zoom = clampInteractionZoom(nextZoom);
-
-    cancelZoomSnapAnimation();
-
-    if (zoom < MIN_COMMITTED_APP_ZOOM) {
-      animateZoomTo(NORMAL_APP_ZOOM, anchor);
-      return;
-    }
-
-    applyZoomAtAnchor(zoom, anchor, false);
-    commitZoom(zoom);
-  }, [
-    animateZoomTo,
-    applyCanvasZoom,
-    applyZoomAtAnchor,
-    cancelZoomSnapAnimation,
-    commitZoom,
-    getAnchorCanvasPoint,
-  ]);
-
   const panZoomViewport = useCallback((deltaX: number, deltaY: number): boolean => {
     const current = appCanvasTransformRef.current;
     if (current.scale <= NORMAL_APP_ZOOM + 0.0005) {
@@ -1640,8 +1252,8 @@ export function App() {
       return;
     }
 
-    window.localStorage.removeItem("polarbear.appZoom");
-    void invoke("set_app_zoom", { zoom: NORMAL_APP_ZOOM });
+    window.localStorage.removeItem(STORAGE_KEYS.appZoom);
+    void invokeTauri(TAURI_COMMANDS.setAppZoom, { zoom: NORMAL_APP_ZOOM });
   }, []);
 
   useEffect(() => {
@@ -1761,7 +1373,7 @@ export function App() {
     });
     let disposed = false;
     let unlistenNativePinch: UnlistenFn | null = null;
-    void listen<NativePinchPayload>("polarbear-native-pinch", (event) => {
+    void listen<NativePinchPayload>(APP_EVENTS.nativePinch, (event) => {
       handleNativePinchPayload(event.payload);
     }).then((unlisten) => {
       if (disposed) {
@@ -1946,13 +1558,9 @@ export function App() {
     };
   }, [placeEditorCursorDuringAppZoom, preserveCurrentInnerScrollPosition, restoreInnerScrollLocks]);
 
-  useEffect(() => {
-    void refreshRepositoryState();
-  }, [workspaceRoot]);
-
   const updateActiveDocument = (value: string) => {
     if (!activeFileId) {
-      setStatusMessage("Create or select a Markdown file before writing.");
+      setStatusMessage(t("status.selectDocumentBeforeWriting"));
       return;
     }
 
@@ -2003,7 +1611,7 @@ export function App() {
       setAppCanvasZoomingDataset(false);
     }
 
-    setStatusMessage(`App zoom ${Math.round(zoom * 100)}%.`);
+    setStatusMessage(t("status.zoomPercent", { percent: Math.round(zoom * 100) }));
   }, [
     applyCanvasZoom,
     applyZoomAtAnchor,
@@ -2013,6 +1621,7 @@ export function App() {
     getAnchorCanvasPoint,
     releaseInnerScrollLocks,
     restoreInnerScrollLocks,
+    t,
   ]);
 
   const loadWorkspace = async (nextWorkspaceRoot: string): Promise<boolean> => {
@@ -2031,7 +1640,7 @@ export function App() {
       setDocumentRelativePaths({});
       setDirtyFileIds(new Set());
       setSelectedTreeItemId("");
-      setStatusMessage(`Opened workspace: ${nextWorkspaceRoot}`);
+      setStatusMessage(t("status.openedWorkspace", { path: nextWorkspaceRoot }));
 
       if (firstFile) {
         const source = await loadMarkdownFile({
@@ -2061,7 +1670,7 @@ export function App() {
       const selectedFolder = await chooseWorkspaceFolder();
 
       if (!selectedFolder) {
-        setStatusMessage("Open workspace cancelled.");
+        setStatusMessage(t("status.openWorkspaceCancelled"));
         return;
       }
 
@@ -2076,7 +1685,7 @@ export function App() {
       const selectedFile = await chooseMarkdownFile();
 
       if (!selectedFile) {
-        setStatusMessage("Open file cancelled.");
+        setStatusMessage(t("status.openFileCancelled"));
         return;
       }
 
@@ -2113,13 +1722,13 @@ export function App() {
         nextDirtyFileIds.delete(documentId);
         return nextDirtyFileIds;
       });
-      setStatusMessage(`Opened ${openedFile.relativePath}`);
+      setStatusMessage(t("status.openedPath", { path: openedFile.relativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
   };
 
-  const refreshRepositoryState = async () => {
+  const refreshRepositoryState = useCallback(async () => {
     try {
       const account = await getRepositoryAccount();
       const binding = workspaceRoot
@@ -2131,7 +1740,11 @@ export function App() {
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
-  };
+  }, [workspaceRoot]);
+
+  useEffect(() => {
+    void refreshRepositoryState();
+  }, [refreshRepositoryState]);
 
   const repositoryErrorMessage = (error: unknown): string =>
     error instanceof Error ? error.message : String(error);
@@ -2177,7 +1790,7 @@ export function App() {
     if (!targetWorkspaceRoot) {
       const selectedFolder = await chooseWorkspaceFolder();
       if (!selectedFolder) {
-        setStatusMessage("Choose a local workspace before linking cloud sync.");
+        setStatusMessage(t("status.chooseWorkspaceBeforeCloud"));
         setRepositoryDialog(null);
         return;
       }
@@ -2261,10 +1874,10 @@ export function App() {
       setRepositoryLinkWorkspaceRoot("");
       setRepositoryError("");
       setRepositoryDialog(null);
-      setStatusMessage("Disconnected cloud sync.");
+      setStatusMessage(t("status.cloudDisconnected"));
     } catch (error) {
       const message = repositoryErrorMessage(error);
-      showRepositoryOperation("Cloud Sync", message, false);
+      showRepositoryOperation(t("status.cloudSync"), message, false);
       setStatusMessage(message);
     } finally {
       setIsRepositoryBusy(false);
@@ -2281,7 +1894,7 @@ export function App() {
   }) => {
     const syncWorkspaceRoot = repositoryLinkWorkspaceRoot || workspaceRoot;
     if (!syncWorkspaceRoot) {
-      setStatusMessage("Open a workspace before linking a repository.");
+      setStatusMessage(t("status.openWorkspaceBeforeCloud"));
       return;
     }
 
@@ -2301,7 +1914,9 @@ export function App() {
       });
       setRepositorySyncStatus(status);
       setRepositoryDialog("status");
-      setStatusMessage(`Cloud Sync is ready for ${binding.owner}/${binding.repo}.`);
+      setStatusMessage(t("status.cloudReady", {
+        repository: `${binding.owner}/${binding.repo}`,
+      }));
     } catch (error) {
       const message = repositoryErrorMessage(error);
       setRepositoryError(message);
@@ -2437,7 +2052,7 @@ export function App() {
       setRepositoryDialog("status");
     } catch (error) {
       const message = repositoryErrorMessage(error);
-      showRepositoryOperation("Cloud Sync Status", message, false);
+      showRepositoryOperation(t("cloud.statusTitle"), message, false);
       setStatusMessage(message);
     } finally {
       setIsRepositoryBusy(false);
@@ -2446,15 +2061,15 @@ export function App() {
 
   const runRepositorySyncAction = async (action: "pull" | "push" | "sync") => {
     if (repositoryBusyRef.current) {
-      setStatusMessage("Cloud Sync is already running in the background.");
+      setStatusMessage(t("status.cloudBusy"));
       return;
     }
     const operation =
       action === "push"
-        ? { title: "Uploading Local Changes", message: "Saving and uploading your workspace..." }
+        ? { title: t("status.syncUploadingTitle"), message: t("status.syncUploadingMessage") }
         : action === "pull"
-          ? { title: "Downloading Remote Changes", message: "Checking and downloading remote changes..." }
-          : { title: "Syncing Workspace", message: "Merging local and remote changes..." };
+          ? { title: t("status.syncDownloadingTitle"), message: t("status.syncDownloadingMessage") }
+          : { title: t("status.syncingTitle"), message: t("status.syncingMessage") };
     showRepositoryOperation(operation.title, operation.message, true);
     repositoryBusyRef.current = true;
     setIsRepositoryBusy(true);
@@ -2488,15 +2103,15 @@ export function App() {
         title: operation.title,
         message:
           status.conflicts.length > 0
-            ? `Cloud Sync found ${status.conflicts.length} conflict(s).`
-            : `${operation.title} completed.`,
+            ? t("status.syncConflicts", { count: status.conflicts.length })
+            : t("status.operationCompleted", { operation: operation.title }),
         isBusy: false,
         status: status.conflicts.length > 0 ? "error" : "success",
       });
       setStatusMessage(
         status.conflicts.length > 0
-          ? `Cloud Sync found ${status.conflicts.length} conflict(s).`
-          : `${operation.title} completed.`,
+          ? t("status.syncConflicts", { count: status.conflicts.length })
+          : t("status.operationCompleted", { operation: operation.title }),
       );
     } catch (error) {
       const message = repositoryErrorMessage(error);
@@ -2536,7 +2151,7 @@ export function App() {
       nextDirtyFileIds.add(documentId);
       return nextDirtyFileIds;
     });
-    setStatusMessage(`Created ${title}`);
+    setStatusMessage(t("status.createdPath", { path: title }));
   };
 
   const selectFile = async (fileId: string) => {
@@ -2574,7 +2189,7 @@ export function App() {
         ...currentDocuments,
         [documentId]: source,
       }));
-      setStatusMessage(`Loaded ${fileId}`);
+      setStatusMessage(t("status.loadedPath", { path: fileId }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -2630,7 +2245,7 @@ export function App() {
         ...currentDocuments,
         [fileId]: source,
       }));
-      setStatusMessage(`Loaded ${nextRelativePath}`);
+      setStatusMessage(t("status.loadedPath", { path: nextRelativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -2660,7 +2275,7 @@ export function App() {
         deriveDefaultMarkdownFileName(content, tabName),
       );
       if (!selectedPath) {
-        setStatusMessage("Save cancelled.");
+        setStatusMessage(t("status.saveCancelled"));
         return null;
       }
 
@@ -2726,7 +2341,7 @@ export function App() {
         return nextDirtyFileIds;
       });
       lastSavedFileIdRef.current = nextDocumentId;
-      setStatusMessage(`Saved ${relativePath}`);
+      setStatusMessage(t("status.savedPath", { path: relativePath }));
       return nextDocumentId;
     }
 
@@ -2738,7 +2353,7 @@ export function App() {
     const tabRelativePath = documentRelativePathForId(fileId, documentRelativePaths);
 
     if (!tabWorkspaceRoot) {
-      setStatusMessage("Open a local workspace before saving to disk.");
+      setStatusMessage(t("status.openWorkspaceBeforeSave"));
       return null;
     }
 
@@ -2753,7 +2368,7 @@ export function App() {
       return nextDirtyFileIds;
     });
     lastSavedFileIdRef.current = fileId;
-    setStatusMessage(`Saved ${tabRelativePath}`);
+    setStatusMessage(t("status.savedPath", { path: tabRelativePath }));
     return fileId;
   };
 
@@ -2767,14 +2382,14 @@ export function App() {
     let fileIdToClose = fileId;
 
     if (dirtyFileIds.has(fileId)) {
-      const shouldSave = await ask(`Save changes to ${tabName} before closing?`, {
+      const shouldSave = await ask(t("dialog.saveBeforeClosing", { name: tabName }), {
         kind: "warning",
-        title: "Close Tab",
+        title: t("dialog.closeTabTitle"),
       });
 
       if (shouldSave) {
         lastSavedFileIdRef.current = null;
-        let savedFileId: string | null = null;
+        let savedFileId: string | null;
         try {
           savedFileId = await saveTab(fileId);
         } catch (error) {
@@ -2843,7 +2458,7 @@ export function App() {
       editorViewRef.current = null;
     }
 
-    setStatusMessage(`Closed ${tabName}`);
+    setStatusMessage(t("status.closedPath", { path: tabName }));
   };
 
   const saveActiveFile = async (): Promise<boolean> => {
@@ -2859,12 +2474,12 @@ export function App() {
     const saveRelativePath = documentRelativePathForId(activeFileId, documentRelativePaths);
 
     if (!saveWorkspaceRoot) {
-      setStatusMessage("Open a local workspace before saving to disk.");
+      setStatusMessage(t("status.openWorkspaceBeforeSave"));
       return false;
     }
 
     if (!activeFileId) {
-      setStatusMessage("Create or select a Markdown file before saving.");
+      setStatusMessage(t("status.selectDocumentBeforeSave"));
       return false;
     }
 
@@ -2880,7 +2495,7 @@ export function App() {
         return nextDirtyFileIds;
       });
       lastSavedFileIdRef.current = activeFileId;
-      setStatusMessage(`Saved ${saveRelativePath}`);
+      setStatusMessage(t("status.savedPath", { path: saveRelativePath }));
       return true;
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
@@ -2890,7 +2505,7 @@ export function App() {
 
   const saveActiveFileAs = async (): Promise<boolean> => {
     if (!activeFileId) {
-      setStatusMessage("Create or select a Markdown file before saving.");
+      setStatusMessage(t("status.selectDocumentBeforeSave"));
       return false;
     }
 
@@ -2902,7 +2517,7 @@ export function App() {
       const selectedPath = await chooseMarkdownSavePath(defaultFileName);
 
       if (!selectedPath) {
-        setStatusMessage("Save cancelled.");
+        setStatusMessage(t("status.saveCancelled"));
         return false;
       }
 
@@ -2962,7 +2577,7 @@ export function App() {
         return nextDirtyFileIds;
       });
       lastSavedFileIdRef.current = nextDocumentId;
-      setStatusMessage(`Saved ${relativePath}`);
+      setStatusMessage(t("status.savedPath", { path: relativePath }));
       return true;
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
@@ -2988,12 +2603,12 @@ export function App() {
     );
 
     if (!relativePath) {
-      setStatusMessage("File name cannot be empty.");
+      setStatusMessage(t("status.nameRequired", { item: t("common.file") }));
       return;
     }
 
     if (!workspaceRoot) {
-      setStatusMessage("Open a local workspace before creating files.");
+      setStatusMessage(t("status.openWorkspaceBeforeCreate", { item: t("common.file") }));
       return;
     }
 
@@ -3029,7 +2644,7 @@ export function App() {
       addOpenTab(relativePath);
       setSelectedTreeItemId(relativePath);
       revealFolder(createParentPath);
-      setStatusMessage(`Created ${relativePath}`);
+      setStatusMessage(t("status.createdPath", { path: relativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -3042,12 +2657,12 @@ export function App() {
     );
 
     if (!relativePath) {
-      setStatusMessage("Folder name cannot be empty.");
+      setStatusMessage(t("status.nameRequired", { item: t("common.folder") }));
       return;
     }
 
     if (!workspaceRoot) {
-      setStatusMessage("Open a local workspace before creating folders.");
+      setStatusMessage(t("status.openWorkspaceBeforeCreate", { item: t("common.folder") }));
       return;
     }
 
@@ -3064,7 +2679,7 @@ export function App() {
       }));
       setSelectedTreeItemId(relativePath);
       revealFolder(createParentPath);
-      setStatusMessage(`Created folder ${relativePath}`);
+      setStatusMessage(t("status.createdFolder", { path: relativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -3075,13 +2690,13 @@ export function App() {
     parentPath?: string,
   ) => {
     if (!workspaceRoot) {
-      setStatusMessage("Choose a local workspace folder first.");
+      setStatusMessage(t("status.chooseWorkspaceFirst"));
 
       try {
         const selectedFolder = await chooseWorkspaceFolder();
 
         if (!selectedFolder) {
-          setStatusMessage("Create cancelled. No workspace folder selected.");
+          setStatusMessage(t("status.createCancelledNoWorkspace"));
           return;
         }
 
@@ -3124,12 +2739,12 @@ export function App() {
     const targetItem = findWorkspaceItem(workspaceItems, targetId);
 
     if (!targetItem) {
-      setStatusMessage("Select a file or folder before renaming.");
+      setStatusMessage(t("status.selectBeforeRename"));
       return;
     }
 
     if (targetAffectsDirtyFile(targetItem.id, dirtyFileIds)) {
-      setStatusMessage("Save the current file before renaming.");
+      setStatusMessage(t("status.saveBeforeRename"));
       return;
     }
 
@@ -3140,7 +2755,7 @@ export function App() {
     const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
     const targetItem = findWorkspaceItem(workspaceItems, targetId);
     if (!workspaceRoot || !targetItem) {
-      setStatusMessage("Select a file or folder before deleting.");
+      setStatusMessage(t("status.selectBeforeDelete"));
       return;
     }
     const isDeletedPath = (path: string) =>
@@ -3156,13 +2771,13 @@ export function App() {
       );
     });
     if (hasDirtyTarget) {
-      setStatusMessage("Save or close modified files before deleting.");
+      setStatusMessage(t("status.saveBeforeDelete"));
       return;
     }
 
     const confirmed = await ask(
       `Delete ${targetItem.name}? This action cannot be undone.`,
-      { kind: "warning", title: "Delete from Workspace" },
+      { kind: "warning", title: t("dialog.deleteWorkspaceTitle") },
     );
     if (!confirmed) {
       return;
@@ -3240,7 +2855,7 @@ export function App() {
       if (isDeletedPath(documentRelativePathForId(activeFileId, documentRelativePaths))) {
         setActiveFileId(remainingOpenFileIds.at(-1) ?? "");
       }
-      setStatusMessage(`Deleted ${targetItem.id}. Sync to remove it from the remote.`);
+      setStatusMessage(t("status.deletedNeedsSync", { path: targetItem.id }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -3250,7 +2865,7 @@ export function App() {
     const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
     const targetItem = findWorkspaceItem(workspaceItems, targetId);
     if (!workspaceRoot || !targetItem) {
-      setStatusMessage("Select a file or folder before duplicating.");
+      setStatusMessage(t("status.selectBeforeDuplicate"));
       return;
     }
     try {
@@ -3266,7 +2881,7 @@ export function App() {
       }));
       setSelectedTreeItemId(result.newRelativePath);
       revealFolder(parentFolderIdOf(result.newRelativePath));
-      setStatusMessage(`Duplicated as ${result.newRelativePath}.`);
+      setStatusMessage(t("status.duplicatedPath", { path: result.newRelativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -3278,7 +2893,7 @@ export function App() {
     }
 
     if (targetAffectsDirtyFile(item.id, dirtyFileIds)) {
-      setStatusMessage("Save the current file before renaming.");
+      setStatusMessage(t("status.saveBeforeRename"));
       return;
     }
 
@@ -3348,12 +2963,12 @@ export function App() {
     targetParentPath: string | null,
   ) => {
     if (!workspaceRoot) {
-      setStatusMessage("Open a workspace before moving files.");
+      setStatusMessage(t("status.openWorkspaceBeforeMove"));
       return;
     }
 
     if (targetAffectsDirtyFile(sourcePath, dirtyFileIds)) {
-      setStatusMessage("Save the current file before moving it.");
+      setStatusMessage(t("status.saveBeforeMove"));
       return;
     }
 
@@ -3422,7 +3037,7 @@ export function App() {
     const editorView = editorViewRef.current;
 
     if (!editorView) {
-      setStatusMessage("Focus the Markdown editor before formatting.");
+      setStatusMessage(t("status.focusBeforeFormat"));
       return;
     }
 
@@ -3453,7 +3068,7 @@ export function App() {
     const editorView = editorViewRef.current;
 
     if (!activeFileId) {
-      setStatusMessage("Open a Markdown document before inserting content.");
+      setStatusMessage(t("status.openDocumentBeforeInsert"));
       return;
     }
 
@@ -3500,7 +3115,7 @@ export function App() {
     command: "edit.find" | "edit.findNext" | "edit.findPrevious",
   ) => {
     if (!editorViewRef.current) {
-      setStatusMessage("Focus the Markdown editor before searching.");
+      setStatusMessage(t("status.focusBeforeSearch"));
       return;
     }
 
@@ -3513,18 +3128,18 @@ export function App() {
           : findPrevious(editorView);
 
     if (!didRun) {
-      setStatusMessage("Search is unavailable in this editor state.");
+      setStatusMessage(t("status.searchUnavailable"));
     }
   };
 
   const ensureSavedMarkdownAssetTarget = async (): Promise<boolean> => {
     if (!activeFileId || isUntitledDocument(activeFileId)) {
-      setStatusMessage("Save this document before inserting images.");
+      setStatusMessage(t("status.saveBeforeImage"));
       return false;
     }
 
     if (!workspaceRoot) {
-      setStatusMessage("Open a workspace before inserting images.");
+      setStatusMessage(t("status.openWorkspaceBeforeImage"));
       return false;
     }
 
@@ -3543,7 +3158,7 @@ export function App() {
         sourcePath,
       });
       insertMarkdownAtSelection(`${asset.markdownInsertText}\n`);
-      setStatusMessage(`Inserted ${asset.assetRelativePath}`);
+      setStatusMessage(t("status.insertedPath", { path: asset.assetRelativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
@@ -3595,14 +3210,16 @@ export function App() {
       } else {
         insertMarkdownAtSelection(imageMarkdown);
       }
-      setStatusMessage(`Inserted ${asset.assetRelativePath}`);
+      setStatusMessage(t("status.insertedPath", { path: asset.assetRelativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
   };
 
-  const executeCommand = useCallback(
-    (command: AppCommand, payload?: AppCommandPayload) => {
+  const executeCommand: ExecuteAppCommand = (
+    command: AppCommand,
+    payload?: AppCommandPayload,
+  ) => {
       const targetPath = payload?.targetPath;
       const targetItem = targetPath
         ? findWorkspaceItem(workspaceItems, targetPath)
@@ -3700,7 +3317,7 @@ export function App() {
         const targetParentPath = payload?.targetParentPath ?? null;
 
         if (!sourcePath) {
-          setStatusMessage("Select a file or folder before moving.");
+          setStatusMessage(t("status.selectBeforeMove"));
           return;
         }
 
@@ -3710,7 +3327,7 @@ export function App() {
 
       if (command === "file.revealInFinder") {
         if (!workspaceRoot) {
-          setStatusMessage("Open a workspace before revealing it.");
+          setStatusMessage(t("status.openWorkspaceBeforeReveal"));
           return;
         }
 
@@ -3732,7 +3349,7 @@ export function App() {
 
         void navigator.clipboard
           .writeText(pathToCopy)
-          .then(() => setStatusMessage("Copied path."))
+          .then(() => setStatusMessage(t("status.copiedPath")))
           .catch((error: unknown) =>
             setStatusMessage(
               error instanceof Error ? error.message : String(error),
@@ -3809,13 +3426,13 @@ export function App() {
 
       if (command === "theme.light") {
         setThemeName("light");
-        setStatusMessage("Theme changed to Light.");
+        setStatusMessage(t("status.themeChanged", { theme: t("menu.light") }));
         return;
       }
 
       if (command === "theme.dark") {
         setThemeName("dark");
-        setStatusMessage("Theme changed to Dark.");
+        setStatusMessage(t("status.themeChanged", { theme: t("menu.dark") }));
         return;
       }
 
@@ -3869,24 +3486,9 @@ export function App() {
       }
 
       setStatusMessage(
-        `${command} is reserved for a future Polarbear version.`,
+        t("status.commandReserved", { command }),
       );
-    },
-    [
-      activeFileId,
-      activeFileName,
-      dirtyFileIds,
-      markdownContent,
-      openFileIds,
-      repositoryAccount,
-      repositoryBinding,
-      runAppZoomCommand,
-      selectedTreeItemId,
-      untitledCounter,
-      workspaceItems,
-      workspaceRoot,
-    ],
-  );
+  };
 
   useAppShortcuts(executeCommand);
   useNativeAppMenu(executeCommand, {
@@ -3976,7 +3578,7 @@ export function App() {
               <section className={`editor-workspace editor-workspace-${viewMode}`}>
                 {!activeFileId && !workspaceRoot ? (
                   <section className="editor-empty-state">
-                    <h1>Polarbear</h1>
+                    <h1>{PRODUCT_CONFIG.name}</h1>
                     <p>{t("empty.startDescription")}</p>
                     <p className="empty-state-hint">{t("empty.startHint")}</p>
                   </section>
@@ -4110,307 +3712,4 @@ export function App() {
       ) : null}
     </>
   );
-}
-
-function findFirstFile(items: WorkspaceItem[]): WorkspaceItem | null {
-  for (const item of items) {
-    if (item.type === "file") {
-      return item;
-    }
-
-    if (item.children) {
-      const firstFile = findFirstFile(item.children);
-      if (firstFile) {
-        return firstFile;
-      }
-    }
-  }
-
-  return null;
-}
-
-function normalizeWorkspacePath(rawPath: string): string {
-  return rawPath
-    .trim()
-    .replaceAll("\\", "/")
-    .split("/")
-    .map((pathPart) => pathPart.trim())
-    .filter(Boolean)
-    .join("/");
-}
-
-function normalizeMarkdownFileName(rawFileName: string): string {
-  const relativePath = normalizeWorkspacePath(rawFileName);
-
-  if (!relativePath) {
-    return "";
-  }
-
-  return /\.(md|markdown)$/i.test(relativePath)
-    ? relativePath
-    : `${relativePath}.md`;
-}
-
-function joinWorkspacePath(
-  parentPath: string | null,
-  childPath: string,
-): string {
-  const normalizedParentPath = normalizeWorkspacePath(parentPath ?? "");
-  const normalizedChildPath = normalizeWorkspacePath(childPath);
-
-  if (!normalizedParentPath) {
-    return normalizedChildPath;
-  }
-
-  if (!normalizedChildPath) {
-    return normalizedParentPath;
-  }
-
-  return `${normalizedParentPath}/${normalizedChildPath}`;
-}
-
-function remapPath(path: string, oldPath: string, newPath: string): string {
-  if (path === oldPath) {
-    return newPath;
-  }
-
-  if (path.startsWith(`${oldPath}/`)) {
-    return `${newPath}${path.slice(oldPath.length)}`;
-  }
-
-  return path;
-}
-
-function remapDocumentPaths(
-  documents: WorkspaceDocumentMap,
-  oldPath: string,
-  newPath: string,
-): WorkspaceDocumentMap {
-  return Object.fromEntries(
-    Object.entries(documents).map(([path, content]) => [
-      remapPath(path, oldPath, newPath),
-      content,
-    ]),
-  );
-}
-
-function remapDirtyFileIds(
-  dirtyFileIds: Set<string>,
-  oldPath: string,
-  newPath: string,
-): Set<string> {
-  return new Set(
-    [...dirtyFileIds].map((dirtyFileId) =>
-      remapPath(dirtyFileId, oldPath, newPath),
-    ),
-  );
-}
-
-function remapDocumentMetadataKeys(
-  metadata: Record<string, string>,
-  oldPath: string,
-  newPath: string,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(metadata).map(([documentId, value]) => [
-      remapPath(documentId, oldPath, newPath),
-      value,
-    ]),
-  );
-}
-
-function remapDocumentMetadataPaths(
-  metadata: Record<string, string>,
-  oldPath: string,
-  newPath: string,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(metadata).map(([documentId, relativePath]) => [
-      remapPath(documentId, oldPath, newPath),
-      remapPath(relativePath, oldPath, newPath),
-    ]),
-  );
-}
-
-function targetAffectsDirtyFile(
-  targetPath: string,
-  dirtyFileIds: Set<string>,
-): boolean {
-  return [...dirtyFileIds].some((dirtyFileId) => {
-    return (
-      dirtyFileId === targetPath || dirtyFileId.startsWith(`${targetPath}/`)
-    );
-  });
-}
-
-function isUntitledDocument(documentId: string): boolean {
-  return documentId.startsWith("untitled:");
-}
-
-function displayNameForDocumentId(
-  documentId: string,
-  workspaceItems: WorkspaceItem[],
-  documentTitles: Record<string, string>,
-  documentRelativePaths: Record<string, string>,
-): string {
-  if (!documentId) {
-    return "Untitled";
-  }
-
-  if (isUntitledDocument(documentId)) {
-    return documentTitles[documentId] ?? "Untitled";
-  }
-
-  const relativePath = documentRelativePathForId(documentId, documentRelativePaths);
-
-  return findWorkspaceItem(workspaceItems, relativePath)?.name ?? fileNameOf(relativePath);
-}
-
-function documentRelativePathForId(
-  documentId: string,
-  documentRelativePaths: Record<string, string>,
-): string {
-  return documentRelativePaths[documentId] ?? documentId;
-}
-
-function documentWorkspaceRootForId(
-  documentId: string,
-  documentWorkspaceRoots: Record<string, string>,
-  fallbackWorkspaceRoot: string,
-): string {
-  if (isUntitledDocument(documentId)) {
-    return "";
-  }
-
-  return documentWorkspaceRoots[documentId] ?? fallbackWorkspaceRoot;
-}
-
-function findOpenDocumentIdForWorkspaceFile(
-  openFileIds: string[],
-  documentWorkspaceRoots: Record<string, string>,
-  documentRelativePaths: Record<string, string>,
-  workspaceRoot: string,
-  relativePath: string,
-): string | null {
-  return openFileIds.find((documentId) => {
-    return (
-      documentWorkspaceRootForId(documentId, documentWorkspaceRoots, workspaceRoot) === workspaceRoot &&
-      documentRelativePathForId(documentId, documentRelativePaths) === relativePath
-    );
-  }) ?? null;
-}
-
-function makeWorkspaceDocumentId(params: {
-  currentDocumentIds: Set<string>;
-  currentWorkspaceRoot: string;
-  relativePath: string;
-  workspaceRoot: string;
-}): string {
-  const { currentDocumentIds, currentWorkspaceRoot, relativePath, workspaceRoot } = params;
-  if (workspaceRoot === currentWorkspaceRoot && !currentDocumentIds.has(relativePath)) {
-    return relativePath;
-  }
-
-  const baseId = `${workspaceRoot}::${relativePath}`;
-  let documentId = baseId;
-  let suffix = 2;
-  while (currentDocumentIds.has(documentId)) {
-    documentId = `${baseId}#${suffix}`;
-    suffix += 1;
-  }
-
-  return documentId;
-}
-
-function parentFolderIdOf(documentId: string): string | null {
-  if (!documentId || isUntitledDocument(documentId)) {
-    return null;
-  }
-
-  const pathParts = normalizeWorkspacePath(documentId).split("/");
-  pathParts.pop();
-  const parentId = pathParts.join("/");
-
-  return parentId || null;
-}
-
-function extractDocumentStructure(markdownContent: string): DocumentStructureItem[] {
-  const items: DocumentStructureItem[] = [];
-  let offset = 0;
-
-  markdownContent.split("\n").forEach((line, index) => {
-    const headingMatch = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
-    if (headingMatch) {
-      const label = headingMatch[2].trim();
-      if (label) {
-        items.push({
-          id: `heading-${index}-${offset}`,
-          label,
-          level: headingMatch[1].length,
-          position: offset,
-        });
-      }
-    }
-
-    offset += line.length + 1;
-  });
-
-  return items;
-}
-
-function deriveDefaultMarkdownFileName(
-  markdownContent: string,
-  fallbackTitle: string,
-): string {
-  const firstHeading = markdownContent
-    .split("\n")
-    .map((line) => line.replace(/^#{1,6}\s+/, "").trim())
-    .find(Boolean);
-  const rawTitle = firstHeading || fallbackTitle || "Untitled";
-  const safeTitle = rawTitle.replace(/[\\/:*?"<>|]/g, " ").trim() || "Untitled";
-
-  return /\.(md|markdown)$/i.test(safeTitle) ? safeTitle : `${safeTitle}.md`;
-}
-
-function ensureMarkdownFilePath(filePath: string): string {
-  return /\.(md|markdown)$/i.test(filePath) ? filePath : `${filePath}.md`;
-}
-
-function parentPathOf(filePath: string): string {
-  const normalizedPath = filePath.replaceAll("\\", "/");
-  const pathParts = normalizedPath.split("/");
-  pathParts.pop();
-
-  return pathParts.join("/") || "/";
-}
-
-function fileNameOf(filePath: string): string {
-  return filePath.replaceAll("\\", "/").split("/").at(-1) ?? "Untitled.md";
-}
-
-function codeFenceTemplate(language: string): string {
-  if (language === "mermaid") {
-    return "\n```mermaid\ngraph TD\n  A[Start] --> B[End]\n```\n";
-  }
-
-  if (language === "plantuml") {
-    return "\n```plantuml\n@startuml\nAlice -> Bob: Hello\n@enduml\n```\n";
-  }
-
-  return `\n\`\`\`${language}\n\n\`\`\`\n`;
-}
-
-function timestampForFileName(): string {
-  const now = new Date();
-  const pad = (value: number) => String(value).padStart(2, "0");
-
-  return [
-    now.getFullYear(),
-    pad(now.getMonth() + 1),
-    pad(now.getDate()),
-    "-",
-    pad(now.getHours()),
-    pad(now.getMinutes()),
-    pad(now.getSeconds()),
-  ].join("");
 }

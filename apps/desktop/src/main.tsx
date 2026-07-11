@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { I18nProvider } from "./i18n/I18nProvider";
+import { I18nProvider } from "./shared/i18n/I18nProvider";
 import "./styles.css";
 
 console.info("Polarbear frontend booting...");

@@ -42,6 +42,15 @@ jobs:
       - name: Typecheck
         run: npm --workspace apps/desktop run typecheck
 
+      - name: Lint
+        run: npm --workspace apps/desktop run lint
+
+      - name: Frontend tests
+        run: npm --workspace apps/desktop run test
+
+      - name: Rust format
+        run: cargo fmt --all -- --check
+
       - name: Sync Tauri version from tag
         run: |
           TAG="${GITHUB_REF_NAME}"

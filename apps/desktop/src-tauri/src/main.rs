@@ -4,33 +4,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::{Emitter, Manager, State, WebviewWindow};
+use tauri::{Emitter, Manager};
 
+mod app_zoom;
 mod cloud_sync_store;
+mod ipc_contracts;
 mod native_pinch;
-
-const DEFAULT_APP_ZOOM: f64 = 1.0;
-const MIN_APP_ZOOM: f64 = 0.5;
-const MAX_APP_ZOOM: f64 = 3.0;
-const APP_ZOOM_STEP: f64 = 0.1;
-
-struct AppZoomState {
-    zoom: Mutex<f64>,
-}
-
-impl Default for AppZoomState {
-    fn default() -> Self {
-        Self {
-            zoom: Mutex::new(DEFAULT_APP_ZOOM),
-        }
-    }
-}
+mod secret_store;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -91,12 +74,6 @@ struct ResolveMarkdownAssetResponse {
     mime_type: Option<String>,
     asset_url: Option<String>,
     error: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ValidateGithubTokenRequest {
-    token: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -193,7 +170,7 @@ fn emit_repository_sync_progress(
 ) {
     let message = message.into();
     let _ = app.emit(
-        "repository-sync-progress",
+        ipc_contracts::REPOSITORY_SYNC_PROGRESS_EVENT,
         RepositorySyncProgressDto {
             phase: phase.to_owned(),
             message: message.clone(),
@@ -588,10 +565,6 @@ fn cloud_sync_database_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(app_config_dir(app)?.join("cloud-sync.sqlite3"))
 }
 
-fn fallback_secrets_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    Ok(app_config_dir(app)?.join("repository-secrets.json"))
-}
-
 fn read_account(app: &tauri::AppHandle) -> Result<Option<RepositoryAccountDto>, String> {
     let path = account_path(app)?;
     if !path.exists() {
@@ -617,28 +590,6 @@ fn delete_account(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn read_fallback_secrets(app: &tauri::AppHandle) -> Result<BTreeMap<String, String>, String> {
-    let path = fallback_secrets_path(app)?;
-    if !path.exists() {
-        return Ok(BTreeMap::new());
-    }
-    let content = fs::read_to_string(path).map_err(|error| error.to_string())?;
-    serde_json::from_str(&content).map_err(|error| error.to_string())
-}
-
-fn write_fallback_secrets(
-    app: &tauri::AppHandle,
-    secrets: &BTreeMap<String, String>,
-) -> Result<(), String> {
-    let path = fallback_secrets_path(app)?;
-    let content = serde_json::to_string(secrets).map_err(|error| error.to_string())?;
-    fs::write(&path, content).map_err(|error| error.to_string())?;
-    #[cfg(unix)]
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
-        .map_err(|error| error.to_string())?;
-    Ok(())
-}
-
 fn read_bindings(app: &tauri::AppHandle) -> Result<BTreeMap<String, RepositoryBindingDto>, String> {
     cloud_sync_store::load_bindings(&cloud_sync_database_path(app)?, &bindings_path(app)?)
 }
@@ -655,83 +606,6 @@ fn read_binding(
     workspace_ref: &str,
 ) -> Result<Option<RepositoryBindingDto>, String> {
     Ok(read_bindings(app)?.get(workspace_ref).cloned())
-}
-
-trait SecretStore {
-    fn save_secret(&self, key: &str, value: &str) -> Result<(), String>;
-    fn get_secret(&self, key: &str) -> Result<Option<String>, String>;
-    fn delete_secret(&self, key: &str) -> Result<(), String>;
-}
-
-struct KeychainSecretStore;
-
-impl SecretStore for KeychainSecretStore {
-    fn save_secret(&self, key: &str, value: &str) -> Result<(), String> {
-        let entry =
-            keyring::Entry::new("dev.polarbear.app", key).map_err(|error| error.to_string())?;
-        entry.set_password(value).map_err(|error| error.to_string())
-    }
-
-    fn get_secret(&self, key: &str) -> Result<Option<String>, String> {
-        let entry =
-            keyring::Entry::new("dev.polarbear.app", key).map_err(|error| error.to_string())?;
-        match entry.get_password() {
-            Ok(secret) => Ok(Some(secret)),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(error) => Err(error.to_string()),
-        }
-    }
-
-    fn delete_secret(&self, key: &str) -> Result<(), String> {
-        let entry =
-            keyring::Entry::new("dev.polarbear.app", key).map_err(|error| error.to_string())?;
-        match entry.delete_credential() {
-            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-            Err(error) => Err(error.to_string()),
-        }
-    }
-}
-
-fn read_repository_secret(
-    app: &tauri::AppHandle,
-    provider: &str,
-) -> Result<Option<String>, String> {
-    let key = repository_secret_key(provider);
-    match KeychainSecretStore.get_secret(key) {
-        Ok(Some(secret)) if !secret.trim().is_empty() => return Ok(Some(secret)),
-        Ok(_) | Err(_) => {}
-    }
-
-    Ok(read_fallback_secrets(app)?
-        .remove(key)
-        .filter(|secret| !secret.trim().is_empty()))
-}
-
-fn save_repository_secret(
-    app: &tauri::AppHandle,
-    provider: &str,
-    token: &str,
-) -> Result<(), String> {
-    let key = repository_secret_key(provider);
-    let keychain_verified = KeychainSecretStore
-        .save_secret(key, token)
-        .and_then(|_| KeychainSecretStore.get_secret(key))
-        .map(|saved| saved.as_deref() == Some(token))
-        .unwrap_or(false);
-
-    let mut fallback_secrets = read_fallback_secrets(app)?;
-    if keychain_verified {
-        fallback_secrets.remove(key);
-    } else {
-        fallback_secrets.insert(key.to_owned(), token.to_owned());
-    }
-    write_fallback_secrets(app, &fallback_secrets)
-}
-
-fn delete_repository_secrets(app: &tauri::AppHandle) -> Result<(), String> {
-    let _ = KeychainSecretStore.delete_secret("github_token");
-    let _ = KeychainSecretStore.delete_secret("gitlab_token");
-    write_fallback_secrets(app, &BTreeMap::new())
 }
 
 fn github_client(token: &str) -> Result<Client, String> {
@@ -757,11 +631,6 @@ fn github_client(token: &str) -> Result<Client, String> {
         .map_err(|error| error.to_string())
 }
 
-fn github_token(app: &tauri::AppHandle) -> Result<String, String> {
-    read_repository_secret(app, "github")?
-        .ok_or_else(|| "Connect GitHub before using repository sync.".to_owned())
-}
-
 fn normalize_repository_provider(provider: &str) -> Result<String, String> {
     match provider.trim().to_ascii_lowercase().as_str() {
         "github" => Ok("github".to_owned()),
@@ -777,16 +646,9 @@ fn repository_provider_label(provider: &str) -> &'static str {
     }
 }
 
-fn repository_secret_key(provider: &str) -> &'static str {
-    match provider {
-        "gitlab" => "gitlab_token",
-        _ => "github_token",
-    }
-}
-
 fn repository_token(app: &tauri::AppHandle, provider: &str) -> Result<String, String> {
     let provider = normalize_repository_provider(provider)?;
-    read_repository_secret(app, &provider)?.ok_or_else(|| {
+    secret_store::read_repository_secret(app, &provider)?.ok_or_else(|| {
         format!(
             "Connect {} before using repository sync.",
             repository_provider_label(&provider)
@@ -799,7 +661,7 @@ fn read_connected_account(app: &tauri::AppHandle) -> Result<Option<RepositoryAcc
         return Ok(None);
     };
     let provider = normalize_repository_provider(&account.provider)?;
-    let secret = read_repository_secret(app, &provider)?;
+    let secret = secret_store::read_repository_secret(app, &provider)?;
     if secret
         .as_deref()
         .is_some_and(|token| !token.trim().is_empty())
@@ -2006,7 +1868,7 @@ fn repository_connect_provider_blocking(
             &client,
             &format!("{}/user", gitlab_api_base(Some(base_url.as_str()))),
         )?;
-        save_repository_secret(&app, &provider, token)?;
+        secret_store::save_repository_secret(&app, &provider, token)?;
         RepositoryAccountDto {
             provider,
             account_id: user.id.to_string(),
@@ -2018,7 +1880,7 @@ fn repository_connect_provider_blocking(
     } else {
         let client = github_client(token)?;
         let user = github_get::<GithubUserResponse>(&client, "https://api.github.com/user")?;
-        save_repository_secret(&app, &provider, token)?;
+        secret_store::save_repository_secret(&app, &provider, token)?;
         RepositoryAccountDto {
             provider,
             account_id: user.id.to_string(),
@@ -2029,10 +1891,11 @@ fn repository_connect_provider_blocking(
         }
     };
 
-    let saved_token = read_repository_secret(&app, &account.provider)?.ok_or_else(|| {
-        "Cloud Sync could not save the token. Check app storage permissions and try again."
-            .to_owned()
-    })?;
+    let saved_token =
+        secret_store::read_repository_secret(&app, &account.provider)?.ok_or_else(|| {
+            "Cloud Sync could not save the token. Check app storage permissions and try again."
+                .to_owned()
+        })?;
     if saved_token != token {
         return Err("Cloud Sync could not verify the saved token.".to_owned());
     }
@@ -2050,32 +1913,9 @@ async fn repository_connect_provider(
 }
 
 #[tauri::command]
-async fn repository_validate_github_token(
-    app: tauri::AppHandle,
-    request: ValidateGithubTokenRequest,
-) -> Result<RepositoryAccountDto, String> {
-    run_repository_task(move || {
-        repository_connect_provider_blocking(
-            app,
-            ConnectRepositoryProviderRequest {
-                provider: "github".to_owned(),
-                token: request.token,
-                base_url: None,
-            },
-        )
-    })
-    .await
-}
-
-#[tauri::command]
 fn repository_disconnect_provider(app: tauri::AppHandle) -> Result<(), String> {
-    delete_repository_secrets(&app)?;
+    secret_store::delete_repository_secrets(&app)?;
     delete_account(&app)
-}
-
-#[tauri::command]
-fn repository_disconnect_github(app: tauri::AppHandle) -> Result<(), String> {
-    repository_disconnect_provider(app)
 }
 
 #[tauri::command]
@@ -2105,18 +1945,6 @@ async fn repository_list_repositories(
     app: tauri::AppHandle,
 ) -> Result<Vec<RepositoryInfoDto>, String> {
     run_repository_task(move || repository_list_repositories_blocking(app)).await
-}
-
-#[tauri::command]
-async fn repository_list_github_repositories(
-    app: tauri::AppHandle,
-) -> Result<Vec<RepositoryInfoDto>, String> {
-    run_repository_task(move || {
-        let token = github_token(&app)?;
-        let client = github_client(&token)?;
-        github_repositories(&client)
-    })
-    .await
 }
 
 fn repository_link_workspace_blocking(
@@ -2174,13 +2002,6 @@ fn repository_get_workspace_binding(
     workspace_ref: String,
 ) -> Result<Option<RepositoryBindingDto>, String> {
     read_binding(&app, &workspace_ref)
-}
-
-#[tauri::command]
-fn repository_unlink_workspace(app: tauri::AppHandle, workspace_ref: String) -> Result<(), String> {
-    let mut bindings = read_bindings(&app)?;
-    bindings.remove(&workspace_ref);
-    write_bindings(&app, &bindings)
 }
 
 fn repository_get_sync_status_blocking(
@@ -3238,87 +3059,16 @@ fn provider_push_workspace_files(
     }
 }
 
-fn clamp_app_zoom(value: f64) -> f64 {
-    if value.is_finite() {
-        value.clamp(MIN_APP_ZOOM, MAX_APP_ZOOM)
-    } else {
-        DEFAULT_APP_ZOOM
-    }
-}
-
-fn read_app_zoom(state: &State<'_, AppZoomState>) -> Result<f64, String> {
-    state
-        .zoom
-        .lock()
-        .map(|zoom| *zoom)
-        .map_err(|_| "Failed to lock app zoom state.".to_owned())
-}
-
-#[tauri::command]
-fn set_app_zoom(
-    window: WebviewWindow,
-    state: State<'_, AppZoomState>,
-    zoom: f64,
-) -> Result<f64, String> {
-    let next_zoom = clamp_app_zoom(zoom);
-
-    window
-        .set_zoom(next_zoom)
-        .map_err(|error| format!("Failed to set WebView zoom: {error}"))?;
-
-    {
-        let mut current_zoom = state
-            .zoom
-            .lock()
-            .map_err(|_| "Failed to lock app zoom state.".to_owned())?;
-        *current_zoom = next_zoom;
-    }
-
-    let _ = window.emit("app-zoom-changed", next_zoom);
-
-    Ok(next_zoom)
-}
-
-#[tauri::command]
-fn get_app_zoom(state: State<'_, AppZoomState>) -> Result<f64, String> {
-    read_app_zoom(&state)
-}
-
-#[tauri::command]
-fn zoom_app_in(window: WebviewWindow, state: State<'_, AppZoomState>) -> Result<f64, String> {
-    let current_zoom = read_app_zoom(&state)?;
-    set_app_zoom(window, state, current_zoom + APP_ZOOM_STEP)
-}
-
-#[tauri::command]
-fn zoom_app_out(window: WebviewWindow, state: State<'_, AppZoomState>) -> Result<f64, String> {
-    let current_zoom = read_app_zoom(&state)?;
-    set_app_zoom(
-        window,
-        state,
-        (current_zoom - APP_ZOOM_STEP).max(DEFAULT_APP_ZOOM),
-    )
-}
-
-#[tauri::command]
-fn reset_app_zoom(window: WebviewWindow, state: State<'_, AppZoomState>) -> Result<f64, String> {
-    set_app_zoom(window, state, DEFAULT_APP_ZOOM)
-}
-
 fn main() -> tauri::Result<()> {
     tauri::Builder::default()
-        .manage(AppZoomState::default())
+        .manage(app_zoom::AppZoomState::default())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             native_pinch::install_native_pinch(app).map_err(std::io::Error::other)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            set_app_zoom,
-            get_app_zoom,
-            zoom_app_in,
-            zoom_app_out,
-            reset_app_zoom,
+            app_zoom::set_app_zoom,
             list_workspace_files,
             refresh_workspace_sync_index,
             load_markdown_file,
@@ -3340,30 +3090,21 @@ fn main() -> tauri::Result<()> {
             export_svg_file,
             resolve_markdown_asset,
             repository_connect_provider,
-            repository_validate_github_token,
             repository_disconnect_provider,
-            repository_disconnect_github,
             repository_get_account,
             repository_list_repositories,
-            repository_list_github_repositories,
             repository_link_workspace,
             repository_get_workspace_binding,
-            repository_unlink_workspace,
             repository_get_sync_status,
             repository_push_workspace,
             repository_pull_workspace,
-            repository_sync_now,
-            debug_emit_native_pinch
+            repository_sync_now
         ])
         .run(tauri::generate_context!())
 }
 
-#[tauri::command]
-fn debug_emit_native_pinch(app: tauri::AppHandle) -> Result<(), String> {
-    native_pinch::debug_emit_native_pinch(&app)
-}
-
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::{
         create_markdown_file, create_workspace_directory, list_workspace_files, load_markdown_file,

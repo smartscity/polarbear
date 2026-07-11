@@ -2456,10 +2456,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "polarbear-core"
-version = "0.1.0"
-
-[[package]]
 name = "polarbear-desktop"
 version = "0.1.0"
 dependencies = [
@@ -2477,13 +2473,6 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "urlencoding",
-]
-
-[[package]]
-name = "polarbear-tauri"
-version = "0.1.0"
-dependencies = [
- "polarbear-core",
 ]
 
 [[package]]

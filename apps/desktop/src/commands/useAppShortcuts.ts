@@ -1,10 +1,15 @@
-import { useEffect } from "react";
-import { shortcutDefinitions } from "./appCommandRegistry";
-import type { ExecuteAppCommand } from "../model/AppCommand";
-
-const shortcuts = shortcutDefinitions();
+import { useEffect, useMemo } from "react";
+import type { ExecuteAppCommand } from "../shared/commands/appCommandTypes";
+import { useUserSettings } from "../shared/settings/useUserSettings";
+import { resolveShortcutDefinitions } from "./keybindingResolver";
 
 export function useAppShortcuts(executeCommand: ExecuteAppCommand): void {
+  const settings = useUserSettings();
+  const shortcuts = useMemo(
+    () => resolveShortcutDefinitions(settings.keybindings),
+    [settings],
+  );
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented) {
@@ -45,7 +50,7 @@ export function useAppShortcuts(executeCommand: ExecuteAppCommand): void {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [executeCommand]);
+  }, [executeCommand, shortcuts]);
 }
 
 function isInsideCodeMirror(target: EventTarget | null): boolean {

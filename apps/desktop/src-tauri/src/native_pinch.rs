@@ -1,5 +1,6 @@
 #[cfg(target_os = "macos")]
 mod macos {
+    use crate::ipc_contracts::NATIVE_PINCH_EVENT;
     use block2::RcBlock;
     use objc2::runtime::AnyObject;
     use objc2::{msg_send, ClassType};
@@ -9,8 +10,6 @@ mod macos {
     use std::sync::OnceLock;
     use std::time::{SystemTime, UNIX_EPOCH};
     use tauri::{AppHandle, Emitter, Manager};
-
-    const NATIVE_PINCH_EVENT: &str = "polarbear-native-pinch";
 
     // AppKit: NSEventTypeMagnify = 30, and NSEventMask is 1 << eventType.
     // Use the numeric value to avoid feature/version friction in objc2_app_kit bindings.
@@ -46,22 +45,6 @@ mod macos {
         install_local_magnify_monitor(app_handle, ns_view_ptr as usize)
     }
 
-    pub fn debug_emit_native_pinch(app_handle: &AppHandle) -> Result<(), String> {
-        let payload = NativePinchPayload {
-            delta: 0.12,
-            x: 360.0,
-            y: 260.0,
-            timestamp: now_millis(),
-            source: "debug_emit_native_pinch",
-            view_width: 0.0,
-            view_height: 0.0,
-            state: -1,
-        };
-
-        emit_native_pinch_payload(app_handle, payload);
-        Ok(())
-    }
-
     fn install_local_magnify_monitor(
         app_handle: AppHandle,
         root_view_addr: usize,
@@ -89,11 +72,8 @@ mod macos {
                 if !delta.is_finite() || (delta.abs() < 0.000_000_1 && !is_end_phase) {
                     return event;
                 }
-                let (x, y, view_width, view_height) = root_view_metrics(
-                    root_view_addr,
-                    location_in_window.x,
-                    location_in_window.y,
-                );
+                let (x, y, view_width, view_height) =
+                    root_view_metrics(root_view_addr, location_in_window.x, location_in_window.y);
 
                 let payload = NativePinchPayload {
                     delta,
@@ -130,7 +110,11 @@ mod macos {
         Ok(())
     }
 
-    fn root_view_metrics(root_view_addr: usize, window_x: f64, window_y: f64) -> (f64, f64, f64, f64) {
+    fn root_view_metrics(
+        root_view_addr: usize,
+        window_x: f64,
+        window_y: f64,
+    ) -> (f64, f64, f64, f64) {
         if root_view_addr == 0 {
             return (window_x, window_y, 0.0, 0.0);
         }
@@ -176,31 +160,9 @@ mod macos {
 }
 
 #[cfg(target_os = "macos")]
-pub use macos::{debug_emit_native_pinch, install_native_pinch};
+pub use macos::install_native_pinch;
 
 #[cfg(not(target_os = "macos"))]
 pub fn install_native_pinch(_app: &tauri::App) -> Result<(), String> {
     Ok(())
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn debug_emit_native_pinch(app_handle: &tauri::AppHandle) -> Result<(), String> {
-    use serde_json::json;
-    use tauri::Emitter;
-
-    app_handle
-        .emit(
-            "polarbear-native-pinch",
-            json!({
-                "delta": 0.12,
-                "x": 360.0,
-                "y": 260.0,
-                "timestamp": 0,
-                "source": "debug_emit_native_pinch",
-                "viewWidth": 0.0,
-                "viewHeight": 0.0,
-                "state": -1
-            }),
-        )
-        .map_err(|error| format!("Failed to emit debug native pinch event: {error}"))
 }

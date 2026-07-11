@@ -1,4 +1,5 @@
 import React from "react";
+import { translateCurrent } from "./shared/i18n/translate";
 
 type ErrorBoundaryState = {
   hasError: boolean;
@@ -29,9 +30,9 @@ export class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <main className="startup-error">
-          <h1>Polarbear failed to start</h1>
+          <h1>{translateCurrent("error.startTitle")}</h1>
           <p>{this.state.message}</p>
-          <p>Open the developer console for details.</p>
+          <p>{translateCurrent("error.consoleHint")}</p>
         </main>
       );
     }

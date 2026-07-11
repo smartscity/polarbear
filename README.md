@@ -1,47 +1,11 @@
 # Polarbear
 
-## Project Name
-
-```text
-Polarbear
-```
-
-## 中文名称
-
-```text
-北极熊
-```
-
-## Main Slogan
-
-```text
-Polarbear — A local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows.
-```
-
-## 中文 Slogan
-
-```text
-北极熊 Polarbear —— 一个本地优先、面向开发者的 Markdown 编辑与 GitHub 知识管理工具。
-```
-
-## Short Description
-
-```text
-Polarbear is an open-source, local-first Markdown editor built with Rust, Tauri, and TypeScript. It focuses on clean writing, live preview, Mermaid diagrams, plugin-based extensibility, and GitHub-powered document workflows.
-```
-
-## 中文简介
-
-```text
-Polarbear 是一个使用 Rust、Tauri 和 TypeScript 构建的开源、本地优先 Markdown 编辑器。它专注于清爽写作、实时预览、Mermaid 图表、插件化扩展，以及基于 GitHub 的文档工作流。
-```
+[English](README.md) | [简体中文](README-zh.md)
 
 > A local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows.
 
 Polarbear is an open-source, local-first Markdown editor built with Rust, Tauri, and TypeScript.  
-It focuses on clean writing, live preview, Mermaid diagrams, plugin-based extensibility, and GitHub-powered document workflows.
-
-中文名称：**北极熊**
+It focuses on clean writing, live preview, Mermaid and PlantUML diagrams, and GitHub/GitLab document workflows.
 
 MVP platform targets:
 
@@ -61,8 +25,7 @@ It aims to become a local-first writing workspace with:
 - Clean Markdown editing and live preview
 - First-class Mermaid diagram support
 - Zoomable diagram viewer
-- GitHub repository integration
-- Plugin-based extensibility
+- GitHub and GitLab Cloud Sync
 - Clear architecture for long-term open-source maintenance
 
 Write locally. Preview clearly. Sync with GitHub.
@@ -84,7 +47,7 @@ Polarbear is not designed as a macOS-only app. The MVP targets macOS and iOS fir
 - Unsaved change indicator
 - Local file access designed with desktop permissions and iOS sandbox limitations in mind
 
-### Mermaid Diagram Support
+### Diagram Support
 
 - Render Mermaid code blocks inside Markdown preview
 - Open Mermaid diagrams in a zoomable viewer
@@ -92,43 +55,25 @@ Polarbear is not designed as a macOS-only app. The MVP targets macOS and iOS fir
 - Drag and pan large diagrams
 - Copy Mermaid source
 - Export SVG
-- Reserve export PNG capability for future versions
+- Export Mermaid and PlantUML diagrams as SVG or PNG
 - Keep Mermaid rendering in the WebView layer for macOS and iOS compatibility
 
-### GitHub Workflow
+### Cloud Sync
 
-- Connect to a GitHub repository
+- Connect to a GitHub or GitLab repository
 - Browse Markdown files from a repository
 - Read remote Markdown files
 - Edit and commit changes back to GitHub
-- Sync through the GitHub REST API so the workflow can run on both macOS and iOS
+- Sync through provider REST APIs without requiring a local Git installation
 - Use commit messages such as:
 
 ```text
 docs: update {file_path}
 ```
 
-### Plugin System
+### Extensibility
 
-Polarbear uses a plugin-oriented architecture from the beginning.
-
-Built-in plugins:
-
-- `markdown-preview`
-- `mermaid-renderer`
-- `github-sync`
-
-Initial plugin capabilities:
-
-- `MarkdownRenderer`
-- `DiagramRenderer`
-- `RepositorySync`
-- `Exporter`
-
-The first version uses built-in plugins and metadata-based plugin management.
-Dynamic third-party plugin loading will be considered after the security model is mature.
-
-The MVP plugin model does not rely on dynamic native library loading because that is not iOS-friendly.
+Mermaid, PlantUML, Cloud Sync, and export are built-in features with explicit module boundaries. Polarbear does not currently expose a runtime plugin API. A plugin system will only be considered after permissions, versioned contracts, and sandboxing are designed.
 
 ---
 
@@ -141,7 +86,7 @@ The MVP plugin model does not rely on dynamic native library loading because tha
 - Vite
 - CodeMirror 6
 - Mermaid
-- GitHub REST API
+- GitHub and GitLab REST APIs
 
 ---
 
@@ -154,18 +99,19 @@ polarbear/
   ARCHITECTURE.md
   CONTRIBUTING.md
   LICENSE
-  crates/
-    polarbear-core/
-    polarbear-tauri/
   apps/
     desktop/
       package.json
       src/
+        app/
+        commands/
+        features/
+        shared/
       src-tauri/
         Cargo.toml
 ```
 
-The `apps/desktop` package is the first application shell. Its `src-tauri` crate is the native Tauri app entry point, while shared UI and core architecture must remain suitable for an iOS Tauri target.
+The `apps/desktop` package contains the React application. Its `src-tauri` directory is the only Rust application crate and the native Tauri entry point.
 
 ---
 
@@ -174,17 +120,17 @@ The `apps/desktop` package is the first application shell. Its `src-tauri` crate
 Polarbear follows these principles:
 
 - Local-first by default
-- Rust core, TypeScript UI
+- Feature-oriented TypeScript UI with a typed Tauri boundary
 - macOS and iOS first
 - Clear module boundaries
-- Plugin-oriented design
-- No business logic inside Tauri commands
+- Built-in feature modules with explicit ownership
+- Thin Tauri command entry points backed by focused Rust services
 - Domain models separated from DTOs
 - Testable core logic
 - Explicit error handling
 - No token leakage in logs
 - Platform-specific logic behind traits or adapter modules
-- No macOS-only APIs inside `polarbear-core`
+- macOS-only APIs isolated in platform modules
 - Small, meaningful modules
 - Descriptive naming
 
@@ -209,7 +155,7 @@ Platform rules:
 
 - Use Tauri v2 and keep mobile compatibility in mind.
 - Keep UI responsive across desktop and mobile screen sizes.
-- Do not rely on macOS-only APIs directly inside `polarbear-core`.
+- Keep macOS-only APIs isolated from portable command and service logic.
 - Put platform-specific behavior behind traits or adapter modules.
 - Keep Tauri commands thin and free of platform-specific business logic.
 - Use GitHub REST API for sync so it can work on iOS.
@@ -229,11 +175,10 @@ Rust code should follow idiomatic naming conventions:
 - Avoid unclear names such as `handle`, `process`, `data`, `info`, `manager`
 - Prefer meaningful names such as:
 
-  - `GitHubSyncService`
-  - `MarkdownDocument`
-  - `PluginRegistry`
-  - `SecretStore`
-  - `MermaidRendererPlugin`
+  - `CloudSyncStore`
+  - `RepositorySettings`
+  - `SecretStoreError`
+  - `WorkspaceFile`
 
 Do not use `unwrap()` or `expect()` in production code.
 Use explicit error types and return meaningful errors.
@@ -258,18 +203,6 @@ npm install
 
 This installs frontend workspace dependencies. Rust dependencies are resolved by Cargo when you run Rust commands.
 
-### Run Shared Frontend Scaffold
-
-```bash
-npm run build
-```
-
-The current scaffold writes a static app preview bundle to:
-
-```text
-apps/desktop/dist/
-```
-
 ### Run macOS App
 
 ```bash
@@ -292,13 +225,13 @@ npm run tauri -- ios dev
 
 This starts the experimental iOS target after Tauri mobile setup is complete and Xcode is configured.
 
-### Run Rust Binary
+### Run Rust Application
 
 ```bash
-cargo run -p polarbear-tauri --bin polarbear
+npm --workspace apps/desktop run tauri -- dev
 ```
 
-This runs the current Rust binary entry point for Polarbear.
+This starts the React development server and the `polarbear-desktop` Tauri crate.
 
 ### Build Rust Workspace
 
@@ -390,19 +323,17 @@ npm run build
 
 ---
 
-## GitHub Token
+## Cloud Sync Token
 
-Polarbear uses a GitHub token to read and update Markdown files in a repository.
+Polarbear uses a GitHub or GitLab personal access token to synchronize workspace files.
 
 Security rules:
 
 - Do not store tokens in plain text configuration files
 - Do not print tokens in logs
-- Token access must go through the `SecretStore` abstraction
-- macOS should use Keychain in the future
-- iOS should use Keychain in the future
-- `polarbear-core` should depend on the `SecretStore` trait, not platform keychain APIs directly
-- The first MVP may use an in-memory implementation with a clear TODO
+- Token access must go through the Rust `secret_store` module
+- Release builds require the platform Keychain
+- Plaintext fallback storage is limited to debug builds
 
 ---
 
@@ -426,9 +357,8 @@ graph TD
 - Markdown live preview
 - Mermaid rendering
 - Mermaid zoom viewer
-- Built-in plugin registry
-- GitHub settings page
-- GitHub file read and update skeleton
+- GitHub and GitLab Cloud Sync settings
+- Incremental upload, download, conflict detection, and deletion sync
 - macOS desktop app
 - Experimental iOS app structure
 
@@ -441,7 +371,7 @@ graph TD
 - Export PDF
 - Export HTML
 - Export PNG for diagrams
-- More plugin capabilities
+- Local knowledge indexing foundations
 
 ### Future
 
@@ -457,30 +387,3 @@ graph TD
 
 MIT or Apache-2.0.
 Please keep the license decision explicit before publishing the first release.
-
-npm --workspace apps/desktop run tauri -- dev
-
-npm --workspace apps/desktop run typecheck
-npm --workspace apps/desktop run build
-cargo test --workspace
-cargo build --workspace
-
-
----
-npm --workspace apps/desktop run tauri -- build --bundles dmg
-
-cd apps/desktop
-npm run tauri -- build --bundles dmg
-
-npm run tauri build -- --bundles dmg
-
-npm --workspace apps/desktop run tauri -- build
-
-npm --workspace apps/desktop run tauri -- icon ./app-icon.svg
-
-
-
-npm install
-npm --workspace apps/desktop run typecheck
-npm --workspace apps/desktop run tauri -- build --bundles dmg
----

@@ -1,7 +1,5 @@
 [workspace]
 members = [
-    "crates/polarbear-core",
-    "crates/polarbear-tauri",
     "apps/desktop/src-tauri"
 ]
 resolver = "2"
@@ -9,8 +7,8 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/polarbear/polarbear"
-homepage = "https://github.com/polarbear/polarbear"
+repository = "https://github.com/smartscity/polarbear"
+homepage = "https://github.com/smartscity/polarbear"
 description = "Polarbear is a local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows."
 
 [workspace.lints.clippy]
