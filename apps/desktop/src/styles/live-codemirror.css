@@ -576,14 +576,19 @@ body,
 
 .cm-typora-table-preview {
   position: relative;
-  margin: 0;
-  padding: 2px 0 12px;
+  margin: 2px 0 8px;
+  padding: 0 0 8px;
+  overflow: visible;
+}
+
+.cm-typora-table-scrollport {
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .cm-typora-table-toolbar {
   position: absolute;
-  top: 0;
+  top: -30px;
   right: 0;
   left: 0;
   z-index: 3;
@@ -594,8 +599,8 @@ body,
   pointer-events: none;
   opacity: 0;
   transform: translateY(-4px);
-  min-height: 31px;
-  padding: 3px 8px;
+  min-height: 0;
+  padding: 3px 6px;
   background: color-mix(in srgb, var(--color-sidebar-background, #f7f7f7) 92%, transparent);
   transition:
     opacity 120ms ease,
@@ -613,7 +618,129 @@ body,
 .cm-typora-table-preview:hover .cm-typora-table-toolbar,
 .cm-typora-table-preview:focus-within .cm-typora-table-toolbar {
   opacity: 1;
-  transform: translateY(-1px);
+  transform: translateY(0);
+}
+
+.cm-typora-table-interaction-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.cm-typora-table-handle,
+.cm-typora-table-row-handle,
+.cm-typora-table-column-handle,
+.cm-typora-table-gap-button {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 84%, var(--color-accent, #2f80ed));
+  border-radius: 5px;
+  padding: 0;
+  color: var(--color-text-secondary, #5f666d);
+  background: color-mix(in srgb, var(--color-preview-background, #ffffff) 94%, transparent);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  font: 600 13px/1 var(--type-preview-font-family, system-ui, sans-serif);
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.cm-typora-table-preview:hover .cm-typora-table-handle,
+.cm-typora-table-row-handle.cm-typora-table-handle-active,
+.cm-typora-table-column-handle.cm-typora-table-handle-active,
+.cm-typora-table-gap-button:not([hidden]) {
+  opacity: 1;
+}
+
+.cm-typora-table-handle:hover,
+.cm-typora-table-row-handle:hover,
+.cm-typora-table-column-handle:hover,
+.cm-typora-table-gap-button:hover {
+  color: var(--color-accent-text, #ffffff);
+  border-color: var(--color-accent, #2f80ed);
+  background: var(--color-accent, #2f80ed);
+}
+
+.cm-typora-table-row-handle,
+.cm-typora-table-column-handle {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--color-text-muted, #8a8f98);
+  background: transparent;
+  box-shadow: none;
+  cursor: grab;
+  pointer-events: none;
+}
+
+.cm-typora-table-row-handle.cm-typora-table-handle-active,
+.cm-typora-table-column-handle.cm-typora-table-handle-active {
+  pointer-events: auto;
+}
+
+.cm-typora-table-row-handle:hover,
+.cm-typora-table-column-handle:hover {
+  color: var(--color-accent-text, #ffffff);
+  background: var(--color-accent, #2f80ed);
+}
+
+.cm-typora-table-drag-grip {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.cm-typora-table-gap-button {
+  z-index: 3;
+  border-radius: 50%;
+  color: var(--color-accent, #2f80ed);
+  font-size: 16px;
+}
+
+.cm-typora-table-resize-handle {
+  position: absolute;
+  z-index: 4;
+  width: 6px;
+  min-height: 20px;
+  margin-left: -3px;
+  cursor: col-resize;
+  pointer-events: auto;
+}
+
+.cm-typora-table-resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  content: "";
+}
+
+.cm-typora-table-resize-handle:hover::after,
+.cm-typora-table-preview[data-table-resizing="true"] .cm-typora-table-resize-handle::after {
+  background: var(--color-accent, #2f80ed);
+}
+
+.cm-typora-table-drop-indicator {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  background: var(--color-accent, #2f80ed);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent, #2f80ed) 35%, transparent);
+}
+
+.cm-typora-table-preview[data-table-dragging] {
+  user-select: none;
+  cursor: grabbing;
 }
 
 .cm-typora-table-tool-button,
@@ -720,6 +847,58 @@ body,
   box-shadow: 0 16px 44px rgba(15, 23, 42, 0.16);
 }
 
+.cm-typora-table-count-menu {
+  position: fixed;
+  z-index: 10020;
+  display: grid;
+  gap: 10px;
+  min-width: 168px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--color-text-primary, #2f3437);
+  background: var(--color-preview-background, #ffffff);
+  box-shadow: 0 16px 44px rgba(15, 23, 42, 0.16);
+}
+
+.cm-typora-table-count-menu label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary, #5f666d);
+  font-size: 13px;
+}
+
+.cm-typora-table-count-menu input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 5px;
+  padding: 6px 8px;
+  color: inherit;
+  background: var(--color-editor-background, #ffffff);
+  font: inherit;
+}
+
+.cm-typora-table-count-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cm-typora-table-count-actions button {
+  border: 0;
+  border-radius: 5px;
+  padding: 5px 8px;
+  color: var(--color-text-primary, #2f3437);
+  background: var(--color-hover-background, #f0f2f5);
+  font: inherit;
+}
+
+.cm-typora-table-count-actions button[type="submit"] {
+  color: var(--color-accent-text, #ffffff);
+  background: var(--color-accent, #2f80ed);
+}
+
 .cm-typora-table-menu button {
   width: 100%;
   border: 0;
@@ -768,6 +947,35 @@ body,
   caret-color: var(--color-text-primary, #2f3437);
 }
 
+.cm-typora-table-preview td .cm-typora-table-cell-list,
+.cm-typora-table-preview th .cm-typora-table-cell-list {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.cm-typora-table-preview .cm-typora-table-cell-task-list input[type="checkbox"] {
+  margin: 0 0.35em 0 0;
+  vertical-align: middle;
+  accent-color: var(--color-accent, #2f80ed);
+}
+
+.cm-typora-table-preview td blockquote,
+.cm-typora-table-preview th blockquote {
+  margin: 0;
+  border-left: 2px solid var(--color-blockquote-border, #d0d7de);
+  padding-left: 0.65em;
+  color: var(--color-blockquote-text, #57606a);
+}
+
+.cm-typora-table-preview td img,
+.cm-typora-table-preview th img {
+  display: inline-block;
+  max-width: min(100%, 280px);
+  max-height: 180px;
+  height: auto;
+  vertical-align: middle;
+}
+
 .cm-typora-table-preview th[contenteditable="true"],
 .cm-typora-table-preview td[contenteditable="true"] {
   outline: none;
@@ -779,6 +987,20 @@ body,
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-accent, #2f80ed) 72%, transparent);
 }
 
+.cm-typora-table-preview .cm-typora-table-cell-selected {
+  background: color-mix(in srgb, var(--color-accent, #2f80ed) 12%, var(--color-preview-background, #ffffff)) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent, #2f80ed) 52%, transparent);
+}
+
+.cm-typora-table-preview.cm-typora-table-selected table {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #2f80ed) 65%, transparent);
+}
+
+.cm-typora-table-preview th:hover,
+.cm-typora-table-preview td:hover {
+  background: color-mix(in srgb, var(--color-hover-background, #f0f2f5) 78%, var(--color-preview-background, #ffffff)) !important;
+}
+
 .cm-typora-table-preview th {
   background: var(--color-table-header-background, #f6f8fa);
   font-weight: 650;
@@ -786,6 +1008,16 @@ body,
 
 .cm-typora-table-preview tr:nth-child(even) td {
   background: color-mix(in srgb, var(--color-preview-background, #ffffff) 92%, var(--color-hover-background, #f0f2f5));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-typora-table-toolbar,
+  .cm-typora-table-handle,
+  .cm-typora-table-row-handle,
+  .cm-typora-table-column-handle,
+  .cm-typora-table-gap-button {
+    transition: none;
+  }
 }
 
 .cm-typora-image-line {

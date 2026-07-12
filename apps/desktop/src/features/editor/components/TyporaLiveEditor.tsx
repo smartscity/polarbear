@@ -52,17 +52,37 @@ import {
 } from "../markdown/tableCellDom";
 import {
   cssTextAlignForTableAlignment,
-  deleteTableColumn,
-  deleteTableRow,
-  insertTableColumn,
-  insertTableRow,
   parseTableAlignments,
   parseTableCells,
   resizeMarkdownTable,
-  setTableColumnAlignment,
   tableColumnCount,
   updateMarkdownTableCell,
 } from "../markdown/markdownTable";
+import { TABLE_COMMANDS, executeTableCommand, type TableCommandId } from "../table/tableCommands";
+import {
+  parseTableClipboard,
+  pasteTableMatrix,
+  tableSelectionAsMarkdown,
+  tableSelectionAsTsvForSelection,
+  tableSelectionPositions,
+} from "../table/tableClipboard";
+import { TABLE_UI } from "../table/tableConstants";
+import {
+  installTableInteractionControls,
+  clearTableSelection,
+  selectTableCell,
+  setTableCellEditing,
+} from "../table/tableInteractionDom";
+import { readTableInteractionState, updateTableInteractionState } from "../table/tableInteractionState";
+import {
+  insertTableColumnWidth,
+  moveTableColumnWidth,
+  readTableColumnWidths,
+  removeTableColumnWidths,
+  setTableColumnWidth,
+} from "../table/tableLayoutState";
+import { parseMarkdownTable } from "../table/tableModel";
+import type { TableCellPosition, TableSelection } from "../table/tableTypes";
 
 type ImagePasteHandler = (
   items: DataTransferItemList,
@@ -713,6 +733,7 @@ const plantUmlRenderCache = new Map<
 
 
 let mermaidInitialized = false;
+const tablePortalMenuCleanups = new Set<() => void>();
 
 export function TyporaLiveEditor({
   activeFileId,
@@ -3189,6 +3210,8 @@ class HtmlImagePreviewWidget extends WidgetType {
 }
 
 class TablePreviewWidget extends WidgetType {
+  private disposeInteraction: (() => void) | null = null;
+
   constructor(private readonly block: PreviewBlock) {
     super();
   }
@@ -3200,9 +3223,15 @@ class TablePreviewWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-table-preview";
+    wrapper.tabIndex = -1;
     markMarkdownPreviewBlock(wrapper, this.block, "markdown-table-block");
+    wrapper.dataset.tableKey = String(this.block.from);
     wrapper.title = translateCurrent("diagram.tablePreview");
     allowEditorVerticalScroll(wrapper);
+
+    const scrollport = document.createElement("div");
+    scrollport.className = "cm-typora-table-scrollport";
+    allowEditorVerticalScroll(scrollport);
 
     const lines = this.block.raw.split(/\r?\n/);
     const [headerLine, separatorLine = "", ...bodyLines] = lines;
@@ -3214,7 +3243,7 @@ class TablePreviewWidget extends WidgetType {
     const leftTools = document.createElement("div");
     leftTools.className = "cm-typora-table-toolbar-left";
 
-    const gridButton = createTableToolbarButton("grid", "Table size");
+    const gridButton = createTableToolbarButton("grid", translateCurrent("table.size"));
     gridButton.classList.add("cm-typora-table-grid-button");
     gridButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3222,51 +3251,56 @@ class TablePreviewWidget extends WidgetType {
       openTableSizeMenu(wrapper, this.block, gridButton);
     });
 
-    const alignLeftButton = createTableToolbarButton("align-left", "Align Left");
+    const alignLeftButton = createTableToolbarButton("align-left", translateCurrent("table.alignment.left"));
     alignLeftButton.classList.add("cm-typora-table-align-left-button");
     alignLeftButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      applyTableOperation(wrapper, this.block, (nextLines) =>
-        setTableColumnAlignment(nextLines, activeTableColumn(wrapper), "left"),
-      );
+      applyTableCommand(wrapper, this.block, TABLE_COMMANDS.alignmentLeft, {
+        row: 0,
+        column: activeTableColumn(wrapper),
+      });
     });
 
-    const alignCenterButton = createTableToolbarButton("align-center", "Align Center");
+    const alignCenterButton = createTableToolbarButton("align-center", translateCurrent("table.alignment.center"));
     alignCenterButton.classList.add("cm-typora-table-align-center-button");
     alignCenterButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      applyTableOperation(wrapper, this.block, (nextLines) =>
-        setTableColumnAlignment(nextLines, activeTableColumn(wrapper), "center"),
-      );
+      applyTableCommand(wrapper, this.block, TABLE_COMMANDS.alignmentCenter, {
+        row: 0,
+        column: activeTableColumn(wrapper),
+      });
     });
 
-    const alignRightButton = createTableToolbarButton("align-right", "Align Right");
+    const alignRightButton = createTableToolbarButton("align-right", translateCurrent("table.alignment.right"));
     alignRightButton.classList.add("cm-typora-table-align-right-button");
     alignRightButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      applyTableOperation(wrapper, this.block, (nextLines) =>
-        setTableColumnAlignment(nextLines, activeTableColumn(wrapper), "right"),
-      );
+      applyTableCommand(wrapper, this.block, TABLE_COMMANDS.alignmentRight, {
+        row: 0,
+        column: activeTableColumn(wrapper),
+      });
     });
 
     leftTools.append(gridButton, alignLeftButton, alignCenterButton, alignRightButton);
 
-    const deleteButton = createTableToolbarButton("delete", "Delete table");
+    const deleteButton = createTableToolbarButton("delete", translateCurrent("table.delete"));
     deleteButton.className = "cm-typora-table-delete-button";
-    deleteButton.setAttribute("aria-label", "Delete table");
+    deleteButton.setAttribute("aria-label", translateCurrent("table.delete"));
     deleteButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      applyTableEdit(wrapper, this.block, "");
+      applyTableCommand(wrapper, this.block, TABLE_COMMANDS.delete, { row: 0, column: 0 });
     });
 
     toolbar.append(leftTools, deleteButton);
     wrapper.append(toolbar);
 
     const table = document.createElement("table");
+    table.dataset.tableKey = String(this.block.from);
+    applyTableColumnWidths(table, String(this.block.from), headers.length);
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
     let tableFocusIndex = 0;
@@ -3278,6 +3312,7 @@ class TablePreviewWidget extends WidgetType {
         block: this.block,
         columnIndex,
         focusIndex: tableFocusIndex,
+        rowIndex: 0,
         sourceLineIndex: 0,
         value: header,
         wrapper,
@@ -3302,6 +3337,7 @@ class TablePreviewWidget extends WidgetType {
           block: this.block,
           columnIndex,
           focusIndex: tableFocusIndex,
+          rowIndex: bodyIndex + 1,
           sourceLineIndex: bodyIndex + 2,
           value: cell,
           wrapper,
@@ -3312,7 +3348,39 @@ class TablePreviewWidget extends WidgetType {
       tbody.append(row);
     });
     table.append(tbody);
-    wrapper.append(table);
+    scrollport.append(table);
+    wrapper.append(scrollport);
+    this.disposeInteraction = installTableInteractionControls({
+      columnCount: headers.length,
+      onAutoFitColumn: (column) => autoFitTableColumn(table, String(this.block.from), column),
+      onCommand: (command, position) => applyTableCommand(wrapper, this.block, command, position),
+      onMoveColumn: (from, to) =>
+        applyTableCommand(wrapper, this.block, TABLE_COMMANDS.columnMove, {
+          row: 0,
+          column: from,
+        }, { targetColumn: to }),
+      onMoveRow: (from, to) =>
+        applyTableCommand(wrapper, this.block, TABLE_COMMANDS.rowMove, {
+          row: from,
+          column: 0,
+        }, { targetRow: to }),
+      onResizeColumn: (column, width) => {
+        setTableColumnWidth(String(this.block.from), column, width);
+        applyTableColumnWidths(table, String(this.block.from), headers.length);
+      },
+      rowCount: bodyLines.filter(isTableRowLine).length + 1,
+      scrollport,
+      table,
+      wrapper,
+    });
+    wrapper.addEventListener("keydown", (event) => handleTableSelectionKeydown(event, wrapper, table));
+    wrapper.addEventListener("copy", (event) => {
+      writeTableSelectionToClipboard(event, wrapper, this.block.raw);
+    });
+    wrapper.addEventListener("cut", (event) => {
+      if (!writeTableSelectionToClipboard(event, wrapper, this.block.raw)) return;
+      applyTableCommand(wrapper, this.block, TABLE_COMMANDS.cellClear, { row: 0, column: 0 });
+    });
     scheduleEditorMeasureFromDom(wrapper);
 
     return wrapper;
@@ -3320,6 +3388,11 @@ class TablePreviewWidget extends WidgetType {
 
   ignoreEvent(): boolean {
     return true;
+  }
+
+  destroy(): void {
+    this.disposeInteraction?.();
+    this.disposeInteraction = null;
   }
 }
 
@@ -3329,6 +3402,7 @@ function makeTableCellEditable(
     block: PreviewBlock;
     columnIndex: number;
     focusIndex: number;
+    rowIndex: number;
     sourceLineIndex: number;
     value: string;
     wrapper: HTMLElement;
@@ -3338,8 +3412,10 @@ function makeTableCellEditable(
   cell.spellcheck = true;
   renderTableCellValue(cell, params.value);
   cell.setAttribute("role", "textbox");
-  cell.setAttribute("aria-label", "Edit table cell");
+  cell.setAttribute("aria-label", translateCurrent("table.editCell"));
   cell.dataset.tableFocusIndex = String(params.focusIndex);
+  cell.dataset.tableRow = String(params.rowIndex);
+  cell.dataset.tableColumn = String(params.columnIndex);
 
   let committedValue = params.value;
 
@@ -3387,11 +3463,60 @@ function makeTableCellEditable(
     return true;
   };
 
-  cell.addEventListener("mousedown", (event) => event.stopPropagation());
-  cell.addEventListener("click", (event) => event.stopPropagation());
+  cell.addEventListener("mousedown", (event) => {
+    cell.dataset.tableExtendSelection = event.shiftKey ? "true" : "false";
+    selectTableCell(
+      params.wrapper,
+      { row: params.rowIndex, column: params.columnIndex },
+      event.shiftKey,
+    );
+    event.stopPropagation();
+  });
+  cell.addEventListener("click", (event) => {
+    if (document.activeElement !== cell) {
+      cell.focus({ preventScroll: true });
+    }
+    event.stopPropagation();
+  });
   cell.addEventListener("input", (event) => event.stopPropagation());
+  cell.addEventListener("paste", (event) => {
+    const clipboardText = event.clipboardData?.getData("text/plain") ?? "";
+    const matrix = parseTableClipboard(clipboardText);
+    if (!matrix) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const nextRaw = pasteTableMatrix(
+      params.block.raw,
+      params.rowIndex,
+      params.columnIndex,
+      matrix,
+    );
+    applyTableEdit(params.wrapper, params.block, nextRaw, {
+      row: params.rowIndex,
+      column: params.columnIndex,
+    });
+  });
+  cell.addEventListener("copy", (event) => {
+    writeTableSelectionToClipboard(event, params.wrapper, params.block.raw);
+  });
+  cell.addEventListener("cut", (event) => {
+    if (!writeTableSelectionToClipboard(event, params.wrapper, params.block.raw)) return;
+    applyTableCommand(params.wrapper, params.block, TABLE_COMMANDS.cellClear, {
+      row: params.rowIndex,
+      column: params.columnIndex,
+    });
+  });
   cell.addEventListener("focus", () => {
     params.wrapper.dataset.activeColumn = String(params.columnIndex);
+    const extend = cell.dataset.tableExtendSelection === "true";
+    selectTableCell(
+      params.wrapper,
+      { row: params.rowIndex, column: params.columnIndex },
+      extend,
+    );
+    setTableCellEditing(params.wrapper, { row: params.rowIndex, column: params.columnIndex });
+    cell.dataset.tableExtendSelection = "false";
   });
   cell.addEventListener("contextmenu", (event) => {
     event.preventDefault();
@@ -3401,23 +3526,72 @@ function makeTableCellEditable(
       sourceLineIndex: params.sourceLineIndex,
     });
   });
-  cell.addEventListener("blur", commit);
+  cell.addEventListener("blur", () => {
+    commit();
+    setTableCellEditing(params.wrapper, null);
+  });
   cell.addEventListener("keydown", (event) => {
     event.stopPropagation();
+
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      const view = EditorView.findFromDOM(params.wrapper);
+      if (view) {
+        (event.shiftKey ? redo : undo)(view);
+      }
+      return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "y") {
+      event.preventDefault();
+      const view = EditorView.findFromDOM(params.wrapper);
+      if (view) {
+        redo(view);
+      }
+      return;
+    }
 
     if (event.key === "Tab") {
       event.preventDefault();
       const nextFocusIndex = params.focusIndex + (event.shiftKey ? -1 : 1);
+      const tableCellCount = params.wrapper.querySelectorAll("[data-table-focus-index]").length;
+      if (!event.shiftKey && nextFocusIndex >= tableCellCount) {
+        const model = parseMarkdownTable(params.block.raw);
+        const nextRow = (model?.rows.length ?? 0) + 1;
+        const currentRaw = updateMarkdownTableCell(
+          params.block.raw,
+          params.sourceLineIndex,
+          params.columnIndex,
+          markdownFromTableCellElement(cell),
+        );
+        committedValue = markdownFromTableCellElement(cell);
+        const result = executeTableCommand(TABLE_COMMANDS.rowInsertBefore, {
+          rawTable: currentRaw,
+          row: nextRow,
+          column: 0,
+        });
+        applyTableEdit(params.wrapper, params.block, result.rawTable, result.focus);
+        return;
+      }
       if (commit()) {
         focusTableCellAfterCommit(params.wrapper, params.block.from, nextFocusIndex);
       }
       return;
     }
 
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && event.shiftKey) {
       event.preventDefault();
+      insertLineBreakAtCurrentSelection(cell);
+      return;
+    }
+
+    if (event.key === "Enter") {
       if (event.metaKey || event.ctrlKey) {
-        insertLineBreakAtCurrentSelection();
+        event.preventDefault();
+        insertLineBreakAtCurrentSelection(cell);
+        return;
+      }
+      if (cell.querySelector(".cm-typora-table-cell-list")) {
         return;
       }
       commit();
@@ -3435,8 +3609,62 @@ function makeTableCellEditable(
       event.preventDefault();
       renderTableCellValue(cell, committedValue);
       cell.blur();
+      params.wrapper.focus({ preventScroll: true });
     }
   });
+}
+
+function handleTableSelectionKeydown(
+  event: KeyboardEvent,
+  wrapper: HTMLElement,
+  table: HTMLTableElement,
+): void {
+  if (event.target !== wrapper) return;
+  const state = readTableInteractionState(wrapper);
+  const selection = state.selection;
+  if (!selection || selection.kind !== "cell") return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    clearTableSelection(wrapper);
+    updateTableInteractionState(wrapper, { focusedCell: null, mode: "idle", selection: null });
+    wrapper.blur();
+    return;
+  }
+
+  const columnCount = table.tHead?.rows[0]?.cells.length ?? 0;
+  const rowCount = table.rows.length;
+  const current = state.focusedCell ?? selection.head;
+  const next = nextTableCellPosition(event.key, current, rowCount, columnCount);
+  if (!next) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const cell = wrapper.querySelector<HTMLElement>(
+      `[data-table-row="${current.row}"][data-table-column="${current.column}"]`,
+    );
+    cell?.focus({ preventScroll: true });
+    if (cell) placeCaretAtEnd(cell);
+    return;
+  }
+
+  event.preventDefault();
+  selectTableCell(wrapper, next, event.shiftKey);
+}
+
+function nextTableCellPosition(
+  key: string,
+  current: TableCellPosition,
+  rowCount: number,
+  columnCount: number,
+): TableCellPosition | null {
+  if (rowCount === 0 || columnCount === 0) return null;
+  if (key === "ArrowLeft") return { row: current.row, column: Math.max(0, current.column - 1) };
+  if (key === "ArrowRight") return { row: current.row, column: Math.min(columnCount - 1, current.column + 1) };
+  if (key === "ArrowUp") return { row: Math.max(0, current.row - 1), column: current.column };
+  if (key === "ArrowDown") return { row: Math.min(rowCount - 1, current.row + 1), column: current.column };
+  if (key === "Home") return { row: current.row, column: 0 };
+  if (key === "End") return { row: current.row, column: columnCount - 1 };
+  return null;
 }
 
 function createTableToolbarButton(iconName: string, ariaLabel: string): HTMLButtonElement {
@@ -3475,6 +3703,36 @@ function createTableIcon(iconName: string): SVGSVGElement {
   return svg;
 }
 
+function applyTableColumnWidths(table: HTMLTableElement, tableKey: string, columnCount: number): void {
+  const widths = readTableColumnWidths(tableKey);
+  const colgroup = table.querySelector("colgroup") ?? document.createElement("colgroup");
+  if (!colgroup.parentElement) {
+    table.prepend(colgroup);
+  }
+
+  colgroup.replaceChildren();
+  for (let column = 0; column < columnCount; column += 1) {
+    const col = document.createElement("col");
+    const width = widths[column];
+    if (width) {
+      col.style.width = `${width}px`;
+    }
+    colgroup.append(col);
+  }
+
+  table.style.tableLayout = widths.some(Boolean) ? "fixed" : "auto";
+}
+
+function autoFitTableColumn(table: HTMLTableElement, tableKey: string, column: number): void {
+  const widths = Array.from(table.rows)
+    .map((row) => row.cells[column])
+    .filter((cell): cell is HTMLTableCellElement => Boolean(cell))
+    .map((cell) => Math.max(cell.scrollWidth, cell.getBoundingClientRect().width));
+  const width = Math.min(TABLE_UI.columnMaxWidthPx, Math.max(TABLE_UI.columnMinWidthPx, ...widths));
+  setTableColumnWidth(tableKey, column, width);
+  applyTableColumnWidths(table, tableKey, table.tHead?.rows[0]?.cells.length ?? 1);
+}
+
 function activeTableColumn(wrapper: HTMLElement): number {
   const activeColumn = Number.parseInt(wrapper.dataset.activeColumn ?? "0", 10);
   return Number.isFinite(activeColumn) ? activeColumn : 0;
@@ -3486,9 +3744,12 @@ function openTableSizeMenu(
   anchorElement: HTMLElement,
 ) {
   closeTableActionMenus(wrapper);
+  updateTableInteractionState(wrapper, { mode: "contextMenuOpen" });
 
   const menu = document.createElement("div");
   menu.className = "cm-typora-table-size-menu";
+  menu.setAttribute("role", "dialog");
+  menu.tabIndex = -1;
 
   const grid = document.createElement("div");
   grid.className = "cm-typora-table-size-grid";
@@ -3504,7 +3765,7 @@ function openTableSizeMenu(
   const updateGrid = (rows: number, columns: number) => {
     selectedRows = rows;
     selectedColumns = columns;
-    label.textContent = `${columns} x ${rows}`;
+    label.textContent = translateCurrent("table.sizeValue", { columns, rows });
     for (const cell of grid.querySelectorAll<HTMLButtonElement>("button")) {
       const row = Number.parseInt(cell.dataset.row ?? "0", 10);
       const column = Number.parseInt(cell.dataset.column ?? "0", 10);
@@ -3521,7 +3782,10 @@ function openTableSizeMenu(
       cell.type = "button";
       cell.dataset.row = String(row);
       cell.dataset.column = String(column);
-      cell.setAttribute("aria-label", `${column} columns, ${row} rows`);
+      cell.setAttribute(
+        "aria-label",
+        translateCurrent("table.sizeValue", { columns: column, rows: row }),
+      );
       cell.addEventListener("mouseenter", () => updateGrid(row, column));
       cell.addEventListener("click", (event) => {
         event.preventDefault();
@@ -3542,16 +3806,34 @@ function openTableSizeMenu(
   const anchorRect = anchorElement.getBoundingClientRect();
   positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
+  const close = () => {
+    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.removeEventListener("blur", close);
+    tablePortalMenuCleanups.delete(close);
+    updateTableInteractionState(wrapper, { mode: "idle" });
+    menu.remove();
+  };
   const closeOnOutsidePointer = (event: PointerEvent) => {
     if (event.target instanceof Node && menu.contains(event.target)) {
       return;
     }
-    closeTableActionMenus(wrapper);
-    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    close();
   };
+
+  menu.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+      return;
+    }
+    moveTableMenuFocus(menu, event);
+  });
 
   window.requestAnimationFrame(() => {
     document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("blur", close, { once: true });
+    tablePortalMenuCleanups.add(close);
+    menu.focus({ preventScroll: true });
   });
 }
 
@@ -3563,12 +3845,15 @@ function openTableActionMenu(
     columnIndex: number;
     sourceLineIndex: number;
   },
+  level: "advanced" | "primary" = "primary",
 ) {
   closeTableActionMenus(wrapper);
+  updateTableInteractionState(wrapper, { mode: "contextMenuOpen" });
 
   const menu = document.createElement("div");
   menu.className = "cm-typora-table-menu";
   menu.setAttribute("role", "menu");
+  menu.tabIndex = -1;
 
   const addAction = (
     label: string,
@@ -3579,6 +3864,7 @@ function openTableActionMenu(
     button.type = "button";
     button.textContent = label;
     button.disabled = disabled;
+    button.setAttribute("role", "menuitem");
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -3594,48 +3880,121 @@ function openTableActionMenu(
     menu.append(separator);
   };
 
-  const bodyLineIndex = Math.max(2, position.sourceLineIndex);
-  addAction("Insert Row Above", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      insertTableRow(lines, bodyLineIndex, position.columnIndex),
-    ));
-  addAction("Insert Row Below", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      insertTableRow(lines, bodyLineIndex + 1, position.columnIndex),
-    ));
-  addAction("Insert Column Left", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      insertTableColumn(lines, position.columnIndex),
-    ));
-  addAction("Insert Column Right", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      insertTableColumn(lines, position.columnIndex + 1),
-    ));
-  addSeparator();
-  addAction("Delete Row", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      deleteTableRow(lines, position.sourceLineIndex),
-    ), position.sourceLineIndex < 2);
-  addAction("Delete Column", () =>
-    applyTableOperation(wrapper, block, (lines) =>
-      deleteTableColumn(lines, position.columnIndex),
-    ));
+  const row = position.sourceLineIndex === 0 ? 0 : position.sourceLineIndex - 1;
+  const commandPosition = { row, column: position.columnIndex };
+  const runCommand = (command: TableCommandId) =>
+    applyTableCommand(wrapper, block, command, commandPosition);
+  const table = parseMarkdownTable(block.raw);
+  const bodyRowCount = table?.rows.length ?? 0;
+  const columnCount = table?.header.length ?? 0;
+
+  if (level === "primary") {
+    addAction(translateCurrent("table.insert.rowBefore"), () =>
+      applyTableCommand(wrapper, block, TABLE_COMMANDS.rowInsertBefore, {
+        row: Math.max(1, row),
+        column: position.columnIndex,
+      }));
+    addAction(translateCurrent("table.insert.rowAfter"), () =>
+      applyTableCommand(wrapper, block, TABLE_COMMANDS.rowInsertAfter, {
+        row: Math.max(1, row),
+        column: position.columnIndex,
+      }));
+    addAction(translateCurrent("table.insert.columnBefore"), () => runCommand(TABLE_COMMANDS.columnInsertBefore));
+    addAction(translateCurrent("table.insert.columnAfter"), () => runCommand(TABLE_COMMANDS.columnInsertAfter));
+    addSeparator();
+    addAction(translateCurrent("table.row.duplicate"), () => runCommand(TABLE_COMMANDS.rowDuplicate), row === 0);
+    addAction(translateCurrent("table.column.duplicate"), () => runCommand(TABLE_COMMANDS.columnDuplicate));
+    addAction(translateCurrent("table.more"), () =>
+      openTableActionMenu(wrapper, block, anchorElement, position, "advanced"));
+    addSeparator();
+    addAction(translateCurrent("table.row.delete"), () => runCommand(TABLE_COMMANDS.rowDelete), row === 0);
+    addAction(translateCurrent("table.column.delete"), () => runCommand(TABLE_COMMANDS.columnDelete));
+  } else {
+    addAction(translateCurrent("table.insert.rowsBefore"), () =>
+      openTableInsertCountMenu(
+        wrapper,
+        anchorElement,
+        translateCurrent("table.create.rows"),
+        (count) => applyTableCommand(wrapper, block, TABLE_COMMANDS.rowInsertMultipleBefore, {
+          row: Math.max(1, row),
+          column: position.columnIndex,
+        }, { count }),
+      ));
+    addAction(translateCurrent("table.insert.rowsAfter"), () =>
+      openTableInsertCountMenu(
+        wrapper,
+        anchorElement,
+        translateCurrent("table.create.rows"),
+        (count) => applyTableCommand(wrapper, block, TABLE_COMMANDS.rowInsertMultipleAfter, {
+          row: Math.max(1, row),
+          column: position.columnIndex,
+        }, { count }),
+      ));
+    addAction(translateCurrent("table.insert.columnsBefore"), () =>
+      openTableInsertCountMenu(
+        wrapper,
+        anchorElement,
+        translateCurrent("table.create.columns"),
+        (count) => applyTableCommand(wrapper, block, TABLE_COMMANDS.columnInsertMultipleBefore, commandPosition, { count }),
+      ));
+    addAction(translateCurrent("table.insert.columnsAfter"), () =>
+      openTableInsertCountMenu(
+        wrapper,
+        anchorElement,
+        translateCurrent("table.create.columns"),
+        (count) => applyTableCommand(wrapper, block, TABLE_COMMANDS.columnInsertMultipleAfter, commandPosition, { count }),
+      ));
+    addSeparator();
+    addAction(translateCurrent("table.column.autoFit"), () => runCommand(TABLE_COMMANDS.columnAutoFit));
+    addAction(translateCurrent("table.row.moveUp"), () => runCommand(TABLE_COMMANDS.rowMoveUp), row <= 1);
+    addAction(translateCurrent("table.row.moveDown"), () => runCommand(TABLE_COMMANDS.rowMoveDown), row === 0 || row >= bodyRowCount);
+    addAction(translateCurrent("table.column.moveLeft"), () => runCommand(TABLE_COMMANDS.columnMoveLeft), position.columnIndex <= 0);
+    addAction(translateCurrent("table.column.moveRight"), () => runCommand(TABLE_COMMANDS.columnMoveRight), position.columnIndex >= columnCount - 1);
+    addSeparator();
+    addAction(translateCurrent("table.alignment.left"), () => runCommand(TABLE_COMMANDS.alignmentLeft));
+    addAction(translateCurrent("table.alignment.center"), () => runCommand(TABLE_COMMANDS.alignmentCenter));
+    addAction(translateCurrent("table.alignment.right"), () => runCommand(TABLE_COMMANDS.alignmentRight));
+    addSeparator();
+    addAction(translateCurrent("table.copyAsMarkdown"), () => {
+      void navigator.clipboard?.writeText(block.raw);
+    });
+    addAction(translateCurrent("table.row.clear"), () => runCommand(TABLE_COMMANDS.rowClear));
+    addAction(translateCurrent("table.column.clear"), () => runCommand(TABLE_COMMANDS.columnClear));
+  }
 
   document.body.append(menu);
 
   const anchorRect = anchorElement.getBoundingClientRect();
   positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
+  const close = () => {
+    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.removeEventListener("blur", close);
+    tablePortalMenuCleanups.delete(close);
+    updateTableInteractionState(wrapper, { mode: "idle" });
+    menu.remove();
+  };
   const closeOnOutsidePointer = (event: PointerEvent) => {
     if (event.target instanceof Node && menu.contains(event.target)) {
       return;
     }
-    closeTableActionMenus(wrapper);
-    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    close();
   };
+
+  menu.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+      return;
+    }
+    moveTableMenuFocus(menu, event);
+  });
 
   window.requestAnimationFrame(() => {
     document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("blur", close, { once: true });
+    tablePortalMenuCleanups.add(close);
+    menu.focus({ preventScroll: true });
   });
 }
 
@@ -3647,11 +4006,107 @@ function positionTablePortalMenu(menu: HTMLElement, left: number, top: number): 
   menu.style.top = `${Math.min(Math.max(margin, top), maxTop)}px`;
 }
 
+function openTableInsertCountMenu(
+  wrapper: HTMLElement,
+  anchorElement: HTMLElement,
+  kind: string,
+  onConfirm: (count: number) => void,
+): void {
+  closeTableActionMenus(wrapper);
+  updateTableInteractionState(wrapper, { mode: "contextMenuOpen" });
+
+  const menu = document.createElement("form");
+  menu.className = "cm-typora-table-count-menu";
+  menu.setAttribute("role", "dialog");
+  menu.setAttribute("aria-label", translateCurrent("table.insert.countTitle", { kind }));
+
+  const label = document.createElement("label");
+  label.textContent = translateCurrent("table.insert.countLabel");
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "1";
+  input.max = String(TABLE_UI.batchInsertMax);
+  input.step = "1";
+  input.value = "1";
+  label.append(input);
+
+  const actions = document.createElement("div");
+  actions.className = "cm-typora-table-count-actions";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = translateCurrent("common.cancel");
+  const confirm = document.createElement("button");
+  confirm.type = "submit";
+  confirm.textContent = translateCurrent("common.insert");
+  actions.append(cancel, confirm);
+  menu.append(label, actions);
+  document.body.append(menu);
+
+  const anchorRect = anchorElement.getBoundingClientRect();
+  positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
+
+  const close = () => {
+    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.removeEventListener("blur", close);
+    tablePortalMenuCleanups.delete(close);
+    updateTableInteractionState(wrapper, { mode: "idle" });
+    menu.remove();
+  };
+  const closeOnOutsidePointer = (event: PointerEvent) => {
+    if (event.target instanceof Node && menu.contains(event.target)) return;
+    close();
+  };
+
+  cancel.addEventListener("click", close);
+  menu.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const count = Math.min(
+      TABLE_UI.batchInsertMax,
+      Math.max(1, Number.parseInt(input.value, 10) || 1),
+    );
+    close();
+    onConfirm(count);
+  });
+  menu.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  });
+  window.requestAnimationFrame(() => {
+    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("blur", close, { once: true });
+    tablePortalMenuCleanups.add(close);
+    input.focus({ preventScroll: true });
+    input.select();
+  });
+}
+
 function closeTableActionMenus(wrapper: HTMLElement) {
   void wrapper;
-  for (const menu of document.querySelectorAll(".cm-typora-table-menu, .cm-typora-table-size-menu")) {
+  for (const cleanup of tablePortalMenuCleanups) {
+    cleanup();
+  }
+  tablePortalMenuCleanups.clear();
+  for (const menu of document.querySelectorAll(".cm-typora-table-menu, .cm-typora-table-size-menu, .cm-typora-table-count-menu")) {
     menu.remove();
   }
+}
+
+function moveTableMenuFocus(menu: HTMLElement, event: KeyboardEvent): void {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const buttons = Array.from(menu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+  if (buttons.length === 0) return;
+  event.preventDefault();
+  const currentIndex = Math.max(0, buttons.indexOf(document.activeElement as HTMLButtonElement));
+  const nextIndex = event.key === "Home"
+    ? 0
+    : event.key === "End"
+      ? buttons.length - 1
+      : event.key === "ArrowUp"
+        ? (currentIndex - 1 + buttons.length) % buttons.length
+        : (currentIndex + 1) % buttons.length;
+  buttons[nextIndex]?.focus({ preventScroll: true });
 }
 
 function applyTableOperation(
@@ -3663,10 +4118,96 @@ function applyTableOperation(
   applyTableEdit(wrapper, block, nextRaw);
 }
 
+function applyTableCommand(
+  wrapper: HTMLElement,
+  block: PreviewBlock,
+  command: TableCommandId,
+  position: TableCellPosition,
+  target?: { count?: number; targetColumn?: number; targetRow?: number },
+) {
+  if (command === TABLE_COMMANDS.columnAutoFit) {
+    const table = wrapper.querySelector<HTMLTableElement>("table");
+    if (table) {
+      autoFitTableColumn(table, String(block.from), position.column);
+    }
+    return;
+  }
+
+  const selection = readTableInteractionState(wrapper).selection;
+  const selected = tableSelectionIndices(block.raw, selection, position);
+  const result = executeTableCommand(command, {
+    rawTable: block.raw,
+    row: position.row,
+    column: position.column,
+    selectedColumns: selected.columns,
+    selectedRows: selected.rows,
+    ...target,
+  });
+  if (command === TABLE_COMMANDS.columnMove && target?.targetColumn !== undefined) {
+    moveTableColumnWidth(String(block.from), position.column, target.targetColumn);
+  }
+  if (command === TABLE_COMMANDS.columnInsertBefore) {
+    insertTableColumnWidth(String(block.from), position.column);
+  }
+  if (command === TABLE_COMMANDS.columnInsertAfter) {
+    insertTableColumnWidth(String(block.from), position.column + 1);
+  }
+  if (command === TABLE_COMMANDS.columnDuplicate) {
+    [...selected.columns].sort((left, right) => right - left).forEach((column) => {
+      insertTableColumnWidth(String(block.from), column + 1);
+    });
+  }
+  if (command === TABLE_COMMANDS.columnDelete) {
+    removeTableColumnWidths(String(block.from), selected.columns);
+  }
+  applyTableEdit(wrapper, block, result.rawTable, result.focus);
+}
+
+function tableSelectionIndices(
+  rawTable: string,
+  selection: TableSelection | null,
+  fallback: TableCellPosition,
+): { columns: number[]; rows: number[] } {
+  const table = parseMarkdownTable(rawTable);
+  if (!table || !selection) {
+    return { columns: [fallback.column], rows: [fallback.row] };
+  }
+  const positions = tableSelectionPositions(rawTable, selection);
+  const rows = Array.from(new Set(positions.map((position) => position.row)));
+  const columns = Array.from(new Set(positions.map((position) => position.column)));
+  return {
+    columns: columns.length ? columns : [fallback.column],
+    rows: rows.length ? rows : [fallback.row],
+  };
+}
+
+function shouldCopyTableSelection(rawTable: string, selection: TableSelection): boolean {
+  return tableSelectionPositions(rawTable, selection).length > 1;
+}
+
+function writeTableSelectionToClipboard(
+  event: ClipboardEvent,
+  wrapper: HTMLElement,
+  rawTable: string,
+): boolean {
+  const selection = readTableInteractionState(wrapper).selection;
+  if (!selection || !shouldCopyTableSelection(rawTable, selection)) return false;
+  const tsv = tableSelectionAsTsvForSelection(rawTable, selection);
+  const markdown = tableSelectionAsMarkdown(rawTable, selection);
+  if (!tsv) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.clipboardData?.setData("text/plain", tsv);
+  event.clipboardData?.setData("text/tab-separated-values", tsv);
+  event.clipboardData?.setData("text/markdown", markdown);
+  return true;
+}
+
 function applyTableEdit(
   wrapper: HTMLElement,
   block: PreviewBlock,
   nextRaw: string,
+  focus?: TableCellPosition,
 ) {
   const view = EditorView.findFromDOM(wrapper);
   if (!view) {
@@ -3687,6 +4228,37 @@ function applyTableEdit(
   });
   scrollDOM.scrollTop = scrollTop;
   scrollDOM.scrollLeft = scrollLeft;
+
+  if (focus) {
+    focusTableCellAtAfterCommit(wrapper, block.from, focus);
+  }
+}
+
+function focusTableCellAtAfterCommit(
+  wrapper: HTMLElement,
+  blockFrom: number,
+  position: TableCellPosition,
+) {
+  const focusCell = (): boolean => {
+    const nextWrapper = document.querySelector<HTMLElement>(
+      `.cm-typora-table-preview[data-table-key="${blockFrom}"]`,
+    );
+    const nextCell = nextWrapper?.querySelector<HTMLElement>(
+      `[data-table-row="${position.row}"][data-table-column="${position.column}"]`,
+    );
+    if (!nextCell) return false;
+    nextCell.focus({ preventScroll: true });
+    placeCaretAtEnd(nextCell);
+    return true;
+  };
+
+  let remainingFrames = 4;
+  const retryFocus = () => {
+    if (focusCell() || remainingFrames <= 0) return;
+    remainingFrames -= 1;
+    window.requestAnimationFrame(retryFocus);
+  };
+  window.requestAnimationFrame(retryFocus);
 }
 
 function focusTableCellAfterCommit(
@@ -3698,30 +4270,27 @@ function focusTableCellAfterCommit(
     return;
   }
 
-  const view = EditorView.findFromDOM(wrapper);
-  if (!view) {
-    return;
-  }
-
-  const focusCell = () => {
-    const nextWrapper = view.dom.querySelector<HTMLElement>(
-      `.cm-typora-table-preview[data-markdown-block-from="${blockFrom}"]`,
+  const focusCell = (): boolean => {
+    const nextWrapper = document.querySelector<HTMLElement>(
+      `.cm-typora-table-preview[data-table-key="${blockFrom}"]`,
     );
     const nextCell = nextWrapper?.querySelector<HTMLElement>(
       `[data-table-focus-index="${focusIndex}"]`,
     );
-    if (!nextCell) {
-      return;
-    }
+    if (!nextCell) return false;
 
-    nextCell.focus();
+    nextCell.focus({ preventScroll: true });
     placeCaretAtEnd(nextCell);
+    return true;
   };
 
-  window.requestAnimationFrame(() => {
-    focusCell();
-    window.requestAnimationFrame(focusCell);
-  });
+  let remainingFrames = 4;
+  const retryFocus = () => {
+    if (focusCell() || remainingFrames <= 0) return;
+    remainingFrames -= 1;
+    window.requestAnimationFrame(retryFocus);
+  };
+  window.requestAnimationFrame(retryFocus);
 }
 
 class MermaidPreviewWidget extends WidgetType {
