@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -30,7 +31,62 @@ struct OpenMarkdownFileDto {
     workspace_root: String,
     relative_path: String,
     markdown_content: String,
+    revision: String,
     tree: Vec<WorkspaceItemDto>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MarkdownDocumentDto {
+    markdown_content: String,
+    revision: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MarkdownFileRevisionDto {
+    exists: bool,
+    watch_token: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MarkdownSaveResponseDto {
+    revision: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorkspaceSaveError {
+    code: &'static str,
+    message: String,
+}
+
+impl WorkspaceSaveError {
+    fn document_changed() -> Self {
+        Self {
+            code: "workspace.documentChanged",
+            message:
+                "This file changed outside Polarbear. Reload it before saving to avoid overwriting newer content."
+                    .to_owned(),
+        }
+    }
+
+    fn document_missing() -> Self {
+        Self {
+            code: "workspace.documentMissing",
+            message:
+                "This file was deleted outside Polarbear. Save it under a new name instead of overwriting newer work."
+                    .to_owned(),
+        }
+    }
+
+    fn unexpected(error: impl Into<String>) -> Self {
+        Self {
+            code: "workspace.saveFailed",
+            message: error.into(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -922,6 +978,14 @@ fn content_digest(content: &[u8]) -> String {
     format!("{}:{}", content.len(), BASE64.encode(content))
 }
 
+fn content_revision(content: &[u8]) -> String {
+    // A revision detects accidental concurrent writes without exposing document content in the token.
+    let hash = content.iter().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(0x1000_0000_01b3)
+    });
+    format!("{}-{hash:016x}", content.len())
+}
+
 fn local_manifest(
     app: &tauri::AppHandle,
     workspace_root: &str,
@@ -1107,62 +1171,57 @@ fn list_workspace_files(workspace_root: String) -> Result<Vec<WorkspaceItemDto>,
 }
 
 #[tauri::command]
-fn refresh_workspace_sync_index(
-    app: tauri::AppHandle,
+fn load_markdown_file(
     workspace_root: String,
-) -> Result<usize, String> {
-    if read_binding(&app, &workspace_root)?.is_none() {
-        return Ok(0);
-    }
-
-    let database_path = cloud_sync_database_path(&app)?;
-    let cached_files = cloud_sync_store::read_local_file_cache(&database_path, &workspace_root)?;
-    let (_, current_manifest) = local_snapshot(&app, &workspace_root)?;
-    if cached_files.is_empty() {
-        return Ok(0);
-    }
-
-    let mut queued_count = 0;
-    for (relative_path, digest) in &current_manifest {
-        let changed = cached_files
-            .get(relative_path)
-            .map(|cached| cached.digest.as_str())
-            != Some(digest.as_str());
-        if changed {
-            cloud_sync_store::queue_outbox_path(
-                &database_path,
-                &workspace_root,
-                relative_path,
-                "upload",
-            )?;
-            queued_count += 1;
-        }
-    }
-    for relative_path in cached_files
-        .keys()
-        .filter(|path| !current_manifest.contains_key(*path))
-    {
-        cloud_sync_store::queue_outbox_path(
-            &database_path,
-            &workspace_root,
-            relative_path,
-            "delete",
-        )?;
-        queued_count += 1;
-    }
-
-    Ok(queued_count)
-}
-
-#[tauri::command]
-fn load_markdown_file(workspace_root: String, relative_path: String) -> Result<String, String> {
+    relative_path: String,
+) -> Result<MarkdownDocumentDto, String> {
     let path = workspace_path(&workspace_root, &relative_path)?;
 
     if !is_markdown_file(&path) {
         return Err("Only Markdown files can be opened.".to_owned());
     }
 
-    fs::read_to_string(path).map_err(|error| error.to_string())
+    read_markdown_document(&path)
+}
+
+#[tauri::command]
+fn get_markdown_file_revision(
+    workspace_root: String,
+    relative_path: String,
+) -> Result<MarkdownFileRevisionDto, String> {
+    let path = workspace_path(&workspace_root, &relative_path)?;
+
+    if !is_markdown_file(&path) {
+        return Err("Only Markdown files can be checked.".to_owned());
+    }
+
+    match fs::metadata(&path) {
+        Ok(metadata) => Ok(MarkdownFileRevisionDto {
+            exists: true,
+            watch_token: Some(file_watch_token(&metadata)),
+        }),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Ok(MarkdownFileRevisionDto {
+                exists: false,
+                watch_token: None,
+            })
+        }
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+/// A lightweight change detector for background file watching. The stronger
+/// content revision remains the save contract, while this token avoids hashing
+/// the full active document every polling interval.
+fn file_watch_token(metadata: &fs::Metadata) -> String {
+    let modified_nanos = metadata
+        .modified()
+        .ok()
+        .and_then(|timestamp| timestamp.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+
+    format!("{}:{modified_nanos}", metadata.len())
 }
 
 #[tauri::command]
@@ -1171,46 +1230,140 @@ fn save_markdown_file(
     workspace_root: String,
     relative_path: String,
     markdown_content: String,
-) -> Result<(), String> {
-    save_markdown_file_content(&workspace_root, &relative_path, &markdown_content)?;
-    if read_binding(&app, &workspace_root)?.is_some() {
+    expected_revision: Option<String>,
+) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
+    let saved = save_markdown_file_content(
+        &workspace_root,
+        &relative_path,
+        &markdown_content,
+        expected_revision.as_deref(),
+    )?;
+    if read_binding(&app, &workspace_root)
+        .map_err(WorkspaceSaveError::unexpected)?
+        .is_some()
+    {
         cloud_sync_store::queue_outbox_path(
-            &cloud_sync_database_path(&app)?,
+            &cloud_sync_database_path(&app).map_err(WorkspaceSaveError::unexpected)?,
             &workspace_root,
             &relative_path,
             "upload",
-        )?;
+        )
+        .map_err(WorkspaceSaveError::unexpected)?;
     }
-    Ok(())
+    Ok(saved)
 }
 
 fn save_markdown_file_content(
     workspace_root: &str,
     relative_path: &str,
     markdown_content: &str,
-) -> Result<(), String> {
-    let path = workspace_path(&workspace_root, &relative_path)?;
+    expected_revision: Option<&str>,
+) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
+    let path = workspace_path(workspace_root, relative_path).map_err(WorkspaceSaveError::unexpected)?;
 
     if !is_markdown_file(&path) {
-        return Err("Only Markdown files can be saved.".to_owned());
+        return Err(WorkspaceSaveError::unexpected("Only Markdown files can be saved."));
     }
 
-    fs::write(path, markdown_content).map_err(|error| error.to_string())
+    let current_content = fs::read(&path).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            WorkspaceSaveError::document_missing()
+        } else {
+            WorkspaceSaveError::unexpected(error.to_string())
+        }
+    })?;
+    if let Some(expected_revision) = expected_revision {
+        if content_revision(&current_content) != expected_revision {
+            return Err(WorkspaceSaveError::document_changed());
+        }
+    }
+
+    atomic_write(&path, markdown_content.as_bytes()).map_err(WorkspaceSaveError::unexpected)?;
+    Ok(MarkdownSaveResponseDto {
+        revision: content_revision(markdown_content.as_bytes()),
+    })
 }
 
 #[tauri::command]
-fn write_markdown_file(file_path: String, markdown_content: String) -> Result<(), String> {
+fn write_markdown_file(
+    file_path: String,
+    markdown_content: String,
+    expected_revision: Option<String>,
+) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
     let path = PathBuf::from(file_path);
 
     if !is_markdown_file(&path) {
-        return Err("Only Markdown files can be saved.".to_owned());
+        return Err(WorkspaceSaveError::unexpected("Only Markdown files can be saved."));
     }
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        fs::create_dir_all(parent).map_err(|error| WorkspaceSaveError::unexpected(error.to_string()))?;
     }
 
-    fs::write(path, markdown_content).map_err(|error| error.to_string())
+    if let Some(expected_revision) = expected_revision {
+        let current_content = fs::read(&path).map_err(|error| {
+            if error.kind() == std::io::ErrorKind::NotFound {
+                WorkspaceSaveError::document_missing()
+            } else {
+                WorkspaceSaveError::unexpected(error.to_string())
+            }
+        })?;
+        if content_revision(&current_content) != expected_revision {
+            return Err(WorkspaceSaveError::document_changed());
+        }
+    }
+
+    atomic_write(&path, markdown_content.as_bytes()).map_err(WorkspaceSaveError::unexpected)?;
+    Ok(MarkdownSaveResponseDto {
+        revision: content_revision(markdown_content.as_bytes()),
+    })
+}
+
+fn read_markdown_document(path: &Path) -> Result<MarkdownDocumentDto, String> {
+    let markdown_content = fs::read_to_string(path).map_err(|error| error.to_string())?;
+    Ok(MarkdownDocumentDto {
+        revision: content_revision(markdown_content.as_bytes()),
+        markdown_content,
+    })
+}
+
+fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| "The target file does not have a parent directory.".to_owned())?;
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "The target file name is invalid.".to_owned())?;
+    let temporary_path = parent.join(format!(
+        ".{file_name}.polarbear-{}-{}.tmp",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos())
+            .unwrap_or_default(),
+    ));
+
+    let result = (|| -> Result<(), String> {
+        let mut temporary_file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary_path)
+            .map_err(|error| error.to_string())?;
+        temporary_file
+            .write_all(content)
+            .map_err(|error| error.to_string())?;
+        temporary_file
+            .sync_all()
+            .map_err(|error| error.to_string())?;
+        fs::rename(&temporary_path, path).map_err(|error| error.to_string())
+    })();
+
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary_path);
+    }
+
+    result
 }
 
 #[tauri::command]
@@ -1229,8 +1382,7 @@ fn create_markdown_file(workspace_root: String, relative_path: String) -> Result
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
 
-    fs::write(path, "# Untitled\n\nStart writing in Polarbear.\n")
-        .map_err(|error| error.to_string())
+    atomic_write(&path, b"# Untitled\n\nStart writing in Polarbear.\n")
 }
 
 #[tauri::command]
@@ -1464,13 +1616,14 @@ fn open_markdown_file(file_path: String) -> Result<OpenMarkdownFileDto, String> 
         .map_err(|error| error.to_string())?
         .to_string_lossy()
         .to_string();
-    let markdown_content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    let document = read_markdown_document(&path)?;
     let tree = list_directory(&workspace_root, &workspace_root)?;
 
     Ok(OpenMarkdownFileDto {
         workspace_root: workspace_root.to_string_lossy().to_string(),
         relative_path,
-        markdown_content,
+        markdown_content: document.markdown_content,
+        revision: document.revision,
         tree,
     })
 }
@@ -1566,6 +1719,11 @@ fn open_new_app_window() -> Result<(), String> {
         .spawn()
         .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -2328,7 +2486,7 @@ fn repository_pull_workspace_internal(
                 fs::create_dir_all(parent).map_err(|error| error.to_string())?;
             }
             remote_manifest.insert(relative_path, content_digest(&content));
-            fs::write(destination, content).map_err(|error| error.to_string())?;
+            atomic_write(&destination, &content)?;
         } else if destination.exists() {
             fs::remove_file(destination).map_err(|error| error.to_string())?;
         }
@@ -2430,7 +2588,7 @@ fn repository_sync_now_blocking(
                 if let Some(parent) = destination.parent() {
                     fs::create_dir_all(parent).map_err(|error| error.to_string())?;
                 }
-                fs::write(destination, content).map_err(|error| error.to_string())?;
+                atomic_write(&destination, &content)?;
             }
 
             binding.has_synced = true;
@@ -3067,11 +3225,17 @@ fn main() -> tauri::Result<()> {
             native_pinch::install_native_pinch(app).map_err(std::io::Error::other)?;
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.emit("polarbear-window-close-requested", ());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             app_zoom::set_app_zoom,
             list_workspace_files,
-            refresh_workspace_sync_index,
             load_markdown_file,
+            get_markdown_file_revision,
             save_markdown_file,
             write_markdown_file,
             create_markdown_file,
@@ -3083,6 +3247,7 @@ fn main() -> tauri::Result<()> {
             reveal_in_file_manager,
             open_external_url,
             open_new_app_window,
+            quit_app,
             move_entry,
             copy_image_asset,
             save_image_asset,
@@ -3107,8 +3272,8 @@ fn main() -> tauri::Result<()> {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::{
-        create_markdown_file, create_workspace_directory, list_workspace_files, load_markdown_file,
-        rename_entry, save_markdown_file_content,
+        create_markdown_file, create_workspace_directory, get_markdown_file_revision,
+        list_workspace_files, load_markdown_file, rename_entry, save_markdown_file_content,
     };
     use std::fs;
 
@@ -3139,14 +3304,20 @@ mod tests {
             .expect("create workspace directory");
         create_markdown_file(root.clone(), "docs/guide.md".to_owned())
             .expect("create markdown file");
-        save_markdown_file_content(&root, "docs/guide.md", "# Guide\n\nSaved from Polarbear.\n")
-            .expect("save markdown file");
+        let saved = save_markdown_file_content(
+            &root,
+            "docs/guide.md",
+            "# Guide\n\nSaved from Polarbear.\n",
+            None,
+        )
+        .expect("save markdown file");
 
         let source =
             load_markdown_file(root.clone(), "docs/guide.md".to_owned()).expect("load markdown");
         let items = list_workspace_files(root).expect("list workspace files");
 
-        assert!(source.contains("Saved from Polarbear"));
+        assert!(source.markdown_content.contains("Saved from Polarbear"));
+        assert_eq!(source.revision, saved.revision);
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].name, "docs");
         assert_eq!(
@@ -3174,6 +3345,81 @@ mod tests {
 
         assert_eq!(file_rename.new_relative_path, "docs/world.md");
         assert_eq!(directory_rename.new_relative_path, "notes");
-        assert!(source.contains("Start writing in Polarbear"));
+        assert!(source.markdown_content.contains("Start writing in Polarbear"));
+    }
+
+    #[test]
+    fn save_rejects_an_externally_changed_document_without_overwriting_it() {
+        let root = test_workspace_root("save-rejects-external-change");
+        create_markdown_file(root.clone(), "note.md".to_owned())
+            .expect("create markdown file");
+        let loaded = load_markdown_file(root.clone(), "note.md".to_owned())
+            .expect("load markdown file");
+
+        fs::write(
+            std::path::Path::new(&root).join("note.md"),
+            "# Changed outside Polarbear\n",
+        )
+        .expect("simulate external write");
+
+        let error = save_markdown_file_content(
+            &root,
+            "note.md",
+            "# Local pending change\n",
+            Some(&loaded.revision),
+        )
+        .expect_err("conflicting save must fail");
+
+        assert_eq!(error.code, "workspace.documentChanged");
+        assert!(error.message.contains("changed outside Polarbear"));
+        let current = fs::read_to_string(std::path::Path::new(&root).join("note.md"))
+            .expect("read externally changed file");
+        assert_eq!(current, "# Changed outside Polarbear\n");
+    }
+
+    #[test]
+    fn save_reports_when_an_open_document_was_deleted_externally() {
+        let root = test_workspace_root("save-rejects-external-delete");
+        create_markdown_file(root.clone(), "note.md".to_owned())
+            .expect("create markdown file");
+        let loaded = load_markdown_file(root.clone(), "note.md".to_owned())
+            .expect("load markdown file");
+        let path = std::path::Path::new(&root).join("note.md");
+        fs::remove_file(&path).expect("simulate external deletion");
+
+        let error = save_markdown_file_content(
+            &root,
+            "note.md",
+            "# Local pending change\n",
+            Some(&loaded.revision),
+        )
+        .expect_err("saving a deleted document must fail");
+
+        assert_eq!(error.code, "workspace.documentMissing");
+        assert!(error.message.contains("deleted outside Polarbear"));
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn markdown_file_watch_reports_a_missing_file_without_using_an_error_string() {
+        let root = test_workspace_root("revision-reports-missing-file");
+        let revision = get_markdown_file_revision(root, "missing.md".to_owned())
+            .expect("missing files should be represented in the revision response");
+
+        assert!(!revision.exists);
+        assert_eq!(revision.watch_token, None);
+    }
+
+    #[test]
+    fn markdown_file_watch_reports_a_metadata_token_for_existing_files() {
+        let root = test_workspace_root("revision-reports-existing-file");
+        create_markdown_file(root.clone(), "note.md".to_owned())
+            .expect("create markdown file");
+
+        let revision = get_markdown_file_revision(root, "note.md".to_owned())
+            .expect("existing files should be represented in the revision response");
+
+        assert!(revision.exists);
+        assert!(revision.watch_token.is_some());
     }
 }

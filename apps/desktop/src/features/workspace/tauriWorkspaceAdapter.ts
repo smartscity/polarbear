@@ -2,7 +2,23 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type { WorkspaceItem } from "./workspaceModel";
 import { translateCurrent } from "../../shared/i18n/translate";
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
-import { invokeTauri } from "../../shared/tauri/invokeTauri";
+import { hasTauriErrorCode, invokeTauri } from "../../shared/tauri/invokeTauri";
+
+export const WORKSPACE_SAVE_ERROR_CODES = {
+  documentChanged: "workspace.documentChanged",
+  documentMissing: "workspace.documentMissing",
+  saveFailed: "workspace.saveFailed",
+} as const;
+
+export type WorkspaceSaveErrorCode =
+  typeof WORKSPACE_SAVE_ERROR_CODES[keyof typeof WORKSPACE_SAVE_ERROR_CODES];
+
+export function hasWorkspaceSaveErrorCode(
+  error: unknown,
+  code: WorkspaceSaveErrorCode,
+): boolean {
+  return hasTauriErrorCode(error, code);
+}
 
 type WorkspaceItemDto = {
   id: string;
@@ -15,7 +31,22 @@ type OpenMarkdownFileDto = {
   workspaceRoot: string;
   relativePath: string;
   markdownContent: string;
+  revision: string;
   tree: WorkspaceItemDto[];
+};
+
+export type MarkdownDocument = {
+  markdownContent: string;
+  revision: string;
+};
+
+export type MarkdownSaveResult = {
+  revision: string;
+};
+
+export type MarkdownFileRevision = {
+  exists: boolean;
+  watchToken: string | null;
 };
 
 type RenameEntryResponseDto = {
@@ -67,7 +98,7 @@ export async function chooseMarkdownFile(): Promise<string | null> {
     directory: false,
     filters: [
       {
-        name: "Markdown",
+        name: translateCurrent("dialog.fileTypeMarkdown"),
         extensions: ["md", "markdown"]
       }
     ],
@@ -83,7 +114,7 @@ export async function chooseImageFile(): Promise<string | null> {
     directory: false,
     filters: [
       {
-        name: "Images",
+        name: translateCurrent("dialog.fileTypeImages"),
         extensions: ["png", "jpg", "jpeg", "gif", "svg", "webp"]
       }
     ],
@@ -101,7 +132,7 @@ export async function chooseMarkdownSavePath(
     defaultPath,
     filters: [
       {
-        name: "Markdown",
+        name: translateCurrent("dialog.fileTypeMarkdown"),
         extensions: ["md", "markdown"]
       }
     ],
@@ -120,32 +151,38 @@ export async function listWorkspaceFiles(
   return items.map(mapWorkspaceItem);
 }
 
-export async function refreshWorkspaceSyncIndex(
-  workspaceRoot: string
-): Promise<number> {
-  return invokeTauri<number>(TAURI_COMMANDS.refreshWorkspaceSyncIndex, { workspaceRoot });
-}
-
 export async function loadMarkdownFile(params: {
   workspaceRoot: string;
   relativePath: string;
-}): Promise<string> {
-  return invokeTauri<string>(TAURI_COMMANDS.loadMarkdownFile, params);
+}): Promise<MarkdownDocument> {
+  return invokeTauri<MarkdownDocument>(TAURI_COMMANDS.loadMarkdownFile, params);
+}
+
+export async function getMarkdownFileRevision(params: {
+  workspaceRoot: string;
+  relativePath: string;
+}): Promise<MarkdownFileRevision> {
+  return invokeTauri<MarkdownFileRevision>(
+    TAURI_COMMANDS.getMarkdownFileRevision,
+    params,
+  );
 }
 
 export async function saveMarkdownFile(params: {
   workspaceRoot: string;
   relativePath: string;
   markdownContent: string;
-}): Promise<void> {
-  await invokeTauri(TAURI_COMMANDS.saveMarkdownFile, params);
+  expectedRevision?: string;
+}): Promise<MarkdownSaveResult> {
+  return invokeTauri<MarkdownSaveResult>(TAURI_COMMANDS.saveMarkdownFile, params);
 }
 
 export async function writeMarkdownFile(params: {
   filePath: string;
   markdownContent: string;
-}): Promise<void> {
-  await invokeTauri(TAURI_COMMANDS.writeMarkdownFile, params);
+  expectedRevision?: string;
+}): Promise<MarkdownSaveResult> {
+  return invokeTauri<MarkdownSaveResult>(TAURI_COMMANDS.writeMarkdownFile, params);
 }
 
 export async function createMarkdownFile(params: {
@@ -188,6 +225,7 @@ export async function openMarkdownFile(filePath: string): Promise<{
   workspaceRoot: string;
   relativePath: string;
   markdownContent: string;
+  revision: string;
   tree: WorkspaceItem[];
 }> {
   const openedFile = await invokeTauri<OpenMarkdownFileDto>(TAURI_COMMANDS.openMarkdownFile, {
@@ -198,6 +236,7 @@ export async function openMarkdownFile(filePath: string): Promise<{
     workspaceRoot: openedFile.workspaceRoot,
     relativePath: openedFile.relativePath,
     markdownContent: openedFile.markdownContent,
+    revision: openedFile.revision,
     tree: openedFile.tree.map(mapWorkspaceItem)
   };
 }

@@ -4,7 +4,8 @@ export const APP_EVENTS = {
   debugChanged: "polarbear-debug-changed",
   nativePinch: "polarbear-native-pinch",
   repositorySyncProgress: "repository-sync-progress",
-  settingsChanged: "polarbear-settings-changed"
+  settingsChanged: "polarbear-settings-changed",
+  windowCloseRequested: "polarbear-window-close-requested",
 } as const;
 
 export type AppEventName = typeof APP_EVENTS[keyof typeof APP_EVENTS];

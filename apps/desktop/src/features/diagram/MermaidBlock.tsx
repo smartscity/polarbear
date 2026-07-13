@@ -1,33 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import mermaid from "mermaid";
-import { sanitizeDiagramSvg } from "./sanitizeDiagramSvg";
 import { useI18n } from "../../shared/i18n/I18nProvider";
-
-const COPY_FEEDBACK_DURATION_MS = 1_400;
 import {
   exportSvgElementAsPng,
   exportSvgElementAsSvg,
   findRenderedSvg,
 } from "./diagramExport";
-import { mermaidDiagramConfig } from "./mermaidDiagramConfig";
+import { renderMermaidSvg } from "./mermaidRenderer";
+
+const COPY_FEEDBACK_DURATION_MS = 1_400;
 
 export type MermaidBlockProps = {
   source: string;
   diagramId: string;
 };
-
-let mermaidInitialized = false;
-
-function initializeMermaid(): void {
-  if (mermaidInitialized) {
-    return;
-  }
-
-  mermaid.initialize({
-    ...mermaidDiagramConfig,
-  });
-  mermaidInitialized = true;
-}
 
 export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const { t } = useI18n();
@@ -38,18 +23,16 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
-    initializeMermaid();
     renderVersionRef.current += 1;
     const renderVersion = renderVersionRef.current;
 
     setSvgContent("");
     setRenderError(null);
 
-    mermaid
-      .render(`${diagramId}-${renderVersion}`, source)
-      .then(({ svg }) => {
+    void renderMermaidSvg(`${diagramId}-${renderVersion}`, source)
+      .then((svgContent) => {
         if (renderVersionRef.current === renderVersion) {
-          setSvgContent(sanitizeDiagramSvg(svg));
+          setSvgContent(svgContent);
         }
       })
       .catch((error: unknown) => {

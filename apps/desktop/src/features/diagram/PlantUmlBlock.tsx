@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DIAGRAM_CONFIG } from "./diagramConfig";
+import { plantUmlSvgUrl } from "./plantUmlUrl";
 import { sanitizeDiagramSvg } from "./sanitizeDiagramSvg";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import {
@@ -18,12 +19,19 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   const renderTargetRef = useRef<HTMLDivElement | null>(null);
   const [svgContent, setSvgContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [requestedSource, setRequestedSource] = useState<string | null>(null);
   const diagramUrl = useMemo(
-    () => `${DIAGRAM_CONFIG.plantUml.serverUrl}${encodePlantUmlHex(source)}`,
+    () => plantUmlSvgUrl(DIAGRAM_CONFIG.plantUml.serverUrl, source),
     [source]
   );
 
   useEffect(() => {
+    if (requestedSource !== source) {
+      setErrorMessage("");
+      setSvgContent("");
+      return;
+    }
+
     const abortController = new AbortController();
 
     async function loadDiagram() {
@@ -55,7 +63,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
     void loadDiagram();
 
     return () => abortController.abort();
-  }, [diagramUrl, t]);
+  }, [diagramUrl, requestedSource, source, t]);
 
   const exportPng = () => {
     const svg = findRenderedSvg(renderTargetRef.current);
@@ -99,6 +107,13 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
         >
           {svgContent ? (
             <span dangerouslySetInnerHTML={{ __html: svgContent }} />
+          ) : requestedSource !== source ? (
+            <div className="plantuml-remote-consent">
+              <span>{t("diagram.plantUmlRemoteDisabled")}</span>
+              <button type="button" onClick={() => setRequestedSource(source)}>
+                {t("diagram.plantUmlRenderRemotely")}
+              </button>
+            </div>
           ) : (
             <span className="plantuml-loading">{t("diagram.renderingPlantUml")}</span>
           )}
@@ -126,13 +141,4 @@ function SvgIcon() {
       <path d="M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Zm2 4.25h6V9H7V7.75Zm0 3h6V12H7v-1.25Zm0 3h4V15H7v-1.25Z" />
     </svg>
   );
-}
-
-function encodePlantUmlHex(source: string): string {
-  const bytes = new TextEncoder().encode(source);
-  const hex = Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-
-  return `~h${hex}`;
 }

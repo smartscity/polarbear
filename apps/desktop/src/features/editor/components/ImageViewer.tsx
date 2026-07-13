@@ -7,6 +7,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type TouchEvent as ReactTouchEvent,
 } from "react";
+import { useDismissOnEscape } from "../../../shared/hooks/useDismissOnEscape";
+import { useStoredDebugEnabled } from "../../../shared/debug/useStoredDebugEnabled";
+import { useI18n } from "../../../shared/i18n/I18nProvider";
+import { hasPrimaryModifier } from "../../../shared/platform/keyboard";
 
 type ImageViewerProps = {
   alt: string;
@@ -81,6 +85,7 @@ const nativeEventHandledMark = "__polarbearImageViewerHandled";
 const debugVersion = "ImageViewer DEBUG v20260611-zoom-trace";
 
 export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
+  const { t } = useI18n();
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -102,6 +107,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
     pointerCount: 0,
   });
   const [isDragging, setIsDragging] = useState(false);
+  const debugEnabled = useStoredDebugEnabled();
   const [transform, setTransform] = useState<ImageTransform>(
     transformRef.current,
   );
@@ -117,7 +123,22 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
     computedTransform: "",
   });
 
+  const logImageViewerDebug = useCallback((message: string, details?: unknown) => {
+    if (debugEnabled) {
+      console.info(message, details);
+    }
+  }, [debugEnabled]);
+
+  const warnImageViewerDebug = useCallback((message: string, details?: unknown) => {
+    if (debugEnabled) {
+      console.warn(message, details);
+    }
+  }, [debugEnabled]);
+
   const updateDebugState = useCallback((partial: Partial<DebugState>) => {
+    if (!debugEnabled) {
+      return;
+    }
     setDebugState((previous) => ({
       ...previous,
       ...partial,
@@ -127,7 +148,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       pointerCount: eventStatsRef.current.pointerCount,
       currentScale: transformRef.current.scale,
     }));
-  }, []);
+  }, [debugEnabled]);
 
   const applyTransform = useCallback(
     (nextTransform: ImageTransform, reason = "unknown") => {
@@ -135,7 +156,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       transformRef.current = nextTransform;
       setTransform(nextTransform);
 
-      console.info("[ImageViewerZoom] applyTransform", {
+      logImageViewerDebug("[ImageViewerZoom] applyTransform", {
         reason,
         previousScale: previousTransform.scale,
         nextScale: nextTransform.scale,
@@ -146,7 +167,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       requestAnimationFrame(() => {
         const imageElement = imageRef.current;
         if (!imageElement) {
-          console.warn("[ImageViewerZoom] imageRef missing after transform", {
+          warnImageViewerDebug("[ImageViewerZoom] imageRef missing after transform", {
             reason,
           });
           updateDebugState({
@@ -159,7 +180,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
 
         const computedTransform =
           window.getComputedStyle(imageElement).transform;
-        console.info("[ImageViewerZoom] domTransform", {
+        logImageViewerDebug("[ImageViewerZoom] domTransform", {
           reason,
           inlineTransform: imageElement.style.transform,
           computedTransform,
@@ -175,7 +196,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
         });
       });
     },
-    [updateDebugState],
+    [logImageViewerDebug, updateDebugState, warnImageViewerDebug],
   );
 
   const resetView = useCallback((): boolean => {
@@ -183,7 +204,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
     const imageElement = imageRef.current;
 
     if (!canvasElement || !imageElement || imageElement.naturalWidth === 0) {
-      console.info("[ImageViewerZoom] resetView skipped", {
+      logImageViewerDebug("[ImageViewerZoom] resetView skipped", {
         hasCanvas: Boolean(canvasElement),
         hasImage: Boolean(imageElement),
         naturalWidth: imageElement?.naturalWidth,
@@ -211,7 +232,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       "resetView",
     );
     return true;
-  }, [applyTransform]);
+  }, [applyTransform, logImageViewerDebug]);
 
   useLayoutEffect(() => {
     didInitialFitRef.current = false;
@@ -221,7 +242,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
   }, [resetView, src]);
 
   useEffect(() => {
-    console.info("[ImageViewerZoom] component loaded", {
+    logImageViewerDebug("[ImageViewerZoom] component loaded", {
       debugVersion,
       src,
       alt,
@@ -230,25 +251,16 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
     updateDebugState({
       lastEvent: `${debugVersion} loaded`,
     });
-  }, [alt, src, updateDebugState]);
+  }, [alt, logImageViewerDebug, src, updateDebugState]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  useDismissOnEscape(onClose);
 
   useEffect(() => {
     const overlayElement = overlayRef.current;
     const canvasElement = canvasRef.current;
 
     if (!overlayElement || !canvasElement) {
-      console.warn("[ImageViewerZoom] native listener install skipped", {
+      warnImageViewerDebug("[ImageViewerZoom] native listener install skipped", {
         hasOverlay: Boolean(overlayElement),
         hasCanvas: Boolean(canvasElement),
       });
@@ -283,7 +295,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       const isPinchWheel = isTrackpadPinchWheel(event);
       const eventInfo = getWheelEventInfo(event);
 
-      console.info("[ImageViewerZoom] wheel", {
+      logImageViewerDebug("[ImageViewerZoom] wheel", {
         ...eventInfo,
         isPinchWheel,
         currentScale: currentTransform.scale,
@@ -368,7 +380,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       };
       lastGestureAtRef.current = Date.now();
       eventStatsRef.current.gestureCount += 1;
-      console.info("[ImageViewerZoom] gesturestart", {
+      logImageViewerDebug("[ImageViewerZoom] gesturestart", {
         rawScale: gestureEvent.scale,
         initialScale: currentTransform.scale,
         center,
@@ -401,7 +413,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       lastGestureAtRef.current = Date.now();
 
       if (!gestureState) {
-        console.warn("[ImageViewerZoom] gesturechange without gestureState", {
+        warnImageViewerDebug("[ImageViewerZoom] gesturechange without gestureState", {
           rawScale: gestureEvent.scale,
           currentScale: transformRef.current.scale,
         });
@@ -424,7 +436,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
         nextScale,
       });
 
-      console.info("[ImageViewerZoom] gesturechange", {
+      logImageViewerDebug("[ImageViewerZoom] gesturechange", {
         rawGestureScale,
         gestureZoomSensitivity,
         acceleratedGestureScale,
@@ -459,7 +471,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       event.stopPropagation();
       eventStatsRef.current.gestureCount += 1;
       lastGestureAtRef.current = Date.now();
-      console.info("[ImageViewerZoom] gestureend", {
+      logImageViewerDebug("[ImageViewerZoom] gestureend", {
         currentScale: transformRef.current.scale,
         target: getEventTargetName(event),
       });
@@ -476,7 +488,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       canvasElement,
     ];
 
-    console.info("[ImageViewerZoom] native listeners installed", {
+    logImageViewerDebug("[ImageViewerZoom] native listeners installed", {
       targets: ["window", "document", "overlay", "canvas"],
       listenerOptions,
       wheelZoomIntensity,
@@ -528,13 +540,18 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
           listenerOptions,
         );
       }
-      console.info("[ImageViewerZoom] native listeners removed");
+      logImageViewerDebug("[ImageViewerZoom] native listeners removed");
     };
-  }, [applyTransform, updateDebugState]);
+  }, [
+    applyTransform,
+    logImageViewerDebug,
+    updateDebugState,
+    warnImageViewerDebug,
+  ]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     eventStatsRef.current.pointerCount += 1;
-    console.info("[ImageViewerZoom] pointerdown", {
+    logImageViewerDebug("[ImageViewerZoom] pointerdown", {
       pointerType: event.pointerType,
       button: event.button,
       clientX: event.clientX,
@@ -601,7 +618,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
 
   const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
     eventStatsRef.current.touchCount += 1;
-    console.info("[ImageViewerZoom] touchstart", {
+    logImageViewerDebug("[ImageViewerZoom] touchstart", {
       touchCount: event.touches.length,
       currentScale: transformRef.current.scale,
     });
@@ -649,7 +666,7 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
       nextScale,
     });
 
-    console.info("[ImageViewerZoom] touchmove", {
+    logImageViewerDebug("[ImageViewerZoom] touchmove", {
       nextDistance,
       initialDistance: touchState.initialDistance,
       initialScale: touchState.initialScale,
@@ -671,18 +688,20 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
         <span className="image-viewer-scale">
           {Math.round(transform.scale * 100)}%
         </span>
-        <span
-          className="image-viewer-scale"
-          style={{ color: "#fbbf24", minWidth: 260, textAlign: "left" }}
-          title={debugState.lastEvent}
-        >
-          {debugVersion}
-        </span>
+        {debugEnabled ? (
+          <span
+            className="image-viewer-scale"
+            style={{ color: "#fbbf24", minWidth: 260, textAlign: "left" }}
+            title={debugState.lastEvent}
+          >
+            {debugVersion}
+          </span>
+        ) : null}
         <button type="button" onClick={resetView}>
-          Reset
+          {t("common.reset")}
         </button>
         <button type="button" onClick={onClose}>
-          Close
+          {t("common.close")}
         </button>
       </div>
       <div
@@ -725,30 +744,32 @@ export function ImageViewer({ alt, src, title, onClose }: ImageViewerProps) {
             }
           }}
         />
-        <div
-          style={{
-            position: "absolute",
-            left: 12,
-            bottom: 12,
-            zIndex: 1200,
-            maxWidth: "min(760px, calc(100vw - 24px))",
-            padding: "10px 12px",
-            border: "1px solid rgba(251, 191, 36, 0.5)",
-            borderRadius: 8,
-            color: "#fde68a",
-            background: "rgba(2, 6, 23, 0.88)",
-            fontFamily:
-              '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
-            fontSize: 12,
-            lineHeight: 1.5,
-            pointerEvents: "none",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {`loaded: ${debugState.loadedAt}\nlast: ${debugState.lastEvent}\nscale: ${Math.round(
-            transform.scale * 100,
-          )}% / max ${maxScale * 100}%\ncounts: wheel=${debugState.wheelCount}, gesture=${debugState.gestureCount}, touch=${debugState.touchCount}, pointer=${debugState.pointerCount}\ninline: ${debugState.domTransform || "-"}\ncomputed: ${debugState.computedTransform || "-"}`}
-        </div>
+        {debugEnabled ? (
+          <div
+            style={{
+              position: "absolute",
+              left: 12,
+              bottom: 12,
+              zIndex: 1200,
+              maxWidth: "min(760px, calc(100vw - 24px))",
+              padding: "10px 12px",
+              border: "1px solid rgba(251, 191, 36, 0.5)",
+              borderRadius: 8,
+              color: "#fde68a",
+              background: "rgba(2, 6, 23, 0.88)",
+              fontFamily:
+                '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
+              fontSize: 12,
+              lineHeight: 1.5,
+              pointerEvents: "none",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {`loaded: ${debugState.loadedAt}\nlast: ${debugState.lastEvent}\nscale: ${Math.round(
+              transform.scale * 100,
+            )}% / max ${maxScale * 100}%\ncounts: wheel=${debugState.wheelCount}, gesture=${debugState.gestureCount}, touch=${debugState.touchCount}, pointer=${debugState.pointerCount}\ninline: ${debugState.domTransform || "-"}\ncomputed: ${debugState.computedTransform || "-"}`}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -795,7 +816,7 @@ function shouldHandleViewerEvent(
 }
 
 function isTrackpadPinchWheel(event: WheelEvent): boolean {
-  return event.ctrlKey || event.metaKey || Math.abs(event.deltaZ) > 0;
+  return hasPrimaryModifier(event) || Math.abs(event.deltaZ) > 0;
 }
 
 function getNormalizedWheelZoomDelta(event: WheelEvent): number {

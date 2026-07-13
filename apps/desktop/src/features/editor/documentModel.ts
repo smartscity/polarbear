@@ -17,12 +17,13 @@ export function displayNameForDocumentId(
   workspaceItems: WorkspaceItem[],
   documentTitles: Record<string, string>,
   documentRelativePaths: Record<string, string>,
+  untitledTitle: string,
 ): string {
   if (!documentId) {
-    return "Untitled";
+    return untitledTitle;
   }
   if (isUntitledDocument(documentId)) {
-    return documentTitles[documentId] ?? "Untitled";
+    return documentTitles[documentId] ?? untitledTitle;
   }
 
   const relativePath = documentRelativePathForId(documentId, documentRelativePaths);
@@ -116,12 +117,13 @@ export function extractDocumentStructure(markdownContent: string): DocumentStruc
 export function deriveDefaultMarkdownFileName(
   markdownContent: string,
   fallbackTitle: string,
+  untitledTitle: string,
 ): string {
   const firstHeading = markdownContent
     .split("\n")
     .map((line) => line.replace(/^#{1,6}\s+/, "").trim())
     .find(Boolean);
-  const rawTitle = firstHeading || fallbackTitle || "Untitled";
-  const safeTitle = rawTitle.replace(/[\\/:*?"<>|]/g, " ").trim() || "Untitled";
+  const rawTitle = firstHeading || fallbackTitle || untitledTitle;
+  const safeTitle = rawTitle.replace(/[\\/:*?"<>|]/g, " ").trim() || untitledTitle;
   return /\.(md|markdown)$/i.test(safeTitle) ? safeTitle : `${safeTitle}.md`;
 }

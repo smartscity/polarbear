@@ -29,9 +29,20 @@ import {
   CreateItemDialog,
   type CreateItemType,
 } from "./features/workspace/components/CreateItemDialog";
+import { ExternalFileChangedDialog } from "./features/workspace/components/ExternalFileChangedDialog";
 import { useAppShortcuts } from "./commands/useAppShortcuts";
+import { resolveFileCommandTarget } from "./commands/commandTarget";
 import { useNativeAppMenu } from "./commands/useNativeAppMenu";
-import { applyMarkdownFormat } from "./features/editor/markdown/applyMarkdownFormat";
+import { useEventCallback } from "./shared/hooks/useEventCallback";
+import { quitApp } from "./shared/tauri/quitApp";
+import {
+  getCommandState,
+  type CommandRuntimeContext,
+} from "./commands/commandState";
+import {
+  applyMarkdownFormat,
+  minimalMarkdownDocumentChange,
+} from "./features/editor/markdown/applyMarkdownFormat";
 import { codeFenceTemplate } from "./features/editor/markdown/markdownTemplates";
 import {
   deriveDefaultMarkdownFileName,
@@ -82,9 +93,14 @@ import {
 } from "./features/repository/repositoryApi";
 import {
   findWorkspaceItem,
+  workspaceTreesEqual,
   type WorkspaceDocumentMap,
   type WorkspaceItem,
 } from "./features/workspace/workspaceModel";
+import {
+  useWorkspaceDocumentRevision,
+  type WorkspaceDocumentRevisionTarget,
+} from "./features/workspace/useWorkspaceDocumentRevision";
 import {
   ensureMarkdownFilePath,
   fileNameOf,
@@ -119,7 +135,10 @@ import {
   revealInFileManager,
   saveMarkdownFile,
   saveImageAsset,
+  hasWorkspaceSaveErrorCode,
+  WORKSPACE_SAVE_ERROR_CODES,
   writeMarkdownFile,
+  type MarkdownSaveResult,
 } from "./features/workspace/tauriWorkspaceAdapter";
 import { openNewAppWindow } from "./shared/tauri/openNewAppWindow";
 import { useI18n } from "./shared/i18n/I18nProvider";
@@ -146,7 +165,6 @@ import {
   isNativePinchEndPhase,
   measureAppCanvasSize,
   readAppCanvasSize,
-  readStoredDebugEnabled,
   removePolarbearDebugOverlays,
   resolveScrollableElementFromTarget,
   setAppCanvasZoomingDataset,
@@ -163,6 +181,7 @@ import {
   type NativePinchPayload,
   type ZoomAnchor,
 } from "./features/zoom/appZoomRuntime";
+import { readStoredDebugEnabled } from "./shared/debug/debugSettings";
 import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
 import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
 import { STORAGE_KEYS } from "./shared/constants/storageKeys";
@@ -177,9 +196,14 @@ const initialDocuments: WorkspaceDocumentMap = {
   "untitled:1": "",
 };
 
-const initialDocumentTitles: Record<string, string> = {
-  "untitled:1": "Untitled",
+type ExternalDocumentChange = WorkspaceDocumentRevisionTarget & {
+  reason: "changed" | "deleted";
 };
+
+type ExternalDocumentReference = Pick<
+  WorkspaceDocumentRevisionTarget,
+  "fileId" | "relativePath" | "workspaceRoot"
+>;
 
 export function App() {
   const { t } = useI18n();
@@ -215,12 +239,13 @@ export function App() {
   const [workspaceItems, setWorkspaceItems] = useState(initialWorkspace);
   const [workspaceItemsByRoot, setWorkspaceItemsByRoot] = useState<Record<string, WorkspaceItem[]>>({});
   const [documents, setDocuments] = useState(initialDocuments);
+  const [documentRevisions, setDocumentRevisions] = useState<Record<string, string>>({});
   const [activeFileId, setActiveFileId] = useState("untitled:1");
   const [openFileIds, setOpenFileIds] = useState<string[]>(["untitled:1"]);
   const [documentWorkspaceRoots, setDocumentWorkspaceRoots] = useState<Record<string, string>>({});
   const [documentRelativePaths, setDocumentRelativePaths] = useState<Record<string, string>>({});
   const [documentTitles, setDocumentTitles] = useState<Record<string, string>>(
-    initialDocumentTitles,
+    () => ({ "untitled:1": t("top.untitled") }),
   );
   const [untitledCounter, setUntitledCounter] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("live"); // split、live
@@ -246,6 +271,8 @@ export function App() {
   );
   const [createParentPath, setCreateParentPath] = useState<string | null>(null);
   const [renameItemId, setRenameItemId] = useState<string | null>(null);
+  const [externalDocumentChange, setExternalDocumentChange] =
+    useState<ExternalDocumentChange | null>(null);
   const [isInsertTableDialogOpen, setIsInsertTableDialogOpen] = useState(false);
   const [isInsertCodeFenceDialogOpen, setIsInsertCodeFenceDialogOpen] =
     useState(false);
@@ -275,6 +302,7 @@ export function App() {
   });
   const [isRepositoryBusy, setIsRepositoryBusy] = useState(false);
   const repositoryBusyRef = useRef(false);
+  const quitRequestedRef = useRef(false);
   const dirtyFileIdsRef = useRef(dirtyFileIds);
   const openFileIdsRef = useRef(openFileIds);
   const [statusMessage, setStatusMessage] = useState("");
@@ -291,20 +319,178 @@ export function App() {
   const handleWorkspaceFileTreeRefresh = useCallback(
     (refreshedWorkspaceRoot: string, items: WorkspaceItem[]) => {
       setWorkspaceItems((currentItems) =>
-        JSON.stringify(currentItems) === JSON.stringify(items) ? currentItems : items,
+        workspaceTreesEqual(currentItems, items) ? currentItems : items,
       );
       setWorkspaceItemsByRoot((currentTrees) => {
         const currentItems = currentTrees[refreshedWorkspaceRoot] ?? [];
-        return JSON.stringify(currentItems) === JSON.stringify(items)
+        return workspaceTreesEqual(currentItems, items)
           ? currentTrees
           : { ...currentTrees, [refreshedWorkspaceRoot]: items };
       });
     },
     [],
   );
+
+  const handleExternalDocumentRevisionChange = useCallback(
+    async (changedDocument: WorkspaceDocumentRevisionTarget) => {
+      if (dirtyFileIdsRef.current.has(changedDocument.fileId)) {
+        setExternalDocumentChange({ ...changedDocument, reason: "changed" });
+        setStatusMessage(
+          t("status.externalFileChanged", { path: changedDocument.relativePath }),
+        );
+        return;
+      }
+
+      try {
+        const reloaded = await loadMarkdownFile({
+          workspaceRoot: changedDocument.workspaceRoot,
+          relativePath: changedDocument.relativePath,
+        });
+        if (dirtyFileIdsRef.current.has(changedDocument.fileId)) {
+          return;
+        }
+        setDocuments((currentDocuments) => ({
+          ...currentDocuments,
+          [changedDocument.fileId]: reloaded.markdownContent,
+        }));
+        setDocumentRevisions((currentRevisions) => ({
+          ...currentRevisions,
+          [changedDocument.fileId]: reloaded.revision,
+        }));
+        setStatusMessage(
+          t("status.externalFileReloaded", { path: changedDocument.relativePath }),
+        );
+      } catch (error) {
+        setStatusMessage(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [t],
+  );
+
+  const reloadExternalDocumentFromDisk = useCallback(async () => {
+    const changedDocument = externalDocumentChange;
+    if (!changedDocument) {
+      return;
+    }
+
+    try {
+      const reloaded = await loadMarkdownFile({
+        workspaceRoot: changedDocument.workspaceRoot,
+        relativePath: changedDocument.relativePath,
+      });
+      setDocuments((currentDocuments) => ({
+        ...currentDocuments,
+        [changedDocument.fileId]: reloaded.markdownContent,
+      }));
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [changedDocument.fileId]: reloaded.revision,
+      }));
+      setDirtyFileIds((currentDirtyFileIds) => {
+        const nextDirtyFileIds = new Set(currentDirtyFileIds);
+        nextDirtyFileIds.delete(changedDocument.fileId);
+        return nextDirtyFileIds;
+      });
+      setExternalDocumentChange(null);
+      setStatusMessage(
+        t("status.externalFileReloaded", { path: changedDocument.relativePath }),
+      );
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    }
+  }, [externalDocumentChange, t]);
+
+  const handleExternalDocumentMissing = useCallback(
+    (deletedDocument: WorkspaceDocumentRevisionTarget) => {
+      setExternalDocumentChange({ ...deletedDocument, reason: "deleted" });
+      setStatusMessage(
+        t("status.externalFileDeleted", { path: deletedDocument.relativePath }),
+      );
+    },
+    [t],
+  );
+
+  const reportDocumentSaveError = useCallback(
+    (error: unknown, document: ExternalDocumentReference) => {
+      let reason: ExternalDocumentChange["reason"] | null = null;
+      if (
+        hasWorkspaceSaveErrorCode(
+          error,
+          WORKSPACE_SAVE_ERROR_CODES.documentChanged,
+        )
+      ) {
+        reason = "changed";
+      } else if (
+        hasWorkspaceSaveErrorCode(
+          error,
+          WORKSPACE_SAVE_ERROR_CODES.documentMissing,
+        )
+      ) {
+        reason = "deleted";
+      }
+
+      if (reason && document.fileId === activeFileId) {
+        setExternalDocumentChange({
+          ...document,
+          reason,
+          revision: documentRevisions[document.fileId] ?? "",
+        });
+        setStatusMessage(
+          reason === "changed"
+            ? t("status.externalFileChanged", { path: document.relativePath })
+            : t("status.externalFileDeleted", { path: document.relativePath }),
+        );
+        return;
+      }
+
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    },
+    [activeFileId, documentRevisions, t],
+  );
+
+  const activeDocumentRevisionTarget = useMemo<WorkspaceDocumentRevisionTarget | null>(() => {
+    const activeDocumentWorkspaceRoot = documentWorkspaceRootForId(
+      activeFileId,
+      documentWorkspaceRoots,
+      workspaceRoot,
+    );
+    const activeDocumentRelativePath = documentRelativePathForId(
+      activeFileId,
+      documentRelativePaths,
+    );
+    const revision = documentRevisions[activeFileId];
+
+    if (
+      isUntitledDocument(activeFileId) ||
+      !activeDocumentWorkspaceRoot ||
+      !activeDocumentRelativePath ||
+      !revision
+    ) {
+      return null;
+    }
+
+    return {
+      fileId: activeFileId,
+      relativePath: activeDocumentRelativePath,
+      revision,
+      workspaceRoot: activeDocumentWorkspaceRoot,
+    };
+  }, [
+    activeFileId,
+    documentRelativePaths,
+    documentRevisions,
+    documentWorkspaceRoots,
+    workspaceRoot,
+  ]);
+
   useWorkspaceFileTreeRefresh({
     workspaceRoot,
     onRefresh: handleWorkspaceFileTreeRefresh,
+  });
+  useWorkspaceDocumentRevision({
+    document: activeDocumentRevisionTarget,
+    onChanged: handleExternalDocumentRevisionChange,
+    onMissing: handleExternalDocumentMissing,
   });
 
   const handleRepositorySyncProgress = useCallback((payload: {
@@ -336,6 +522,7 @@ export function App() {
     workspaceItems,
     documentTitles,
     documentRelativePaths,
+    t("top.untitled"),
   );
   const isDirty = dirtyFileIds.has(activeFileId);
   const documentStructureItems = useMemo(
@@ -348,7 +535,13 @@ export function App() {
       return {
         id: fileId,
         isDirty: dirtyFileIds.has(fileId),
-        name: displayNameForDocumentId(fileId, workspaceItems, documentTitles, documentRelativePaths),
+        name: displayNameForDocumentId(
+          fileId,
+          workspaceItems,
+          documentTitles,
+          documentRelativePaths,
+          t("top.untitled"),
+        ),
       };
     });
 
@@ -1636,6 +1829,7 @@ export function App() {
         [nextWorkspaceRoot]: items,
       }));
       setDocuments({});
+      setDocumentRevisions({});
       setDocumentWorkspaceRoots({});
       setDocumentRelativePaths({});
       setDirtyFileIds(new Set());
@@ -1643,11 +1837,12 @@ export function App() {
       setStatusMessage(t("status.openedWorkspace", { path: nextWorkspaceRoot }));
 
       if (firstFile) {
-        const source = await loadMarkdownFile({
+        const document = await loadMarkdownFile({
           workspaceRoot: nextWorkspaceRoot,
           relativePath: firstFile.id,
         });
-        setDocuments({ [firstFile.id]: source });
+        setDocuments({ [firstFile.id]: document.markdownContent });
+        setDocumentRevisions({ [firstFile.id]: document.revision });
         setDocumentWorkspaceRoots({ [firstFile.id]: nextWorkspaceRoot });
         setDocumentRelativePaths({ [firstFile.id]: firstFile.id });
         setActiveFileId(firstFile.id);
@@ -1705,6 +1900,10 @@ export function App() {
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
         [documentId]: openedFile.markdownContent,
+      }));
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [documentId]: openedFile.revision,
       }));
       setDocumentWorkspaceRoots((currentRoots) => ({
         ...currentRoots,
@@ -1816,9 +2015,7 @@ export function App() {
       setRepositories(repositories);
       setRepositoryBinding(binding);
       if (repositories.length === 0) {
-        setRepositoryError(
-          "No repositories are visible to this token. Give the token access to at least one repository with Metadata read and Contents read/write permissions, then reconnect Cloud Sync.",
-        );
+        setRepositoryError(t("cloud.noVisibleRepositoriesMessage"));
       }
     } catch (error) {
       const message = repositoryErrorMessage(error);
@@ -1826,9 +2023,7 @@ export function App() {
         setRepositoryAccount(null);
         setRepositoryBinding(null);
         setRepositories([]);
-        setRepositoryError(
-          "Your saved Cloud Sync credentials are no longer available. Connect GitHub again to load your repositories.",
-        );
+        setRepositoryError(t("cloud.credentialsUnavailable"));
         setRepositoryDialog("connect");
       } else {
         setRepositoryError(message);
@@ -1850,9 +2045,10 @@ export function App() {
     try {
       const account = await connectRepositoryProvider(params);
       setRepositoryAccount(account);
-      setStatusMessage(
-        `Connected ${repositoryProviderLabel(account.provider)} as ${account.login}.`
-      );
+      setStatusMessage(t("cloud.connectedAsStatus", {
+        account: account.login,
+        provider: repositoryProviderLabel(account.provider),
+      }));
       await openLinkWorkspaceDialog(account);
     } catch (error) {
       const message = repositoryErrorMessage(error);
@@ -1949,11 +2145,16 @@ export function App() {
       if (!relativePath || content === undefined) {
         continue;
       }
-      await saveMarkdownFile({
+      const saved = await saveMarkdownFile({
         workspaceRoot: targetWorkspaceRoot,
         relativePath,
         markdownContent: content,
+        expectedRevision: documentRevisions[fileId],
       });
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [fileId]: saved.revision,
+      }));
     }
     if (dirtyIds.length > 0) {
       setDirtyFileIds((currentDirtyFileIds) => {
@@ -1990,17 +2191,25 @@ export function App() {
     const reloadedEntries = await Promise.all(
       reloadableDocuments.map(async (fileId) => {
         const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-        const content = await loadMarkdownFile({
+        const document = await loadMarkdownFile({
           workspaceRoot: targetWorkspaceRoot,
           relativePath,
         });
-        return [fileId, content] as const;
+        return [fileId, document] as const;
       }),
     );
     if (reloadedEntries.length > 0) {
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
-        ...Object.fromEntries(reloadedEntries),
+        ...Object.fromEntries(
+          reloadedEntries.map(([fileId, document]) => [fileId, document.markdownContent]),
+        ),
+      }));
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        ...Object.fromEntries(
+          reloadedEntries.map(([fileId, document]) => [fileId, document.revision]),
+        ),
       }));
     }
   };
@@ -2031,8 +2240,8 @@ export function App() {
 
   const refreshSyncStatus = async () => {
     showRepositoryOperation(
-      "Checking Cloud Sync",
-      "Checking local and remote changes...",
+      t("status.checkingCloudSyncTitle"),
+      t("status.checkingCloudSyncMessage"),
       true,
     );
     setIsRepositoryBusy(true);
@@ -2131,8 +2340,11 @@ export function App() {
 
   const createUntitledDocument = () => {
     const nextUntitledNumber = untitledCounter + 1;
+    const baseTitle = t("top.untitled");
     const title =
-      nextUntitledNumber === 1 ? "Untitled" : `Untitled ${nextUntitledNumber}`;
+      nextUntitledNumber === 1
+        ? baseTitle
+        : `${baseTitle} ${nextUntitledNumber}`;
     const documentId = `untitled:${nextUntitledNumber}`;
 
     setUntitledCounter(nextUntitledNumber);
@@ -2181,13 +2393,17 @@ export function App() {
     }
 
     try {
-      const source = await loadMarkdownFile({
+      const document = await loadMarkdownFile({
         workspaceRoot,
         relativePath: fileId,
       });
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
-        [documentId]: source,
+        [documentId]: document.markdownContent,
+      }));
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [documentId]: document.revision,
       }));
       setStatusMessage(t("status.loadedPath", { path: fileId }));
     } catch (error) {
@@ -2237,13 +2453,17 @@ export function App() {
     }
 
     try {
-      const source = await loadMarkdownFile({
+      const document = await loadMarkdownFile({
         workspaceRoot: nextWorkspaceRoot,
         relativePath: nextRelativePath,
       });
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
-        [fileId]: source,
+        [fileId]: document.markdownContent,
+      }));
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [fileId]: document.revision,
       }));
       setStatusMessage(t("status.loadedPath", { path: nextRelativePath }));
     } catch (error) {
@@ -2272,7 +2492,7 @@ export function App() {
 
     if (isUntitledDocument(fileId)) {
       const selectedPath = await chooseMarkdownSavePath(
-        deriveDefaultMarkdownFileName(content, tabName),
+        deriveDefaultMarkdownFileName(content, tabName, t("top.untitled")),
       );
       if (!selectedPath) {
         setStatusMessage(t("status.saveCancelled"));
@@ -2280,7 +2500,7 @@ export function App() {
       }
 
       const markdownFilePath = ensureMarkdownFilePath(selectedPath);
-      await writeMarkdownFile({
+      const saved = await writeMarkdownFile({
         filePath: markdownFilePath,
         markdownContent: content,
       });
@@ -2306,6 +2526,12 @@ export function App() {
         delete nextDocuments[fileId];
         nextDocuments[nextDocumentId] = content;
         return nextDocuments;
+      });
+      setDocumentRevisions((currentRevisions) => {
+        const nextRevisions = { ...currentRevisions };
+        delete nextRevisions[fileId];
+        nextRevisions[nextDocumentId] = saved.revision;
+        return nextRevisions;
       });
       setDocumentTitles((currentTitles) => {
         const nextTitles = { ...currentTitles };
@@ -2357,11 +2583,26 @@ export function App() {
       return null;
     }
 
-    await saveMarkdownFile({
-      workspaceRoot: tabWorkspaceRoot,
-      relativePath: tabRelativePath,
-      markdownContent: content,
-    });
+    let saved: MarkdownSaveResult;
+    try {
+      saved = await saveMarkdownFile({
+        workspaceRoot: tabWorkspaceRoot,
+        relativePath: tabRelativePath,
+        markdownContent: content,
+        expectedRevision: documentRevisions[fileId],
+      });
+    } catch (error) {
+      reportDocumentSaveError(error, {
+        fileId,
+        relativePath: tabRelativePath,
+        workspaceRoot: tabWorkspaceRoot,
+      });
+      return null;
+    }
+    setDocumentRevisions((currentRevisions) => ({
+      ...currentRevisions,
+      [fileId]: saved.revision,
+    }));
     setDirtyFileIds((currentDirtyFileIds) => {
       const nextDirtyFileIds = new Set(currentDirtyFileIds);
       nextDirtyFileIds.delete(fileId);
@@ -2378,7 +2619,7 @@ export function App() {
     }
 
     const tabItem = findWorkspaceItem(workspaceItems, fileId);
-    const tabName = tabItem?.name ?? documentTitles[fileId] ?? "Untitled";
+    const tabName = tabItem?.name ?? documentTitles[fileId] ?? t("top.untitled");
     let fileIdToClose = fileId;
 
     if (dirtyFileIds.has(fileId)) {
@@ -2424,30 +2665,42 @@ export function App() {
       delete nextDocuments[fileIdToClose];
       return nextDocuments;
     });
-      setDocumentTitles((currentTitles) => {
-        const nextTitles = { ...currentTitles };
-        delete nextTitles[fileId];
-        delete nextTitles[fileIdToClose];
-        return nextTitles;
-      });
-      setDocumentWorkspaceRoots((currentRoots) => {
-        const nextRoots = { ...currentRoots };
-        delete nextRoots[fileId];
-        delete nextRoots[fileIdToClose];
-        return nextRoots;
-      });
-      setDocumentRelativePaths((currentPaths) => {
-        const nextPaths = { ...currentPaths };
-        delete nextPaths[fileId];
-        delete nextPaths[fileIdToClose];
-        return nextPaths;
-      });
+    setDocumentRevisions((currentRevisions) => {
+      const nextRevisions = { ...currentRevisions };
+      delete nextRevisions[fileId];
+      delete nextRevisions[fileIdToClose];
+      return nextRevisions;
+    });
+    setDocumentTitles((currentTitles) => {
+      const nextTitles = { ...currentTitles };
+      delete nextTitles[fileId];
+      delete nextTitles[fileIdToClose];
+      return nextTitles;
+    });
+    setDocumentWorkspaceRoots((currentRoots) => {
+      const nextRoots = { ...currentRoots };
+      delete nextRoots[fileId];
+      delete nextRoots[fileIdToClose];
+      return nextRoots;
+    });
+    setDocumentRelativePaths((currentPaths) => {
+      const nextPaths = { ...currentPaths };
+      delete nextPaths[fileId];
+      delete nextPaths[fileIdToClose];
+      return nextPaths;
+    });
     setDirtyFileIds((currentDirtyFileIds) => {
       const nextDirtyFileIds = new Set(currentDirtyFileIds);
       nextDirtyFileIds.delete(fileId);
       nextDirtyFileIds.delete(fileIdToClose);
       return nextDirtyFileIds;
     });
+    setExternalDocumentChange((currentChange) =>
+      currentChange &&
+      (currentChange.fileId === fileId || currentChange.fileId === fileIdToClose)
+        ? null
+        : currentChange,
+    );
 
     if (nextActiveFileId) {
       setActiveFileId(nextActiveFileId);
@@ -2460,6 +2713,58 @@ export function App() {
 
     setStatusMessage(t("status.closedPath", { path: tabName }));
   };
+
+  const requestAppQuit = useEventCallback(async () => {
+    if (quitRequestedRef.current) {
+      return;
+    }
+    quitRequestedRef.current = true;
+
+    try {
+      const dirtyDocumentIds = openFileIds.filter((fileId) => dirtyFileIds.has(fileId));
+      if (dirtyDocumentIds.length > 0) {
+        const shouldSave = await ask(t("dialog.saveBeforeQuitting"), {
+          kind: "warning",
+          title: t("dialog.quitTitle"),
+        });
+
+        if (shouldSave) {
+          for (const fileId of dirtyDocumentIds) {
+            const savedFileId = await saveTab(fileId);
+            if (!savedFileId) {
+              quitRequestedRef.current = false;
+              return;
+            }
+          }
+        }
+      }
+
+      await quitApp();
+    } catch (error) {
+      quitRequestedRef.current = false;
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    }
+  });
+
+  useEffect(() => {
+    let disposed = false;
+    let unlistenWindowCloseRequest: UnlistenFn | null = null;
+
+    void listen(APP_EVENTS.windowCloseRequested, () => {
+      void requestAppQuit();
+    }).then((unlisten) => {
+      if (disposed) {
+        unlisten();
+        return;
+      }
+      unlistenWindowCloseRequest = unlisten;
+    });
+
+    return () => {
+      disposed = true;
+      unlistenWindowCloseRequest?.();
+    };
+  }, [requestAppQuit]);
 
   const saveActiveFile = async (): Promise<boolean> => {
     if (isUntitledDocument(activeFileId)) {
@@ -2484,11 +2789,16 @@ export function App() {
     }
 
     try {
-      await saveMarkdownFile({
+      const saved = await saveMarkdownFile({
         workspaceRoot: saveWorkspaceRoot,
         relativePath: saveRelativePath,
         markdownContent,
+        expectedRevision: documentRevisions[activeFileId],
       });
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [activeFileId]: saved.revision,
+      }));
       setDirtyFileIds((currentDirtyFileIds) => {
         const nextDirtyFileIds = new Set(currentDirtyFileIds);
         nextDirtyFileIds.delete(activeFileId);
@@ -2498,7 +2808,11 @@ export function App() {
       setStatusMessage(t("status.savedPath", { path: saveRelativePath }));
       return true;
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      reportDocumentSaveError(error, {
+        fileId: activeFileId,
+        relativePath: saveRelativePath,
+        workspaceRoot: saveWorkspaceRoot,
+      });
       return false;
     }
   };
@@ -2513,6 +2827,7 @@ export function App() {
       const defaultFileName = deriveDefaultMarkdownFileName(
         markdownContent,
         activeFileName,
+        t("top.untitled"),
       );
       const selectedPath = await chooseMarkdownSavePath(defaultFileName);
 
@@ -2522,7 +2837,7 @@ export function App() {
       }
 
       const markdownFilePath = ensureMarkdownFilePath(selectedPath);
-      await writeMarkdownFile({
+      const saved = await writeMarkdownFile({
         filePath: markdownFilePath,
         markdownContent,
       });
@@ -2548,6 +2863,12 @@ export function App() {
         delete nextDocuments[activeFileId];
         nextDocuments[nextDocumentId] = markdownContent;
         return nextDocuments;
+      });
+      setDocumentRevisions((currentRevisions) => {
+        const nextRevisions = { ...currentRevisions };
+        delete nextRevisions[activeFileId];
+        nextRevisions[nextDocumentId] = saved.revision;
+        return nextRevisions;
       });
       setDocumentTitles((currentTitles) => {
         const nextTitles = { ...currentTitles };
@@ -2585,6 +2906,13 @@ export function App() {
     }
   };
 
+  const saveDeletedExternalDocumentAs = async () => {
+    const didSave = await saveActiveFileAs();
+    if (didSave) {
+      setExternalDocumentChange(null);
+    }
+  };
+
   const revealFolder = (folderId: string | null) => {
     if (!folderId) {
       return;
@@ -2618,7 +2946,7 @@ export function App() {
         relativePath,
       });
       const items = await listWorkspaceFiles(workspaceRoot);
-      const source = await loadMarkdownFile({
+      const document = await loadMarkdownFile({
         workspaceRoot,
         relativePath,
       });
@@ -2630,7 +2958,11 @@ export function App() {
       }));
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
-        [relativePath]: source,
+        [relativePath]: document.markdownContent,
+      }));
+      setDocumentRevisions((currentRevisions) => ({
+        ...currentRevisions,
+        [relativePath]: document.revision,
       }));
       setDocumentWorkspaceRoots((currentRoots) => ({
         ...currentRoots,
@@ -2776,7 +3108,7 @@ export function App() {
     }
 
     const confirmed = await ask(
-      `Delete ${targetItem.name}? This action cannot be undone.`,
+      t("dialog.deleteWorkspaceMessage", { name: targetItem.name }),
       { kind: "warning", title: t("dialog.deleteWorkspaceTitle") },
     );
     if (!confirmed) {
@@ -2818,6 +3150,19 @@ export function App() {
           }),
         ),
       );
+      setDocumentRevisions((currentRevisions) =>
+        Object.fromEntries(
+          Object.entries(currentRevisions).filter(([fileId]) => {
+            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
+            const root = documentWorkspaceRootForId(
+              fileId,
+              documentWorkspaceRoots,
+              workspaceRoot,
+            );
+            return root !== workspaceRoot || !isDeletedPath(relativePath);
+          }),
+        ),
+      );
       setDirtyFileIds((currentDirtyIds) =>
         new Set(
           Array.from(currentDirtyIds).filter((fileId) => {
@@ -2830,6 +3175,13 @@ export function App() {
             return root !== workspaceRoot || !isDeletedPath(relativePath);
           }),
         ),
+      );
+      setExternalDocumentChange((currentChange) =>
+        currentChange &&
+        currentChange.workspaceRoot === workspaceRoot &&
+        isDeletedPath(currentChange.relativePath)
+          ? null
+          : currentChange,
       );
       setDocumentWorkspaceRoots((currentRoots) =>
         Object.fromEntries(
@@ -2918,6 +3270,13 @@ export function App() {
           response.newRelativePath,
         ),
       );
+      setDocumentRevisions((currentRevisions) =>
+        remapDocumentPaths(
+          currentRevisions,
+          response.oldRelativePath,
+          response.newRelativePath,
+        ),
+      );
       setDirtyFileIds((currentDirtyFileIds) =>
         remapDirtyFileIds(
           currentDirtyFileIds,
@@ -2951,7 +3310,10 @@ export function App() {
         remapDocumentMetadataPaths(currentPaths, response.oldRelativePath, response.newRelativePath),
       );
       setStatusMessage(
-        `Renamed ${response.oldRelativePath} to ${response.newRelativePath}`,
+        t("status.renamedPath", {
+          from: response.oldRelativePath,
+          to: response.newRelativePath,
+        }),
       );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
@@ -2992,6 +3354,13 @@ export function App() {
           response.newRelativePath,
         ),
       );
+      setDocumentRevisions((currentRevisions) =>
+        remapDocumentPaths(
+          currentRevisions,
+          response.oldRelativePath,
+          response.newRelativePath,
+        ),
+      );
       setDirtyFileIds((currentDirtyFileIds) =>
         remapDirtyFileIds(
           currentDirtyFileIds,
@@ -3026,7 +3395,10 @@ export function App() {
       );
       revealFolder(targetParentPath);
       setStatusMessage(
-        `Moved ${response.oldRelativePath} to ${response.newRelativePath}`,
+        t("status.movedPath", {
+          from: response.oldRelativePath,
+          to: response.newRelativePath,
+        }),
       );
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
@@ -3049,12 +3421,13 @@ export function App() {
       return;
     }
 
+    const change = minimalMarkdownDocumentChange(text, edit.nextText);
+    if (!change) {
+      return;
+    }
+
     editorView.dispatch({
-      changes: {
-        from: 0,
-        to: text.length,
-        insert: edit.nextText,
-      },
+      changes: change,
       selection: {
         anchor: edit.selectionAnchor,
         head: edit.selectionHead,
@@ -3216,19 +3589,54 @@ export function App() {
     }
   };
 
-  const executeCommand: ExecuteAppCommand = (
+  const commandRuntimeContext = useMemo<CommandRuntimeContext>(() => ({
+    activeDocumentId: activeFileId,
+    activeViewMode: viewMode,
+    repositoryBusy: isRepositoryBusy,
+    repositoryConnected: Boolean(repositoryAccount),
+    repositoryLinked: Boolean(repositoryBinding),
+    selectedTreeItemId,
+    sidebarOpen,
+    theme: themeName,
+    workspaceOpen: Boolean(workspaceRoot),
+  }), [
+    activeFileId,
+    isRepositoryBusy,
+    repositoryAccount,
+    repositoryBinding,
+    selectedTreeItemId,
+    sidebarOpen,
+    themeName,
+    viewMode,
+    workspaceRoot,
+  ]);
+
+  const executeCommand: ExecuteAppCommand = useEventCallback((
     command: AppCommand,
     payload?: AppCommandPayload,
   ) => {
+      if (!getCommandState(command, commandRuntimeContext).enabled) {
+        return;
+      }
+
       const targetPath = payload?.targetPath;
       const targetItem = targetPath
         ? findWorkspaceItem(workspaceItems, targetPath)
         : null;
       const parentPath = targetItem?.type === "folder" ? targetItem.id : null;
-      const commandTargetPath = targetPath ?? activeFileId;
+      const commandTargetPath = resolveFileCommandTarget({
+        activeFileId,
+        selectedTreeItemId,
+        targetPath,
+      });
 
       if (command === "app.about") {
         setIsAboutDialogOpen(true);
+        return;
+      }
+
+      if (command === "app.quit") {
+        void requestAppQuit();
         return;
       }
 
@@ -3488,10 +3896,11 @@ export function App() {
       setStatusMessage(
         t("status.commandReserved", { command }),
       );
-  };
+  });
 
-  useAppShortcuts(executeCommand);
+  useAppShortcuts(executeCommand, commandRuntimeContext);
   useNativeAppMenu(executeCommand, {
+    commandContext: commandRuntimeContext,
     repositoryAccount,
     repositoryBinding,
   });
@@ -3592,6 +4001,7 @@ export function App() {
                     {viewMode === "edit" || viewMode === "split" ? (
                       <MarkdownEditor
                         markdownContent={markdownContent}
+                        onCommand={executeCommand}
                         onEditorReady={(editorView) => {
                           editorViewRef.current = editorView;
                         }}
@@ -3705,6 +4115,15 @@ export function App() {
           message={repositoryOperation.message}
           title={repositoryOperation.title}
           onClose={() => setRepositoryDialog(null)}
+        />
+      ) : null}
+      {externalDocumentChange ? (
+        <ExternalFileChangedDialog
+          path={externalDocumentChange.relativePath}
+          reason={externalDocumentChange.reason}
+          onKeepEditing={() => setExternalDocumentChange(null)}
+          onReloadFromDisk={() => void reloadExternalDocumentFromDisk()}
+          onSaveAs={() => void saveDeletedExternalDocumentAs()}
         />
       ) : null}
       {isAboutDialogOpen ? (

@@ -6,7 +6,7 @@ import { APP_EVENTS } from "../events/appEvents";
 export const USER_SETTINGS_VERSION = 2;
 
 export type KeybindingOverrides = Partial<Record<AppCommand, string | null>>;
-export type LanguagePreference = "system" | "en" | "zh-CN";
+export type LanguagePreference = string;
 export type ThemePreference = "system" | "light" | "dark";
 
 export type UserSettings = {
@@ -98,7 +98,9 @@ function settingsFromLegacyPreferences(settings: UserSettings): UserSettings {
 }
 
 function isLanguagePreference(value: unknown): value is LanguagePreference {
-  return value === "system" || value === "en" || value === "zh-CN";
+  return typeof value === "string" && (
+    value === "system" || /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(value)
+  );
 }
 
 function isThemePreference(value: unknown): value is ThemePreference {

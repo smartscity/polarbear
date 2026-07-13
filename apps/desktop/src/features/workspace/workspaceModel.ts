@@ -7,6 +7,32 @@ export type WorkspaceItem = {
 
 export type WorkspaceDocumentMap = Record<string, string>;
 
+/**
+ * Compares the filesystem tree structurally without serializing it on every
+ * polling interval. Item ordering remains significant because it is the order
+ * displayed in the file tree.
+ */
+export function workspaceTreesEqual(
+  left: WorkspaceItem[],
+  right: WorkspaceItem[],
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((item, index) => {
+    const other = right[index];
+    if (!other || item.id !== other.id || item.name !== other.name || item.type !== other.type) {
+      return false;
+    }
+
+    return workspaceTreesEqual(item.children ?? [], other.children ?? []);
+  });
+}
+
 export function findWorkspaceItem(
   items: WorkspaceItem[],
   itemId: string

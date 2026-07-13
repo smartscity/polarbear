@@ -1340,6 +1340,34 @@ button:disabled {
   opacity: 1;
 }
 
+.plantuml-remote-consent {
+  min-height: 150px;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: #a9b4c5;
+  text-align: center;
+  border: 1px dashed rgba(167, 139, 250, 0.38);
+  border-radius: 8px;
+  background: rgba(49, 46, 129, 0.12);
+}
+
+.plantuml-remote-consent button {
+  min-height: 30px;
+  padding: 0 12px;
+  color: #f5f3ff;
+  border: 1px solid rgba(167, 139, 250, 0.58);
+  border-radius: 5px;
+  background: rgba(109, 40, 217, 0.45);
+  cursor: pointer;
+}
+
+.plantuml-remote-consent button:hover {
+  background: rgba(124, 58, 237, 0.62);
+}
+
 .plantuml-error {
   padding: 14px;
   border: 1px solid rgba(248, 113, 113, 0.5);

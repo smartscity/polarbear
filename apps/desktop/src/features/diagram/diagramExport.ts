@@ -8,7 +8,7 @@ export function exportSvgElementAsSvg(svg: SVGSVGElement, diagramId: string): vo
   void (async () => {
     const selectedPath = await save({
       defaultPath: `${safeDiagramFileBase(diagramId)}.svg`,
-      filters: [{ name: "SVG Image", extensions: ["svg"] }],
+      filters: [{ name: translateCurrent("diagram.fileTypeSvg"), extensions: ["svg"] }],
       title: translateCurrent("diagram.exportSvg"),
     });
     if (!selectedPath) return;
@@ -24,7 +24,7 @@ export function exportSvgElementAsPng(svg: SVGSVGElement, diagramId: string): vo
   void (async () => {
     const selectedPath = await save({
       defaultPath: `${safeDiagramFileBase(diagramId)}.png`,
-      filters: [{ name: "PNG Image", extensions: ["png"] }],
+      filters: [{ name: translateCurrent("diagram.fileTypePng"), extensions: ["png"] }],
       title: translateCurrent("diagram.exportPng"),
     });
     if (!selectedPath) return;

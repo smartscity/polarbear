@@ -1,6 +1,7 @@
 import { APP_ZOOM_CONFIG } from "./appZoomConfig";
 import { STORAGE_KEYS } from "../../shared/constants/storageKeys";
 import { translateCurrent } from "../../shared/i18n/translate";
+import { hasPrimaryModifier } from "../../shared/platform/keyboard";
 
 export const NORMAL_APP_ZOOM = APP_ZOOM_CONFIG.normal;
 export const MIN_COMMITTED_APP_ZOOM = APP_ZOOM_CONFIG.minimum;
@@ -34,7 +35,7 @@ export function clampCommittedZoom(value: number): number {
 }
 
 export function isAppZoomWheelEvent(event: WheelEvent): boolean {
-  return (event.metaKey || event.ctrlKey) && Math.abs(event.deltaY) > Math.abs(event.deltaX);
+  return hasPrimaryModifier(event) && Math.abs(event.deltaY) > Math.abs(event.deltaX);
 }
 
 export function consumeAppZoomWheelEvent(event: WheelEvent): void {
@@ -52,14 +53,6 @@ export function consumeAppZoomPointerEvent(event: Event): void {
 function isAppZoomDebugOverlayEnabled(): boolean {
   try {
     return window.localStorage.getItem(STORAGE_KEYS.liveDebugScroll) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function readStoredDebugEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(STORAGE_KEYS.debug) === "1";
   } catch {
     return false;
   }
@@ -384,4 +377,3 @@ export function isNativePinchEndPhase(phase: unknown): boolean {
     "failed",
   ].includes(phase.toLowerCase());
 }
-

@@ -229,6 +229,7 @@ export function FileTree({
   return (
     <div
       ref={treeShellRef}
+      data-file-tree="true"
       className={`workspace-tree-shell ${dropTargetId === "" ? "drop-target" : ""}`}
       onContextMenu={(event) =>
         openContextMenu(event, {
@@ -237,20 +238,6 @@ export function FileTree({
           y: event.clientY
         })
       }
-      onKeyDown={(event) => {
-        if ((event.key === "F2" || event.key === "Enter") && selectedTreeItemId) {
-          event.preventDefault();
-          executeCommand("file.rename", { targetPath: selectedTreeItemId });
-          return;
-        }
-        if (
-          (event.key === "Delete" || event.key === "Backspace") &&
-          selectedTreeItemId
-        ) {
-          event.preventDefault();
-          executeCommand("file.delete", { targetPath: selectedTreeItemId });
-        }
-      }}
       onDragOver={(event) => {
         if (
           getDraggedPath(event) &&
@@ -286,13 +273,6 @@ export function FileTree({
       const isCollapsed = collapsedFolderIds.has(item.id);
       const isRenaming = renameItemId === item.id;
       const isSelected = selectedTreeItemId === item.id;
-      const handleRenameKeyDown = (event: KeyboardEvent) => {
-        if (event.key === "F2" || event.key === "Enter") {
-          event.preventDefault();
-          executeCommand("file.rename", { targetPath: item.id });
-        }
-      };
-
       return (
         <li key={item.id}>
           {item.type === "folder" ? (
@@ -384,7 +364,6 @@ export function FileTree({
                   event.preventDefault();
                   executeCommand("file.rename", { targetPath: item.id });
                 }}
-                onKeyDown={handleRenameKeyDown}
                 onContextMenu={(event) =>
                   openContextMenu(event, {
                     target: { type: "item", item },
@@ -444,7 +423,6 @@ export function FileTree({
                 event.preventDefault();
                 executeCommand("file.rename", { targetPath: item.id });
               }}
-              onKeyDown={handleRenameKeyDown}
               onContextMenu={(event) =>
                 openContextMenu(event, {
                   target: { type: "item", item },

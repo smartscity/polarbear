@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import { useDismissOnEscape } from "../../../shared/hooks/useDismissOnEscape";
 
 const languages = [
   "text",
@@ -28,16 +29,7 @@ export function InsertCodeFenceDialog({
   const { t } = useI18n();
   const [language, setLanguage] = useState("text");
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onCancel();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+  useDismissOnEscape(onCancel);
 
   return (
     <section className="create-dialog-overlay" role="dialog" aria-modal="true">

@@ -3,6 +3,7 @@ import {
   resolveMarkdownAsset,
   type ResolveMarkdownAssetResponse
 } from "../../workspace/tauriWorkspaceAdapter";
+import { useI18n } from "../../../shared/i18n/I18nProvider";
 import { ImageViewer } from "./ImageViewer";
 
 type MarkdownImageProps = {
@@ -29,6 +30,7 @@ export function MarkdownImage({
   workspaceRoot,
   onDelete
 }: MarkdownImageProps) {
+  const { t } = useI18n();
   const [imageState, setImageState] = useState<ImageState>({ status: "loading" });
   const [isSelected, setIsSelected] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -39,7 +41,7 @@ export function MarkdownImage({
 
     async function resolveImage() {
       if (!src.trim()) {
-        setImageState({ status: "error", message: "Image source is empty." });
+        setImageState({ status: "error", message: t("diagram.imageSourceMissing") });
         return;
       }
 
@@ -51,7 +53,7 @@ export function MarkdownImage({
       if (!workspaceRoot || !activeFileId) {
         setImageState({
           status: "error",
-          message: "Open a saved workspace file to preview local images."
+          message: t("diagram.imageNeedsSavedFile", { source: src }),
         });
         return;
       }
@@ -72,7 +74,7 @@ export function MarkdownImage({
         if (!response.exists || !response.assetUrl) {
           setImageState({
             status: "error",
-            message: response.error ?? `Image not found: ${src}`
+            message: response.error ?? t("diagram.imageNotFound", { source: src })
           });
           return;
         }
@@ -97,12 +99,12 @@ export function MarkdownImage({
     return () => {
       isMounted = false;
     };
-  }, [activeFileId, directSource, src, workspaceRoot]);
+  }, [activeFileId, directSource, src, t, workspaceRoot]);
 
   if (imageState.status === "loading") {
     return (
       <figure className="markdown-image-card markdown-image-loading">
-        <span>Loading image: {src}</span>
+        <span>{t("diagram.imageLoading", { source: src })}</span>
       </figure>
     );
   }

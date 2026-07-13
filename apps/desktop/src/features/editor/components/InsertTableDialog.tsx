@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import { useDismissOnEscape } from "../../../shared/hooks/useDismissOnEscape";
 import { TABLE_UI } from "../table/tableConstants";
 
 type InsertTableDialogProps = {
@@ -52,16 +53,7 @@ export function InsertTableDialog({
     updateGridSelection(next.row, next.column, true);
   };
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onCancel();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+  useDismissOnEscape(onCancel);
 
   return (
     <section className="create-dialog-overlay" role="dialog" aria-modal="true">

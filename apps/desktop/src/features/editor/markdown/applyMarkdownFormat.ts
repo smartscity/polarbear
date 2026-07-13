@@ -6,6 +6,12 @@ export type MarkdownTextEdit = {
   selectionHead?: number;
 };
 
+export type MarkdownDocumentChange = {
+  from: number;
+  insert: string;
+  to: number;
+};
+
 type SelectionRange = {
   from: number;
   to: number;
@@ -86,6 +92,46 @@ export function applyMarkdownFormat(
   }
 
   return null;
+}
+
+/**
+ * Keeps editor formatting transactions local. Replacing a whole CodeMirror
+ * document for a two-character wrapper invalidates more layout state than the
+ * command actually changed and makes scroll/selection restoration fragile.
+ */
+export function minimalMarkdownDocumentChange(
+  previousText: string,
+  nextText: string,
+): MarkdownDocumentChange | null {
+  if (previousText === nextText) {
+    return null;
+  }
+
+  let from = 0;
+  const sharedPrefixLength = Math.min(previousText.length, nextText.length);
+  while (
+    from < sharedPrefixLength &&
+    previousText.charCodeAt(from) === nextText.charCodeAt(from)
+  ) {
+    from += 1;
+  }
+
+  let previousTo = previousText.length;
+  let nextTo = nextText.length;
+  while (
+    previousTo > from &&
+    nextTo > from &&
+    previousText.charCodeAt(previousTo - 1) === nextText.charCodeAt(nextTo - 1)
+  ) {
+    previousTo -= 1;
+    nextTo -= 1;
+  }
+
+  return {
+    from,
+    insert: nextText.slice(from, nextTo),
+    to: previousTo,
+  };
 }
 
 function replaceCurrentLinePrefix(

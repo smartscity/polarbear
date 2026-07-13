@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import { useDismissOnEscape } from "../../../shared/hooks/useDismissOnEscape";
 
 export type CreateItemType = "file" | "folder";
 
@@ -23,16 +24,7 @@ export function CreateItemDialog({
     setName(defaultName);
   }, [defaultName]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onCancel();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+  useDismissOnEscape(onCancel);
 
   const title =
     itemType === "file" ? t("create.fileTitle") : t("create.folderTitle");

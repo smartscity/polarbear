@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  deriveDefaultMarkdownFileName,
+  displayNameForDocumentId,
   extractDocumentStructure,
   findOpenDocumentIdForWorkspaceFile,
   makeWorkspaceDocumentId,
@@ -31,5 +33,10 @@ describe("documentModel", () => {
       "/two",
       "README.md",
     )).toBe("tab-b");
+  });
+
+  it("receives the localized untitled label from the UI boundary", () => {
+    expect(displayNameForDocumentId("", [], {}, {}, "未命名")).toBe("未命名");
+    expect(deriveDefaultMarkdownFileName("", "", "未命名")).toBe("未命名.md");
   });
 });

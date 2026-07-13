@@ -1,11 +1,15 @@
 import { EditorSelection, Prec } from "@codemirror/state";
 import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
 
-export function macNavigationKeymap() {
-  return Prec.highest(keymap.of(macNavigationKeyBindings()));
+export function platformNavigationKeymap() {
+  return Prec.highest(keymap.of(platformNavigationKeyBindings()));
 }
 
-export function macNavigationKeyBindings(): KeyBinding[] {
+/**
+ * CodeMirror's Mod modifier maps to Command on Apple hardware and Control on
+ * other desktop platforms, so these navigation bindings stay platform-neutral.
+ */
+export function platformNavigationKeyBindings(): KeyBinding[] {
   return [
     {
       key: "Mod-ArrowLeft",

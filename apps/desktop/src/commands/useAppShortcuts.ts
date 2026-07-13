@@ -1,14 +1,35 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { ExecuteAppCommand } from "../shared/commands/appCommandTypes";
 import { useUserSettings } from "../shared/settings/useUserSettings";
-import { resolveShortcutDefinitions } from "./keybindingResolver";
+import {
+  getCommandState,
+  type CommandRuntimeContext,
+} from "./commandState";
+import {
+  contextFromKeyboardEventTarget,
+  findKeybindingConflicts,
+  resolveShortcutDefinitions,
+  resolveShortcutForKeyboardEvent,
+} from "./keybindingResolver";
 
-export function useAppShortcuts(executeCommand: ExecuteAppCommand): void {
+export function useAppShortcuts(
+  executeCommand: ExecuteAppCommand,
+  commandContext: CommandRuntimeContext,
+): void {
   const settings = useUserSettings();
+  const commandContextRef = useRef(commandContext);
+  commandContextRef.current = commandContext;
   const shortcuts = useMemo(
     () => resolveShortcutDefinitions(settings.keybindings),
     [settings],
   );
+
+  useEffect(() => {
+    const conflicts = findKeybindingConflicts(shortcuts);
+    if (import.meta.env.DEV && conflicts.length > 0) {
+      console.warn("Polarbear keybinding conflicts", conflicts);
+    }
+  }, [shortcuts]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -16,57 +37,35 @@ export function useAppShortcuts(executeCommand: ExecuteAppCommand): void {
         return;
       }
 
-      const usesModKey = event.metaKey || event.ctrlKey;
+      const context = contextFromKeyboardEventTarget(event.target);
+      const resolved = resolveShortcutForKeyboardEvent(event, shortcuts, context);
+      if (resolved.kind !== "match") {
+        return;
+      }
+      const { shortcut } = resolved;
 
-      if (!usesModKey) {
+      const currentCommandContext = commandContextRef.current;
+      if (!getCommandState(shortcut.command, currentCommandContext).enabled) {
         return;
       }
 
-      const key = event.key.toLowerCase();
-      const codeKey = keyFromKeyboardCode(event.code);
-      const shortcut = shortcuts.find((candidate) => {
-        if (candidate.command === "view.zoomIn" && (key === "+" || key === "=")) {
-          return !event.altKey;
-        }
-
-        return (
-          (candidate.key === key || candidate.key === codeKey) &&
-          Boolean(candidate.altKey) === event.altKey &&
-          Boolean(candidate.shiftKey) === event.shiftKey
-        );
-      });
-
-      if (!shortcut) {
+      if (shortcut.editorHandled && context.editorFocused) {
         return;
       }
-
-      if (shortcut.editorHandled && isInsideCodeMirror(event.target)) {
+      if (shortcut.when === "fileTreeFocus" && !currentCommandContext.selectedTreeItemId) {
         return;
       }
 
       event.preventDefault();
-      executeCommand(shortcut.command, { commandSource: "shortcut" });
+      executeCommand(shortcut.command, {
+        commandSource: "shortcut",
+        targetPath: shortcut.when === "fileTreeFocus"
+          ? currentCommandContext.selectedTreeItemId
+          : undefined,
+      });
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [executeCommand, shortcuts]);
-}
-
-function isInsideCodeMirror(target: EventTarget | null): boolean {
-  return target instanceof Element && Boolean(
-    target.closest(".typora-live-editor-pane .cm-editor"),
-  );
-}
-
-function keyFromKeyboardCode(code: string): string {
-  if (/^Key[A-Z]$/.test(code)) {
-    return code.slice(3).toLowerCase();
-  }
-
-  if (/^Digit[0-9]$/.test(code)) {
-    return code.slice(5);
-  }
-
-  return "";
 }

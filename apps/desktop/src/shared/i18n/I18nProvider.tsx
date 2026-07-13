@@ -10,8 +10,11 @@ import {
 import { updateUserSettings } from "../settings/userSettings";
 import {
   initialLanguage,
+  languageDirection,
+  localeOptions,
   translate,
   type AppLanguage,
+  type LocaleOption,
   type Translate,
 } from "./translate";
 
@@ -24,6 +27,7 @@ export type {
 
 type I18nContextValue = {
   language: AppLanguage;
+  languages: readonly LocaleOption[];
   setLanguage: (language: AppLanguage) => void;
   t: Translate;
 };
@@ -35,6 +39,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = language;
+    document.documentElement.dir = languageDirection(language);
   }, [language]);
 
   const setLanguage = useCallback((nextLanguage: AppLanguage) => {
@@ -52,7 +57,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ language, setLanguage, t }),
+    () => ({ language, languages: localeOptions, setLanguage, t }),
     [language, setLanguage, t]
   );
 

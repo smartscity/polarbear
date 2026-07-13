@@ -9,15 +9,25 @@ export type ShortcutDefinition = {
   command: AppCommand;
   key: string;
   altKey?: boolean;
+  primaryModifier?: boolean;
   shiftKey?: boolean;
   editorHandled?: boolean;
+  priority?: number;
+  when?: CommandShortcutContext;
 };
+
+export type CommandShortcutContext =
+  | "always"
+  | "editorFocus"
+  | "fileTreeFocus"
+  | "tableCellFocus";
 
 type CommandDefinition = {
   titleKey: MessageKey;
   titleValues?: TranslationValues;
   accelerator?: string;
   shortcut?: ShortcutDefinition;
+  shortcuts?: ShortcutDefinition[];
 };
 
 export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
@@ -32,12 +42,30 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "app.quit": {
     titleKey: "menu.quit",
     accelerator: "CmdOrCtrl+Q",
+    shortcut: { key: "q", command: "app.quit" },
   },
   "edit.undo": {
     titleKey: "menu.undo",
+    accelerator: "CmdOrCtrl+Z",
+    shortcut: {
+      key: "z",
+      command: "edit.undo",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "edit.redo": {
     titleKey: "menu.redo",
+    accelerator: "Shift+CmdOrCtrl+Z",
+    shortcut: {
+      key: "z",
+      shiftKey: true,
+      command: "edit.redo",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "edit.cut": {
     titleKey: "menu.cut",
@@ -50,6 +78,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "edit.selectAll": {
     titleKey: "menu.selectAll",
+    accelerator: "CmdOrCtrl+A",
+    shortcut: {
+      key: "a",
+      command: "edit.selectAll",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "file.newFile": {
     titleKey: "menu.new",
@@ -84,9 +120,35 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "file.rename": {
     titleKey: "menu.rename",
+    shortcut: {
+      command: "file.rename",
+      key: "f2",
+      primaryModifier: false,
+      when: "fileTreeFocus",
+    },
+    shortcuts: [{
+      command: "file.rename",
+      key: "enter",
+      primaryModifier: false,
+      when: "fileTreeFocus",
+    }],
   },
   "file.delete": {
     titleKey: "menu.delete",
+    shortcuts: [
+      {
+        command: "file.delete",
+        key: "delete",
+        primaryModifier: false,
+        when: "fileTreeFocus",
+      },
+      {
+        command: "file.delete",
+        key: "backspace",
+        primaryModifier: false,
+        when: "fileTreeFocus",
+      },
+    ],
   },
   "file.duplicate": {
     titleKey: "tree.duplicate",
@@ -157,22 +219,46 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "format.bold": {
     titleKey: "menu.bold",
     accelerator: "CmdOrCtrl+B",
-    shortcut: { key: "b", command: "format.bold", editorHandled: true },
+    shortcut: {
+      key: "b",
+      command: "format.bold",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "format.italic": {
     titleKey: "menu.italic",
     accelerator: "CmdOrCtrl+I",
-    shortcut: { key: "i", command: "format.italic", editorHandled: true },
+    shortcut: {
+      key: "i",
+      command: "format.italic",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "format.underline": {
     titleKey: "menu.underline",
     accelerator: "CmdOrCtrl+U",
-    shortcut: { key: "u", command: "format.underline", editorHandled: true },
+    shortcut: {
+      key: "u",
+      command: "format.underline",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "format.link": {
     titleKey: "menu.link",
     accelerator: "CmdOrCtrl+K",
-    shortcut: { key: "k", command: "format.link", editorHandled: true },
+    shortcut: {
+      key: "k",
+      command: "format.link",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "format.code": {
     titleKey: "menu.inlineCode",
@@ -183,7 +269,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "format.codeFence": {
     titleKey: "menu.codeFence",
     accelerator: "Shift+CmdOrCtrl+K",
-    shortcut: { key: "k", shiftKey: true, command: "format.codeFence", editorHandled: true },
+    shortcut: {
+      key: "k",
+      shiftKey: true,
+      command: "format.codeFence",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "format.insertImage": {
     titleKey: "menu.insertImage",
@@ -193,7 +286,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "format.mathBlock": {
     titleKey: "menu.mathBlock",
     accelerator: "Shift+CmdOrCtrl+M",
-    shortcut: { key: "m", shiftKey: true, command: "format.mathBlock", editorHandled: true },
+    shortcut: {
+      key: "m",
+      shiftKey: true,
+      command: "format.mathBlock",
+      editorHandled: true,
+      priority: 100,
+      when: "editorFocus",
+    },
   },
   "format.quote": {
     titleKey: "menu.quote",
@@ -223,7 +323,7 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "table.row.duplicate": { titleKey: "table.row.duplicate" },
   "table.row.moveUp": { titleKey: "table.row.moveUp" },
   "table.row.moveDown": { titleKey: "table.row.moveDown" },
-  "table.row.move": { titleKey: "table.row.moveDown" },
+  "table.row.move": { titleKey: "table.row.move" },
   "table.row.clear": { titleKey: "table.row.clear" },
   "table.row.delete": { titleKey: "table.row.delete" },
   "table.row.select": { titleKey: "table.row.select" },
@@ -234,7 +334,7 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "table.column.duplicate": { titleKey: "table.column.duplicate" },
   "table.column.moveLeft": { titleKey: "table.column.moveLeft" },
   "table.column.moveRight": { titleKey: "table.column.moveRight" },
-  "table.column.move": { titleKey: "table.column.moveRight" },
+  "table.column.move": { titleKey: "table.column.move" },
   "table.column.autoFit": { titleKey: "table.column.autoFit" },
   "table.column.clear": { titleKey: "table.column.clear" },
   "table.column.delete": { titleKey: "table.column.delete" },
@@ -336,6 +436,8 @@ export function acceleratorForCommand(command: AppCommand): string | undefined {
 
 export function shortcutDefinitions(): ShortcutDefinition[] {
   return Object.values(appCommandRegistry)
-    .map((definition) => definition.shortcut)
-    .filter((shortcut): shortcut is ShortcutDefinition => Boolean(shortcut));
+    .flatMap((definition) => [
+      ...(definition.shortcut ? [definition.shortcut] : []),
+      ...(definition.shortcuts ?? []),
+    ]);
 }

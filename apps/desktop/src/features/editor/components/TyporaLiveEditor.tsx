@@ -15,6 +15,7 @@ import {
   EditorState,
   Prec,
   StateField,
+  Transaction,
   type Range,
   type Text,
 } from "@codemirror/state";
@@ -26,12 +27,14 @@ import {
   keymap,
   type KeyBinding,
 } from "@codemirror/view";
-import mermaid from "mermaid";
 import { DIAGRAM_CONFIG } from "../../diagram/diagramConfig";
+import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
+import { plantUmlSvgUrl } from "../../diagram/plantUmlUrl";
 import { sanitizeDiagramSvg } from "../../diagram/sanitizeDiagramSvg";
 import { STORAGE_KEYS } from "../../../shared/constants/storageKeys";
 import { APP_EVENTS } from "../../../shared/events/appEvents";
 import { translateCurrent } from "../../../shared/i18n/translate";
+import { hasPrimaryModifier } from "../../../shared/platform/keyboard";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
 import { codeMirrorKeyForCommand } from "../../../commands/keybindingResolver";
@@ -41,9 +44,24 @@ import {
   exportSvgElementAsSvg,
   findRenderedSvg,
 } from "../../diagram/diagramExport";
-import { mermaidDiagramConfig } from "../../diagram/mermaidDiagramConfig";
-import { macNavigationKeyBindings } from "./macNavigationKeymap";
+import { platformNavigationKeyBindings } from "./platformNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
+import { renderMathText } from "../markdown/mathText";
+import {
+  isCalloutStartLine,
+  isFrontmatterDelimiter,
+  isHorizontalRuleLine,
+  isHtmlImageOnlyLine,
+  isImageOnlyLine,
+  isMathFenceLine,
+  isRemoteOrDataImage,
+  isTableLine,
+  isTableRowLine,
+  isTableSeparatorLine,
+  parseCodeFenceLine,
+  parseHtmlAttributes,
+  type CodeFenceInfo,
+} from "../markdown/liveMarkdownSyntax";
 import {
   insertLineBreakAtCurrentSelection,
   markdownFromTableCellElement,
@@ -83,6 +101,11 @@ import {
 } from "../table/tableLayoutState";
 import { parseMarkdownTable } from "../table/tableModel";
 import type { TableCellPosition, TableSelection } from "../table/tableTypes";
+import {
+  InlineMathWidget,
+  ListMarkerWidget,
+  TaskListMarkerWidget,
+} from "../widgets/inlineMarkdownWidgets";
 
 type ImagePasteHandler = (
   items: DataTransferItemList,
@@ -105,15 +128,6 @@ type TyporaLiveEditorProps = {
   onImageDrop?: ImageDropHandler;
   onImagePaste?: ImagePasteHandler;
   workspaceRoot: string;
-};
-
-type CodeFenceInfo = {
-  lineFrom: number;
-  lineTo: number;
-  markerTo: number;
-  languageFrom: number;
-  languageTo: number;
-  language: string;
 };
 
 type TyporaDecorationRange = Range<Decoration>;
@@ -732,7 +746,6 @@ const plantUmlRenderCache = new Map<
 >();
 
 
-let mermaidInitialized = false;
 const tablePortalMenuCleanups = new Set<() => void>();
 
 export function TyporaLiveEditor({
@@ -1113,7 +1126,7 @@ export function TyporaLiveEditor({
       {liveDebugEnabled && liveDebugPanelEnabled ? (
         <div className="typora-live-debug-panel">
           <div className="typora-live-debug-header">
-            <strong>Scroll Debug</strong>
+            <strong>{translateCurrent("debug.scrollTitle")}</strong>
             <button
               type="button"
               onClick={() => {
@@ -1181,7 +1194,7 @@ function typoraLiveKeymap(keybindingOverrides: KeybindingOverrides) {
   ].filter((binding): binding is KeyBinding => binding !== null);
 
   return Prec.highest(keymap.of([
-    ...macNavigationKeyBindings(),
+    ...platformNavigationKeyBindings(),
     {
       key: "Mod-Enter",
       preventDefault: true,
@@ -1192,10 +1205,9 @@ function typoraLiveKeymap(keybindingOverrides: KeybindingOverrides) {
       run: handleCodeFenceEnter,
     },
     ...configurableBindings,
-    {
-      key: "Mod-y",
-      run: redo,
-    },
+    ...(keybindingOverrides["edit.redo"] === undefined
+      ? [{ key: "Mod-y", run: redo }]
+      : []),
   ]));
 }
 
@@ -2716,83 +2728,6 @@ function decorateCodeSyntax(
   }
 }
 
-function parseCodeFenceLine(
-  lineFrom: number,
-  lineTo: number,
-  lineText: string,
-): CodeFenceInfo | null {
-  const match = /^(\s*)(`{3,}|~{3,})([^\s`]*)?/.exec(lineText);
-  if (!match) {
-    return null;
-  }
-
-  const markerTo = lineFrom + match[1].length + match[2].length;
-  const language = match[3] ?? "";
-  const languageFrom = markerTo;
-  const languageTo = Math.min(lineTo, languageFrom + language.length);
-
-  return {
-    lineFrom,
-    lineTo,
-    markerTo,
-    languageFrom,
-    languageTo,
-    language,
-  };
-}
-
-function isTableLine(lineText: string): boolean {
-  return /^\s*\|.+\|\s*$/.test(lineText) || /^\s*\|?\s*:?-{3,}:?\s*\|/.test(lineText);
-}
-
-function isTableRowLine(lineText: string): boolean {
-  return /^\s*\|.+\|\s*$/.test(lineText);
-}
-
-function isTableSeparatorLine(lineText: string): boolean {
-  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lineText);
-}
-
-function isImageOnlyLine(lineText: string): boolean {
-  return /^\s*!\[[^\]]*]\([^)]+\)\s*$/.test(lineText);
-}
-
-function isHtmlImageOnlyLine(lineText: string): boolean {
-  return /^\s*<img\b[^>]*>\s*$/i.test(lineText);
-}
-
-function isFrontmatterDelimiter(lineText: string): boolean {
-  return /^\s*---\s*$/.test(lineText);
-}
-
-function isHorizontalRuleLine(lineText: string): boolean {
-  return /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(lineText);
-}
-
-function isMathFenceLine(lineText: string): boolean {
-  return /^\s*\$\$\s*$/.test(lineText);
-}
-
-function isCalloutStartLine(lineText: string): boolean {
-  return /^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)]/i.test(lineText);
-}
-
-function isRemoteOrDataImage(src: string): boolean {
-  return /^(https?:)?\/\//i.test(src) || /^data:image\//i.test(src);
-}
-
-function parseHtmlAttributes(source: string): Record<string, string> {
-  const attributes: Record<string, string> = {};
-  for (const match of source.matchAll(/\s([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
-    const name = match[1]?.toLowerCase();
-    const value = match[2] ?? match[3] ?? match[4] ?? "";
-    if (name) {
-      attributes[name] = value;
-    }
-  }
-  return attributes;
-}
-
 function revealSource(dom: HTMLElement, block: Pick<PreviewBlock, "from">) {
   const view = EditorView.findFromDOM(dom);
   if (!view) {
@@ -2844,134 +2779,12 @@ function scheduleEditorMeasureFromDom(element: HTMLElement) {
   requestMeasure(2);
 }
 
-function initializeMermaid(): void {
-  if (mermaidInitialized) {
-    return;
-  }
-
-  mermaid.initialize({
-    ...mermaidDiagramConfig,
-  });
-  mermaidInitialized = true;
-}
-
 function diagramIdForSource(source: string): string {
   let hash = 0;
   for (let index = 0; index < source.length; index += 1) {
     hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
   }
   return `polarbear-live-mermaid-${hash}`;
-}
-
-class ListMarkerWidget extends WidgetType {
-  constructor(private readonly label: string) {
-    super();
-  }
-
-  eq(other: ListMarkerWidget): boolean {
-    return other.label === this.label;
-  }
-
-  toDOM(): HTMLElement {
-    const marker = document.createElement("span");
-    marker.className = "cm-typora-list-marker";
-    marker.textContent = this.label;
-    return marker;
-  }
-}
-
-class TaskListMarkerWidget extends WidgetType {
-  constructor(
-    private readonly checked: boolean,
-    private readonly checkboxCharFrom: number,
-  ) {
-    super();
-  }
-
-  eq(other: TaskListMarkerWidget): boolean {
-    return (
-      other.checked === this.checked &&
-      other.checkboxCharFrom === this.checkboxCharFrom
-    );
-  }
-
-  toDOM(): HTMLElement {
-    const marker = document.createElement("span");
-    marker.className = this.checked
-      ? "cm-typora-task-marker cm-typora-task-marker-checked"
-      : "cm-typora-task-marker";
-    marker.textContent = this.checked ? "✓" : "";
-    marker.setAttribute("aria-label", this.checked ? "Task checked" : "Task unchecked");
-    marker.setAttribute("role", "checkbox");
-    marker.setAttribute("aria-checked", String(this.checked));
-
-    const toggle = () => {
-      const view = EditorView.findFromDOM(marker);
-      if (!view) {
-        return;
-      }
-      const scrollTop = view.scrollDOM.scrollTop;
-      const scrollLeft = view.scrollDOM.scrollLeft;
-      view.dispatch({
-        changes: {
-          from: this.checkboxCharFrom,
-          to: this.checkboxCharFrom + 1,
-          insert: this.checked ? " " : "x",
-        },
-        scrollIntoView: false,
-        userEvent: "input.taskToggle",
-      });
-      view.scrollDOM.scrollTop = scrollTop;
-      view.scrollDOM.scrollLeft = scrollLeft;
-      window.requestAnimationFrame(() => {
-        view.scrollDOM.scrollTop = scrollTop;
-        view.scrollDOM.scrollLeft = scrollLeft;
-      });
-    };
-
-    marker.addEventListener("pointerdown", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    });
-    marker.addEventListener("mousedown", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    });
-    marker.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      toggle();
-    });
-    marker.addEventListener("keydown", (event) => {
-      if (event.key === " " || event.key === "Enter") {
-        event.preventDefault();
-        event.stopPropagation();
-        toggle();
-      }
-    });
-    return marker;
-  }
-
-  ignoreEvent(): boolean {
-    return true;
-  }
-}
-
-class InlineMathWidget extends WidgetType {
-  constructor(private readonly source: string) {
-    super();
-  }
-
-  eq(other: InlineMathWidget): boolean {
-    return other.source === this.source;
-  }
-
-  toDOM(): HTMLElement {
-    const span = document.createElement("span");
-    span.className = "cm-typora-inline-math";
-    span.textContent = renderMathText(this.source);
-    return span;
-  }
 }
 
 class HorizontalRuleWidget extends WidgetType {
@@ -3076,43 +2889,6 @@ function renderMathBlockDom(wrapper: HTMLElement, source: string) {
   formula.className = "cm-typora-math-equation";
   formula.textContent = renderMathText(normalized);
   wrapper.append(formula);
-}
-
-function renderMathText(source: string): string {
-  return source
-    .replace(/\\times/g, "×")
-    .replace(/\\leq/g, "≤")
-    .replace(/\\geq/g, "≥")
-    .replace(/\\neq/g, "≠")
-    .replace(/\\in/g, "∈")
-    .replace(/\\epsilon/g, "ε")
-    .replace(/\\alpha/g, "α")
-    .replace(/\\beta/g, "β")
-    .replace(/\\gamma/g, "γ")
-    .replace(/\\delta/g, "δ")
-    .replace(/\\_/g, "_")
-    .replace(/([A-Za-z])_([0-9]+)/g, (_, name: string, digits: string) =>
-      `${name}${toSubscript(digits)}`,
-    )
-    .replace(/\{([^{}]+)\}/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function toSubscript(value: string): string {
-  const map: Record<string, string> = {
-    "0": "₀",
-    "1": "₁",
-    "2": "₂",
-    "3": "₃",
-    "4": "₄",
-    "5": "₅",
-    "6": "₆",
-    "7": "₇",
-    "8": "₈",
-    "9": "₉",
-  };
-  return value.replace(/[0-9]/g, (digit) => map[digit] ?? digit);
 }
 
 class CalloutPreviewWidget extends WidgetType {
@@ -3448,6 +3224,8 @@ function makeTableCellEditable(
     const scrollTop = scrollDOM.scrollTop;
     const scrollLeft = scrollDOM.scrollLeft;
 
+    prepareTableHistorySelection(view, params.block.from);
+
     view.dispatch({
       changes: {
         from: params.block.from,
@@ -3533,7 +3311,7 @@ function makeTableCellEditable(
   cell.addEventListener("keydown", (event) => {
     event.stopPropagation();
 
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+    if (hasPrimaryModifier(event) && event.key.toLowerCase() === "z") {
       event.preventDefault();
       runTableHistoryAction(
         params.wrapper,
@@ -3543,7 +3321,7 @@ function makeTableCellEditable(
       return;
     }
 
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "y") {
+    if (hasPrimaryModifier(event) && event.key.toLowerCase() === "y") {
       event.preventDefault();
       runTableHistoryAction(
         params.wrapper,
@@ -3588,7 +3366,7 @@ function makeTableCellEditable(
     }
 
     if (event.key === "Enter") {
-      if (event.metaKey || event.ctrlKey) {
+      if (hasPrimaryModifier(event)) {
         event.preventDefault();
         insertLineBreakAtCurrentSelection(cell);
         return;
@@ -3601,7 +3379,7 @@ function makeTableCellEditable(
       return;
     }
 
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+    if (hasPrimaryModifier(event) && event.key.toLowerCase() === "b") {
       event.preventDefault();
       document.execCommand("bold");
       return;
@@ -4223,6 +4001,8 @@ function applyTableEdit(
   const scrollDOM = view.scrollDOM;
   const scrollTop = scrollDOM.scrollTop;
   const scrollLeft = scrollDOM.scrollLeft;
+  prepareTableHistorySelection(view, block.from);
+
   view.dispatch({
     changes: {
       from: block.from,
@@ -4263,31 +4043,28 @@ function restoreTableHistoryViewport(
   scrollTop: number,
   scrollLeft: number,
 ) {
-  let remainingFrames = 4;
-  let focusRestored = false;
-
   const restore = () => {
     restoreTableHistoryScrollPosition(view, scrollTop, scrollLeft);
 
-    if (!focusRestored && tableKey) {
-      const nextWrapper = findTablePreviewWrapper(tableKey);
-      const nextCell = nextWrapper
-        ? findNearestTableCell(nextWrapper, focusedCell)
-        : null;
-      if (nextCell) {
-        nextCell.focus({ preventScroll: true });
-        placeCaretAtEnd(nextCell);
-        focusRestored = true;
-        restoreTableHistoryScrollPosition(view, scrollTop, scrollLeft);
-      }
-    }
+    if (!tableKey) return true;
+    const nextWrapper = findTablePreviewWrapper(tableKey);
+    const nextCell = nextWrapper
+      ? findNearestTableCell(nextWrapper, focusedCell)
+      : null;
+    if (!nextCell) return false;
 
-    if (remainingFrames <= 0) return;
-    remainingFrames -= 1;
-    window.requestAnimationFrame(restore);
+    nextCell.focus({ preventScroll: true });
+    placeCaretAtEnd(nextCell);
+    restoreTableHistoryScrollPosition(view, scrollTop, scrollLeft);
+    return true;
   };
 
-  window.requestAnimationFrame(restore);
+  // Widgets are recreated by the history transaction. One retry covers the next
+  // paint without continuously overwriting the user's scroll position.
+  window.requestAnimationFrame(() => {
+    if (restore()) return;
+    window.requestAnimationFrame(restore);
+  });
 }
 
 function restoreTableHistoryScrollPosition(
@@ -4296,14 +4073,23 @@ function restoreTableHistoryScrollPosition(
   scrollLeft: number,
 ) {
   const scrollDOM = view.scrollDOM;
-  scrollDOM.scrollTop = Math.min(
-    Math.max(0, scrollTop),
-    Math.max(0, scrollDOM.scrollHeight - scrollDOM.clientHeight),
-  );
-  scrollDOM.scrollLeft = Math.min(
-    Math.max(0, scrollLeft),
-    Math.max(0, scrollDOM.scrollWidth - scrollDOM.clientWidth),
-  );
+  // Let the browser clamp against the current layout. Manually clamping during
+  // a widget rebuild can observe a transient zero-height scroll range and send
+  // the document to its top edge.
+  scrollDOM.scrollTop = scrollTop;
+  scrollDOM.scrollLeft = scrollLeft;
+}
+
+function prepareTableHistorySelection(view: EditorView, position: number): void {
+  if (view.state.selection.main.head === position) {
+    return;
+  }
+
+  view.dispatch({
+    selection: EditorSelection.cursor(position),
+    scrollIntoView: false,
+    annotations: Transaction.addToHistory.of(false),
+  });
 }
 
 function findTablePreviewWrapper(tableKey: string): HTMLElement | null {
@@ -4512,16 +4298,27 @@ class PlantUmlPreviewWidget extends WidgetType {
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
-    content.textContent = translateCurrent("diagram.renderingPlantUml");
+
+    const consent = document.createElement("div");
+    consent.className = "plantuml-remote-consent";
+    const consentText = document.createElement("span");
+    consentText.textContent = translateCurrent("diagram.plantUmlRemoteDisabled");
+    const renderButton = document.createElement("button");
+    renderButton.type = "button";
+    renderButton.textContent = translateCurrent("diagram.plantUmlRenderRemotely");
+    renderButton.addEventListener("click", () => {
+      consent.remove();
+      content.textContent = translateCurrent("diagram.renderingPlantUml");
+      void renderPlantUmlPreview(this.block.source, content);
+    });
+    consent.append(consentText, renderButton);
+    content.append(consent);
 
     const privacyNote = document.createElement("p");
-    privacyNote.textContent =
-      "Rendered by the configured PlantUML server. Diagram text may be sent to that server.";
+    privacyNote.textContent = translateCurrent("diagram.plantUmlPrivacy");
 
     wrapper.append(toolbar, content, privacyNote);
     scheduleEditorMeasureFromDom(wrapper);
-
-    void renderPlantUmlPreview(this.block.source, content);
 
     return wrapper;
   }
@@ -4571,7 +4368,7 @@ async function renderPlantUmlPreview(
 
   try {
     const response = await fetch(
-      `${DIAGRAM_CONFIG.plantUml.serverUrl}${encodePlantUmlHex(source)}`,
+      plantUmlSvgUrl(DIAGRAM_CONFIG.plantUml.serverUrl, source),
     );
     if (!response.ok) {
       throw new Error(translateCurrent("diagram.plantUmlServerStatus", {
@@ -4604,15 +4401,6 @@ async function renderPlantUmlPreview(
   }
 }
 
-function encodePlantUmlHex(source: string): string {
-  const bytes = new TextEncoder().encode(source);
-  const hex = Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-
-  return `~h${hex}`;
-}
-
 async function renderMermaidPreview(
   source: string,
   content: HTMLElement,
@@ -4632,17 +4420,19 @@ async function renderMermaidPreview(
   }
 
   try {
-    initializeMermaid();
-    const result = await mermaid.render(diagramIdForSource(source), source);
-    const svgContent = sanitizeDiagramSvg(result.svg);
+    const svgContent = await renderMermaidSvg(
+      diagramIdForSource(source),
+      source,
+    );
     mermaidRenderCache.set(source, {
       svgContent,
     });
     content.innerHTML = svgContent;
     scheduleEditorMeasureFromDom(content);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : `Mermaid render failed: ${String(error)}`;
+    const message = error instanceof Error
+      ? error.message
+      : translateCurrent("diagram.mermaidRenderError", { error: String(error) });
     mermaidRenderCache.set(source, {
       error: message,
     });
@@ -4671,7 +4461,7 @@ class CodeFenceLanguageWidget extends WidgetType {
     const listId = `polarbear-code-languages-${this.fenceInfo.lineFrom}`;
     const input = document.createElement("input");
     input.className = "cm-typora-code-language-input";
-    input.setAttribute("aria-label", "Code block language");
+    input.setAttribute("aria-label", translateCurrent("editor.codeBlockLanguage"));
     input.setAttribute("list", listId);
     input.spellcheck = false;
     input.value = this.fenceInfo.language || "text";
@@ -4811,7 +4601,7 @@ class MarkdownImagePreviewWidget extends WidgetType {
     });
 
     const image = document.createElement("img");
-    image.alt = this.params.alt || "image";
+    image.alt = this.params.alt || translateCurrent("diagram.imageAlt");
     image.loading = "lazy";
     image.decoding = "async";
     image.addEventListener("load", () => scheduleEditorMeasureFromDom(wrapper));
@@ -4845,7 +4635,9 @@ class MarkdownImagePreviewWidget extends WidgetType {
       .then((asset) => {
         if (!asset.exists || !asset.assetUrl) {
           wrapper.classList.add("cm-typora-image-error");
-          caption.textContent = asset.error || `Image not found: ${this.params.src}`;
+          caption.textContent = asset.error || translateCurrent("diagram.imageNotFound", {
+            source: this.params.src,
+          });
           scheduleEditorMeasureFromDom(wrapper);
           return;
         }

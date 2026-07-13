@@ -1346,6 +1346,28 @@ body,
   margin: 0 auto;
 }
 
+.cm-typora-diagram-content .plantuml-remote-consent {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  color: var(--color-text-secondary, #5f666d);
+  text-align: center;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-preview-background, #ffffff) 88%, var(--color-accent, #2563eb));
+}
+
+.cm-typora-plantuml-preview .plantuml-remote-consent button {
+  width: auto;
+  height: 30px;
+  padding: 0 12px;
+  color: var(--color-accent-text, #ffffff);
+  border-color: var(--color-accent, #2563eb);
+  background: var(--color-accent, #2563eb);
+}
+
 .cm-typora-diagram-error {
   color: #b91c1c;
   border: 1px solid #fecaca;

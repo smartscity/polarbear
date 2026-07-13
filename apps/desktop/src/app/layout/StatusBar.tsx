@@ -1,7 +1,10 @@
 import type { MouseEvent } from "react";
+import { effectiveAcceleratorForCommand } from "../../commands/keybindingResolver";
 import { openExternalUrl } from "../../shared/tauri/openExternalUrl";
-import { useI18n, type AppLanguage } from "../../shared/i18n/I18nProvider";
+import { useI18n } from "../../shared/i18n/I18nProvider";
 import { PRODUCT_CONFIG } from "../../shared/config/productConfig";
+import { displayAccelerator } from "../../shared/platform/keyboard";
+import { useUserSettings } from "../../shared/settings/useUserSettings";
 
 type StatusBarProps = {
   activeFileName: string;
@@ -24,7 +27,11 @@ export function StatusBar({
   onDebugToggle,
   onSync
 }: StatusBarProps) {
-  const { language, setLanguage, t } = useI18n();
+  const { language, languages, setLanguage, t } = useI18n();
+  const userSettings = useUserSettings();
+  const syncShortcut = displayAccelerator(
+    effectiveAcceleratorForCommand("repository.syncNow", userSettings.keybindings),
+  );
   const openProjectLink = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     void openExternalUrl(PRODUCT_CONFIG.repositoryUrl);
@@ -53,7 +60,12 @@ export function StatusBar({
           type="button"
           className={`status-sync-button ${syncState === "busy" ? "busy" : ""}`}
           aria-label={t("status.syncNow")}
-          title={`${t("status.syncNow")} (Command/Control + Option/Alt + S)`}
+          title={syncShortcut
+            ? t("status.commandWithShortcut", {
+              command: t("status.syncNow"),
+              shortcut: syncShortcut,
+            })
+            : t("status.syncNow")}
           disabled={syncState === "busy"}
           onClick={onSync}
         >
@@ -83,10 +95,13 @@ export function StatusBar({
           aria-label={t("status.language")}
           title={t("status.language")}
           value={language}
-          onChange={(event) => setLanguage(event.target.value as AppLanguage)}
+          onChange={(event) => setLanguage(event.target.value)}
         >
-          <option value="zh-CN">中文</option>
-          <option value="en">EN</option>
+          {languages.map(({ code, label }) => (
+            <option key={code} value={code}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
     </footer>

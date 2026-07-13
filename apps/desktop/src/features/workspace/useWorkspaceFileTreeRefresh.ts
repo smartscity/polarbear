@@ -1,9 +1,6 @@
 import { useEffect } from "react";
-import type { WorkspaceItem } from "./workspaceModel";
-import {
-  listWorkspaceFiles,
-  refreshWorkspaceSyncIndex,
-} from "./tauriWorkspaceAdapter";
+import { workspaceTreesEqual, type WorkspaceItem } from "./workspaceModel";
+import { listWorkspaceFiles } from "./tauriWorkspaceAdapter";
 import { WORKSPACE_CONFIG } from "./workspaceConfig";
 
 type WorkspaceFileTreeRefreshOptions = {
@@ -22,21 +19,23 @@ export function useWorkspaceFileTreeRefresh({
 
     let disposed = false;
     let refreshInProgress = false;
+    let lastReportedItems: WorkspaceItem[] | null = null;
     const refreshFileTree = async () => {
       if (disposed || refreshInProgress || document.visibilityState !== "visible") {
         return;
       }
       refreshInProgress = true;
       try {
-        const [items] = await Promise.all([
-          listWorkspaceFiles(workspaceRoot),
-          refreshWorkspaceSyncIndex(workspaceRoot),
-        ]);
-        if (!disposed) {
+        const items = await listWorkspaceFiles(workspaceRoot);
+        if (
+          !disposed &&
+          (!lastReportedItems || !workspaceTreesEqual(lastReportedItems, items))
+        ) {
+          lastReportedItems = items;
           onRefresh(workspaceRoot, items);
         }
       } catch {
-        // A transient filesystem change is retried on the next focus/poll cycle.
+        // A transient filesystem change is retried on the next focus or poll cycle.
       } finally {
         refreshInProgress = false;
       }
