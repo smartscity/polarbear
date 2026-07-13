@@ -14,6 +14,7 @@ import {
   moveTableRow,
   setTableColumnAlignment,
 } from "./tableOperations";
+import { parseMarkdownTable } from "./tableModel";
 import type { TableAlignment, TableCellPosition } from "./tableTypes";
 
 export const TABLE_COMMANDS = {
@@ -92,11 +93,19 @@ export function executeTableCommand(
     return withFocus(duplicateTableRows(context.rawTable, selectedRows), context.row + 1, context.column);
   }
   if (command === TABLE_COMMANDS.rowMoveUp) {
-    const target = Math.max(1, context.row - 1);
-    return withFocus(moveTableRow(context.rawTable, context.row, target), target, context.column);
+    const row = clampTableRow(context.rawTable, context.row);
+    if (row <= 1) return withFocus(context.rawTable, row, clampTableColumn(context.rawTable, context.column));
+    const target = row - 1;
+    return withFocus(moveTableRow(context.rawTable, row, target), target, context.column);
   }
   if (command === TABLE_COMMANDS.rowMoveDown) {
-    return withFocus(moveTableRow(context.rawTable, context.row, context.row + 1), context.row + 1, context.column);
+    const row = clampTableRow(context.rawTable, context.row);
+    const bodyRowCount = tableBodyRowCount(context.rawTable);
+    if (row === 0 || row >= bodyRowCount) {
+      return withFocus(context.rawTable, row, clampTableColumn(context.rawTable, context.column));
+    }
+    const target = row + 1;
+    return withFocus(moveTableRow(context.rawTable, row, target), target, context.column);
   }
   if (command === TABLE_COMMANDS.rowMove && context.targetRow !== undefined) {
     return withFocus(moveTableRow(context.rawTable, context.row, context.targetRow), context.targetRow, context.column);
@@ -124,11 +133,19 @@ export function executeTableCommand(
     return withFocus(duplicateTableColumns(context.rawTable, selectedColumns), context.row, context.column + 1);
   }
   if (command === TABLE_COMMANDS.columnMoveLeft) {
-    const target = Math.max(0, context.column - 1);
-    return withFocus(moveTableColumn(context.rawTable, context.column, target), context.row, target);
+    const column = clampTableColumn(context.rawTable, context.column);
+    if (column <= 0) return withFocus(context.rawTable, clampTableRow(context.rawTable, context.row), column);
+    const target = column - 1;
+    return withFocus(moveTableColumn(context.rawTable, column, target), context.row, target);
   }
   if (command === TABLE_COMMANDS.columnMoveRight) {
-    return withFocus(moveTableColumn(context.rawTable, context.column, context.column + 1), context.row, context.column + 1);
+    const column = clampTableColumn(context.rawTable, context.column);
+    const columnCount = tableColumnCount(context.rawTable);
+    if (column >= columnCount - 1) {
+      return withFocus(context.rawTable, clampTableRow(context.rawTable, context.row), column);
+    }
+    const target = column + 1;
+    return withFocus(moveTableColumn(context.rawTable, column, target), context.row, target);
   }
   if (command === TABLE_COMMANDS.columnMove && context.targetColumn !== undefined) {
     return withFocus(moveTableColumn(context.rawTable, context.column, context.targetColumn), context.row, context.targetColumn);
@@ -167,4 +184,20 @@ function setAlignment(context: TableCommandContext, alignment: TableAlignment): 
 
 function withFocus(rawTable: string, row: number, column: number): TableCommandResult {
   return { rawTable, focus: { row, column } };
+}
+
+function tableBodyRowCount(rawTable: string): number {
+  return parseMarkdownTable(rawTable)?.rows.length ?? 0;
+}
+
+function tableColumnCount(rawTable: string): number {
+  return parseMarkdownTable(rawTable)?.header.length ?? 1;
+}
+
+function clampTableRow(rawTable: string, row: number): number {
+  return Math.max(0, Math.min(row, tableBodyRowCount(rawTable)));
+}
+
+function clampTableColumn(rawTable: string, column: number): number {
+  return Math.max(0, Math.min(column, tableColumnCount(rawTable) - 1));
 }

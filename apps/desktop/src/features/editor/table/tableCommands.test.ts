@@ -74,4 +74,20 @@ describe("Table commands", () => {
     });
     expect(columns.rawTable).toContain("| Name |  |  | Notes |");
   });
+
+  it("keeps the nearest valid cell focused when a move command reaches a table edge", () => {
+    const rowAtBottom = executeTableCommand(TABLE_COMMANDS.rowMoveDown, {
+      rawTable: source,
+      row: 1,
+      column: 0,
+    });
+    expect(rowAtBottom).toEqual({ rawTable: source, focus: { row: 1, column: 0 } });
+
+    const columnAtRight = executeTableCommand(TABLE_COMMANDS.columnMoveRight, {
+      rawTable: source,
+      row: 1,
+      column: 1,
+    });
+    expect(columnAtRight).toEqual({ rawTable: source, focus: { row: 1, column: 1 } });
+  });
 });

@@ -3870,7 +3870,7 @@ function openTableActionMenu(
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      closeTableActionMenus(wrapper);
+      close(false);
       action();
     });
     menu.append(button);
@@ -3969,12 +3969,15 @@ function openTableActionMenu(
   const anchorRect = anchorElement.getBoundingClientRect();
   positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
-  const close = () => {
+  const close = (restoreFocus = true) => {
     document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.removeEventListener("blur", close);
+    window.removeEventListener("blur", closeAfterWindowBlur);
     tablePortalMenuCleanups.delete(close);
     updateTableInteractionState(wrapper, { mode: "idle" });
     menu.remove();
+    if (restoreFocus && anchorElement.isConnected) {
+      anchorElement.focus({ preventScroll: true });
+    }
   };
   const closeOnOutsidePointer = (event: PointerEvent) => {
     if (event.target instanceof Node && menu.contains(event.target)) {
@@ -3982,6 +3985,7 @@ function openTableActionMenu(
     }
     close();
   };
+  const closeAfterWindowBlur = () => close(false);
 
   menu.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -3994,9 +3998,9 @@ function openTableActionMenu(
 
   window.requestAnimationFrame(() => {
     document.addEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.addEventListener("blur", close, { once: true });
+    window.addEventListener("blur", closeAfterWindowBlur, { once: true });
     tablePortalMenuCleanups.add(close);
-    menu.focus({ preventScroll: true });
+    menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
   });
 }
 

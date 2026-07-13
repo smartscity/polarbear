@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
 import { TABLE_UI } from "../table/tableConstants";
 
@@ -9,12 +9,48 @@ type InsertTableDialogProps = {
 
 export function InsertTableDialog({
   onCancel,
-  onConfirm
+  onConfirm,
 }: InsertTableDialogProps) {
   const { t } = useI18n();
   const [columns, setColumns] = useState(3);
   const [rows, setRows] = useState(4);
+  const [gridFocus, setGridFocus] = useState({ column: 3, row: 4 });
+  const gridButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const isValid = columns >= 1 && columns <= 20 && rows >= 1 && rows <= 50;
+
+  const updateGridSelection = (nextRows: number, nextColumns: number, focus = false) => {
+    const row = Math.max(1, Math.min(TABLE_UI.sizePickerLimit, nextRows));
+    const column = Math.max(1, Math.min(TABLE_UI.sizePickerLimit, nextColumns));
+    setRows(nextRows);
+    setColumns(nextColumns);
+    setGridFocus({ row, column });
+    if (focus) {
+      window.requestAnimationFrame(() => {
+        gridButtonRefs.current.get(`${row}:${column}`)?.focus({ preventScroll: true });
+      });
+    }
+  };
+
+  const handleGridKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const current = gridFocus;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      onConfirm(current.column, current.row);
+      return;
+    }
+
+    const next = { ...current };
+    if (event.key === "ArrowDown") next.row += 1;
+    else if (event.key === "ArrowUp") next.row -= 1;
+    else if (event.key === "ArrowRight") next.column += 1;
+    else if (event.key === "ArrowLeft") next.column -= 1;
+    else if (event.key === "Home") next.column = 1;
+    else if (event.key === "End") next.column = TABLE_UI.sizePickerLimit;
+    else return;
+
+    event.preventDefault();
+    updateGridSelection(next.row, next.column, true);
+  };
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -55,13 +91,20 @@ export function InsertTableDialog({
                   className={selected ? "table-create-grid-cell table-create-grid-cell-active" : "table-create-grid-cell"}
                   key={`${nextRows}:${nextColumns}`}
                   onClick={() => {
-                    setColumns(nextColumns);
-                    setRows(nextRows);
+                    onConfirm(nextColumns, nextRows);
                   }}
+                  onFocus={() => setGridFocus({ row: nextRows, column: nextColumns })}
+                  onKeyDown={handleGridKeyDown}
                   onMouseEnter={() => {
-                    setColumns(nextColumns);
-                    setRows(nextRows);
+                    updateGridSelection(nextRows, nextColumns);
                   }}
+                  ref={(button) => {
+                    const key = `${nextRows}:${nextColumns}`;
+                    if (button) gridButtonRefs.current.set(key, button);
+                    else gridButtonRefs.current.delete(key);
+                  }}
+                  role="gridcell"
+                  tabIndex={gridFocus.row === nextRows && gridFocus.column === nextColumns ? 0 : -1}
                   type="button"
                 />
               );

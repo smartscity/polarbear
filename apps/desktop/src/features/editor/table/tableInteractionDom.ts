@@ -370,12 +370,15 @@ export function installTableInteractionControls(options: TableInteractionControl
     autoScrollDuringDrag(event);
     dropIndicator.hidden = false;
     dropIndicator.className = `cm-typora-table-drop-indicator cm-typora-table-drop-indicator-${dragState.kind}`;
+    const placeAfterTarget = dragState.source < dragState.target;
     if (dragState.kind === "row") {
-      dropIndicator.style.transform = `translate(${targetRect.left - wrapperRect.left + options.scrollport.scrollLeft}px, ${targetRect.top - wrapperRect.top + options.scrollport.scrollTop}px)`;
+      const top = placeAfterTarget ? targetRect.bottom : targetRect.top;
+      dropIndicator.style.transform = `translate(${targetRect.left - wrapperRect.left + options.scrollport.scrollLeft}px, ${top - wrapperRect.top + options.scrollport.scrollTop}px)`;
       dropIndicator.style.width = `${targetRect.width}px`;
       dropIndicator.style.height = "2px";
     } else {
-      dropIndicator.style.transform = `translate(${targetRect.left - wrapperRect.left + options.scrollport.scrollLeft}px, ${targetRect.top - wrapperRect.top + options.scrollport.scrollTop}px)`;
+      const left = placeAfterTarget ? targetRect.right : targetRect.left;
+      dropIndicator.style.transform = `translate(${left - wrapperRect.left + options.scrollport.scrollLeft}px, ${targetRect.top - wrapperRect.top + options.scrollport.scrollTop}px)`;
       dropIndicator.style.width = "2px";
       dropIndicator.style.height = `${options.table.getBoundingClientRect().height}px`;
     }
