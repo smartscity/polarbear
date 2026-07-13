@@ -3535,19 +3535,21 @@ function makeTableCellEditable(
 
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
       event.preventDefault();
-      const view = EditorView.findFromDOM(params.wrapper);
-      if (view) {
-        (event.shiftKey ? redo : undo)(view);
-      }
+      runTableHistoryAction(
+        params.wrapper,
+        { row: params.rowIndex, column: params.columnIndex },
+        event.shiftKey ? redo : undo,
+      );
       return;
     }
 
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "y") {
       event.preventDefault();
-      const view = EditorView.findFromDOM(params.wrapper);
-      if (view) {
-        redo(view);
-      }
+      runTableHistoryAction(
+        params.wrapper,
+        { row: params.rowIndex, column: params.columnIndex },
+        redo,
+      );
       return;
     }
 
@@ -4232,6 +4234,97 @@ function applyTableEdit(
   if (focus) {
     focusTableCellAtAfterCommit(wrapper, block.from, focus);
   }
+}
+
+function runTableHistoryAction(
+  wrapper: HTMLElement,
+  focusedCell: TableCellPosition,
+  action: (view: EditorView) => boolean,
+) {
+  const view = EditorView.findFromDOM(wrapper);
+  if (!view) return;
+
+  const scrollTop = view.scrollDOM.scrollTop;
+  const scrollLeft = view.scrollDOM.scrollLeft;
+  const tableKey = wrapper.dataset.tableKey;
+  if (!action(view)) return;
+
+  restoreTableHistoryViewport(view, tableKey, focusedCell, scrollTop, scrollLeft);
+}
+
+function restoreTableHistoryViewport(
+  view: EditorView,
+  tableKey: string | undefined,
+  focusedCell: TableCellPosition,
+  scrollTop: number,
+  scrollLeft: number,
+) {
+  let remainingFrames = 4;
+  let focusRestored = false;
+
+  const restore = () => {
+    restoreTableHistoryScrollPosition(view, scrollTop, scrollLeft);
+
+    if (!focusRestored && tableKey) {
+      const nextWrapper = findTablePreviewWrapper(tableKey);
+      const nextCell = nextWrapper
+        ? findNearestTableCell(nextWrapper, focusedCell)
+        : null;
+      if (nextCell) {
+        nextCell.focus({ preventScroll: true });
+        placeCaretAtEnd(nextCell);
+        focusRestored = true;
+        restoreTableHistoryScrollPosition(view, scrollTop, scrollLeft);
+      }
+    }
+
+    if (remainingFrames <= 0) return;
+    remainingFrames -= 1;
+    window.requestAnimationFrame(restore);
+  };
+
+  window.requestAnimationFrame(restore);
+}
+
+function restoreTableHistoryScrollPosition(
+  view: EditorView,
+  scrollTop: number,
+  scrollLeft: number,
+) {
+  const scrollDOM = view.scrollDOM;
+  scrollDOM.scrollTop = Math.min(
+    Math.max(0, scrollTop),
+    Math.max(0, scrollDOM.scrollHeight - scrollDOM.clientHeight),
+  );
+  scrollDOM.scrollLeft = Math.min(
+    Math.max(0, scrollLeft),
+    Math.max(0, scrollDOM.scrollWidth - scrollDOM.clientWidth),
+  );
+}
+
+function findTablePreviewWrapper(tableKey: string): HTMLElement | null {
+  return Array.from(document.querySelectorAll<HTMLElement>(".cm-typora-table-preview")).find(
+    (candidate) => candidate.dataset.tableKey === tableKey,
+  ) ?? null;
+}
+
+function findNearestTableCell(
+  wrapper: HTMLElement,
+  position: TableCellPosition,
+): HTMLElement | null {
+  const cells = Array.from(wrapper.querySelectorAll<HTMLElement>("[data-table-row][data-table-column]"));
+  if (cells.length === 0) return null;
+
+  return cells.reduce((nearest, cell) => {
+    const row = Number(cell.dataset.tableRow);
+    const column = Number(cell.dataset.tableColumn);
+    const nearestRow = Number(nearest.dataset.tableRow);
+    const nearestColumn = Number(nearest.dataset.tableColumn);
+    const distance = Math.abs(row - position.row) + Math.abs(column - position.column);
+    const nearestDistance =
+      Math.abs(nearestRow - position.row) + Math.abs(nearestColumn - position.column);
+    return distance < nearestDistance ? cell : nearest;
+  });
 }
 
 function focusTableCellAtAfterCommit(
