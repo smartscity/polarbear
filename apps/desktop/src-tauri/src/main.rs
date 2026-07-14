@@ -980,9 +980,11 @@ fn content_digest(content: &[u8]) -> String {
 
 fn content_revision(content: &[u8]) -> String {
     // A revision detects accidental concurrent writes without exposing document content in the token.
-    let hash = content.iter().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-        (hash ^ u64::from(*byte)).wrapping_mul(0x1000_0000_01b3)
-    });
+    let hash = content
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(0x1000_0000_01b3)
+        });
     format!("{}-{hash:016x}", content.len())
 }
 
@@ -1200,12 +1202,10 @@ fn get_markdown_file_revision(
             exists: true,
             watch_token: Some(file_watch_token(&metadata)),
         }),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            Ok(MarkdownFileRevisionDto {
-                exists: false,
-                watch_token: None,
-            })
-        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(MarkdownFileRevisionDto {
+            exists: false,
+            watch_token: None,
+        }),
         Err(error) => Err(error.to_string()),
     }
 }
@@ -1259,10 +1259,13 @@ fn save_markdown_file_content(
     markdown_content: &str,
     expected_revision: Option<&str>,
 ) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
-    let path = workspace_path(workspace_root, relative_path).map_err(WorkspaceSaveError::unexpected)?;
+    let path =
+        workspace_path(workspace_root, relative_path).map_err(WorkspaceSaveError::unexpected)?;
 
     if !is_markdown_file(&path) {
-        return Err(WorkspaceSaveError::unexpected("Only Markdown files can be saved."));
+        return Err(WorkspaceSaveError::unexpected(
+            "Only Markdown files can be saved.",
+        ));
     }
 
     let current_content = fs::read(&path).map_err(|error| {
@@ -1293,11 +1296,14 @@ fn write_markdown_file(
     let path = PathBuf::from(file_path);
 
     if !is_markdown_file(&path) {
-        return Err(WorkspaceSaveError::unexpected("Only Markdown files can be saved."));
+        return Err(WorkspaceSaveError::unexpected(
+            "Only Markdown files can be saved.",
+        ));
     }
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| WorkspaceSaveError::unexpected(error.to_string()))?;
+        fs::create_dir_all(parent)
+            .map_err(|error| WorkspaceSaveError::unexpected(error.to_string()))?;
     }
 
     if let Some(expected_revision) = expected_revision {
@@ -3345,16 +3351,17 @@ mod tests {
 
         assert_eq!(file_rename.new_relative_path, "docs/world.md");
         assert_eq!(directory_rename.new_relative_path, "notes");
-        assert!(source.markdown_content.contains("Start writing in Polarbear"));
+        assert!(source
+            .markdown_content
+            .contains("Start writing in Polarbear"));
     }
 
     #[test]
     fn save_rejects_an_externally_changed_document_without_overwriting_it() {
         let root = test_workspace_root("save-rejects-external-change");
-        create_markdown_file(root.clone(), "note.md".to_owned())
-            .expect("create markdown file");
-        let loaded = load_markdown_file(root.clone(), "note.md".to_owned())
-            .expect("load markdown file");
+        create_markdown_file(root.clone(), "note.md".to_owned()).expect("create markdown file");
+        let loaded =
+            load_markdown_file(root.clone(), "note.md".to_owned()).expect("load markdown file");
 
         fs::write(
             std::path::Path::new(&root).join("note.md"),
@@ -3380,10 +3387,9 @@ mod tests {
     #[test]
     fn save_reports_when_an_open_document_was_deleted_externally() {
         let root = test_workspace_root("save-rejects-external-delete");
-        create_markdown_file(root.clone(), "note.md".to_owned())
-            .expect("create markdown file");
-        let loaded = load_markdown_file(root.clone(), "note.md".to_owned())
-            .expect("load markdown file");
+        create_markdown_file(root.clone(), "note.md".to_owned()).expect("create markdown file");
+        let loaded =
+            load_markdown_file(root.clone(), "note.md".to_owned()).expect("load markdown file");
         let path = std::path::Path::new(&root).join("note.md");
         fs::remove_file(&path).expect("simulate external deletion");
 
@@ -3413,8 +3419,7 @@ mod tests {
     #[test]
     fn markdown_file_watch_reports_a_metadata_token_for_existing_files() {
         let root = test_workspace_root("revision-reports-existing-file");
-        create_markdown_file(root.clone(), "note.md".to_owned())
-            .expect("create markdown file");
+        create_markdown_file(root.clone(), "note.md".to_owned()).expect("create markdown file");
 
         let revision = get_markdown_file_revision(root, "note.md".to_owned())
             .expect("existing files should be represented in the revision response");
