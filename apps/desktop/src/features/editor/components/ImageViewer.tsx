@@ -10,7 +10,7 @@ import {
 import { useDismissOnEscape } from "../../../shared/hooks/useDismissOnEscape";
 import { useStoredDebugEnabled } from "../../../shared/debug/useStoredDebugEnabled";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
-import { hasPrimaryModifier } from "../../../shared/platform/keyboard";
+import { hasZoomModifier } from "../../../shared/platform/keyboard";
 
 type ImageViewerProps = {
   alt: string;
@@ -816,7 +816,7 @@ function shouldHandleViewerEvent(
 }
 
 function isTrackpadPinchWheel(event: WheelEvent): boolean {
-  return hasPrimaryModifier(event) || Math.abs(event.deltaZ) > 0;
+  return hasZoomModifier(event) || Math.abs(event.deltaZ) > 0;
 }
 
 function getNormalizedWheelZoomDelta(event: WheelEvent): number {

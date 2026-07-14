@@ -66,6 +66,13 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
       priority: 100,
       when: "editorFocus",
     },
+    shortcuts: [{
+      command: "edit.redo",
+      editorHandled: true,
+      key: "y",
+      priority: 100,
+      when: "editorFocus",
+    }],
   },
   "edit.cut": {
     titleKey: "menu.cut",

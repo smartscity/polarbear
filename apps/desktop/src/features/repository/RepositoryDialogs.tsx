@@ -77,7 +77,7 @@ export function ConnectRepositoryDialog({
             {t("cloud.gitlabUrl")}
             <input
               value={baseUrl}
-              placeholder="https://gitlab.com"
+              placeholder={t("repository.gitlabBaseUrlPlaceholder")}
               onChange={(event) => setBaseUrl(event.target.value)}
             />
           </label>

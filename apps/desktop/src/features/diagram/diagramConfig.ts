@@ -6,6 +6,7 @@ export const DIAGRAM_CONFIG = {
     pngScale: 2
   },
   plantUml: {
+    renderTimeoutMs: 15_000,
     serverUrl: "https://www.plantuml.com/plantuml/svg/"
   }
 } as const;

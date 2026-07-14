@@ -1,4 +1,5 @@
 import type { AppCommand } from "../shared/commands/appCommandTypes";
+import { isMarkdownFormatCommand } from "../shared/commands/markdownFormatCommands";
 
 export type CommandRuntimeContext = {
   activeDocumentId: string;
@@ -43,7 +44,8 @@ export function getCommandState(
     command === "edit.find" ||
     command === "edit.findNext" ||
     command === "edit.findPrevious" ||
-    command.startsWith("format.") ||
+    isMarkdownFormatCommand(command) ||
+    command === "format.insertImage" ||
     command === "editor.insertTable" ||
     command === "editor.insertCodeFence"
   ) {

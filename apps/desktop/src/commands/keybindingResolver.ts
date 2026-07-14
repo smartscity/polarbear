@@ -156,30 +156,20 @@ export function parseKeybinding(
   };
 }
 
-export function codeMirrorKeyForCommand(
+export function codeMirrorKeysForCommand(
   command: AppCommand,
-  fallback: string,
   overrides: KeybindingOverrides,
-): string | null {
-  const override = overrides[command];
-  if (override === null) {
-    return null;
-  }
-  if (override === undefined) {
-    return fallback;
-  }
-
-  const parsed = parseKeybinding(command, override);
-  if (!parsed) {
-    return fallback;
-  }
-
-  return [
-    parsed.primaryModifier !== false ? "Mod" : "",
-    parsed.shiftKey ? "Shift" : "",
-    parsed.altKey ? "Alt" : "",
-    parsed.key,
-  ].filter(Boolean).join("-");
+): string[] {
+  return Array.from(new Set(
+    resolveShortcutDefinitions(overrides)
+      .filter((shortcut) => shortcut.command === command)
+      .map((shortcut) => [
+        shortcut.primaryModifier !== false ? "Mod" : "",
+        shortcut.shiftKey ? "Shift" : "",
+        shortcut.altKey ? "Alt" : "",
+        shortcut.key,
+      ].filter(Boolean).join("-")),
+  ));
 }
 
 export function resolveShortcutForKeyboardEvent(
@@ -187,6 +177,12 @@ export function resolveShortcutForKeyboardEvent(
   shortcuts: ShortcutDefinition[],
   context: KeybindingContext,
 ): ResolvedShortcut {
+  // IME composition uses intermediate keyboard events that must remain owned
+  // by the text input. Some WebViews expose these as the Process key.
+  if (event.isComposing || event.key === "Process") {
+    return { kind: "none" };
+  }
+
   const key = event.key.toLowerCase();
   const codeKey = keyFromKeyboardCode(event.code);
   const matching = shortcuts.filter((shortcut) => {
@@ -314,10 +310,6 @@ export function findKeybindingConflicts(
   }
 
   return conflicts;
-}
-
-function isPrimaryModifier(part: string): boolean {
-  return MODIFIER_ALIASES.get(part) === "mod";
 }
 
 function matchesShortcutContext(

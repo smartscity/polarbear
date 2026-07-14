@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { DIAGRAM_CONFIG } from "./diagramConfig";
-import { plantUmlSvgUrl } from "./plantUmlUrl";
-import { sanitizeDiagramSvg } from "./sanitizeDiagramSvg";
+import { useEffect, useRef, useState } from "react";
+import {
+  renderPlantUmlSvg,
+} from "./plantUmlRenderer";
+import { describePlantUmlRenderError } from "./plantUmlRenderError";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import {
   exportSvgElementAsPng,
@@ -22,11 +23,6 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [requestedSource, setRequestedSource] = useState<string | null>(null);
-  const diagramUrl = useMemo(
-    () => plantUmlSvgUrl(DIAGRAM_CONFIG.plantUml.serverUrl, source),
-    [source]
-  );
-
   useEffect(() => {
     setActionStatus("");
     if (requestedSource !== source) {
@@ -42,23 +38,12 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
       setSvgContent("");
 
       try {
-        const response = await fetch(diagramUrl, {
-          signal: abortController.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(t("diagram.plantUmlServerStatus", { status: response.status }));
-        }
-
-        const svgText = await response.text();
-        if (!svgText.includes("<svg")) {
-          throw new Error(t("diagram.plantUmlInvalidResponse"));
-        }
-
-        setSvgContent(sanitizeDiagramSvg(svgText));
+        setSvgContent(await renderPlantUmlSvg(source, {
+          signal: abortController.signal,
+        }));
       } catch (error) {
         if (!abortController.signal.aborted) {
-          setErrorMessage(describeError(error));
+          setErrorMessage(describePlantUmlRenderError(error, t));
         }
       }
     }
@@ -66,7 +51,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
     void loadDiagram();
 
     return () => abortController.abort();
-  }, [diagramUrl, requestedSource, source, t]);
+  }, [requestedSource, source, t]);
 
   const exportPng = async () => {
     const svg = findRenderedSvg(renderTargetRef.current);

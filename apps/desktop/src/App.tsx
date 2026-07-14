@@ -39,12 +39,15 @@ import {
   getCommandState,
   type CommandRuntimeContext,
 } from "./commands/commandState";
-import {
-  applyMarkdownFormat,
-  minimalMarkdownDocumentChange,
-} from "./features/editor/markdown/applyMarkdownFormat";
 import { codeFenceTemplate } from "./features/editor/markdown/markdownTemplates";
-import { executeStandardEditorCommand } from "./features/editor/editorCommandAdapter";
+import {
+  executeMarkdownFormatCommand,
+  executeStandardEditorCommand,
+} from "./features/editor/editorCommandAdapter";
+import {
+  isMarkdownFormatCommand,
+  type MarkdownFormatCommand,
+} from "./shared/commands/markdownFormatCommands";
 import {
   deriveDefaultMarkdownFileName,
   displayNameForDocumentId,
@@ -136,11 +139,10 @@ import {
   revealInFileManager,
   saveMarkdownFile,
   saveImageAsset,
-  hasWorkspaceSaveErrorCode,
-  WORKSPACE_SAVE_ERROR_CODES,
   writeMarkdownFile,
   type MarkdownSaveResult,
 } from "./features/workspace/tauriWorkspaceAdapter";
+import { workspaceDocumentSaveConflict } from "./features/workspace/workspaceSaveError";
 import { openNewAppWindow } from "./shared/tauri/openNewAppWindow";
 import { useI18n } from "./shared/i18n/I18nProvider";
 import {
@@ -416,29 +418,16 @@ export function App() {
 
   const reportDocumentSaveError = useCallback(
     (error: unknown, document: ExternalDocumentReference) => {
-      let reason: ExternalDocumentChange["reason"] | null = null;
-      if (
-        hasWorkspaceSaveErrorCode(
-          error,
-          WORKSPACE_SAVE_ERROR_CODES.documentChanged,
-        )
-      ) {
-        reason = "changed";
-      } else if (
-        hasWorkspaceSaveErrorCode(
-          error,
-          WORKSPACE_SAVE_ERROR_CODES.documentMissing,
-        )
-      ) {
-        reason = "deleted";
-      }
+      const reason = workspaceDocumentSaveConflict(error);
 
-      if (reason && document.fileId === activeFileId) {
-        setExternalDocumentChange({
-          ...document,
-          reason,
-          revision: documentRevisions[document.fileId] ?? "",
-        });
+      if (reason) {
+        if (document.fileId === activeFileId) {
+          setExternalDocumentChange({
+            ...document,
+            reason,
+            revision: documentRevisions[document.fileId] ?? "",
+          });
+        }
         setStatusMessage(
           reason === "changed"
             ? t("status.externalFileChanged", { path: document.relativePath })
@@ -3400,7 +3389,7 @@ export function App() {
     }
   };
 
-  const formatMarkdown = (command: AppCommand) => {
+  const formatMarkdown = (command: MarkdownFormatCommand) => {
     const editorView = editorViewRef.current;
 
     if (!editorView) {
@@ -3408,28 +3397,7 @@ export function App() {
       return;
     }
 
-    const text = editorView.state.doc.toString();
-    const selection = editorView.state.selection.main;
-    const edit = applyMarkdownFormat(command, text, selection);
-
-    if (!edit) {
-      return;
-    }
-
-    const change = minimalMarkdownDocumentChange(text, edit.nextText);
-    if (!change) {
-      return;
-    }
-
-    editorView.dispatch({
-      changes: change,
-      selection: {
-        anchor: edit.selectionAnchor,
-        head: edit.selectionHead,
-      },
-      scrollIntoView: false,
-    });
-    editorView.focus();
+    executeMarkdownFormatCommand(editorView, command);
   };
 
   const insertMarkdownAtSelection = (insertText: string) => {
@@ -3892,7 +3860,7 @@ export function App() {
         return;
       }
 
-      if (command.startsWith("format.")) {
+      if (isMarkdownFormatCommand(command)) {
         formatMarkdown(command);
         return;
       }

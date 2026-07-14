@@ -2,23 +2,13 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type { WorkspaceItem } from "./workspaceModel";
 import { translateCurrent } from "../../shared/i18n/translate";
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
-import { hasTauriErrorCode, invokeTauri } from "../../shared/tauri/invokeTauri";
+import { invokeTauri } from "../../shared/tauri/invokeTauri";
 
-export const WORKSPACE_SAVE_ERROR_CODES = {
-  documentChanged: "workspace.documentChanged",
-  documentMissing: "workspace.documentMissing",
-  saveFailed: "workspace.saveFailed",
-} as const;
-
-export type WorkspaceSaveErrorCode =
-  typeof WORKSPACE_SAVE_ERROR_CODES[keyof typeof WORKSPACE_SAVE_ERROR_CODES];
-
-export function hasWorkspaceSaveErrorCode(
-  error: unknown,
-  code: WorkspaceSaveErrorCode,
-): boolean {
-  return hasTauriErrorCode(error, code);
-}
+export {
+  hasWorkspaceSaveErrorCode,
+  WORKSPACE_SAVE_ERROR_CODES,
+  type WorkspaceSaveErrorCode,
+} from "./workspaceSaveError";
 
 type WorkspaceItemDto = {
   id: string;

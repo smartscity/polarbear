@@ -1,4 +1,4 @@
-import type { AppCommand } from "../../../shared/commands/appCommandTypes";
+import type { MarkdownFormatCommand } from "../../../shared/commands/markdownFormatCommands";
 
 export type MarkdownTextEdit = {
   nextText: string;
@@ -17,7 +17,7 @@ type SelectionRange = {
   to: number;
 };
 
-const headingCommands: Partial<Record<AppCommand, number>> = {
+const headingCommands: Partial<Record<MarkdownFormatCommand, number>> = {
   "format.heading1": 1,
   "format.heading2": 2,
   "format.heading3": 3,
@@ -27,7 +27,7 @@ const headingCommands: Partial<Record<AppCommand, number>> = {
 };
 
 export function applyMarkdownFormat(
-  command: AppCommand,
+  command: MarkdownFormatCommand,
   text: string,
   selection: SelectionRange
 ): MarkdownTextEdit | null {

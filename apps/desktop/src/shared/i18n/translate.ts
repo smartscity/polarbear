@@ -34,14 +34,14 @@ if (!messages[fallbackLanguage]) {
 }
 
 export const localeOptions: readonly LocaleOption[] = Object.entries(messages)
-  .map(([code, catalog]) => ({
+  .map<LocaleOption>(([code, catalog]) => ({
     code,
     direction: catalog["locale.direction"] === "rtl" ? "rtl" : "ltr",
     label: catalog["locale.name"] ?? code,
   }))
   .sort(({ code: left }, { code: right }) => left.localeCompare(right));
 
-export function isSupportedLanguage(value: string): value is AppLanguage {
+export function isSupportedLanguage(value: string): boolean {
   return Object.hasOwn(messages, value);
 }
 

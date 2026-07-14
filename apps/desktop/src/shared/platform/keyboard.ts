@@ -6,11 +6,27 @@ type NavigatorWithUserAgentData = Navigator & {
 
 /**
  * Treat Command as the primary modifier on Apple platforms and Control as the
- * primary modifier elsewhere. Browser events expose both flags, which keeps
- * this adapter usable for external keyboards on tablets as well.
+ * primary modifier elsewhere. This is intentionally separate from zoom: macOS
+ * trackpad pinch commonly arrives as Ctrl+wheel even though Command is the
+ * keyboard primary modifier.
  */
-export function hasPrimaryModifier(event: ModifierEvent): boolean {
+export function hasPrimaryModifier(
+  event: ModifierEvent,
+  platformHint = currentPlatformHint(),
+): boolean {
+  return isApplePlatform(platformHint) ? event.metaKey : event.ctrlKey;
+}
+
+/**
+ * Zoom gestures can be initiated by either Command/Control wheel or browser
+ * pinch emulation. Keep this broader than the keyboard command modifier.
+ */
+export function hasZoomModifier(event: ModifierEvent): boolean {
   return event.metaKey || event.ctrlKey;
+}
+
+export function isApplePlatform(platformHint = currentPlatformHint()): boolean {
+  return /mac|iphone|ipad|ipod/i.test(platformHint);
 }
 
 /**
@@ -22,10 +38,10 @@ export function displayAccelerator(accelerator: string | undefined): string {
     return "";
   }
 
-  const isApplePlatform = currentPlatformHint().match(/mac|iphone|ipad|ipod/i);
+  const isApple = isApplePlatform();
   return accelerator
-    .replace("CmdOrCtrl", isApplePlatform ? "Command" : "Control")
-    .replace("Alt", isApplePlatform ? "Option" : "Alt");
+    .replace("CmdOrCtrl", isApple ? "Command" : "Control")
+    .replace("Alt", isApple ? "Option" : "Alt");
 }
 
 function currentPlatformHint(): string {

@@ -1,7 +1,7 @@
 import { APP_ZOOM_CONFIG } from "./appZoomConfig";
 import { readStoredDebugEnabled } from "../../shared/debug/debugSettings";
 import { translateCurrent } from "../../shared/i18n/translate";
-import { hasPrimaryModifier } from "../../shared/platform/keyboard";
+import { hasZoomModifier } from "../../shared/platform/keyboard";
 
 export const NORMAL_APP_ZOOM = APP_ZOOM_CONFIG.normal;
 export const MIN_COMMITTED_APP_ZOOM = APP_ZOOM_CONFIG.minimum;
@@ -35,7 +35,7 @@ export function clampCommittedZoom(value: number): number {
 }
 
 export function isAppZoomWheelEvent(event: WheelEvent): boolean {
-  return hasPrimaryModifier(event) && Math.abs(event.deltaY) > Math.abs(event.deltaX);
+  return hasZoomModifier(event) && Math.abs(event.deltaY) > Math.abs(event.deltaX);
 }
 
 export function consumeAppZoomWheelEvent(event: WheelEvent): void {

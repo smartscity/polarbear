@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  codeMirrorKeyForCommand,
+  codeMirrorKeysForCommand,
   effectiveAcceleratorForCommand,
   findKeybindingConflicts,
   matchesCommandShortcut,
@@ -9,6 +9,7 @@ import {
   resolveShortcutForKeyboardEvent,
   type KeybindingContext,
 } from "./keybindingResolver";
+import { isApplePlatform } from "../shared/platform/keyboard";
 
 const editorContext: KeybindingContext = {
   editorFocused: true,
@@ -25,16 +26,29 @@ const fileTreeContext: KeybindingContext = {
 };
 
 function keydownEvent(
-  values: Pick<KeyboardEvent, "code" | "ctrlKey" | "key"> & Partial<
-    Pick<KeyboardEvent, "altKey" | "metaKey" | "shiftKey">
+  values: Pick<KeyboardEvent, "code" | "key"> & Partial<
+    Pick<KeyboardEvent, "altKey" | "ctrlKey" | "isComposing" | "metaKey" | "shiftKey">
   >,
 ): KeyboardEvent {
   return {
     altKey: false,
+    ctrlKey: false,
+    isComposing: false,
     metaKey: false,
     shiftKey: false,
     ...values,
   } as KeyboardEvent;
+}
+
+function primaryModifierEvent(
+  values: Pick<KeyboardEvent, "code" | "key"> & Partial<
+    Pick<KeyboardEvent, "altKey" | "isComposing" | "shiftKey">
+  >,
+): KeyboardEvent {
+  return keydownEvent({
+    ...values,
+    ...(isApplePlatform() ? { metaKey: true } : { ctrlKey: true }),
+  });
 }
 
 describe("parseKeybinding", () => {
@@ -124,14 +138,23 @@ describe("resolveShortcutDefinitions", () => {
   });
 });
 
-describe("codeMirrorKeyForCommand", () => {
-  it("uses the same override syntax for editor keymaps", () => {
-    expect(codeMirrorKeyForCommand("format.bold", "Mod-b", {
+describe("codeMirrorKeysForCommand", () => {
+  it("uses command definitions and overrides for editor keymaps", () => {
+    expect(codeMirrorKeysForCommand("format.bold", {
       "format.bold": "Mod+Alt+B",
-    })).toBe("Mod-Alt-b");
-    expect(codeMirrorKeyForCommand("format.bold", "Mod-b", {
+    })).toEqual(["Mod-Alt-b"]);
+    expect(codeMirrorKeysForCommand("format.bold", {
       "format.bold": null,
-    })).toBeNull();
+    })).toEqual([]);
+  });
+
+  it("keeps configured secondary bindings for commands that support them", () => {
+    expect(codeMirrorKeysForCommand("edit.redo", {}))
+      .toEqual(["Mod-Shift-z", "Mod-y"]);
+  });
+
+  it("exposes editor keymaps even when a command is not globally editor-handled", () => {
+    expect(codeMirrorKeysForCommand("format.heading1", {})).toEqual(["Mod-1"]);
   });
 });
 
@@ -152,7 +175,7 @@ describe("effectiveAcceleratorForCommand", () => {
 describe("resolveShortcutForKeyboardEvent", () => {
   it("prefers an editor-specific binding over an always-active binding", () => {
     const result = resolveShortcutForKeyboardEvent(
-      keydownEvent({ code: "KeyB", ctrlKey: true, key: "b" }),
+      primaryModifierEvent({ code: "KeyB", key: "b" }),
       [
         { command: "file.save", key: "b" },
         {
@@ -178,7 +201,7 @@ describe("resolveShortcutForKeyboardEvent", () => {
 
   it("does not choose an arbitrary command when equal-priority bindings collide", () => {
     const result = resolveShortcutForKeyboardEvent(
-      keydownEvent({ code: "KeyS", ctrlKey: true, key: "s" }),
+      primaryModifierEvent({ code: "KeyS", key: "s" }),
       [
         { command: "file.save", key: "s" },
         { command: "repository.syncNow", key: "s" },
@@ -207,13 +230,27 @@ describe("resolveShortcutForKeyboardEvent", () => {
       textInputFocused: true,
     })).toEqual({ kind: "none" });
   });
+
+  it("does not resolve application commands during IME composition", () => {
+    const shortcuts = [{ command: "file.save" as const, key: "s" }];
+
+    expect(resolveShortcutForKeyboardEvent(
+      primaryModifierEvent({ code: "KeyS", isComposing: true, key: "s" }),
+      shortcuts,
+      editorContext,
+    )).toEqual({ kind: "none" });
+    expect(resolveShortcutForKeyboardEvent(
+      primaryModifierEvent({ code: "Process", key: "Process" }),
+      shortcuts,
+      editorContext,
+    )).toEqual({ kind: "none" });
+  });
 });
 
 describe("matchesCommandShortcut", () => {
   it("honors a configured embedded-editor command binding", () => {
-    const event = keydownEvent({
+    const event = primaryModifierEvent({
       code: "KeyB",
-      ctrlKey: true,
       key: "b",
       shiftKey: true,
     });

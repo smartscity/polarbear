@@ -33,6 +33,13 @@ export class ErrorBoundary extends React.Component<
           <h1>{translateCurrent("error.startTitle")}</h1>
           <p>{this.state.message}</p>
           <p>{translateCurrent("error.consoleHint")}</p>
+          <button
+            type="button"
+            className="startup-error-reload"
+            onClick={() => window.location.reload()}
+          >
+            {translateCurrent("error.reloadApp")}
+          </button>
         </main>
       );
     }

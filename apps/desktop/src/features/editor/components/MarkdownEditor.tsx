@@ -1,14 +1,13 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
-import { redo, selectAll, undo } from "@codemirror/commands";
 import { search } from "@codemirror/search";
 import { Prec } from "@codemirror/state";
-import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
+import { keymap, type EditorView } from "@codemirror/view";
 import { useEffect, useMemo, useRef } from "react";
-import { codeMirrorKeyForCommand } from "../../../commands/keybindingResolver";
 import type { AppCommand } from "../../../shared/commands/appCommandTypes";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
+import { createEditorCommandBindings } from "../editorCommandKeymap";
 import { platformNavigationKeymap } from "./platformNavigationKeymap";
 
 export type MarkdownEditorView = EditorView;
@@ -102,48 +101,13 @@ function sourceEditorCommandKeymap(
   keybindingOverrides: KeybindingOverrides,
   onCommand: (command: AppCommand) => void,
 ) {
-  const commandBinding = (
-    command: AppCommand,
-    fallback: string,
-  ): KeyBinding | null => {
-    const key = codeMirrorKeyForCommand(command, fallback, keybindingOverrides);
-    return key
-      ? {
-          key,
-          preventDefault: true,
-          run: () => {
-            onCommand(command);
-            return true;
-          },
-        }
-      : null;
-  };
-  const directBinding = (
-    command: AppCommand,
-    fallback: string,
-    run: KeyBinding["run"],
-  ): KeyBinding | null => {
-    const key = codeMirrorKeyForCommand(command, fallback, keybindingOverrides);
-    return key ? { key, run } : null;
-  };
-
-  const bindings = [
-    commandBinding("format.bold", "Mod-b"),
-    commandBinding("format.italic", "Mod-i"),
-    commandBinding("format.underline", "Mod-u"),
-    commandBinding("format.link", "Mod-k"),
-    commandBinding("format.codeFence", "Mod-Shift-k"),
-    commandBinding("format.mathBlock", "Mod-Shift-m"),
-    ...([1, 2, 3, 4, 5, 6] as const).map((level) =>
-      commandBinding(`format.heading${level}`, `Mod-${level}`),
-    ),
-    directBinding("edit.selectAll", "Mod-a", selectAll),
-    directBinding("edit.undo", "Mod-z", undo),
-    directBinding("edit.redo", "Mod-Shift-z", redo),
-    keybindingOverrides["edit.redo"] === undefined
-      ? { key: "Mod-y", run: redo }
-      : null,
-  ].filter((binding): binding is KeyBinding => binding !== null);
-
-  return Prec.highest(keymap.of(bindings));
+  return Prec.highest(
+    keymap.of(createEditorCommandBindings({
+      keybindingOverrides,
+      runMarkdownFormatCommand: (_view, command) => {
+        onCommand(command);
+        return true;
+      },
+    })),
+  );
 }

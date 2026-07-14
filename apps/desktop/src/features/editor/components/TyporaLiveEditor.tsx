@@ -7,8 +7,8 @@ import {
   useState,
 } from "react";
 import CodeMirror from "@uiw/react-codemirror";
+import { redo, undo } from "@codemirror/commands";
 import { markdown as markdownLanguage } from "@codemirror/lang-markdown";
-import { redo, selectAll, undo } from "@codemirror/commands";
 import { search } from "@codemirror/search";
 import {
   EditorSelection,
@@ -17,7 +17,6 @@ import {
   StateField,
   Transaction,
   type Range,
-  type Text,
 } from "@codemirror/state";
 import {
   Decoration,
@@ -27,28 +26,16 @@ import {
   keymap,
   type KeyBinding,
 } from "@codemirror/view";
-import { DIAGRAM_CONFIG } from "../../diagram/diagramConfig";
-import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
-import { plantUmlSvgUrl } from "../../diagram/plantUmlUrl";
-import { sanitizeDiagramSvg } from "../../diagram/sanitizeDiagramSvg";
 import { APP_EVENTS } from "../../../shared/events/appEvents";
-import { readStoredDebugEnabled } from "../../../shared/debug/debugSettings";
 import { translateCurrent } from "../../../shared/i18n/translate";
 import { hasPrimaryModifier } from "../../../shared/platform/keyboard";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
-import { openExternalUrl } from "../../../shared/tauri/openExternalUrl";
 import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import {
-  codeMirrorKeyForCommand,
   matchesCommandShortcut,
 } from "../../../commands/keybindingResolver";
 import { resolveMarkdownAsset } from "../../workspace/tauriWorkspaceAdapter";
-import {
-  exportSvgElementAsPng,
-  exportSvgElementAsSvg,
-  findRenderedSvg,
-} from "../../diagram/diagramExport";
 import { platformNavigationKeyBindings } from "./platformNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
 import {
@@ -61,6 +48,36 @@ import {
   clearLiveEditorViewportSizing,
   sizeLiveEditorViewport,
 } from "../liveEditorViewport";
+import {
+  collectLiveDebugState,
+  copyLiveDebugText,
+  createInitialLiveDebugState,
+  describeDebugTarget,
+  formatLiveDebugState,
+  isAppCanvasTransformActive,
+  isLiveDebugEnabled,
+  isLiveDebugPanelEnabled,
+  isLiveScrollDebugEnabled,
+  type LiveDebugState,
+  writeLiveDebugOverlay,
+} from "../liveEditorDebug";
+import { useCodeFenceLanguageHover } from "../hooks/useCodeFenceLanguageHover";
+import { executeMarkdownFormatCommand } from "../editorCommandAdapter";
+import { createEditorCommandBindings } from "../editorCommandKeymap";
+import {
+  createImagePasteExtension,
+  type ImagePasteHandler,
+} from "../imagePasteExtension";
+import {
+  createLinkClickExtension,
+  preserveLargeEnterScrollJumpExtension,
+  trimSingleLineBreakSelectionExtension,
+} from "../codeMirrorInteractionExtensions";
+import {
+  completeFenceBlockOnEnter,
+  exitFenceBlock,
+} from "../markdown/codeFenceCommands";
+import { findClosingFenceLine } from "../markdown/codeFenceState";
 import { renderMathText } from "../markdown/mathText";
 import {
   isCalloutStartLine,
@@ -75,7 +92,6 @@ import {
   isTableSeparatorLine,
   parseCodeFenceLine,
   parseHtmlAttributes,
-  type CodeFenceInfo,
 } from "../markdown/liveMarkdownSyntax";
 import {
   insertLineBreakAtCurrentSelection,
@@ -121,11 +137,12 @@ import {
   ListMarkerWidget,
   TaskListMarkerWidget,
 } from "../widgets/inlineMarkdownWidgets";
-
-type ImagePasteHandler = (
-  items: DataTransferItemList,
-  insertMarkdown?: (markdown: string) => void,
-) => void;
+import {
+  MermaidPreviewWidget,
+  PlantUmlPreviewWidget,
+  type DiagramPreviewBlock,
+} from "../widgets/diagramPreviewWidgets";
+import { CodeFenceLanguageWidget } from "../widgets/codeFenceLanguageWidget";
 
 type ImageDropHandler = (filePaths: string[]) => void;
 
@@ -178,271 +195,6 @@ function hashPreviewBlockSource(source: string): string {
     hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
   }
   return hash.toString(36);
-}
-
-function isAppCanvasZooming(): boolean {
-  return document.documentElement.dataset.appCanvasZooming === "true";
-}
-
-function getAppCanvasZoom(): number {
-  const value = Number.parseFloat(document.documentElement.dataset.appCanvasZoom ?? "1");
-  return Number.isFinite(value) && value > 0 ? value : 1;
-}
-
-function isAppCanvasTransformActive(): boolean {
-  return isAppCanvasZooming() || Math.abs(getAppCanvasZoom() - 1) > 0.0005;
-}
-
-function isLiveDebugEnabled(): boolean {
-  return readStoredDebugEnabled();
-}
-
-function isLiveDebugPanelEnabled(): boolean {
-  return readStoredDebugEnabled();
-}
-
-function isLiveScrollDebugEnabled(): boolean {
-  return readStoredDebugEnabled();
-}
-
-function writeLiveDebugOverlay(text: string): void {
-  const overlayId = "polarbear-live-debug-overlay";
-  let overlay = document.getElementById(overlayId) as HTMLDivElement | null;
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = overlayId;
-    overlay.dataset.polarbearDebugOverlay = "true";
-    overlay.style.position = "fixed";
-    overlay.style.left = "12px";
-    overlay.style.bottom = "12px";
-    overlay.style.zIndex = "2147483646";
-    overlay.style.maxWidth = "760px";
-    overlay.style.maxHeight = "38vh";
-    overlay.style.margin = "0";
-    overlay.style.padding = "10px 12px";
-    overlay.style.overflow = "auto";
-    overlay.style.border = "1px solid rgba(148, 163, 184, 0.45)";
-    overlay.style.borderRadius = "8px";
-    overlay.style.background = "rgba(15, 23, 42, 0.88)";
-    overlay.style.color = "#e5edf8";
-    overlay.style.font = "12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace";
-    overlay.style.pointerEvents = "none";
-    overlay.style.whiteSpace = "pre-wrap";
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.debugCopy = "true";
-    button.textContent = translateCurrent("common.copy");
-    button.style.float = "right";
-    button.style.margin = "0 0 8px 12px";
-    button.style.pointerEvents = "auto";
-    button.style.cursor = "pointer";
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const debugText = overlay?.querySelector("pre")?.textContent ?? "";
-      void copyDebugText(debugText);
-    });
-
-    const pre = document.createElement("pre");
-    pre.style.margin = "0";
-    pre.style.whiteSpace = "pre-wrap";
-    pre.style.font = "inherit";
-    overlay.append(button, pre);
-    document.body.appendChild(overlay);
-  }
-
-  const pre = overlay.querySelector("pre");
-  if (pre) {
-    pre.textContent = text;
-  }
-}
-
-async function copyDebugText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard?.writeText(text);
-  } catch {
-    // Debug copy is best-effort and must not crash the editor.
-  }
-}
-
-type LiveDebugState = {
-  version: string;
-  source: string;
-  eventCount: number;
-  zoom: number;
-  cssZoom: string;
-  appCanvasZooming: string;
-  paneHeight: number;
-  themeHeight: number;
-  editorHeight: number;
-  contentFontSize: string;
-  contentPaddingTop: string;
-  contentWidth: number;
-  contentHeight: number;
-  contentClientWidth: number;
-  contentScrollWidth: number;
-  contentScrollHeight: number;
-  scrollerClientWidth: number;
-  scrollerScrollWidth: number;
-  scrollerClientHeight: number;
-  scrollerScrollHeight: number;
-  scrollTop: number;
-  maxScrollTop: number;
-  editorContentHeight: number;
-  viewportFrom: number;
-  viewportTo: number;
-  docLength: number;
-  docLines: number;
-  key: string;
-  beforeSelection: string;
-  afterSelection: string;
-  wheel: string;
-  mouse: string;
-  mousePos: string;
-  target: string;
-  pinch: string;
-  note: string;
-};
-
-function createInitialLiveDebugState(): LiveDebugState {
-  return {
-    version: "v8-debug",
-    source: "init",
-    eventCount: 0,
-    zoom: 1,
-    cssZoom: "",
-    appCanvasZooming: "",
-    paneHeight: 0,
-    themeHeight: 0,
-    editorHeight: 0,
-    contentFontSize: "",
-    contentPaddingTop: "",
-    contentWidth: 0,
-    contentHeight: 0,
-    contentClientWidth: 0,
-    contentScrollWidth: 0,
-    contentScrollHeight: 0,
-    scrollerClientWidth: 0,
-    scrollerScrollWidth: 0,
-    scrollerClientHeight: 0,
-    scrollerScrollHeight: 0,
-    scrollTop: 0,
-    maxScrollTop: 0,
-    editorContentHeight: 0,
-    viewportFrom: 0,
-    viewportTo: 0,
-    docLength: 0,
-    docLines: 0,
-    key: "",
-    beforeSelection: "",
-    afterSelection: "",
-    wheel: "",
-    mouse: "",
-    mousePos: "",
-    target: "",
-    pinch: "",
-    note: "",
-  };
-}
-
-function describeSelection(view: EditorView | null): string {
-  if (!view) {
-    return "no-view";
-  }
-
-  const head = view.state.selection.main.head;
-  const line = view.state.doc.lineAt(head);
-  return `line=${line.number} col=${head - line.from + 1} pos=${head}`;
-}
-
-function collectLiveDebugState(
-  pane: HTMLElement | null,
-  view: EditorView | null,
-  zoom: number,
-  previous: LiveDebugState,
-  source: string,
-  extra: Partial<LiveDebugState> = {},
-): LiveDebugState {
-  const scroller = pane?.querySelector(".cm-scroller");
-  const content = pane?.querySelector(".cm-content");
-  const theme = pane?.querySelector(".cm-theme");
-  const editor = pane?.querySelector(".cm-editor");
-  const scrollerElement = scroller instanceof HTMLElement ? scroller : null;
-  const contentElement = content instanceof HTMLElement ? content : null;
-  const themeElement = theme instanceof HTMLElement ? theme : null;
-  const editorElement = editor instanceof HTMLElement ? editor : null;
-  const computedContent = contentElement ? window.getComputedStyle(contentElement) : null;
-  const paneRect = pane?.getBoundingClientRect();
-  const themeRect = themeElement?.getBoundingClientRect();
-  const editorRect = editorElement?.getBoundingClientRect();
-  const contentRect = contentElement?.getBoundingClientRect();
-
-  return {
-    ...previous,
-    version: "v8-debug",
-    source,
-    eventCount: previous.eventCount + 1,
-    note: "",
-    zoom,
-    cssZoom: zoom.toFixed(3),
-    appCanvasZooming: document.documentElement.dataset.appCanvasZooming ?? "false",
-    paneHeight: paneRect ? Math.round(paneRect.height) : 0,
-    themeHeight: themeRect ? Math.round(themeRect.height) : 0,
-    editorHeight: editorRect ? Math.round(editorRect.height) : 0,
-    contentFontSize: computedContent?.fontSize ?? "",
-    contentPaddingTop: computedContent?.paddingTop ?? "",
-    contentWidth: contentRect ? Math.round(contentRect.width) : 0,
-    contentHeight: contentRect ? Math.round(contentRect.height) : 0,
-    contentClientWidth: contentElement?.clientWidth ?? 0,
-    contentScrollWidth: contentElement?.scrollWidth ?? 0,
-    contentScrollHeight: contentElement?.scrollHeight ?? 0,
-    scrollerClientWidth: scrollerElement?.clientWidth ?? 0,
-    scrollerScrollWidth: scrollerElement?.scrollWidth ?? 0,
-    scrollerClientHeight: scrollerElement?.clientHeight ?? 0,
-    scrollerScrollHeight: scrollerElement?.scrollHeight ?? 0,
-    scrollTop: scrollerElement?.scrollTop ?? 0,
-    maxScrollTop: scrollerElement
-      ? Math.max(0, scrollerElement.scrollHeight - scrollerElement.clientHeight)
-      : 0,
-    editorContentHeight: view ? Math.round(view.contentHeight) : 0,
-    viewportFrom: view?.viewport.from ?? 0,
-    viewportTo: view?.viewport.to ?? 0,
-    docLength: view?.state.doc.length ?? 0,
-    docLines: view?.state.doc.lines ?? 0,
-    afterSelection: describeSelection(view),
-    ...extra,
-  };
-}
-
-function describeDebugTarget(target: EventTarget | null): string {
-  if (!(target instanceof Element)) {
-    return "unknown";
-  }
-
-  const tag = target.tagName.toLowerCase();
-  const className = typeof target.className === "string"
-    ? target.className.trim().replace(/\s+/g, ".")
-    : "";
-
-  return className ? `${tag}.${className}` : tag;
-}
-
-function formatLiveDebugState(debugState: LiveDebugState): string {
-  return [
-    `LIVE DEBUG ${debugState.version} source=${debugState.source} events=${debugState.eventCount}`,
-    `pane/theme/editor height=${debugState.paneHeight}/${debugState.themeHeight}/${debugState.editorHeight}`,
-    `scroller client/scroll height=${debugState.scrollerClientHeight}/${debugState.scrollerScrollHeight} scrollTop=${debugState.scrollTop} max=${debugState.maxScrollTop}`,
-    `scroller client/scroll width=${debugState.scrollerClientWidth}/${debugState.scrollerScrollWidth}`,
-    `content rect/client/scroll height=${debugState.contentHeight}/${debugState.contentScrollHeight} width=${debugState.contentWidth}/${debugState.contentClientWidth}/${debugState.contentScrollWidth}`,
-    `cm contentHeight=${debugState.editorContentHeight} viewport=${debugState.viewportFrom}-${debugState.viewportTo} doc=${debugState.docLines} lines/${debugState.docLength} chars`,
-    `selection before=${debugState.beforeSelection || "n/a"} after=${debugState.afterSelection || "n/a"}`,
-    `wheel=${debugState.wheel || "n/a"} mouse=${debugState.mouse || "n/a"} target=${debugState.target || "n/a"}`,
-    `appZoom=${debugState.pinch || "n/a"}`,
-    `appCanvasZooming=${debugState.appCanvasZooming || "false"} appCanvasZoom=${getAppCanvasZoom().toFixed(3)}`,
-    `zoom=${Math.round(debugState.zoom * 100)}% css=${debugState.cssZoom || "n/a"} font=${debugState.contentFontSize || "n/a"} paddingTop=${debugState.contentPaddingTop || "n/a"}`,
-    `note=${debugState.note || "n/a"}`,
-  ].join("\n");
 }
 
 const headingLineDecorations = Array.from({ length: 6 }, (_, index) =>
@@ -611,40 +363,6 @@ function codeLineDecorationForLanguage(
   return decoration;
 }
 
-const supportedCodeLanguages = [
-  "text",
-  "markdown",
-  "json",
-  "java",
-  "yaml",
-  "typescript",
-  "tsx",
-  "javascript",
-  "sql",
-  "rust",
-  "bash",
-  "shell",
-  "xml",
-  "html",
-  "css",
-  "python",
-  "go",
-  "kotlin",
-  "properties",
-  "mermaid",
-  "plantuml",
-];
-
-const mermaidRenderCache = new Map<
-  string,
-  { error?: string; svgContent?: string }
->();
-const plantUmlRenderCache = new Map<
-  string,
-  { error?: string; svgContent?: string }
->();
-
-
 const tablePortalMenuCleanups = new Set<() => void>();
 
 export function TyporaLiveEditor({
@@ -722,8 +440,8 @@ export function TyporaLiveEditor({
       preserveLargeEnterScrollJumpExtension,
       markdownLanguage(),
       search({ top: true }),
-      linkClickExtension(),
-      imagePasteExtension(stableImagePasteHandler),
+      createLinkClickExtension(),
+      createImagePasteExtension(stableImagePasteHandler),
       typoraLiveDecorations({
         activeFileId,
         keybindingOverrides: userSettings.keybindings,
@@ -734,84 +452,7 @@ export function TyporaLiveEditor({
     [activeFileId, stableImagePasteHandler, userSettings.keybindings, workspaceRoot],
   );
 
-  useEffect(() => {
-    const pane = paneRef.current;
-    if (!pane) {
-      return undefined;
-    }
-
-    let activeLanguageWidget: HTMLElement | null = null;
-
-    const setActiveLanguageWidget = (nextWidget: HTMLElement | null) => {
-      if (activeLanguageWidget === nextWidget) {
-        return;
-      }
-
-      activeLanguageWidget?.classList.remove("cm-typora-code-language-visible");
-      activeLanguageWidget = nextWidget;
-      activeLanguageWidget?.classList.add("cm-typora-code-language-visible");
-    };
-
-    const findLanguageWidgetForCodeLine = (line: Element): HTMLElement | null => {
-      let sibling = line.previousElementSibling;
-
-      while (sibling) {
-        if (
-          sibling instanceof HTMLElement &&
-          sibling.classList.contains("cm-typora-code-language")
-        ) {
-          return sibling;
-        }
-
-        if (
-          sibling.classList.contains("cm-line") &&
-          sibling.classList.contains("cm-typora-code-line")
-        ) {
-          sibling = sibling.previousElementSibling;
-          continue;
-        }
-
-        return null;
-      }
-
-      return null;
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) {
-        setActiveLanguageWidget(null);
-        return;
-      }
-
-      const languageWidget = target.closest(".cm-typora-code-language");
-      if (languageWidget instanceof HTMLElement) {
-        setActiveLanguageWidget(languageWidget);
-        return;
-      }
-
-      const codeLine = target.closest(".cm-line.cm-typora-code-line");
-      if (codeLine) {
-        setActiveLanguageWidget(findLanguageWidgetForCodeLine(codeLine));
-        return;
-      }
-
-      setActiveLanguageWidget(null);
-    };
-
-    const handlePointerLeave = () => {
-      setActiveLanguageWidget(null);
-    };
-
-    pane.addEventListener("pointermove", handlePointerMove);
-    pane.addEventListener("pointerleave", handlePointerLeave);
-
-    return () => {
-      pane.removeEventListener("pointermove", handlePointerMove);
-      pane.removeEventListener("pointerleave", handlePointerLeave);
-      activeLanguageWidget?.classList.remove("cm-typora-code-language-visible");
-    };
-  }, []);
+  useCodeFenceLanguageHover(paneRef);
 
   useEffect(() => {
     return () => {
@@ -915,6 +556,10 @@ export function TyporaLiveEditor({
   }, [liveDebugEnabled, reportLiveDebug]);
 
   useEffect(() => {
+    if (!liveDebugEnabled || !isLiveScrollDebugEnabled()) {
+      return undefined;
+    }
+
     const pane = paneRef.current;
     if (!pane) {
       return undefined;
@@ -995,7 +640,7 @@ export function TyporaLiveEditor({
       scroller?.removeEventListener("wheel", onWheel);
       scroller?.removeEventListener("scroll", onScroll);
     };
-  }, [reportLiveDebug]);
+  }, [liveDebugEnabled, reportLiveDebug]);
 
   return (
     <section
@@ -1026,10 +671,10 @@ export function TyporaLiveEditor({
             <button
               type="button"
               onClick={() => {
-                void copyDebugText(formatLiveDebugState(debugState));
+                void copyLiveDebugText(formatLiveDebugState(debugState));
               }}
             >
-              Copy
+              {translateCurrent("common.copy")}
             </button>
           </div>
           <pre>{formatLiveDebugState(debugState)}</pre>
@@ -1061,33 +706,10 @@ export function TyporaLiveEditor({
 }
 
 function typoraLiveKeymap(keybindingOverrides: KeybindingOverrides) {
-  const commandBinding = (
-    command: Parameters<typeof codeMirrorKeyForCommand>[0],
-    fallback: string,
-    run: KeyBinding["run"],
-  ): KeyBinding | null => {
-    const key = codeMirrorKeyForCommand(command, fallback, keybindingOverrides);
-    return key ? { key, run } : null;
-  };
-  const configurableBindings = [
-    commandBinding("format.bold", "Mod-b", (view) =>
-      toggleSelectionWrapper(view, "**", "**", "bold")),
-    commandBinding("format.italic", "Mod-i", (view) =>
-      toggleSelectionWrapper(view, "*", "*", "italic")),
-    commandBinding("format.underline", "Mod-u", (view) =>
-      toggleSelectionWrapper(view, "<u>", "</u>", "underline")),
-    commandBinding("format.link", "Mod-k", wrapLinkSelection),
-    commandBinding("format.codeFence", "Mod-Shift-k", (view) =>
-      insertBlockInEditor(view, "```text\n", "\n```\n", "")),
-    commandBinding("format.mathBlock", "Mod-Shift-m", (view) =>
-      insertBlockInEditor(view, "$$\n", "\n$$\n", "")),
-    ...([1, 2, 3, 4, 5, 6] as const).map((level) =>
-      commandBinding(`format.heading${level}`, `Mod-${level}`, (view) =>
-        setCurrentLineHeading(view, level))),
-    commandBinding("edit.selectAll", "Mod-a", selectAll),
-    commandBinding("edit.undo", "Mod-z", undo),
-    commandBinding("edit.redo", "Mod-Shift-z", redo),
-  ].filter((binding): binding is KeyBinding => binding !== null);
+  const configurableBindings = createEditorCommandBindings({
+    keybindingOverrides,
+    runMarkdownFormatCommand: executeMarkdownFormatCommand,
+  });
 
   return Prec.highest(keymap.of([
     ...platformNavigationKeyBindings(),
@@ -1098,516 +720,10 @@ function typoraLiveKeymap(keybindingOverrides: KeybindingOverrides) {
     },
     {
       key: "Enter",
-      run: handleCodeFenceEnter,
+      run: completeFenceBlockOnEnter,
     },
     ...configurableBindings,
-    ...(keybindingOverrides["edit.redo"] === undefined
-      ? [{ key: "Mod-y", run: redo }]
-      : []),
   ]));
-}
-
-const trimSingleLineBreakSelectionExtension = EditorState.transactionFilter.of((transaction) => {
-  if (!transaction.selection || transaction.docChanged) {
-    return transaction;
-  }
-
-  const selection = transaction.newSelection;
-  let changed = false;
-
-  const ranges = selection.ranges.map((range) => {
-    const trimmed = trimSingleLineBreakSelection(
-      transaction.newDoc,
-      range.anchor,
-      range.head,
-    );
-
-    if (!trimmed) {
-      return range;
-    }
-
-    changed = true;
-    return EditorSelection.range(trimmed.anchor, trimmed.head);
-  });
-
-  if (!changed) {
-    return transaction;
-  }
-
-  return [
-    transaction,
-    {
-      selection: EditorSelection.create(ranges, selection.mainIndex),
-      scrollIntoView: transaction.scrollIntoView,
-      sequential: true,
-    },
-  ];
-});
-
-function trimSingleLineBreakSelection(
-  doc: Text,
-  anchor: number,
-  head: number,
-): { anchor: number; head: number } | null {
-  if (anchor === head) {
-    return null;
-  }
-
-  const from = Math.min(anchor, head);
-  const to = Math.max(anchor, head);
-  const line = doc.lineAt(from);
-
-  if (line.number >= doc.lines) {
-    return null;
-  }
-
-  const nextLine = doc.line(line.number + 1);
-  if (to !== nextLine.from) {
-    return null;
-  }
-
-  if (from > line.to) {
-    return null;
-  }
-
-  const forward = anchor <= head;
-  return {
-    anchor: forward ? anchor : line.to,
-    head: forward ? line.to : head,
-  };
-}
-
-function linkClickExtension() {
-  const openLinkFromEvent = (event: MouseEvent, view: EditorView): boolean => {
-    if (event.defaultPrevented || event.button !== 0) {
-      return false;
-    }
-
-    const target = event.target;
-    if (!(target instanceof Element) || !target.closest(".cm-typora-link")) {
-      return false;
-    }
-
-    const pos = view.posAtCoords({
-      x: event.clientX,
-      y: event.clientY,
-    });
-    if (pos === null) {
-      return false;
-    }
-
-    const href = findMarkdownLinkHrefAt(view.state, pos);
-    if (!href) {
-      return false;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    void openExternalUrl(href);
-    return true;
-  };
-
-  return EditorView.domEventHandlers({
-    mousedown(event, view) {
-      return openLinkFromEvent(event, view);
-    },
-
-    click(event, view) {
-      return openLinkFromEvent(event, view);
-    },
-  });
-}
-
-const preserveLargeEnterScrollJumpExtension = EditorView.domEventHandlers({
-  keydown(event, view) {
-    if (event.key !== "Enter" || event.defaultPrevented) {
-      return false;
-    }
-
-    const scrollDOM = view.scrollDOM;
-    const scrollTop = scrollDOM.scrollTop;
-    const scrollLeft = scrollDOM.scrollLeft;
-    const restoreIfLargeJump = () => {
-      if (Math.abs(scrollDOM.scrollTop - scrollTop) > 80) {
-        scrollDOM.scrollTop = scrollTop;
-      }
-      if (Math.abs(scrollDOM.scrollLeft - scrollLeft) > 80) {
-        scrollDOM.scrollLeft = scrollLeft;
-      }
-    };
-
-    window.requestAnimationFrame(() => {
-      restoreIfLargeJump();
-      window.requestAnimationFrame(restoreIfLargeJump);
-    });
-
-    return false;
-  },
-});
-
-function findMarkdownLinkHrefAt(state: EditorState, position: number): string | null {
-  const line = state.doc.lineAt(position);
-  for (const match of line.text.matchAll(/(?<!!)\[([^\]\n]+)]\(([^)\n]+)\)/g)) {
-    if (match.index === undefined) {
-      continue;
-    }
-    const from = line.from + match.index;
-    const to = from + match[0].length;
-    if (position >= from && position <= to) {
-      return match[2].trim();
-    }
-  }
-  return null;
-}
-
-function handleCodeFenceEnter(view: EditorView): boolean {
-  if (!canCompleteFenceBlockOnEnter(view)) {
-    return false;
-  }
-
-  const line = view.state.doc.lineAt(view.state.selection.main.head);
-  view.dispatch({
-    changes: {
-      from: line.to,
-      to: line.to,
-      insert: "\n\n```",
-    },
-    selection: EditorSelection.cursor(line.to + 1),
-    scrollIntoView: false,
-    userEvent: "input.completeCodeBlock",
-  });
-  return true;
-}
-
-function canCompleteFenceBlockOnEnter(view: EditorView): boolean {
-  const selection = view.state.selection.main;
-  if (!selection.empty) {
-    return false;
-  }
-
-  const line = view.state.doc.lineAt(selection.head);
-  if (selection.head !== line.to) {
-    return false;
-  }
-
-  const fenceMatch = /^```([a-zA-Z0-9_-]+)?\s*$/.exec(line.text);
-  if (!fenceMatch) {
-    return false;
-  }
-
-  if (isLineInsideExistingFenceBlock(view.state, line.number)) {
-    return false;
-  }
-
-  if (hasClosingFenceImmediatelyAfter(view.state, line.number, line.text)) {
-    return false;
-  }
-
-  return true;
-}
-
-function exitFenceBlock(view: EditorView): boolean {
-  const selection = view.state.selection.main;
-  if (!selection.empty) {
-    return false;
-  }
-
-  const block = findFenceBlockAt(view.state, selection.head);
-  if (!block) {
-    return false;
-  }
-
-  const closeLine = view.state.doc.line(block.closeLineNumber);
-  const nextLine = closeLine.number < view.state.doc.lines
-    ? view.state.doc.line(closeLine.number + 1)
-    : null;
-
-  if (nextLine && nextLine.text.trim().length === 0) {
-    view.dispatch({
-      selection: EditorSelection.cursor(nextLine.from),
-      scrollIntoView: true,
-      userEvent: "input.exitCodeBlock",
-    });
-    return true;
-  }
-
-  view.dispatch({
-    changes: {
-      from: closeLine.to,
-      to: closeLine.to,
-      insert: "\n",
-    },
-    selection: EditorSelection.cursor(closeLine.to + 1),
-    scrollIntoView: true,
-    userEvent: "input.exitCodeBlock",
-  });
-
-  return true;
-}
-
-function imagePasteExtension(
-  onImagePaste: ImagePasteHandler | undefined,
-) {
-  return EditorView.domEventHandlers({
-    paste(event, view) {
-      const items = event.clipboardData?.items;
-      if (!items || !onImagePaste) {
-        return false;
-      }
-
-      const hasImage = Array.from(items).some((item) => (item as DataTransferItem).type.startsWith("image/"));
-      if (!hasImage) {
-        return false;
-      }
-
-      const selection = view.state.selection.main;
-      const capturedFrom = selection.from;
-      const capturedTo = selection.to;
-      event.preventDefault();
-      event.stopPropagation();
-
-      onImagePaste(items, (markdown) => {
-        insertMarkdownAtPosition(view, markdown, capturedFrom, capturedTo);
-      });
-
-      return true;
-    },
-  });
-}
-
-function insertMarkdownAtPosition(
-  view: EditorView,
-  markdown: string,
-  from: number,
-  to: number,
-) {
-  const docLength = view.state.doc.length;
-  const safeFrom = Math.max(0, Math.min(from, docLength));
-  const safeTo = Math.max(safeFrom, Math.min(to, docLength));
-  const insert = normalizePastedImageMarkdown(view, markdown, safeFrom);
-  const beforeScrollTop = view.scrollDOM.scrollTop;
-
-  view.dispatch({
-    changes: {
-      from: safeFrom,
-      to: safeTo,
-      insert,
-    },
-    selection: EditorSelection.cursor(safeFrom + insert.length),
-  });
-
-  const restoreScrollAndFocus = (attempt: number) => {
-    view.scrollDOM.scrollTop = beforeScrollTop;
-    view.focus();
-    if (attempt < 3) {
-      window.requestAnimationFrame(() => restoreScrollAndFocus(attempt + 1));
-      return;
-    }
-  };
-
-  window.requestAnimationFrame(() => restoreScrollAndFocus(0));
-}
-
-function normalizePastedImageMarkdown(
-  view: EditorView,
-  markdown: string,
-  from: number,
-): string {
-  const trimmed = markdown.replace(/\s+$/g, "");
-  const line = view.state.doc.lineAt(from);
-  const beforeText = view.state.sliceDoc(line.from, from);
-  const afterText = view.state.sliceDoc(from, line.to);
-  const needsLeadingBreak = beforeText.trim().length > 0;
-  const needsTrailingBreak = afterText.trim().length > 0;
-
-  return `${needsLeadingBreak ? "\n" : ""}${trimmed}\n${needsTrailingBreak ? "" : ""}`;
-}
-
-function wrapSelection(
-  view: EditorView,
-  before: string,
-  after: string,
-  placeholder: string,
-): boolean {
-  if (isSelectionInsideFencedCode(view)) {
-    return true;
-  }
-
-  const selection = view.state.selection.main;
-  const selectedText =
-    view.state.sliceDoc(selection.from, selection.to) || placeholder;
-  const insert = `${before}${selectedText}${after}`;
-  const anchor = selection.from + before.length;
-
-  view.dispatch({
-    changes: {
-      from: selection.from,
-      to: selection.to,
-      insert,
-    },
-    selection: {
-      anchor,
-      head: anchor + selectedText.length,
-    },
-    scrollIntoView: false,
-  });
-
-  return true;
-}
-
-function toggleSelectionWrapper(
-  view: EditorView,
-  before: string,
-  after: string,
-  placeholder: string,
-): boolean {
-  if (isSelectionInsideFencedCode(view)) {
-    return true;
-  }
-
-  const selection = view.state.selection.main;
-  const selectedText = view.state.sliceDoc(selection.from, selection.to);
-
-  if (selectedText.startsWith(before) && selectedText.endsWith(after)) {
-    const unwrapped = selectedText.slice(
-      before.length,
-      selectedText.length - after.length,
-    );
-
-    view.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: unwrapped,
-      },
-      selection: {
-        anchor: selection.from,
-        head: selection.from + unwrapped.length,
-      },
-      scrollIntoView: false,
-    });
-    return true;
-  }
-
-  const beforeSelection = view.state.sliceDoc(
-    Math.max(0, selection.from - before.length),
-    selection.from,
-  );
-  const afterSelection = view.state.sliceDoc(
-    selection.to,
-    Math.min(view.state.doc.length, selection.to + after.length),
-  );
-
-  if (selectedText && beforeSelection === before && afterSelection === after) {
-    view.dispatch({
-      changes: [
-        {
-          from: selection.from - before.length,
-          to: selection.from,
-          insert: "",
-        },
-        {
-          from: selection.to,
-          to: selection.to + after.length,
-          insert: "",
-        },
-      ],
-      selection: {
-        anchor: selection.from - before.length,
-        head: selection.to - before.length,
-      },
-      scrollIntoView: false,
-    });
-    return true;
-  }
-
-  return wrapSelection(view, before, after, placeholder);
-}
-
-function wrapLinkSelection(view: EditorView): boolean {
-  if (isSelectionInsideFencedCode(view)) {
-    return true;
-  }
-
-  const selection = view.state.selection.main;
-  const selectedText =
-    view.state.sliceDoc(selection.from, selection.to) || "link";
-  const insert = `[${selectedText}](url)`;
-  const anchor = selection.from + 1;
-
-  view.dispatch({
-    changes: {
-      from: selection.from,
-      to: selection.to,
-      insert,
-    },
-    selection: {
-      anchor,
-      head: anchor + selectedText.length,
-    },
-    scrollIntoView: false,
-  });
-
-  return true;
-}
-
-function insertBlockInEditor(
-  view: EditorView,
-  before: string,
-  after: string,
-  placeholder: string,
-): boolean {
-  if (isSelectionInsideFencedCode(view)) {
-    return true;
-  }
-
-  const selection = view.state.selection.main;
-  const selectedText =
-    view.state.sliceDoc(selection.from, selection.to) || placeholder;
-  const insert = `${before}${selectedText}${after}`;
-  const anchor = selection.from + before.length;
-
-  view.dispatch({
-    changes: {
-      from: selection.from,
-      to: selection.to,
-      insert,
-    },
-    selection: {
-      anchor,
-      head: anchor + selectedText.length,
-    },
-    scrollIntoView: false,
-  });
-
-  return true;
-}
-
-function setCurrentLineHeading(view: EditorView, level: number): boolean {
-  if (isSelectionInsideFencedCode(view)) {
-    return true;
-  }
-
-  const selection = view.state.selection.main;
-  const line = view.state.doc.lineAt(selection.from);
-  const lineText = line.text;
-  const withoutPrefix = lineText.replace(/^(#{1,6}\s+|>\s+|[-*]\s+|\d+\.\s+)/, "");
-  const nextPrefix = level > 0 ? `${"#".repeat(level)} ` : "";
-  const nextLine = `${nextPrefix}${withoutPrefix}`;
-
-  view.dispatch({
-    changes: {
-      from: line.from,
-      to: line.to,
-      insert: nextLine,
-    },
-    selection: {
-      anchor: Math.min(line.from + nextLine.length, line.from + nextPrefix.length + withoutPrefix.length),
-    },
-    scrollIntoView: false,
-  });
-
-  return true;
 }
 
 function typoraLiveDecorations(params: {
@@ -1828,10 +944,23 @@ function previewWidgetForBlock(
   }
 
   if (block.type === "plantuml") {
-    return new PlantUmlPreviewWidget(block);
+    return new PlantUmlPreviewWidget(toDiagramPreviewBlock(block, "plantuml"));
   }
 
-  return new MermaidPreviewWidget(block);
+  return new MermaidPreviewWidget(toDiagramPreviewBlock(block, "mermaid"));
+}
+
+function toDiagramPreviewBlock(
+  block: PreviewBlock,
+  type: DiagramPreviewBlock["type"],
+): DiagramPreviewBlock {
+  return {
+    from: block.from,
+    id: block.id,
+    source: block.source,
+    to: block.to,
+    type,
+  };
 }
 
 function collectPreviewBlocks(state: EditorState): PreviewBlock[] {
@@ -1967,27 +1096,6 @@ function collectPreviewBlocks(state: EditorState): PreviewBlock[] {
   return blocks;
 }
 
-function findClosingFenceLine(
-  state: EditorState,
-  openingLineNumber: number,
-  openingLineText: string,
-) {
-  const marker = openingLineText.trimStart().startsWith("~~~") ? "~~~" : "```";
-
-  for (
-    let lineNumber = openingLineNumber + 1;
-    lineNumber <= state.doc.lines;
-    lineNumber += 1
-  ) {
-    const line = state.doc.line(lineNumber);
-    if (line.text.trimStart().startsWith(marker)) {
-      return line;
-    }
-  }
-
-  return null;
-}
-
 function findFrontmatterClosingLine(state: EditorState) {
   for (let lineNumber = 2; lineNumber <= state.doc.lines; lineNumber += 1) {
     const line = state.doc.line(lineNumber);
@@ -2032,20 +1140,6 @@ function findBlockquoteEndLine(state: EditorState, startLineNumber: number) {
   return endLine;
 }
 
-function hasClosingFenceImmediatelyAfter(
-  state: EditorState,
-  openingLineNumber: number,
-  openingLineText: string,
-): boolean {
-  const nextLineNumber = openingLineNumber + 1;
-  if (nextLineNumber > state.doc.lines) {
-    return false;
-  }
-
-  const marker = openingLineText.trimStart().startsWith("~~~") ? "~~~" : "```";
-  return state.doc.line(nextLineNumber).text.trim() === marker;
-}
-
 function findMarkdownTableEndLine(state: EditorState, startLineNumber: number) {
   if (startLineNumber + 1 > state.doc.lines) {
     return null;
@@ -2079,110 +1173,6 @@ function isSelectionInsideRange(state: EditorState, from: number, to: number): b
   return state.selection.ranges.some((range) => {
     return range.from >= from && range.to <= to;
   });
-}
-
-function isSelectionInsideFencedCode(view: EditorView): boolean {
-  const position = view.state.selection.main.from;
-  let insideFence = false;
-  let fenceMarker = "";
-
-  for (let lineNumber = 1; lineNumber <= view.state.doc.lines; lineNumber += 1) {
-    const line = view.state.doc.line(lineNumber);
-    if (line.from > position) {
-      return insideFence;
-    }
-
-    const fence = parseCodeFenceLine(line.from, line.to, line.text);
-    if (fence && !insideFence) {
-      insideFence = true;
-      fenceMarker = line.text.trimStart().startsWith("~~~") ? "~~~" : "```";
-      continue;
-    }
-
-    if (insideFence && line.text.trimStart().startsWith(fenceMarker)) {
-      return position <= line.to;
-    }
-  }
-
-  return insideFence;
-}
-
-function isLineInsideExistingFenceBlock(
-  state: EditorState,
-  targetLineNumber: number,
-): boolean {
-  let insideFence = false;
-  let fenceMarker = "";
-
-  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
-    const line = state.doc.line(lineNumber);
-
-    if (lineNumber >= targetLineNumber) {
-      return insideFence;
-    }
-
-    const fence = parseCodeFenceLine(line.from, line.to, line.text);
-    if (fence && !insideFence) {
-      insideFence = true;
-      fenceMarker = line.text.trimStart().startsWith("~~~") ? "~~~" : "```";
-      continue;
-    }
-
-    if (insideFence && line.text.trimStart().startsWith(fenceMarker)) {
-      insideFence = false;
-      fenceMarker = "";
-    }
-  }
-
-  return false;
-}
-
-function findFenceBlockAt(
-  state: EditorState,
-  position: number,
-): {
-  closeLineNumber: number;
-  openLineNumber: number;
-} | null {
-  let openLineNumber = 0;
-  let insideFence = false;
-  let fenceMarker = "";
-
-  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
-    const line = state.doc.line(lineNumber);
-    const fence = parseCodeFenceLine(line.from, line.to, line.text);
-
-    if (fence && !insideFence) {
-      insideFence = true;
-      fenceMarker = line.text.trimStart().startsWith("~~~") ? "~~~" : "```";
-      openLineNumber = lineNumber;
-
-      if (position < line.from) {
-        return null;
-      }
-
-      continue;
-    }
-
-    if (insideFence && line.text.trimStart().startsWith(fenceMarker)) {
-      if (position >= state.doc.line(openLineNumber).from && position <= line.to) {
-        return {
-          closeLineNumber: lineNumber,
-          openLineNumber,
-        };
-      }
-
-      insideFence = false;
-      fenceMarker = "";
-      openLineNumber = 0;
-    }
-
-    if (line.from > position && !insideFence) {
-      return null;
-    }
-  }
-
-  return null;
 }
 
 function decorateMarkdownLine(
@@ -2625,14 +1615,6 @@ function decorateCodeSyntax(
     addDecorationRange(ranges, token.from, token.to, token.decoration);
     lastTo = token.to;
   }
-}
-
-function diagramIdForSource(source: string): string {
-  let hash = 0;
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
-  }
-  return `polarbear-live-mermaid-${hash}`;
 }
 
 class HorizontalRuleWidget extends WidgetType {
@@ -3169,6 +2151,10 @@ function makeTableCellEditable(
   cell.addEventListener("keydown", (event) => {
     event.stopPropagation();
 
+    if (event.isComposing || event.key === "Process") {
+      return;
+    }
+
     if (matchesTableCellCommand(event, "edit.undo", params.keybindingOverrides)) {
       event.preventDefault();
       runTableHistoryAction(
@@ -3183,14 +2169,7 @@ function makeTableCellEditable(
       return;
     }
 
-    if (
-      matchesTableCellCommand(event, "edit.redo", params.keybindingOverrides)
-      || (
-        params.keybindingOverrides["edit.redo"] === undefined
-        && hasPrimaryModifier(event)
-        && event.key.toLowerCase() === "y"
-      )
-    ) {
+    if (matchesTableCellCommand(event, "edit.redo", params.keybindingOverrides)) {
       event.preventDefault();
       runTableHistoryAction(
         params.wrapper,
@@ -3309,6 +2288,7 @@ function handleTableSelectionKeydown(
   table: HTMLTableElement,
 ): void {
   if (event.target !== wrapper) return;
+  if (event.isComposing || event.key === "Process") return;
   const state = readTableInteractionState(wrapper);
   const selection = state.selection;
   if (!selection || selection.kind !== "cell") return;
@@ -4083,440 +3063,6 @@ function focusTableCellAfterCommit(
     window.requestAnimationFrame(retryFocus);
   };
   window.requestAnimationFrame(retryFocus);
-}
-
-class MermaidPreviewWidget extends WidgetType {
-  constructor(private readonly block: PreviewBlock) {
-    super();
-  }
-
-  eq(other: MermaidPreviewWidget): boolean {
-    return other.block.id === this.block.id && other.block.source === this.block.source;
-  }
-
-  toDOM(): HTMLElement {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-typora-diagram-preview";
-    markMarkdownPreviewBlock(wrapper, this.block, "mermaid-block");
-    allowEditorVerticalScroll(wrapper);
-
-    const toolbar = document.createElement("div");
-    toolbar.className = "cm-typora-diagram-toolbar";
-
-    const title = document.createElement("span");
-    title.className = "cm-typora-diagram-title";
-    title.textContent = translateCurrent("diagram.mermaid");
-    const actionStatus = document.createElement("output");
-    actionStatus.className = "cm-typora-diagram-action-status";
-    actionStatus.setAttribute("aria-live", "polite");
-
-    const editButton = createDiagramIconButton(
-      translateCurrent("diagram.editSource"),
-      "M4 14.25V17h2.75L15.1 8.65l-2.75-2.75L4 14.25Zm12.35-8.85a.95.95 0 0 0 0-1.35l-1.4-1.4a.95.95 0 0 0-1.35 0l-1.1 1.1 2.75 2.75 1.1-1.1Z",
-    );
-    editButton.addEventListener("click", () => revealMarkdownBlockSource(wrapper, this.block.from));
-
-    const pngButton = createDiagramIconButton(
-      translateCurrent("diagram.exportPng"),
-      "M4 4.5A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-11ZM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 14.5l2.8-3.5a.75.75 0 0 1 1.15-.03L11 12.75l1.8-2.25a.75.75 0 0 1 1.17.02L15.5 13v1.5h-10Z",
-    );
-    pngButton.addEventListener("click", () => {
-      void exportDiagramAsPng(content, this.block.id, actionStatus);
-    });
-    const svgButton = createDiagramIconButton(
-      translateCurrent("diagram.exportSvg"),
-      "M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Zm2 4.25h6V9H7V7.75Zm0 3h6V12H7v-1.25Zm0 3h4V15H7v-1.25Z",
-    );
-    svgButton.addEventListener("click", () => {
-      void exportDiagramAsSvg(content, this.block.id, actionStatus);
-    });
-    const copyButton = createDiagramIconButton(
-      translateCurrent("diagram.copySource"),
-      "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
-    );
-    copyButton.addEventListener("click", () => {
-      void navigator.clipboard.writeText(this.block.source).then(
-        () => showDiagramActionStatus(actionStatus, translateCurrent("common.copied")),
-        (error: unknown) => showDiagramActionStatus(actionStatus, errorMessage(error)),
-      );
-    });
-
-    toolbar.append(title, actionStatus, editButton, pngButton, svgButton, copyButton);
-
-    const content = document.createElement("div");
-    content.className = "cm-typora-diagram-content";
-    content.textContent = translateCurrent("diagram.renderingMermaid");
-
-    wrapper.append(toolbar, content);
-    scheduleEditorMeasureFromDom(wrapper);
-
-    void renderMermaidPreview(this.block.source, content);
-
-    return wrapper;
-  }
-
-  ignoreEvent(): boolean {
-    return true;
-  }
-}
-
-class PlantUmlPreviewWidget extends WidgetType {
-  constructor(private readonly block: PreviewBlock) {
-    super();
-  }
-
-  eq(other: PlantUmlPreviewWidget): boolean {
-    return other.block.id === this.block.id && other.block.source === this.block.source;
-  }
-
-  toDOM(): HTMLElement {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-typora-diagram-preview cm-typora-plantuml-preview";
-    markMarkdownPreviewBlock(wrapper, this.block, "plantuml-block");
-    allowEditorVerticalScroll(wrapper);
-
-    const toolbar = document.createElement("div");
-    toolbar.className = "cm-typora-diagram-toolbar";
-
-    const title = document.createElement("span");
-    title.className = "cm-typora-diagram-title";
-    title.textContent = translateCurrent("diagram.plantUml");
-    const actionStatus = document.createElement("output");
-    actionStatus.className = "cm-typora-diagram-action-status";
-    actionStatus.setAttribute("aria-live", "polite");
-
-    const editButton = createDiagramIconButton(
-      translateCurrent("diagram.editSource"),
-      "M4 14.25V17h2.75L15.1 8.65l-2.75-2.75L4 14.25Zm12.35-8.85a.95.95 0 0 0 0-1.35l-1.4-1.4a.95.95 0 0 0-1.35 0l-1.1 1.1 2.75 2.75 1.1-1.1Z",
-    );
-    editButton.addEventListener("click", () => revealMarkdownBlockSource(wrapper, this.block.from));
-
-    const pngButton = createDiagramIconButton(
-      translateCurrent("diagram.exportPng"),
-      "M4 4.5A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-11ZM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 14.5l2.8-3.5a.75.75 0 0 1 1.15-.03L11 12.75l1.8-2.25a.75.75 0 0 1 1.17.02L15.5 13v1.5h-10Z",
-    );
-    pngButton.addEventListener("click", () => {
-      void exportDiagramAsPng(content, this.block.id, actionStatus);
-    });
-    const svgButton = createDiagramIconButton(
-      translateCurrent("diagram.exportSvg"),
-      "M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Zm2 4.25h6V9H7V7.75Zm0 3h6V12H7v-1.25Zm0 3h4V15H7v-1.25Z",
-    );
-    svgButton.addEventListener("click", () => {
-      void exportDiagramAsSvg(content, this.block.id, actionStatus);
-    });
-
-    const copyButton = createDiagramIconButton(
-      translateCurrent("diagram.copySource"),
-      "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
-    );
-    copyButton.addEventListener("click", () => {
-      void navigator.clipboard.writeText(this.block.source).then(
-        () => showDiagramActionStatus(actionStatus, translateCurrent("common.copied")),
-        (error: unknown) => showDiagramActionStatus(actionStatus, errorMessage(error)),
-      );
-    });
-
-    toolbar.append(title, actionStatus, editButton, pngButton, svgButton, copyButton);
-
-    const content = document.createElement("div");
-    content.className = "cm-typora-diagram-content";
-
-    const consent = document.createElement("div");
-    consent.className = "plantuml-remote-consent";
-    const consentText = document.createElement("span");
-    consentText.textContent = translateCurrent("diagram.plantUmlRemoteDisabled");
-    const renderButton = document.createElement("button");
-    renderButton.type = "button";
-    renderButton.textContent = translateCurrent("diagram.plantUmlRenderRemotely");
-    renderButton.addEventListener("click", () => {
-      consent.remove();
-      content.textContent = translateCurrent("diagram.renderingPlantUml");
-      void renderPlantUmlPreview(this.block.source, content);
-    });
-    consent.append(consentText, renderButton);
-    content.append(consent);
-
-    const privacyNote = document.createElement("p");
-    privacyNote.textContent = translateCurrent("diagram.plantUmlPrivacy");
-
-    wrapper.append(toolbar, content, privacyNote);
-    scheduleEditorMeasureFromDom(wrapper);
-
-    return wrapper;
-  }
-
-  ignoreEvent(): boolean {
-    return true;
-  }
-}
-
-function createDiagramIconButton(label: string, pathData: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "cm-typora-diagram-icon-button";
-  button.title = label;
-  button.setAttribute("aria-label", label);
-  button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 20 20"><path d="${pathData}"/></svg>`;
-  return button;
-}
-
-async function exportDiagramAsSvg(
-  contentElement: HTMLElement,
-  diagramId: string,
-  actionStatus: HTMLOutputElement,
-): Promise<void> {
-  const svg = findRenderedSvg(contentElement);
-  if (!svg) {
-    showDiagramActionStatus(actionStatus, translateCurrent("diagram.exportUnavailable"));
-    return;
-  }
-
-  try {
-    await exportSvgElementAsSvg(svg, diagramId);
-  } catch (error) {
-    showDiagramActionStatus(
-      actionStatus,
-      translateCurrent("diagram.exportFailed", { error: errorMessage(error) }),
-    );
-  }
-}
-
-async function exportDiagramAsPng(
-  contentElement: HTMLElement,
-  diagramId: string,
-  actionStatus: HTMLOutputElement,
-): Promise<void> {
-  const svg = findRenderedSvg(contentElement);
-  if (!svg) {
-    showDiagramActionStatus(actionStatus, translateCurrent("diagram.exportUnavailable"));
-    return;
-  }
-
-  try {
-    await exportSvgElementAsPng(svg, diagramId);
-  } catch (error) {
-    showDiagramActionStatus(
-      actionStatus,
-      translateCurrent("diagram.exportFailed", { error: errorMessage(error) }),
-    );
-  }
-}
-
-function showDiagramActionStatus(actionStatus: HTMLOutputElement, message: string): void {
-  const pendingTimer = Number(actionStatus.dataset.dismissTimer ?? "0");
-  if (pendingTimer) {
-    window.clearTimeout(pendingTimer);
-  }
-
-  actionStatus.textContent = message;
-  const timer = window.setTimeout(() => {
-    actionStatus.textContent = "";
-    delete actionStatus.dataset.dismissTimer;
-  }, 4_000);
-  actionStatus.dataset.dismissTimer = String(timer);
-}
-
-async function renderPlantUmlPreview(
-  source: string,
-  content: HTMLElement,
-) {
-  const cachedResult = plantUmlRenderCache.get(source);
-  if (cachedResult?.svgContent) {
-    content.innerHTML = cachedResult.svgContent;
-    scheduleEditorMeasureFromDom(content);
-    return;
-  }
-
-  if (cachedResult?.error) {
-    content.textContent = cachedResult.error;
-    content.classList.add("cm-typora-diagram-error");
-    scheduleEditorMeasureFromDom(content);
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      plantUmlSvgUrl(DIAGRAM_CONFIG.plantUml.serverUrl, source),
-    );
-    if (!response.ok) {
-      throw new Error(translateCurrent("diagram.plantUmlServerStatus", {
-        status: response.status,
-      }));
-    }
-
-    const rawSvgContent = await response.text();
-    if (!rawSvgContent.includes("<svg")) {
-      throw new Error(translateCurrent("diagram.plantUmlInvalidResponse"));
-    }
-    const svgContent = sanitizeDiagramSvg(rawSvgContent);
-
-    plantUmlRenderCache.set(source, {
-      svgContent,
-    });
-    content.innerHTML = svgContent;
-    scheduleEditorMeasureFromDom(content);
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : translateCurrent("diagram.plantUmlRenderError", { error: String(error) });
-    plantUmlRenderCache.set(source, {
-      error: message,
-    });
-    content.classList.add("cm-typora-diagram-error");
-    content.textContent = message;
-    scheduleEditorMeasureFromDom(content);
-  }
-}
-
-async function renderMermaidPreview(
-  source: string,
-  content: HTMLElement,
-) {
-  const cachedResult = mermaidRenderCache.get(source);
-  if (cachedResult?.svgContent) {
-    content.innerHTML = cachedResult.svgContent;
-    scheduleEditorMeasureFromDom(content);
-    return;
-  }
-
-  if (cachedResult?.error) {
-    content.textContent = cachedResult.error;
-    content.classList.add("cm-typora-diagram-error");
-    scheduleEditorMeasureFromDom(content);
-    return;
-  }
-
-  try {
-    const svgContent = await renderMermaidSvg(
-      diagramIdForSource(source),
-      source,
-    );
-    mermaidRenderCache.set(source, {
-      svgContent,
-    });
-    content.innerHTML = svgContent;
-    scheduleEditorMeasureFromDom(content);
-  } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : translateCurrent("diagram.mermaidRenderError", { error: String(error) });
-    mermaidRenderCache.set(source, {
-      error: message,
-    });
-    content.classList.add("cm-typora-diagram-error");
-    content.textContent = message;
-    scheduleEditorMeasureFromDom(content);
-  }
-}
-
-class CodeFenceLanguageWidget extends WidgetType {
-  constructor(private readonly fenceInfo: CodeFenceInfo) {
-    super();
-  }
-
-  eq(other: CodeFenceLanguageWidget): boolean {
-    return (
-      other.fenceInfo.lineFrom === this.fenceInfo.lineFrom &&
-      other.fenceInfo.language === this.fenceInfo.language
-    );
-  }
-
-  toDOM(): HTMLElement {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-typora-code-language";
-
-    const listId = `polarbear-code-languages-${this.fenceInfo.lineFrom}`;
-    const input = document.createElement("input");
-    input.className = "cm-typora-code-language-input";
-    input.setAttribute("aria-label", translateCurrent("editor.codeBlockLanguage"));
-    input.setAttribute("list", listId);
-    input.spellcheck = false;
-    input.value = this.fenceInfo.language || "text";
-
-    const dataList = document.createElement("datalist");
-    dataList.id = listId;
-
-    for (const language of supportedCodeLanguages) {
-      const option = document.createElement("option");
-      option.value = language;
-      dataList.append(option);
-    }
-
-    const commitLanguage = () => {
-      const view = EditorView.findFromDOM(wrapper);
-      if (!view) {
-        return;
-      }
-
-      const rawLanguage = input.value.trim();
-      const nextLanguage = rawLanguage === "text" ? "" : rawLanguage;
-      const currentLine = view.state.doc.lineAt(this.fenceInfo.lineFrom);
-      const currentFence = parseCodeFenceLine(
-        currentLine.from,
-        currentLine.to,
-        currentLine.text,
-      );
-      if (!currentFence || currentFence.language === nextLanguage) {
-        return;
-      }
-
-      const scrollDOM = view.scrollDOM;
-      const scrollTop = scrollDOM.scrollTop;
-      const scrollLeft = scrollDOM.scrollLeft;
-      const restoreScroll = () => {
-        scrollDOM.scrollTop = scrollTop;
-        scrollDOM.scrollLeft = scrollLeft;
-      };
-      const marker = view.state.sliceDoc(
-        currentFence.lineFrom,
-        currentFence.markerTo,
-      );
-      view.dispatch({
-        changes: {
-          from: currentFence.lineFrom,
-          to: currentFence.lineTo,
-          insert: `${marker}${nextLanguage}`,
-        },
-        scrollIntoView: false,
-      });
-      restoreScroll();
-      window.requestAnimationFrame(() => {
-        view.focus();
-        restoreScroll();
-        window.requestAnimationFrame(restoreScroll);
-      });
-    };
-
-    wrapper.addEventListener("mousedown", (event) => event.stopPropagation());
-    wrapper.addEventListener("click", (event) => event.stopPropagation());
-    input.addEventListener("change", commitLanguage);
-    input.addEventListener("blur", commitLanguage);
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        commitLanguage();
-        input.blur();
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        input.value = this.fenceInfo.language || "text";
-        input.blur();
-      }
-    });
-
-    wrapper.append(input, dataList);
-    return wrapper;
-  }
-
-  ignoreEvent(event: Event): boolean {
-    const target = event.target;
-    return target instanceof HTMLElement && Boolean(
-      target.closest("input, button, select, .cm-typora-code-language"),
-    );
-  }
 }
 
 class HiddenCodeFenceWidget extends WidgetType {
