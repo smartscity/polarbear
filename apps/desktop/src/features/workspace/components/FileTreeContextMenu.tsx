@@ -1,6 +1,10 @@
 import type { AppCommand, ExecuteAppCommand } from "../../../shared/commands/appCommandTypes";
+import { titleForCommand } from "../../../commands/appCommandRegistry";
 import type { WorkspaceItem } from "../workspaceModel";
-import { useI18n, type Translate } from "../../../shared/i18n/I18nProvider";
+import {
+  useI18n,
+  type MessageKey,
+} from "../../../shared/i18n/I18nProvider";
 
 export type FileTreeContextMenuTarget =
   | { type: "blank" }
@@ -15,7 +19,7 @@ export type FileTreeContextMenuState = {
 type ContextMenuItem = {
   command?: AppCommand;
   disabled?: boolean;
-  label?: string;
+  labelKey?: MessageKey;
   type?: "separator";
 };
 
@@ -32,7 +36,7 @@ export function FileTreeContextMenu({
 }: FileTreeContextMenuProps) {
   const { t } = useI18n();
   const targetPath = menu.target.type === "item" ? menu.target.item.id : "";
-  const items = getContextMenuItems(menu.target, t);
+  const items = getContextMenuItems(menu.target);
 
   return (
     <div
@@ -41,8 +45,14 @@ export function FileTreeContextMenu({
       role="menu"
       onContextMenu={(event) => event.preventDefault()}
     >
-      {items.map((item, index) =>
-        item.type === "separator" ? (
+      {items.map((item, index) => {
+        const label = item.command
+          ? item.labelKey
+            ? t(item.labelKey)
+            : titleForCommand(item.command, t)
+          : "";
+
+        return item.type === "separator" ? (
           <span
             className="menu-separator"
             aria-hidden="true"
@@ -52,7 +62,7 @@ export function FileTreeContextMenu({
           <button
             type="button"
             disabled={item.disabled}
-            key={item.label}
+            key={item.command ?? `context-item-${index}`}
             onClick={() => {
               if (item.command) {
                 executeCommand(item.command, {
@@ -65,53 +75,52 @@ export function FileTreeContextMenu({
               onClose();
             }}
           >
-            {item.label}
+            {label}
           </button>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }
 
 function getContextMenuItems(
   target: FileTreeContextMenuTarget,
-  t: Translate
 ): ContextMenuItem[] {
   if (target.type === "blank") {
     return [
-      { label: t("tree.newFile"), command: "file.newFile" },
-      { label: t("tree.newFolder"), command: "file.newFolder" },
+      { command: "file.newFile" },
+      { command: "file.newFolder" },
       { type: "separator" },
-      { label: t("top.fileTree"), command: "view.fileTree" },
+      { command: "view.fileTree" },
       { type: "separator" },
-      { label: t("tree.openFolder"), command: "file.openFolder" },
-      { label: t("tree.refresh"), command: "workspace.refresh" },
-      { label: t("tree.collapseAll"), command: "workspace.collapseAll" },
-      { label: t("tree.reveal"), command: "file.revealInFinder" },
-      { label: t("tree.copyWorkspacePath"), command: "file.copyPath" }
+      { command: "file.openFolder" },
+      { command: "workspace.refresh" },
+      { command: "workspace.collapseAll" },
+      { command: "file.revealInFinder" },
+      { command: "file.copyPath" }
     ];
   }
 
   if (target.item.type === "folder") {
     return [
-      { label: t("tree.newFile"), command: "file.newFile" },
-      { label: t("tree.newFolder"), command: "file.newFolder" },
-      { label: t("tree.rename"), command: "file.rename" },
-      { label: t("tree.duplicate"), command: "file.duplicate" },
-      { label: t("tree.deleteFolder"), command: "file.delete" },
+      { command: "file.newFile" },
+      { command: "file.newFolder" },
+      { command: "file.rename" },
+      { command: "file.duplicate" },
+      { command: "file.delete", labelKey: "tree.deleteFolder" },
       { type: "separator" },
-      { label: t("tree.reveal"), command: "file.revealInFinder" },
-      { label: t("tree.copyFolderPath"), command: "file.copyPath" }
+      { command: "file.revealInFinder" },
+      { command: "file.copyPath" }
     ];
   }
 
   return [
-    { label: t("menu.open"), command: "file.openFile" },
-    { label: t("tree.rename"), command: "file.rename" },
-    { label: t("tree.duplicate"), command: "file.duplicate" },
-    { label: t("tree.deleteFile"), command: "file.delete" },
+    { command: "file.openFile" },
+    { command: "file.rename" },
+    { command: "file.duplicate" },
+    { command: "file.delete", labelKey: "tree.deleteFile" },
     { type: "separator" },
-    { label: t("tree.reveal"), command: "file.revealInFinder" },
-    { label: t("tree.copyFilePath"), command: "file.copyPath" }
+    { command: "file.revealInFinder" },
+    { command: "file.copyPath" }
   ];
 }

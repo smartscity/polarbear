@@ -190,10 +190,10 @@ import {
 } from "./shared/debug/debugSettings";
 import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
 import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
+import { setNativeAppZoom } from "./features/zoom/tauriZoomAdapter";
 import { STORAGE_KEYS } from "./shared/constants/storageKeys";
 import { APP_EVENTS } from "./shared/events/appEvents";
-import { TAURI_COMMANDS } from "./shared/tauri/commandIds";
-import { errorMessage, invokeTauri } from "./shared/tauri/invokeTauri";
+import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 
 const initialWorkspace: WorkspaceItem[] = [];
@@ -1431,7 +1431,7 @@ export function App() {
     }
 
     window.localStorage.removeItem(STORAGE_KEYS.appZoom);
-    void invokeTauri(TAURI_COMMANDS.setAppZoom, { zoom: NORMAL_APP_ZOOM });
+    void setNativeAppZoom(NORMAL_APP_ZOOM);
   }, []);
 
   useEffect(() => {

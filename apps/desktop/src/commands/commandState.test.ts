@@ -46,6 +46,11 @@ describe("getCommandState", () => {
     expect(getCommandState("edit.undo", previewContext).enabled).toBe(false);
     expect(getCommandState("edit.redo", previewContext).enabled).toBe(false);
     expect(getCommandState("edit.selectAll", previewContext).enabled).toBe(false);
+    expect(getCommandState("format.bold", previewContext).enabled).toBe(false);
+    expect(getCommandState("format.insertImage", previewContext).enabled).toBe(false);
+    expect(getCommandState("editor.insertTable", previewContext).enabled).toBe(false);
+    expect(getCommandState("edit.find", previewContext).enabled).toBe(false);
+    expect(getCommandState("file.save", previewContext).enabled).toBe(true);
   });
 
   it("uses the active document as a file command fallback outside the tree", () => {

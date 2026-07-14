@@ -35,12 +35,18 @@ export function getCommandState(
   context: CommandRuntimeContext,
 ): CommandState {
   const hasDocument = Boolean(context.activeDocumentId);
+  const hasEditableDocument = hasDocument && context.activeViewMode !== "preview";
   const hasFileTarget = Boolean(context.selectedTreeItemId || context.activeDocumentId);
 
   if (
     command === "file.save" ||
     command === "file.saveAs" ||
-    command === "file.close" ||
+    command === "file.close"
+  ) {
+    return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
+  }
+
+  if (
     command === "edit.find" ||
     command === "edit.findNext" ||
     command === "edit.findPrevious" ||
@@ -49,7 +55,7 @@ export function getCommandState(
     command === "editor.insertTable" ||
     command === "editor.insertCodeFence"
   ) {
-    return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
+    return { ...DEFAULT_COMMAND_STATE, enabled: hasEditableDocument };
   }
 
   if (
@@ -59,7 +65,7 @@ export function getCommandState(
   ) {
     return {
       ...DEFAULT_COMMAND_STATE,
-      enabled: hasDocument && context.activeViewMode !== "preview",
+      enabled: hasEditableDocument,
     };
   }
 

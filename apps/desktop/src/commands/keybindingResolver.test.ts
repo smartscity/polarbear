@@ -159,6 +159,11 @@ describe("codeMirrorKeysForCommand", () => {
 });
 
 describe("effectiveAcceleratorForCommand", () => {
+  it("derives the native menu accelerator from the same default shortcut", () => {
+    expect(effectiveAcceleratorForCommand("file.save", {})).toBe("CmdOrCtrl+S");
+    expect(effectiveAcceleratorForCommand("view.resetZoom", {})).toBe("CmdOrCtrl+0");
+  });
+
   it("keeps native menu accelerators aligned with user overrides", () => {
     expect(effectiveAcceleratorForCommand("file.save", {
       "file.save": "Mod+Shift+Alt+S",

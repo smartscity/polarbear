@@ -38,7 +38,35 @@ export function useNativeAppMenu(
 
     async function installMenu() {
       try {
-        const { Menu } = await import("@tauri-apps/api/menu");
+        const { CheckMenuItem, Menu } = await import("@tauri-apps/api/menu");
+        const checkableMenuItem = (command: AppCommand) => {
+          const state = commandState(command);
+          return CheckMenuItem.new({
+            id: command,
+            text: commandTitle(command),
+            accelerator: accelerator(command),
+            enabled: state.enabled,
+            checked: state.checked,
+            action: () => executeCommand(command, { commandSource: "menu" }),
+          });
+        };
+        const [
+          sourceModeItem,
+          liveModeItem,
+          splitModeItem,
+          previewModeItem,
+          sidebarItem,
+          lightThemeItem,
+          darkThemeItem,
+        ] = await Promise.all([
+          checkableMenuItem("view.sourceCode"),
+          checkableMenuItem("view.liveEdit"),
+          checkableMenuItem("view.split"),
+          checkableMenuItem("view.preview"),
+          checkableMenuItem("view.toggleSidebar"),
+          checkableMenuItem("theme.light"),
+          checkableMenuItem("theme.dark"),
+        ]);
         const menu = await Menu.new({
           items: [
             {
@@ -171,6 +199,7 @@ export function useNativeAppMenu(
               items: [
                 {
                   text: commandTitle("format.paragraph"),
+                  enabled: commandState("format.paragraph").enabled,
                   action: () => executeCommand("format.paragraph")
                 },
                 { item: "Separator" },
@@ -195,48 +224,58 @@ export function useNativeAppMenu(
                 {
                   text: commandTitle("format.heading1"),
                   accelerator: accelerator("format.heading1"),
+                  enabled: commandState("format.heading1").enabled,
                   action: () => executeCommand("format.heading1")
                 },
                 {
                   text: commandTitle("format.heading2"),
                   accelerator: accelerator("format.heading2"),
+                  enabled: commandState("format.heading2").enabled,
                   action: () => executeCommand("format.heading2")
                 },
                 {
                   text: commandTitle("format.heading3"),
                   accelerator: accelerator("format.heading3"),
+                  enabled: commandState("format.heading3").enabled,
                   action: () => executeCommand("format.heading3")
                 },
                 {
                   text: commandTitle("format.heading4"),
                   accelerator: accelerator("format.heading4"),
+                  enabled: commandState("format.heading4").enabled,
                   action: () => executeCommand("format.heading4")
                 },
                 {
                   text: commandTitle("format.heading5"),
                   accelerator: accelerator("format.heading5"),
+                  enabled: commandState("format.heading5").enabled,
                   action: () => executeCommand("format.heading5")
                 },
                 {
                   text: commandTitle("format.heading6"),
                   accelerator: accelerator("format.heading6"),
+                  enabled: commandState("format.heading6").enabled,
                   action: () => executeCommand("format.heading6")
                 },
                 { item: "Separator" },
                 {
                   text: commandTitle("format.quote"),
+                  enabled: commandState("format.quote").enabled,
                   action: () => executeCommand("format.quote")
                 },
                 {
                   text: commandTitle("format.orderedList"),
+                  enabled: commandState("format.orderedList").enabled,
                   action: () => executeCommand("format.orderedList")
                 },
                 {
                   text: commandTitle("format.unorderedList"),
+                  enabled: commandState("format.unorderedList").enabled,
                   action: () => executeCommand("format.unorderedList")
                 },
                 {
                   text: commandTitle("format.taskList"),
+                  enabled: commandState("format.taskList").enabled,
                   action: () => executeCommand("format.taskList")
                 }
               ]
@@ -298,32 +337,13 @@ export function useNativeAppMenu(
               id: "view",
               text: t("menu.view"),
               items: [
-                {
-                  text: commandTitle("view.sourceCode"),
-                  accelerator: accelerator("view.sourceCode"),
-                  action: () => executeCommand("view.sourceCode")
-                },
-                {
-                  text: commandTitle("view.liveEdit"),
-                  action: () => executeCommand("view.liveEdit")
-                },
+                sourceModeItem,
+                liveModeItem,
                 { item: "Separator" },
-                {
-                  text: commandTitle("view.split"),
-                  accelerator: accelerator("view.split"),
-                  action: () => executeCommand("view.split")
-                },
-                {
-                  text: commandTitle("view.preview"),
-                  accelerator: accelerator("view.preview"),
-                  action: () => executeCommand("view.preview")
-                },
+                splitModeItem,
+                previewModeItem,
                 { item: "Separator" },
-                {
-                  text: commandTitle("view.toggleSidebar"),
-                  accelerator: accelerator("view.toggleSidebar"),
-                  action: () => executeCommand("view.toggleSidebar")
-                },
+                sidebarItem,
                 {
                   text: commandTitle("view.fileTree"),
                   action: () => executeCommand("view.fileTree")
@@ -352,20 +372,15 @@ export function useNativeAppMenu(
               id: "themes",
               text: t("menu.themes"),
               items: [
-                {
-                  text: commandTitle("theme.light"),
-                  action: () => executeCommand("theme.light")
-                },
-                {
-                  text: commandTitle("theme.dark"),
-                  action: () => executeCommand("theme.dark")
-                }
+                lightThemeItem,
+                darkThemeItem,
               ]
             },
             {
               id: "repository",
               text: t("menu.cloudSync"),
               items: repositoryMenuItems({
+                commandContext: state.commandContext,
                 executeCommand,
                 repositoryAccount: state.repositoryAccount,
                 repositoryBinding: state.repositoryBinding,
@@ -393,6 +408,7 @@ export function useNativeAppMenu(
 }
 
 function repositoryMenuItems(params: {
+  commandContext: CommandRuntimeContext;
   executeCommand: ExecuteAppCommand;
   repositoryAccount: RepositoryAccount | null;
   repositoryBinding: RepositoryBinding | null;
@@ -400,18 +416,22 @@ function repositoryMenuItems(params: {
   t: Translate;
 }) {
   const {
+    commandContext,
     executeCommand,
     keybindingOverrides,
     repositoryAccount,
     repositoryBinding,
     t,
   } = params;
+  const commandState = (command: AppCommand) =>
+    getCommandState(command, commandContext);
 
   if (!repositoryAccount) {
     return [
       {
         id: "repository.connectCloudSync",
         text: titleForCommand("repository.connectGithub", t),
+        enabled: commandState("repository.connectGithub").enabled,
         action: () => executeCommand("repository.connectGithub")
       }
     ];
@@ -430,6 +450,7 @@ function repositoryMenuItems(params: {
       {
         id: "repository.syncSettings",
         text: titleForCommand("repository.linkWorkspace", t),
+        enabled: commandState("repository.linkWorkspace").enabled,
         action: () => executeCommand("repository.linkWorkspace")
       }
     ];
@@ -445,6 +466,7 @@ function repositoryMenuItems(params: {
       id: "repository.syncNow",
       text: titleForCommand("repository.syncNow", t),
       accelerator: effectiveAcceleratorForCommand("repository.syncNow", keybindingOverrides),
+      enabled: commandState("repository.syncNow").enabled,
       action: () => executeCommand("repository.syncNow")
     }
   ];

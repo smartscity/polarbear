@@ -25,7 +25,6 @@ export type CommandShortcutContext =
 type CommandDefinition = {
   titleKey: MessageKey;
   titleValues?: TranslationValues;
-  accelerator?: string;
   shortcut?: ShortcutDefinition;
   shortcuts?: ShortcutDefinition[];
 };
@@ -36,17 +35,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "app.newWindow": {
     titleKey: "menu.newWindow",
-    accelerator: "Shift+CmdOrCtrl+N",
     shortcut: { key: "n", shiftKey: true, command: "app.newWindow" },
   },
   "app.quit": {
     titleKey: "menu.quit",
-    accelerator: "CmdOrCtrl+Q",
     shortcut: { key: "q", command: "app.quit" },
   },
   "edit.undo": {
     titleKey: "menu.undo",
-    accelerator: "CmdOrCtrl+Z",
     shortcut: {
       key: "z",
       command: "edit.undo",
@@ -57,7 +53,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "edit.redo": {
     titleKey: "menu.redo",
-    accelerator: "Shift+CmdOrCtrl+Z",
     shortcut: {
       key: "z",
       shiftKey: true,
@@ -85,7 +80,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "edit.selectAll": {
     titleKey: "menu.selectAll",
-    accelerator: "CmdOrCtrl+A",
     shortcut: {
       key: "a",
       command: "edit.selectAll",
@@ -95,8 +89,7 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
     },
   },
   "file.newFile": {
-    titleKey: "menu.new",
-    accelerator: "CmdOrCtrl+N",
+    titleKey: "tree.newFile",
     shortcut: { key: "n", command: "file.newFile" },
   },
   "file.newFolder": {
@@ -104,7 +97,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "file.openFile": {
     titleKey: "menu.open",
-    accelerator: "CmdOrCtrl+O",
     shortcut: { key: "o", command: "file.openFile" },
   },
   "file.openFolder": {
@@ -112,17 +104,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "file.save": {
     titleKey: "menu.save",
-    accelerator: "CmdOrCtrl+S",
     shortcut: { key: "s", command: "file.save" },
   },
   "file.saveAs": {
     titleKey: "menu.saveAs",
-    accelerator: "Shift+CmdOrCtrl+S",
     shortcut: { key: "s", shiftKey: true, command: "file.saveAs" },
   },
   "file.close": {
     titleKey: "menu.close",
-    accelerator: "CmdOrCtrl+W",
     shortcut: { key: "w", command: "file.close" },
   },
   "file.rename": {
@@ -171,17 +160,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "edit.find": {
     titleKey: "menu.find",
-    accelerator: "CmdOrCtrl+F",
     shortcut: { key: "f", command: "edit.find" },
   },
   "edit.findNext": {
     titleKey: "menu.findNext",
-    accelerator: "CmdOrCtrl+G",
     shortcut: { key: "g", command: "edit.findNext" },
   },
   "edit.findPrevious": {
     titleKey: "menu.findPrevious",
-    accelerator: "Shift+CmdOrCtrl+G",
     shortcut: { key: "g", shiftKey: true, command: "edit.findPrevious" },
   },
   "format.paragraph": {
@@ -190,42 +176,35 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "format.heading1": {
     titleKey: "menu.heading",
     titleValues: { level: 1 },
-    accelerator: "CmdOrCtrl+1",
     shortcut: { key: "1", command: "format.heading1" },
   },
   "format.heading2": {
     titleKey: "menu.heading",
     titleValues: { level: 2 },
-    accelerator: "CmdOrCtrl+2",
     shortcut: { key: "2", command: "format.heading2" },
   },
   "format.heading3": {
     titleKey: "menu.heading",
     titleValues: { level: 3 },
-    accelerator: "CmdOrCtrl+3",
     shortcut: { key: "3", command: "format.heading3" },
   },
   "format.heading4": {
     titleKey: "menu.heading",
     titleValues: { level: 4 },
-    accelerator: "CmdOrCtrl+4",
     shortcut: { key: "4", command: "format.heading4" },
   },
   "format.heading5": {
     titleKey: "menu.heading",
     titleValues: { level: 5 },
-    accelerator: "CmdOrCtrl+5",
     shortcut: { key: "5", command: "format.heading5" },
   },
   "format.heading6": {
     titleKey: "menu.heading",
     titleValues: { level: 6 },
-    accelerator: "CmdOrCtrl+6",
     shortcut: { key: "6", command: "format.heading6" },
   },
   "format.bold": {
     titleKey: "menu.bold",
-    accelerator: "CmdOrCtrl+B",
     shortcut: {
       key: "b",
       command: "format.bold",
@@ -236,7 +215,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "format.italic": {
     titleKey: "menu.italic",
-    accelerator: "CmdOrCtrl+I",
     shortcut: {
       key: "i",
       command: "format.italic",
@@ -247,7 +225,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "format.underline": {
     titleKey: "menu.underline",
-    accelerator: "CmdOrCtrl+U",
     shortcut: {
       key: "u",
       command: "format.underline",
@@ -258,7 +235,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "format.link": {
     titleKey: "menu.link",
-    accelerator: "CmdOrCtrl+K",
     shortcut: {
       key: "k",
       command: "format.link",
@@ -275,7 +251,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "format.codeFence": {
     titleKey: "menu.codeFence",
-    accelerator: "Shift+CmdOrCtrl+K",
     shortcut: {
       key: "k",
       shiftKey: true,
@@ -287,12 +262,10 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "format.insertImage": {
     titleKey: "menu.insertImage",
-    accelerator: "Shift+CmdOrCtrl+I",
     shortcut: { key: "i", shiftKey: true, command: "format.insertImage" },
   },
   "format.mathBlock": {
     titleKey: "menu.mathBlock",
-    accelerator: "Shift+CmdOrCtrl+M",
     shortcut: {
       key: "m",
       shiftKey: true,
@@ -316,7 +289,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "editor.insertTable": {
     titleKey: "menu.insertTable",
-    accelerator: "CmdOrCtrl+Alt+T",
     shortcut: { key: "t", altKey: true, command: "editor.insertTable" },
   },
   "editor.insertCodeFence": {
@@ -364,7 +336,6 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "repository.syncNow": {
     titleKey: "cloud.syncNow",
-    accelerator: "CmdOrCtrl+Alt+S",
     shortcut: { key: "s", altKey: true, command: "repository.syncNow" },
   },
   "repository.pullWorkspace": {
@@ -378,12 +349,10 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "view.toggleSidebar": {
     titleKey: "menu.toggleSidebar",
-    accelerator: "Shift+CmdOrCtrl+L",
     shortcut: { key: "l", shiftKey: true, command: "view.toggleSidebar" },
   },
   "view.sourceCode": {
     titleKey: "menu.sourceMode",
-    accelerator: "Shift+CmdOrCtrl+E",
     shortcut: { key: "e", shiftKey: true, command: "view.sourceCode" },
   },
   "view.edit": {
@@ -394,12 +363,10 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "view.split": {
     titleKey: "menu.splitMode",
-    accelerator: "CmdOrCtrl+\\",
     shortcut: { key: "\\", command: "view.split" },
   },
   "view.preview": {
     titleKey: "menu.previewMode",
-    accelerator: "Shift+CmdOrCtrl+P",
     shortcut: { key: "p", shiftKey: true, command: "view.preview" },
   },
   "view.fileTree": {
@@ -407,15 +374,14 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   },
   "view.resetZoom": {
     titleKey: "menu.actualSize",
+    shortcut: { key: "0", command: "view.resetZoom" },
   },
   "view.zoomIn": {
     titleKey: "menu.zoomIn",
-    accelerator: "CmdOrCtrl+=",
     shortcut: { key: "=", command: "view.zoomIn" },
   },
   "view.zoomOut": {
     titleKey: "menu.zoomOut",
-    accelerator: "CmdOrCtrl+-",
     shortcut: { key: "-", command: "view.zoomOut" },
   },
   "theme.light": {
@@ -438,7 +404,10 @@ export function titleForCommand(command: AppCommand, t: Translate): string {
 }
 
 export function acceleratorForCommand(command: AppCommand): string | undefined {
-  return appCommandRegistry[command].accelerator;
+  const definition = appCommandRegistry[command];
+  const shortcut = definition.shortcut
+    ?? definition.shortcuts?.find((candidate) => candidate.primaryModifier !== false);
+  return shortcut ? nativeAcceleratorForShortcut(shortcut) : undefined;
 }
 
 export function shortcutDefinitions(): ShortcutDefinition[] {
@@ -447,4 +416,13 @@ export function shortcutDefinitions(): ShortcutDefinition[] {
       ...(definition.shortcut ? [definition.shortcut] : []),
       ...(definition.shortcuts ?? []),
     ]);
+}
+
+function nativeAcceleratorForShortcut(shortcut: ShortcutDefinition): string {
+  return [
+    shortcut.shiftKey ? "Shift" : "",
+    shortcut.primaryModifier !== false ? "CmdOrCtrl" : "",
+    shortcut.altKey ? "Alt" : "",
+    shortcut.key.toUpperCase(),
+  ].filter(Boolean).join("+");
 }
