@@ -3,7 +3,6 @@ import {
   useRef,
   useState,
   type DragEvent,
-  type KeyboardEvent,
   type MouseEvent
 } from "react";
 import type { ExecuteAppCommand } from "../../../shared/commands/appCommandTypes";

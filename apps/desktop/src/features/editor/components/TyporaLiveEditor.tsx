@@ -24,7 +24,6 @@ import {
   EditorView,
   WidgetType,
   keymap,
-  type KeyBinding,
 } from "@codemirror/view";
 import { APP_EVENTS } from "../../../shared/events/appEvents";
 import { translateCurrent } from "../../../shared/i18n/translate";
