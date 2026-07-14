@@ -3,6 +3,7 @@ import {
   codeMirrorKeyForCommand,
   effectiveAcceleratorForCommand,
   findKeybindingConflicts,
+  matchesCommandShortcut,
   parseKeybinding,
   resolveShortcutDefinitions,
   resolveShortcutForKeyboardEvent,
@@ -24,7 +25,9 @@ const fileTreeContext: KeybindingContext = {
 };
 
 function keydownEvent(
-  values: Pick<KeyboardEvent, "code" | "ctrlKey" | "key">,
+  values: Pick<KeyboardEvent, "code" | "ctrlKey" | "key"> & Partial<
+    Pick<KeyboardEvent, "altKey" | "metaKey" | "shiftKey">
+  >,
 ): KeyboardEvent {
   return {
     altKey: false,
@@ -203,6 +206,29 @@ describe("resolveShortcutForKeyboardEvent", () => {
       ...fileTreeContext,
       textInputFocused: true,
     })).toEqual({ kind: "none" });
+  });
+});
+
+describe("matchesCommandShortcut", () => {
+  it("honors a configured embedded-editor command binding", () => {
+    const event = keydownEvent({
+      code: "KeyB",
+      ctrlKey: true,
+      key: "b",
+      shiftKey: true,
+    });
+
+    expect(matchesCommandShortcut(
+      event,
+      "format.bold",
+      { "format.bold": "CmdOrCtrl+Shift+B" },
+      {
+        editorFocused: true,
+        fileTreeFocused: false,
+        tableCellFocused: true,
+        textInputFocused: true,
+      },
+    )).toBe(true);
   });
 });
 

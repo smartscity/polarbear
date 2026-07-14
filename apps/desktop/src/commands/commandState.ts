@@ -51,6 +51,17 @@ export function getCommandState(
   }
 
   if (
+    command === "edit.undo" ||
+    command === "edit.redo" ||
+    command === "edit.selectAll"
+  ) {
+    return {
+      ...DEFAULT_COMMAND_STATE,
+      enabled: hasDocument && context.activeViewMode !== "preview",
+    };
+  }
+
+  if (
     command === "file.rename" ||
     command === "file.delete" ||
     command === "file.duplicate" ||

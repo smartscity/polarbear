@@ -4,78 +4,94 @@ import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 import { translateCurrent } from "../../shared/i18n/translate";
 
-export function exportSvgElementAsSvg(svg: SVGSVGElement, diagramId: string): void {
-  void (async () => {
-    const selectedPath = await save({
-      defaultPath: `${safeDiagramFileBase(diagramId)}.svg`,
-      filters: [{ name: translateCurrent("diagram.fileTypeSvg"), extensions: ["svg"] }],
-      title: translateCurrent("diagram.exportSvg"),
-    });
-    if (!selectedPath) return;
+export type DiagramExportResult = "cancelled" | "exported";
 
-    const clonedSvg = cloneSvgForExport(svg);
-    sanitizeSvgForXmlExport(clonedSvg);
-    const svgContent = new XMLSerializer().serializeToString(clonedSvg);
-    await invokeTauri(TAURI_COMMANDS.exportSvgFile, { path: selectedPath, svgContent });
-  })();
+export async function exportSvgElementAsSvg(
+  svg: SVGSVGElement,
+  diagramId: string,
+): Promise<DiagramExportResult> {
+  const selectedPath = await save({
+    defaultPath: `${safeDiagramFileBase(diagramId)}.svg`,
+    filters: [{ name: translateCurrent("diagram.fileTypeSvg"), extensions: ["svg"] }],
+    title: translateCurrent("diagram.exportSvg"),
+  });
+  if (!selectedPath) return "cancelled";
+
+  const clonedSvg = cloneSvgForExport(svg);
+  sanitizeSvgForXmlExport(clonedSvg);
+  const svgContent = new XMLSerializer().serializeToString(clonedSvg);
+  await invokeTauri(TAURI_COMMANDS.exportSvgFile, { path: selectedPath, svgContent });
+  return "exported";
 }
 
-export function exportSvgElementAsPng(svg: SVGSVGElement, diagramId: string): void {
-  void (async () => {
-    const selectedPath = await save({
-      defaultPath: `${safeDiagramFileBase(diagramId)}.png`,
-      filters: [{ name: translateCurrent("diagram.fileTypePng"), extensions: ["png"] }],
-      title: translateCurrent("diagram.exportPng"),
-    });
-    if (!selectedPath) return;
+export async function exportSvgElementAsPng(
+  svg: SVGSVGElement,
+  diagramId: string,
+): Promise<DiagramExportResult> {
+  const selectedPath = await save({
+    defaultPath: `${safeDiagramFileBase(diagramId)}.png`,
+    filters: [{ name: translateCurrent("diagram.fileTypePng"), extensions: ["png"] }],
+    title: translateCurrent("diagram.exportPng"),
+  });
+  if (!selectedPath) return "cancelled";
 
-    const clonedSvg = cloneSvgForExport(svg);
-    const width = Number.parseFloat(
-      clonedSvg.getAttribute("width") || String(DIAGRAM_CONFIG.export.fallbackWidth),
-    ) || DIAGRAM_CONFIG.export.fallbackWidth;
-    const height = Number.parseFloat(
-      clonedSvg.getAttribute("height") || String(DIAGRAM_CONFIG.export.fallbackHeight),
-    ) || DIAGRAM_CONFIG.export.fallbackHeight;
+  const clonedSvg = cloneSvgForExport(svg);
+  const width = Number.parseFloat(
+    clonedSvg.getAttribute("width") || String(DIAGRAM_CONFIG.export.fallbackWidth),
+  ) || DIAGRAM_CONFIG.export.fallbackWidth;
+  const height = Number.parseFloat(
+    clonedSvg.getAttribute("height") || String(DIAGRAM_CONFIG.export.fallbackHeight),
+  ) || DIAGRAM_CONFIG.export.fallbackHeight;
 
-    sanitizeSvgForXmlExport(clonedSvg);
-    sanitizeSvgForCanvas(clonedSvg);
+  sanitizeSvgForXmlExport(clonedSvg);
+  sanitizeSvgForCanvas(clonedSvg);
 
-    const svgData = new XMLSerializer().serializeToString(clonedSvg);
-    const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`;
-
-    const img = new Image();
-    img.onload = () => {
-      const scale = DIAGRAM_CONFIG.export.pngScale;
-      const canvas = document.createElement("canvas");
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      ctx.scale(scale, scale);
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        void (async () => {
-          const arrayBuffer = await blob.arrayBuffer();
-          const imageBytes = Array.from(new Uint8Array(arrayBuffer));
-          await invokeTauri(TAURI_COMMANDS.exportPngFile, { path: selectedPath, imageBytes });
-        })();
-      }, "image/png");
-    };
-
-    img.src = svgDataUrl;
-    img.onerror = () => {
-      console.error("Failed to load diagram SVG for PNG export.");
-    };
-  })();
+  const svgData = new XMLSerializer().serializeToString(clonedSvg);
+  const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`;
+  const blob = await pngBlobFromSvg(svgDataUrl, width, height);
+  const arrayBuffer = await blob.arrayBuffer();
+  const imageBytes = Array.from(new Uint8Array(arrayBuffer));
+  await invokeTauri(TAURI_COMMANDS.exportPngFile, { path: selectedPath, imageBytes });
+  return "exported";
 }
 
 export function findRenderedSvg(container: HTMLElement | null): SVGSVGElement | null {
   const svg = container?.querySelector("svg");
   return svg instanceof SVGSVGElement ? svg : null;
+}
+
+function pngBlobFromSvg(svgDataUrl: string, width: number, height: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const scale = DIAGRAM_CONFIG.export.pngScale;
+        const canvas = document.createElement("canvas");
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error(translateCurrent("diagram.exportPngFailed")));
+          return;
+        }
+
+        context.scale(scale, scale);
+        context.drawImage(image, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error(translateCurrent("diagram.exportPngFailed")));
+            return;
+          }
+          resolve(blob);
+        }, "image/png");
+      } catch (error) {
+        reject(error);
+      }
+    };
+    image.onerror = () => reject(new Error(translateCurrent("diagram.exportPngFailed")));
+    image.src = svgDataUrl;
+  });
 }
 
 function safeDiagramFileBase(diagramId: string): string {

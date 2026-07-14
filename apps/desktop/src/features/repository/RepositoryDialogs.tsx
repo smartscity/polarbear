@@ -74,7 +74,7 @@ export function ConnectRepositoryDialog({
         </label>
         {provider === "gitlab" ? (
           <label>
-            GitLab URL
+            {t("cloud.gitlabUrl")}
             <input
               value={baseUrl}
               placeholder="https://gitlab.com"

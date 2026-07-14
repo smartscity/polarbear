@@ -6,6 +6,7 @@ import {
   findRenderedSvg,
 } from "./diagramExport";
 import { renderMermaidSvg } from "./mermaidRenderer";
+import { errorMessage } from "../../shared/tauri/invokeTauri";
 
 const COPY_FEEDBACK_DURATION_MS = 1_400;
 
@@ -20,7 +21,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const renderTargetRef = useRef<HTMLDivElement | null>(null);
   const [svgContent, setSvgContent] = useState("");
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [copyStatus, setCopyStatus] = useState("");
+  const [actionStatus, setActionStatus] = useState("");
 
   useEffect(() => {
     renderVersionRef.current += 1;
@@ -28,6 +29,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
 
     setSvgContent("");
     setRenderError(null);
+    setActionStatus("");
 
     void renderMermaidSvg(`${diagramId}-${renderVersion}`, source)
       .then((svgContent) => {
@@ -37,7 +39,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       })
       .catch((error: unknown) => {
         if (renderVersionRef.current === renderVersion) {
-          setRenderError(error instanceof Error ? error.message : String(error));
+          setRenderError(errorMessage(error));
         }
       });
   }, [diagramId, source]);
@@ -45,21 +47,39 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const copySource = async () => {
     try {
       await navigator.clipboard.writeText(source);
-      setCopyStatus(t("common.copied"));
-      window.setTimeout(() => setCopyStatus(""), COPY_FEEDBACK_DURATION_MS);
+      setActionStatus(t("common.copied"));
+      window.setTimeout(() => setActionStatus(""), COPY_FEEDBACK_DURATION_MS);
     } catch (error) {
-      setCopyStatus(error instanceof Error ? error.message : String(error));
+      setActionStatus(errorMessage(error));
     }
   };
 
-  const exportSvg = () => {
+  const exportSvg = async () => {
     const svg = findRenderedSvg(renderTargetRef.current);
-    if (svg) exportSvgElementAsSvg(svg, diagramId);
+    if (!svg) {
+      setActionStatus(t("diagram.exportUnavailable"));
+      return;
+    }
+
+    try {
+      await exportSvgElementAsSvg(svg, diagramId);
+    } catch (error) {
+      setActionStatus(t("diagram.exportFailed", { error: errorMessage(error) }));
+    }
   };
 
-  const exportPng = () => {
+  const exportPng = async () => {
     const svg = findRenderedSvg(renderTargetRef.current);
-    if (svg) exportSvgElementAsPng(svg, diagramId);
+    if (!svg) {
+      setActionStatus(t("diagram.exportUnavailable"));
+      return;
+    }
+
+    try {
+      await exportSvgElementAsPng(svg, diagramId);
+    } catch (error) {
+      setActionStatus(t("diagram.exportFailed", { error: errorMessage(error) }));
+    }
   };
 
   if (renderError) {
@@ -75,16 +95,16 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
     <figure className="mermaid-card">
       <figcaption>
         {t("diagram.mermaid")}
-        {copyStatus ? <span>{copyStatus}</span> : null}
+        {actionStatus ? <span role="status">{actionStatus}</span> : null}
       </figcaption>
       <div className="mermaid-block-toolbar">
         <button type="button" aria-label={t("diagram.copySource")} title={t("diagram.copySource")} onClick={() => void copySource()}>
           <CopyIcon />
         </button>
-        <button type="button" aria-label={t("diagram.exportPng")} title={t("diagram.exportPng")} disabled={!svgContent} onClick={exportPng}>
+        <button type="button" aria-label={t("diagram.exportPng")} title={t("diagram.exportPng")} disabled={!svgContent} onClick={() => void exportPng()}>
           <ExportIcon />
         </button>
-        <button type="button" aria-label={t("diagram.exportSvg")} title={t("diagram.exportSvg")} disabled={!svgContent} onClick={exportSvg}>
+        <button type="button" aria-label={t("diagram.exportSvg")} title={t("diagram.exportSvg")} disabled={!svgContent} onClick={() => void exportSvg()}>
           <SvgIcon />
         </button>
       </div>

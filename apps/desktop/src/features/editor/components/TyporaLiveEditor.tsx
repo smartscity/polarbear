@@ -31,13 +31,18 @@ import { DIAGRAM_CONFIG } from "../../diagram/diagramConfig";
 import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
 import { plantUmlSvgUrl } from "../../diagram/plantUmlUrl";
 import { sanitizeDiagramSvg } from "../../diagram/sanitizeDiagramSvg";
-import { STORAGE_KEYS } from "../../../shared/constants/storageKeys";
 import { APP_EVENTS } from "../../../shared/events/appEvents";
+import { readStoredDebugEnabled } from "../../../shared/debug/debugSettings";
 import { translateCurrent } from "../../../shared/i18n/translate";
 import { hasPrimaryModifier } from "../../../shared/platform/keyboard";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
-import { codeMirrorKeyForCommand } from "../../../commands/keybindingResolver";
+import { openExternalUrl } from "../../../shared/tauri/openExternalUrl";
+import { errorMessage } from "../../../shared/tauri/invokeTauri";
+import {
+  codeMirrorKeyForCommand,
+  matchesCommandShortcut,
+} from "../../../commands/keybindingResolver";
 import { resolveMarkdownAsset } from "../../workspace/tauriWorkspaceAdapter";
 import {
   exportSvgElementAsPng,
@@ -46,6 +51,16 @@ import {
 } from "../../diagram/diagramExport";
 import { platformNavigationKeyBindings } from "./platformNavigationKeymap";
 import type { MarkdownEditorView } from "./MarkdownEditor";
+import {
+  allowEditorVerticalScroll,
+  markMarkdownPreviewBlock,
+  revealMarkdownBlockSource,
+  scheduleEditorMeasureFromDom,
+} from "../widgets/markdownBlockDom";
+import {
+  clearLiveEditorViewportSizing,
+  sizeLiveEditorViewport,
+} from "../liveEditorViewport";
 import { renderMathText } from "../markdown/mathText";
 import {
   isCalloutStartLine,
@@ -165,110 +180,6 @@ function hashPreviewBlockSource(source: string): string {
   return hash.toString(36);
 }
 
-function markMarkdownPreviewBlock(
-  element: HTMLElement,
-  block: Pick<PreviewBlock, "id" | "type"> & Partial<Pick<PreviewBlock, "from" | "to">>,
-  className?: string,
-) {
-  element.dataset.markdownBlockId = block.id;
-  element.dataset.markdownBlockType = block.type;
-  if (typeof block.from === "number") {
-    element.dataset.markdownBlockFrom = String(block.from);
-  }
-  if (typeof block.to === "number") {
-    element.dataset.markdownBlockTo = String(block.to);
-  }
-  if (className) {
-    element.classList.add(className);
-  }
-}
-
-function clearLiveScrollAreaSizing(pane: HTMLElement) {
-  pane.style.height = "";
-  pane.style.maxHeight = "";
-  pane.style.minHeight = "";
-  pane.style.overflow = "";
-  pane.style.display = "";
-  pane.style.flexDirection = "";
-  delete pane.dataset.liveViewportHeight;
-
-  for (const selector of [".cm-theme", ".cm-editor", ".cm-scroller"]) {
-    const element = pane.querySelector(selector);
-    if (element instanceof HTMLElement) {
-      element.style.minHeight = "";
-      element.style.height = "";
-      element.style.maxHeight = "";
-      element.style.overflow = "";
-      element.style.overflowX = "";
-      element.style.overflowY = "";
-      element.style.overscrollBehavior = "";
-    }
-  }
-}
-
-function sizeLiveCodeMirrorViewport(pane: HTMLElement): boolean {
-  const title = pane.querySelector(".typora-live-title");
-  const theme = pane.querySelector(".cm-theme");
-  const editor = pane.querySelector(".cm-editor");
-  const scroller = pane.querySelector(".cm-scroller");
-
-  if (!(editor instanceof HTMLElement) || !(scroller instanceof HTMLElement)) {
-    return false;
-  }
-
-  // Use layout dimensions here, not getBoundingClientRect().
-  // The live editor can sit inside the app-level zoom canvas, whose transform
-  // changes the visual rect during pinch/zoom. Feeding that transformed rect
-  // back into CodeMirror's real scroller height makes the right pane relayout
-  // while the whole app is being visually scaled.
-  const paneHeight = pane.clientHeight;
-  const titleHeight = title instanceof HTMLElement
-    ? title.offsetHeight
-    : 0;
-  const viewportHeight = Math.max(
-    240,
-    Math.floor(paneHeight - titleHeight),
-  );
-
-  const sizedElements = theme instanceof HTMLElement
-    ? [theme, editor, scroller]
-    : [editor, scroller];
-  const viewportHeightValue = `${viewportHeight}px`;
-
-  for (const element of sizedElements) {
-    if (element.style.minHeight !== "0") {
-      element.style.minHeight = "0";
-    }
-    if (element.style.height !== viewportHeightValue) {
-      element.style.height = viewportHeightValue;
-    }
-    if (element.style.maxHeight !== viewportHeightValue) {
-      element.style.maxHeight = viewportHeightValue;
-    }
-  }
-
-  if (theme instanceof HTMLElement) {
-    if (theme.style.overflow !== "hidden") {
-      theme.style.overflow = "hidden";
-    }
-  }
-  if (editor.style.overflow !== "hidden") {
-    editor.style.overflow = "hidden";
-  }
-  if (scroller.style.overflowX !== "auto") {
-    scroller.style.overflowX = "auto";
-  }
-  if (scroller.style.overflowY !== "auto") {
-    scroller.style.overflowY = "auto";
-  }
-  if (scroller.style.overscrollBehavior !== "contain") {
-    scroller.style.overscrollBehavior = "contain";
-  }
-  pane.dataset.liveViewportHeight = String(viewportHeight);
-
-  return true;
-}
-
 function isAppCanvasZooming(): boolean {
   return document.documentElement.dataset.appCanvasZooming === "true";
 }
@@ -283,27 +194,15 @@ function isAppCanvasTransformActive(): boolean {
 }
 
 function isLiveDebugEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(STORAGE_KEYS.liveDebug) === "1";
-  } catch {
-    return false;
-  }
+  return readStoredDebugEnabled();
 }
 
 function isLiveDebugPanelEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(STORAGE_KEYS.liveDebugPanel) === "1";
-  } catch {
-    return false;
-  }
+  return readStoredDebugEnabled();
 }
 
 function isLiveScrollDebugEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(STORAGE_KEYS.liveDebugScroll) === "1";
-  } catch {
-    return false;
-  }
+  return readStoredDebugEnabled();
 }
 
 function writeLiveDebugOverlay(text: string): void {
@@ -827,6 +726,7 @@ export function TyporaLiveEditor({
       imagePasteExtension(stableImagePasteHandler),
       typoraLiveDecorations({
         activeFileId,
+        keybindingOverrides: userSettings.keybindings,
         workspaceRoot,
       }),
       EditorView.lineWrapping,
@@ -835,10 +735,6 @@ export function TyporaLiveEditor({
   );
 
   useEffect(() => {
-    if (!liveDebugEnabled || !isLiveScrollDebugEnabled()) {
-      return undefined;
-    }
-
     const pane = paneRef.current;
     if (!pane) {
       return undefined;
@@ -915,7 +811,7 @@ export function TyporaLiveEditor({
       pane.removeEventListener("pointerleave", handlePointerLeave);
       activeLanguageWidget?.classList.remove("cm-typora-code-language-visible");
     };
-  }, [liveDebugEnabled]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -949,7 +845,7 @@ export function TyporaLiveEditor({
         }
 
         const beforeViewportHeight = pane.dataset.liveViewportHeight ?? "";
-        const didSize = sizeLiveCodeMirrorViewport(pane);
+        const didSize = sizeLiveEditorViewport(pane);
         const didViewportHeightChange =
           didSize && (pane.dataset.liveViewportHeight ?? "") !== beforeViewportHeight;
         if (didViewportHeightChange) {
@@ -970,7 +866,7 @@ export function TyporaLiveEditor({
             }
 
             const beforeRetryViewportHeight = pane.dataset.liveViewportHeight ?? "";
-            const didRetrySize = sizeLiveCodeMirrorViewport(pane);
+            const didRetrySize = sizeLiveEditorViewport(pane);
             const didRetryViewportHeightChange =
               didRetrySize &&
               (pane.dataset.liveViewportHeight ?? "") !== beforeRetryViewportHeight;
@@ -1014,7 +910,7 @@ export function TyporaLiveEditor({
       window.visualViewport?.removeEventListener("resize", syncLiveScrollArea);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
-      clearLiveScrollAreaSizing(pane);
+      clearLiveEditorViewportSizing(pane);
     };
   }, [liveDebugEnabled, reportLiveDebug]);
 
@@ -1145,7 +1041,7 @@ export function TyporaLiveEditor({
         onCreateEditor={(view) => {
           editorViewRef.current = view;
           if (paneRef.current) {
-            sizeLiveCodeMirrorViewport(paneRef.current);
+            sizeLiveEditorViewport(paneRef.current);
             view.requestMeasure();
             reportLiveDebug("editor-created-sized", {
               note: "Sized CodeMirror viewport after editor creation",
@@ -1307,7 +1203,7 @@ function linkClickExtension() {
 
     event.preventDefault();
     event.stopPropagation();
-    window.open(href, "_blank", "noopener,noreferrer");
+    void openExternalUrl(href);
     return true;
   };
 
@@ -1716,6 +1612,7 @@ function setCurrentLineHeading(view: EditorView, level: number): boolean {
 
 function typoraLiveDecorations(params: {
   activeFileId: string;
+  keybindingOverrides: KeybindingOverrides;
   workspaceRoot: string;
 }) {
   return StateField.define<DecorationSet>({
@@ -1758,6 +1655,7 @@ function buildTyporaDecorations(
   state: EditorState,
   params: {
     activeFileId: string;
+    keybindingOverrides: KeybindingOverrides;
     workspaceRoot: string;
   },
 ): DecorationSet {
@@ -1892,6 +1790,7 @@ function previewWidgetForBlock(
   block: PreviewBlock,
   params: {
     activeFileId: string;
+    keybindingOverrides: KeybindingOverrides;
     workspaceRoot: string;
   },
 ): WidgetType {
@@ -1908,7 +1807,7 @@ function previewWidgetForBlock(
   }
 
   if (block.type === "table") {
-    return new TablePreviewWidget(block);
+    return new TablePreviewWidget(block, params.keybindingOverrides);
   }
 
   if (block.type === "image") {
@@ -2728,57 +2627,6 @@ function decorateCodeSyntax(
   }
 }
 
-function revealSource(dom: HTMLElement, block: Pick<PreviewBlock, "from">) {
-  const view = EditorView.findFromDOM(dom);
-  if (!view) {
-    return;
-  }
-
-  view.dispatch({
-    selection: {
-      anchor: block.from,
-    },
-    scrollIntoView: true,
-  });
-  view.focus();
-}
-
-function allowEditorVerticalScroll(element: HTMLElement) {
-  element.dataset.allowNativeEditorWheel = "true";
-}
-
-function scheduleEditorMeasureFromDom(element: HTMLElement) {
-  const requestMeasure = (restoreFrames = 1) => {
-    const view = EditorView.findFromDOM(element);
-    if (!view) {
-      return;
-    }
-
-    const scrollDOM = view.scrollDOM;
-    const scrollTop = scrollDOM.scrollTop;
-    const scrollLeft = scrollDOM.scrollLeft;
-    const restoreScroll = () => {
-      scrollDOM.scrollTop = scrollTop;
-      scrollDOM.scrollLeft = scrollLeft;
-    };
-
-    view.requestMeasure();
-    restoreScroll();
-
-    let remainingFrames = restoreFrames;
-    const restoreAfterFrame = () => {
-      restoreScroll();
-      remainingFrames -= 1;
-      if (remainingFrames > 0) {
-        window.requestAnimationFrame(restoreAfterFrame);
-      }
-    };
-    window.requestAnimationFrame(restoreAfterFrame);
-  };
-
-  requestMeasure(2);
-}
-
 function diagramIdForSource(source: string): string {
   let hash = 0;
   for (let index = 0; index < source.length; index += 1) {
@@ -2828,8 +2676,8 @@ class MathBlockPreviewWidget extends WidgetType {
     wrapper.className = "cm-typora-math-block";
     markMarkdownPreviewBlock(wrapper, this.block, "markdown-math-block");
     wrapper.title = translateCurrent("diagram.formulaEditHint");
-    wrapper.addEventListener("click", () => revealSource(wrapper, this.block));
-    wrapper.addEventListener("dblclick", () => revealSource(wrapper, this.block));
+    wrapper.addEventListener("click", () => revealMarkdownBlockSource(wrapper, this.block.from));
+    wrapper.addEventListener("dblclick", () => revealMarkdownBlockSource(wrapper, this.block.from));
     renderMathBlockDom(wrapper, this.block.source);
     allowEditorVerticalScroll(wrapper);
     scheduleEditorMeasureFromDom(wrapper);
@@ -2988,12 +2836,19 @@ class HtmlImagePreviewWidget extends WidgetType {
 class TablePreviewWidget extends WidgetType {
   private disposeInteraction: (() => void) | null = null;
 
-  constructor(private readonly block: PreviewBlock) {
+  constructor(
+    private readonly block: PreviewBlock,
+    private readonly keybindingOverrides: KeybindingOverrides,
+  ) {
     super();
   }
 
   eq(other: TablePreviewWidget): boolean {
-    return other.block.id === this.block.id && other.block.raw === this.block.raw;
+    return (
+      other.block.id === this.block.id
+      && other.block.raw === this.block.raw
+      && other.keybindingOverrides === this.keybindingOverrides
+    );
   }
 
   toDOM(): HTMLElement {
@@ -3092,6 +2947,7 @@ class TablePreviewWidget extends WidgetType {
         sourceLineIndex: 0,
         value: header,
         wrapper,
+        keybindingOverrides: this.keybindingOverrides,
       });
       tableFocusIndex += 1;
       headerRow.append(th);
@@ -3117,6 +2973,7 @@ class TablePreviewWidget extends WidgetType {
           sourceLineIndex: bodyIndex + 2,
           value: cell,
           wrapper,
+          keybindingOverrides: this.keybindingOverrides,
         });
         tableFocusIndex += 1;
         row.append(td);
@@ -3182,6 +3039,7 @@ function makeTableCellEditable(
     sourceLineIndex: number;
     value: string;
     wrapper: HTMLElement;
+    keybindingOverrides: KeybindingOverrides;
   },
 ) {
   cell.contentEditable = "true";
@@ -3311,23 +3169,38 @@ function makeTableCellEditable(
   cell.addEventListener("keydown", (event) => {
     event.stopPropagation();
 
-    if (hasPrimaryModifier(event) && event.key.toLowerCase() === "z") {
+    if (matchesTableCellCommand(event, "edit.undo", params.keybindingOverrides)) {
       event.preventDefault();
       runTableHistoryAction(
         params.wrapper,
         { row: params.rowIndex, column: params.columnIndex },
-        event.shiftKey ? redo : undo,
+        undo,
       );
       return;
     }
+    if (suppressesDefaultTableCellCommand(event, "edit.undo", params.keybindingOverrides)) {
+      event.preventDefault();
+      return;
+    }
 
-    if (hasPrimaryModifier(event) && event.key.toLowerCase() === "y") {
+    if (
+      matchesTableCellCommand(event, "edit.redo", params.keybindingOverrides)
+      || (
+        params.keybindingOverrides["edit.redo"] === undefined
+        && hasPrimaryModifier(event)
+        && event.key.toLowerCase() === "y"
+      )
+    ) {
       event.preventDefault();
       runTableHistoryAction(
         params.wrapper,
         { row: params.rowIndex, column: params.columnIndex },
         redo,
       );
+      return;
+    }
+    if (suppressesDefaultTableCellCommand(event, "edit.redo", params.keybindingOverrides)) {
+      event.preventDefault();
       return;
     }
 
@@ -3379,9 +3252,13 @@ function makeTableCellEditable(
       return;
     }
 
-    if (hasPrimaryModifier(event) && event.key.toLowerCase() === "b") {
+    if (matchesTableCellCommand(event, "format.bold", params.keybindingOverrides)) {
       event.preventDefault();
       document.execCommand("bold");
+      return;
+    }
+    if (suppressesDefaultTableCellCommand(event, "format.bold", params.keybindingOverrides)) {
+      event.preventDefault();
       return;
     }
 
@@ -3392,6 +3269,38 @@ function makeTableCellEditable(
       params.wrapper.focus({ preventScroll: true });
     }
   });
+}
+
+function matchesTableCellCommand(
+  event: KeyboardEvent,
+  command: "edit.redo" | "edit.undo" | "format.bold",
+  keybindingOverrides: KeybindingOverrides,
+): boolean {
+  return matchesCommandShortcut(event, command, keybindingOverrides, {
+    editorFocused: true,
+    fileTreeFocused: false,
+    tableCellFocused: true,
+    textInputFocused: true,
+  });
+}
+
+function suppressesDefaultTableCellCommand(
+  event: KeyboardEvent,
+  command: "edit.redo" | "edit.undo" | "format.bold",
+  keybindingOverrides: KeybindingOverrides,
+): boolean {
+  if (keybindingOverrides[command] === undefined || !hasPrimaryModifier(event) || event.altKey) {
+    return false;
+  }
+
+  const key = event.key.toLowerCase();
+  if (command === "edit.undo") {
+    return key === "z" && !event.shiftKey;
+  }
+  if (command === "edit.redo") {
+    return (key === "z" && event.shiftKey) || (key === "y" && !event.shiftKey);
+  }
+  return key === "b" && !event.shiftKey;
 }
 
 function handleTableSelectionKeydown(
@@ -4195,37 +4104,44 @@ class MermaidPreviewWidget extends WidgetType {
     toolbar.className = "cm-typora-diagram-toolbar";
 
     const title = document.createElement("span");
+    title.className = "cm-typora-diagram-title";
     title.textContent = translateCurrent("diagram.mermaid");
+    const actionStatus = document.createElement("output");
+    actionStatus.className = "cm-typora-diagram-action-status";
+    actionStatus.setAttribute("aria-live", "polite");
 
     const editButton = createDiagramIconButton(
       translateCurrent("diagram.editSource"),
       "M4 14.25V17h2.75L15.1 8.65l-2.75-2.75L4 14.25Zm12.35-8.85a.95.95 0 0 0 0-1.35l-1.4-1.4a.95.95 0 0 0-1.35 0l-1.1 1.1 2.75 2.75 1.1-1.1Z",
     );
-    editButton.addEventListener("click", () => revealSource(wrapper, this.block));
+    editButton.addEventListener("click", () => revealMarkdownBlockSource(wrapper, this.block.from));
 
     const pngButton = createDiagramIconButton(
       translateCurrent("diagram.exportPng"),
       "M4 4.5A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-11ZM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 14.5l2.8-3.5a.75.75 0 0 1 1.15-.03L11 12.75l1.8-2.25a.75.75 0 0 1 1.17.02L15.5 13v1.5h-10Z",
     );
     pngButton.addEventListener("click", () => {
-      exportDiagramAsPng(content, this.block.id);
+      void exportDiagramAsPng(content, this.block.id, actionStatus);
     });
     const svgButton = createDiagramIconButton(
       translateCurrent("diagram.exportSvg"),
       "M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Zm2 4.25h6V9H7V7.75Zm0 3h6V12H7v-1.25Zm0 3h4V15H7v-1.25Z",
     );
     svgButton.addEventListener("click", () => {
-      exportDiagramAsSvg(content, this.block.id);
+      void exportDiagramAsSvg(content, this.block.id, actionStatus);
     });
     const copyButton = createDiagramIconButton(
       translateCurrent("diagram.copySource"),
       "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
     );
     copyButton.addEventListener("click", () => {
-      void navigator.clipboard.writeText(this.block.source);
+      void navigator.clipboard.writeText(this.block.source).then(
+        () => showDiagramActionStatus(actionStatus, translateCurrent("common.copied")),
+        (error: unknown) => showDiagramActionStatus(actionStatus, errorMessage(error)),
+      );
     });
 
-    toolbar.append(title, editButton, pngButton, svgButton, copyButton);
+    toolbar.append(title, actionStatus, editButton, pngButton, svgButton, copyButton);
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
@@ -4263,27 +4179,31 @@ class PlantUmlPreviewWidget extends WidgetType {
     toolbar.className = "cm-typora-diagram-toolbar";
 
     const title = document.createElement("span");
+    title.className = "cm-typora-diagram-title";
     title.textContent = translateCurrent("diagram.plantUml");
+    const actionStatus = document.createElement("output");
+    actionStatus.className = "cm-typora-diagram-action-status";
+    actionStatus.setAttribute("aria-live", "polite");
 
     const editButton = createDiagramIconButton(
       translateCurrent("diagram.editSource"),
       "M4 14.25V17h2.75L15.1 8.65l-2.75-2.75L4 14.25Zm12.35-8.85a.95.95 0 0 0 0-1.35l-1.4-1.4a.95.95 0 0 0-1.35 0l-1.1 1.1 2.75 2.75 1.1-1.1Z",
     );
-    editButton.addEventListener("click", () => revealSource(wrapper, this.block));
+    editButton.addEventListener("click", () => revealMarkdownBlockSource(wrapper, this.block.from));
 
     const pngButton = createDiagramIconButton(
       translateCurrent("diagram.exportPng"),
       "M4 4.5A1.5 1.5 0 0 1 5.5 3h9A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 15.5v-11ZM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 14.5l2.8-3.5a.75.75 0 0 1 1.15-.03L11 12.75l1.8-2.25a.75.75 0 0 1 1.17.02L15.5 13v1.5h-10Z",
     );
     pngButton.addEventListener("click", () => {
-      exportDiagramAsPng(content, this.block.id);
+      void exportDiagramAsPng(content, this.block.id, actionStatus);
     });
     const svgButton = createDiagramIconButton(
       translateCurrent("diagram.exportSvg"),
       "M5 3.5h10A1.5 1.5 0 0 1 16.5 5v10A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5A1.5 1.5 0 0 1 5 3.5Zm2 4.25h6V9H7V7.75Zm0 3h6V12H7v-1.25Zm0 3h4V15H7v-1.25Z",
     );
     svgButton.addEventListener("click", () => {
-      exportDiagramAsSvg(content, this.block.id);
+      void exportDiagramAsSvg(content, this.block.id, actionStatus);
     });
 
     const copyButton = createDiagramIconButton(
@@ -4291,10 +4211,13 @@ class PlantUmlPreviewWidget extends WidgetType {
       "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
     );
     copyButton.addEventListener("click", () => {
-      void navigator.clipboard.writeText(this.block.source);
+      void navigator.clipboard.writeText(this.block.source).then(
+        () => showDiagramActionStatus(actionStatus, translateCurrent("common.copied")),
+        (error: unknown) => showDiagramActionStatus(actionStatus, errorMessage(error)),
+      );
     });
 
-    toolbar.append(title, editButton, pngButton, svgButton, copyButton);
+    toolbar.append(title, actionStatus, editButton, pngButton, svgButton, copyButton);
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
@@ -4338,14 +4261,60 @@ function createDiagramIconButton(label: string, pathData: string): HTMLButtonEle
   return button;
 }
 
-function exportDiagramAsSvg(contentElement: HTMLElement, diagramId: string): void {
+async function exportDiagramAsSvg(
+  contentElement: HTMLElement,
+  diagramId: string,
+  actionStatus: HTMLOutputElement,
+): Promise<void> {
   const svg = findRenderedSvg(contentElement);
-  if (svg) exportSvgElementAsSvg(svg, diagramId);
+  if (!svg) {
+    showDiagramActionStatus(actionStatus, translateCurrent("diagram.exportUnavailable"));
+    return;
+  }
+
+  try {
+    await exportSvgElementAsSvg(svg, diagramId);
+  } catch (error) {
+    showDiagramActionStatus(
+      actionStatus,
+      translateCurrent("diagram.exportFailed", { error: errorMessage(error) }),
+    );
+  }
 }
 
-function exportDiagramAsPng(contentElement: HTMLElement, diagramId: string): void {
+async function exportDiagramAsPng(
+  contentElement: HTMLElement,
+  diagramId: string,
+  actionStatus: HTMLOutputElement,
+): Promise<void> {
   const svg = findRenderedSvg(contentElement);
-  if (svg) exportSvgElementAsPng(svg, diagramId);
+  if (!svg) {
+    showDiagramActionStatus(actionStatus, translateCurrent("diagram.exportUnavailable"));
+    return;
+  }
+
+  try {
+    await exportSvgElementAsPng(svg, diagramId);
+  } catch (error) {
+    showDiagramActionStatus(
+      actionStatus,
+      translateCurrent("diagram.exportFailed", { error: errorMessage(error) }),
+    );
+  }
+}
+
+function showDiagramActionStatus(actionStatus: HTMLOutputElement, message: string): void {
+  const pendingTimer = Number(actionStatus.dataset.dismissTimer ?? "0");
+  if (pendingTimer) {
+    window.clearTimeout(pendingTimer);
+  }
+
+  actionStatus.textContent = message;
+  const timer = window.setTimeout(() => {
+    actionStatus.textContent = "";
+    delete actionStatus.dataset.dismissTimer;
+  }, 4_000);
+  actionStatus.dataset.dismissTimer = String(timer);
 }
 
 async function renderPlantUmlPreview(
@@ -4595,9 +4564,7 @@ class MarkdownImagePreviewWidget extends WidgetType {
     allowEditorVerticalScroll(wrapper);
     wrapper.addEventListener("mousedown", (event) => {
       event.preventDefault();
-      revealSource(wrapper, {
-        from: this.params.from,
-      });
+      revealMarkdownBlockSource(wrapper, this.params.from);
     });
 
     const image = document.createElement("img");
@@ -4648,7 +4615,7 @@ class MarkdownImagePreviewWidget extends WidgetType {
       })
       .catch((error: unknown) => {
         wrapper.classList.add("cm-typora-image-error");
-        caption.textContent = error instanceof Error ? error.message : String(error);
+        caption.textContent = errorMessage(error);
         scheduleEditorMeasureFromDom(wrapper);
       });
 

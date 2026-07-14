@@ -40,6 +40,14 @@ describe("getCommandState", () => {
     expect(getCommandState("theme.dark", defaultContext).checked).toBe(false);
   });
 
+  it("does not expose history commands when the editor surface is unmounted", () => {
+    const previewContext = { ...defaultContext, activeViewMode: "preview" as const };
+
+    expect(getCommandState("edit.undo", previewContext).enabled).toBe(false);
+    expect(getCommandState("edit.redo", previewContext).enabled).toBe(false);
+    expect(getCommandState("edit.selectAll", previewContext).enabled).toBe(false);
+  });
+
   it("uses the active document as a file command fallback outside the tree", () => {
     const context = { ...defaultContext, selectedTreeItemId: "" };
 

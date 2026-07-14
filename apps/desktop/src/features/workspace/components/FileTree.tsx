@@ -7,6 +7,7 @@ import {
   type MouseEvent
 } from "react";
 import type { ExecuteAppCommand } from "../../../shared/commands/appCommandTypes";
+import { useDismissOnEscape } from "../../../shared/hooks/useDismissOnEscape";
 import type { WorkspaceItem } from "../workspaceModel";
 import {
   FileTreeContextMenu,
@@ -53,6 +54,11 @@ export function FileTree({
   const autoExpandTimerRef = useRef<number | null>(null);
   const draggedPathRef = useRef("");
   const treeShellRef = useRef<HTMLDivElement | null>(null);
+
+  useDismissOnEscape(
+    () => setContextMenu(null),
+    { enabled: contextMenu !== null },
+  );
 
   useEffect(() => {
     if (collapseVersion > 0) {
@@ -105,15 +111,9 @@ export function FileTree({
       setContextMenu(null);
     }
 
-    function handleKeyDown() {
-      setContextMenu(null);
-    }
-
     window.addEventListener("pointerdown", closeContextMenu);
-    window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("pointerdown", closeContextMenu);
-      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 

@@ -8,6 +8,7 @@ import {
   exportSvgElementAsSvg,
   findRenderedSvg,
 } from "./diagramExport";
+import { errorMessage as describeError } from "../../shared/tauri/invokeTauri";
 
 export type PlantUmlBlockProps = {
   diagramId: string;
@@ -19,6 +20,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   const renderTargetRef = useRef<HTMLDivElement | null>(null);
   const [svgContent, setSvgContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [actionStatus, setActionStatus] = useState("");
   const [requestedSource, setRequestedSource] = useState<string | null>(null);
   const diagramUrl = useMemo(
     () => plantUmlSvgUrl(DIAGRAM_CONFIG.plantUml.serverUrl, source),
@@ -26,6 +28,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   );
 
   useEffect(() => {
+    setActionStatus("");
     if (requestedSource !== source) {
       setErrorMessage("");
       setSvgContent("");
@@ -55,7 +58,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
         setSvgContent(sanitizeDiagramSvg(svgText));
       } catch (error) {
         if (!abortController.signal.aborted) {
-          setErrorMessage(error instanceof Error ? error.message : String(error));
+          setErrorMessage(describeError(error));
         }
       }
     }
@@ -65,14 +68,32 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
     return () => abortController.abort();
   }, [diagramUrl, requestedSource, source, t]);
 
-  const exportPng = () => {
+  const exportPng = async () => {
     const svg = findRenderedSvg(renderTargetRef.current);
-    if (svg) exportSvgElementAsPng(svg, diagramId);
+    if (!svg) {
+      setActionStatus(t("diagram.exportUnavailable"));
+      return;
+    }
+
+    try {
+      await exportSvgElementAsPng(svg, diagramId);
+    } catch (error) {
+      setActionStatus(t("diagram.exportFailed", { error: describeError(error) }));
+    }
   };
 
-  const exportSvg = () => {
+  const exportSvg = async () => {
     const svg = findRenderedSvg(renderTargetRef.current);
-    if (svg) exportSvgElementAsSvg(svg, diagramId);
+    if (!svg) {
+      setActionStatus(t("diagram.exportUnavailable"));
+      return;
+    }
+
+    try {
+      await exportSvgElementAsSvg(svg, diagramId);
+    } catch (error) {
+      setActionStatus(t("diagram.exportFailed", { error: describeError(error) }));
+    }
   };
 
   return (
@@ -85,12 +106,13 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
         <span className="plantuml-privacy-note">
           {t("diagram.plantUmlPrivacy")}
         </span>
+        {actionStatus ? <span role="status">{actionStatus}</span> : null}
       </figcaption>
       <div className="mermaid-block-toolbar">
-        <button type="button" aria-label={t("diagram.exportPng")} title={t("diagram.exportPng")} disabled={!svgContent} onClick={exportPng}>
+        <button type="button" aria-label={t("diagram.exportPng")} title={t("diagram.exportPng")} disabled={!svgContent} onClick={() => void exportPng()}>
           <ExportIcon />
         </button>
-        <button type="button" aria-label={t("diagram.exportSvg")} title={t("diagram.exportSvg")} disabled={!svgContent} onClick={exportSvg}>
+        <button type="button" aria-label={t("diagram.exportSvg")} title={t("diagram.exportSvg")} disabled={!svgContent} onClick={() => void exportSvg()}>
           <SvgIcon />
         </button>
       </div>

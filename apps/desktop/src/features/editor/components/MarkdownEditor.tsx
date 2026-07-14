@@ -3,33 +3,15 @@ import { markdown } from "@codemirror/lang-markdown";
 import { redo, selectAll, undo } from "@codemirror/commands";
 import { search } from "@codemirror/search";
 import { Prec } from "@codemirror/state";
-import { keymap, type KeyBinding } from "@codemirror/view";
-import { useMemo } from "react";
+import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
+import { useEffect, useMemo, useRef } from "react";
 import { codeMirrorKeyForCommand } from "../../../commands/keybindingResolver";
 import type { AppCommand } from "../../../shared/commands/appCommandTypes";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
 import { platformNavigationKeymap } from "./platformNavigationKeymap";
 
-export type MarkdownEditorView = {
-  focus: () => void;
-  dispatch: (transaction: {
-    changes?: { from: number; to: number; insert: string };
-    selection?: { anchor: number; head?: number };
-    scrollIntoView?: boolean;
-  }) => void;
-  state: {
-    doc: {
-      toString: () => string;
-    };
-    selection: {
-      main: {
-        from: number;
-        to: number;
-      };
-    };
-  };
-};
+export type MarkdownEditorView = EditorView;
 
 type DroppedFile = File & {
   path?: string;
@@ -40,7 +22,7 @@ type MarkdownEditorProps = {
   onImageDrop: (filePaths: string[]) => void;
   onImagePaste: (items: DataTransferItemList) => void;
   onCommand: (command: AppCommand) => void;
-  onEditorReady: (editorView: MarkdownEditorView) => void;
+  onEditorReady: (editorView: MarkdownEditorView | null) => void;
   onMarkdownChange: (markdownContent: string) => void;
 };
 
@@ -57,6 +39,13 @@ export function MarkdownEditor({
     () => sourceEditorCommandKeymap(userSettings.keybindings, onCommand),
     [onCommand, userSettings.keybindings],
   );
+  const onEditorReadyRef = useRef(onEditorReady);
+
+  useEffect(() => {
+    onEditorReadyRef.current = onEditorReady;
+  }, [onEditorReady]);
+
+  useEffect(() => () => onEditorReadyRef.current(null), []);
 
   return (
     <section

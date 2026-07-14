@@ -13,6 +13,7 @@ import { repositoryProviderLabel } from "../features/repository/repositoryApi";
 import { useI18n, type Translate } from "../shared/i18n/I18nProvider";
 import { useUserSettings } from "../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../shared/settings/userSettings";
+import { PRODUCT_CONFIG } from "../shared/config/productConfig";
 
 type NativeAppMenuState = {
   commandContext: CommandRuntimeContext;
@@ -42,7 +43,7 @@ export function useNativeAppMenu(
           items: [
             {
               id: "app",
-              text: "Polarbear",
+              text: PRODUCT_CONFIG.name,
               items: [
                 {
                   id: "app.about",
@@ -121,13 +122,28 @@ export function useNativeAppMenu(
               id: "edit",
               text: t("menu.edit"),
               items: [
-                { item: "Undo", text: commandTitle("edit.undo") },
-                { item: "Redo", text: commandTitle("edit.redo") },
+                {
+                  text: commandTitle("edit.undo"),
+                  accelerator: accelerator("edit.undo"),
+                  enabled: commandState("edit.undo").enabled,
+                  action: () => executeCommand("edit.undo", { commandSource: "menu" }),
+                },
+                {
+                  text: commandTitle("edit.redo"),
+                  accelerator: accelerator("edit.redo"),
+                  enabled: commandState("edit.redo").enabled,
+                  action: () => executeCommand("edit.redo", { commandSource: "menu" }),
+                },
                 { item: "Separator" },
                 { item: "Cut", text: commandTitle("edit.cut") },
                 { item: "Copy", text: commandTitle("edit.copy") },
                 { item: "Paste", text: commandTitle("edit.paste") },
-                { item: "SelectAll", text: commandTitle("edit.selectAll") },
+                {
+                  text: commandTitle("edit.selectAll"),
+                  accelerator: accelerator("edit.selectAll"),
+                  enabled: commandState("edit.selectAll").enabled,
+                  action: () => executeCommand("edit.selectAll", { commandSource: "menu" }),
+                },
                 { item: "Separator" },
                 {
                   text: commandTitle("edit.find"),

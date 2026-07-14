@@ -1299,11 +1299,20 @@ body,
   margin-bottom: 10px;
 }
 
-.cm-typora-diagram-toolbar span {
+.cm-typora-diagram-toolbar .cm-typora-diagram-title {
   margin-right: auto;
   color: var(--color-text-secondary, #5f666d);
   font-size: 13px;
   font-weight: 650;
+}
+
+.cm-typora-diagram-action-status {
+  max-width: min(32vw, 280px);
+  overflow: hidden;
+  color: var(--color-text-secondary, #5f666d);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cm-typora-diagram-toolbar button,

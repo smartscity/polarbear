@@ -44,6 +44,7 @@ import {
   minimalMarkdownDocumentChange,
 } from "./features/editor/markdown/applyMarkdownFormat";
 import { codeFenceTemplate } from "./features/editor/markdown/markdownTemplates";
+import { executeStandardEditorCommand } from "./features/editor/editorCommandAdapter";
 import {
   deriveDefaultMarkdownFileName,
   displayNameForDocumentId,
@@ -181,13 +182,16 @@ import {
   type NativePinchPayload,
   type ZoomAnchor,
 } from "./features/zoom/appZoomRuntime";
-import { readStoredDebugEnabled } from "./shared/debug/debugSettings";
+import {
+  readStoredDebugEnabled,
+  storeDebugEnabled,
+} from "./shared/debug/debugSettings";
 import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
 import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
 import { STORAGE_KEYS } from "./shared/constants/storageKeys";
 import { APP_EVENTS } from "./shared/events/appEvents";
 import { TAURI_COMMANDS } from "./shared/tauri/commandIds";
-import { invokeTauri } from "./shared/tauri/invokeTauri";
+import { errorMessage, invokeTauri } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 
 const initialWorkspace: WorkspaceItem[] = [];
@@ -546,15 +550,7 @@ export function App() {
     });
 
   useEffect(() => {
-    try {
-      const value = debugEnabled ? "1" : "0";
-      window.localStorage.setItem(STORAGE_KEYS.debug, value);
-      window.localStorage.setItem(STORAGE_KEYS.liveDebug, value);
-      window.localStorage.setItem(STORAGE_KEYS.liveDebugScroll, value);
-      window.localStorage.setItem(STORAGE_KEYS.liveDebugPanel, debugEnabled ? "1" : "0");
-    } catch {
-      // Ignore storage errors; the toggle still reflects the current session.
-    }
+    storeDebugEnabled(debugEnabled);
 
     if (!debugEnabled) {
       removePolarbearDebugOverlays();
@@ -1945,8 +1941,7 @@ export function App() {
     void refreshRepositoryState();
   }, [refreshRepositoryState]);
 
-  const repositoryErrorMessage = (error: unknown): string =>
-    error instanceof Error ? error.message : String(error);
+  const repositoryErrorMessage = errorMessage;
 
   const isRepositoryAuthenticationError = (message: string): boolean =>
     /credentials are missing|connect (github|gitlab).*before|\b(401|403)\b/i.test(
@@ -3687,6 +3682,15 @@ export function App() {
 
       if (command === "file.close") {
         void closeTab(activeFileId);
+        return;
+      }
+
+      if (
+        command === "edit.undo" ||
+        command === "edit.redo" ||
+        command === "edit.selectAll"
+      ) {
+        executeStandardEditorCommand(editorViewRef.current, command);
         return;
       }
 

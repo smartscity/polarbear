@@ -1,5 +1,5 @@
 import { APP_ZOOM_CONFIG } from "./appZoomConfig";
-import { STORAGE_KEYS } from "../../shared/constants/storageKeys";
+import { readStoredDebugEnabled } from "../../shared/debug/debugSettings";
 import { translateCurrent } from "../../shared/i18n/translate";
 import { hasPrimaryModifier } from "../../shared/platform/keyboard";
 
@@ -51,11 +51,7 @@ export function consumeAppZoomPointerEvent(event: Event): void {
 }
 
 function isAppZoomDebugOverlayEnabled(): boolean {
-  try {
-    return window.localStorage.getItem(STORAGE_KEYS.liveDebugScroll) === "1";
-  } catch {
-    return false;
-  }
+  return readStoredDebugEnabled();
 }
 
 function writeAppZoomDebugOverlay(note: string): void {

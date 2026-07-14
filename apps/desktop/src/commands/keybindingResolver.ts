@@ -224,6 +224,24 @@ export function resolveShortcutForKeyboardEvent(
     : { kind: "conflict", shortcuts: winners };
 }
 
+/**
+ * Lets an embedded editor keep its own document transaction while resolving
+ * the trigger from the same configurable command bindings as the app shell.
+ */
+export function matchesCommandShortcut(
+  event: KeyboardEvent,
+  command: AppCommand,
+  overrides: KeybindingOverrides,
+  context: KeybindingContext,
+): boolean {
+  const resolved = resolveShortcutForKeyboardEvent(
+    event,
+    resolveShortcutDefinitions(overrides),
+    context,
+  );
+  return resolved.kind === "match" && resolved.shortcut.command === command;
+}
+
 export function contextFromKeyboardEventTarget(
   target: EventTarget | null,
 ): KeybindingContext {

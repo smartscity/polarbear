@@ -4,6 +4,7 @@ import {
   type ResolveMarkdownAssetResponse
 } from "../../workspace/tauriWorkspaceAdapter";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import { ImageViewer } from "./ImageViewer";
 
 type MarkdownImageProps = {
@@ -88,7 +89,7 @@ export function MarkdownImage({
         if (isMounted) {
           setImageState({
             status: "error",
-            message: error instanceof Error ? error.message : String(error)
+            message: errorMessage(error)
           });
         }
       }
@@ -158,7 +159,7 @@ export function MarkdownImage({
           className="markdown-image-delete"
           onClick={() => onDelete(markdown)}
         >
-          Delete Reference
+          {t("image.deleteReference")}
         </button>
       ) : null}
       {isViewerOpen ? (
