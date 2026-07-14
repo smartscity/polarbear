@@ -173,7 +173,7 @@ describe("effectiveAcceleratorForCommand", () => {
     })).toBeUndefined();
     expect(effectiveAcceleratorForCommand("file.rename", {
       "file.rename": "F3",
-    })).toBeUndefined();
+    })).toBe("F3");
   });
 });
 

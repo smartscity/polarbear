@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const { sanitizeDiagramSvgMock } = vi.hoisted(() => ({
+  sanitizeDiagramSvgMock: vi.fn((svgContent: string) =>
+    svgContent.replace(/<script[\s\S]*?<\/script>/gi, ""),
+  ),
+}));
+
+vi.mock("./sanitizeDiagramSvg", () => ({
+  sanitizeDiagramSvg: sanitizeDiagramSvgMock,
+}));
+
 import { renderPlantUmlSvg } from "./plantUmlRenderer";
 
 describe("PlantUML renderer", () => {
@@ -12,6 +23,7 @@ describe("PlantUML renderer", () => {
     expect(result).toContain("<svg");
     expect(result).toContain("safe");
     expect(result).not.toContain("<script");
+    expect(sanitizeDiagramSvgMock).toHaveBeenCalledOnce();
   });
 
   it("reports an HTTP status as a typed renderer error", async () => {
