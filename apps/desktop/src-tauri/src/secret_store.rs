@@ -117,6 +117,7 @@ fn fallback_secrets_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(path.join("repository-secrets.json"))
 }
 
+#[cfg(debug_assertions)]
 fn read_fallback_secrets(app: &tauri::AppHandle) -> Result<BTreeMap<String, String>, String> {
     let path = fallback_secrets_path(app)?;
     if !path.exists() {
