@@ -211,6 +211,42 @@ type ExternalDocumentReference = Pick<
   "fileId" | "relativePath" | "workspaceRoot"
 >;
 
+type CaretHitTestDocument = Document & {
+  caretPositionFromPoint?: (x: number, y: number) => {
+    offset: number;
+    offsetNode: Node;
+  } | null;
+  caretRangeFromPoint?: (x: number, y: number) => Range | null;
+};
+
+function resolveEditorPositionAtVisualPointer(
+  view: EditorView,
+  clientX: number,
+  clientY: number,
+  scale: number,
+): number | null {
+  const caretDocument = document as CaretHitTestDocument;
+  const caretPosition = caretDocument.caretPositionFromPoint?.(clientX, clientY);
+  if (caretPosition && view.contentDOM.contains(caretPosition.offsetNode)) {
+    return view.posAtDOM(caretPosition.offsetNode, caretPosition.offset);
+  }
+
+  const caretRange = caretDocument.caretRangeFromPoint?.(clientX, clientY);
+  if (caretRange && view.contentDOM.contains(caretRange.startContainer)) {
+    return view.posAtDOM(caretRange.startContainer, caretRange.startOffset);
+  }
+
+  // CodeMirror's block lookup expects an unscaled Y coordinate, while inline
+  // glyph hit-testing still uses visual X coordinates. This is only a fallback
+  // for WebViews without a DOM caret hit-test API.
+  const contentRect = view.contentDOM.getBoundingClientRect();
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : NORMAL_APP_ZOOM;
+  return view.posAtCoords({
+    x: clientX,
+    y: contentRect.top + (clientY - contentRect.top) / safeScale,
+  });
+}
+
 export function App() {
   const { t } = useI18n();
   const editorViewRef = useRef<MarkdownEditorView | null>(null);
@@ -640,8 +676,9 @@ export function App() {
       zoomCanvasRef.current.style.width = `${size.width}px`;
       zoomCanvasRef.current.style.height = `${size.height}px`;
       zoomCanvasRef.current.style.transformOrigin = "top left";
-      zoomCanvasRef.current.style.transform =
-        `translate3d(${nextTranslate.x}px, ${nextTranslate.y}px, 0) scale(${scale})`;
+      zoomCanvasRef.current.style.transform = resetToNormal
+        ? "none"
+        : `translate3d(${nextTranslate.x}px, ${nextTranslate.y}px, 0) scale(${scale})`;
     }
   }, [clampCanvasTranslate]);
 
@@ -920,31 +957,6 @@ export function App() {
     return moved;
   }, []);
 
-  const preserveCurrentInnerScrollPosition = useCallback((target: EventTarget | null): boolean => {
-    const element = resolveScrollableElementFromTarget(target);
-    if (!element) {
-      return false;
-    }
-
-    const left = element.scrollLeft;
-    const top = element.scrollTop;
-    const restore = () => {
-      element.scrollLeft = left;
-      element.scrollTop = top;
-      zoomInnerScrollLocksRef.current.set(element, {
-        left,
-        top,
-      });
-    };
-
-    restore();
-    window.requestAnimationFrame(() => {
-      restore();
-      window.requestAnimationFrame(restore);
-    });
-    return true;
-  }, []);
-
   const placeEditorCursorDuringAppZoom = useCallback((event: AppZoomPointerLikeEvent): boolean => {
     const button = typeof event.button === "number" ? event.button : 0;
     if (button !== 0 || shouldIgnoreAppZoomEditorPointerTarget(event.target)) {
@@ -964,21 +976,13 @@ export function App() {
     const scrollDOM = editorView.scrollDOM;
     const scrollTop = scrollDOM.scrollTop;
     const scrollLeft = scrollDOM.scrollLeft;
-    const viewportRect = zoomViewportRef.current?.getBoundingClientRect() ?? null;
     const transform = appCanvasTransformRef.current;
-    const safeScale = Number.isFinite(transform.scale) && transform.scale > 0
-      ? transform.scale
-      : NORMAL_APP_ZOOM;
-    const adjustedClientX = viewportRect
-      ? viewportRect.left + ((event.clientX - viewportRect.left - transform.x) / safeScale)
-      : event.clientX;
-    const adjustedClientY = viewportRect
-      ? viewportRect.top + ((event.clientY - viewportRect.top - transform.y) / safeScale)
-      : event.clientY;
-    const pos = editorView.posAtCoords({
-      x: adjustedClientX,
-      y: adjustedClientY,
-    });
+    const pos = resolveEditorPositionAtVisualPointer(
+      editorView,
+      event.clientX,
+      event.clientY,
+      transform.scale,
+    );
 
     if (pos === null) {
       return false;
@@ -987,10 +991,6 @@ export function App() {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    zoomScrollLockUntilRef.current = Math.max(
-      zoomScrollLockUntilRef.current,
-      Date.now() + 180,
-    );
 
     const currentSelection = editorView.state.selection.main;
     editorView.dispatch({
@@ -1008,8 +1008,8 @@ export function App() {
     const afterDispatchScrollTop = scrollDOM.scrollTop;
     const afterDispatchScrollLeft = scrollDOM.scrollLeft;
     lastAppZoomCursorPlacementDebugRef.current = {
-      adjustedClientX,
-      adjustedClientY,
+      adjustedClientX: event.clientX,
+      adjustedClientY: event.clientY,
       afterDispatchScrollLeft,
       afterDispatchScrollTop,
       beforeScrollLeft: scrollLeft,
@@ -1021,8 +1021,8 @@ export function App() {
       transformScale: transform.scale,
       transformX: transform.x,
       transformY: transform.y,
-      viewportLeft: viewportRect?.left ?? null,
-      viewportTop: viewportRect?.top ?? null,
+      viewportLeft: null,
+      viewportTop: null,
       when: lastAppZoomCursorPlacementAtRef.current,
     };
 
@@ -1035,12 +1035,9 @@ export function App() {
       });
     };
     editorView.contentDOM.focus({ preventScroll: true });
-    restoreScroll();
-    window.requestAnimationFrame(() => {
+    if (scrollDOM.scrollTop !== scrollTop || scrollDOM.scrollLeft !== scrollLeft) {
       restoreScroll();
-      window.requestAnimationFrame(restoreScroll);
-    });
-    window.setTimeout(restoreScroll, 0);
+    }
     dispatchAppZoomDebug("cursor-place", {
       canvas: zoomCanvasRef.current,
       canvasSize: zoomCanvasSizeRef.current,
@@ -1052,13 +1049,13 @@ export function App() {
         cursorPos: pos,
         rawClientX: Math.round(event.clientX),
         rawClientY: Math.round(event.clientY),
-        adjustedClientX: Math.round(adjustedClientX),
-        adjustedClientY: Math.round(adjustedClientY),
+        adjustedClientX: Math.round(event.clientX),
+        adjustedClientY: Math.round(event.clientY),
         transformScale: transform.scale.toFixed(4),
         transformX: Math.round(transform.x),
         transformY: Math.round(transform.y),
-        viewportLeft: viewportRect ? Math.round(viewportRect.left) : "n/a",
-        viewportTop: viewportRect ? Math.round(viewportRect.top) : "n/a",
+        viewportLeft: "n/a",
+        viewportTop: "n/a",
       },
       prepared: appZoomInteractionSurfacePreparedRef.current,
       viewport: zoomViewportRef.current,
@@ -1657,43 +1654,10 @@ export function App() {
             return;
           }
 
-          if (
-            isAppZoomPointerLikeEvent(event) &&
-            (event.type === "pointerdown" || event.type === "mousedown")
-          ) {
+          if (isAppZoomPointerLikeEvent(event) && event.type === "pointerdown") {
             if (placeEditorCursorDuringAppZoom(event)) {
               return;
             }
-            if (
-              event.target instanceof Node &&
-              editorViewRef.current &&
-              (editorViewRef.current as unknown as EditorView).dom.contains(event.target)
-            ) {
-              preserveCurrentInnerScrollPosition(event.target);
-              consumeAppZoomPointerEvent(event);
-              return;
-            }
-          }
-
-          if (
-            isAppZoomPointerLikeEvent(event) &&
-            (event.type === "mouseup" || event.type === "click" || event.type === "dblclick") &&
-            event.target instanceof Node &&
-            editorViewRef.current &&
-            (editorViewRef.current as unknown as EditorView).dom.contains(event.target)
-          ) {
-            event.preventDefault();
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-            return;
-          }
-
-          const target = event.target;
-          if (
-            target instanceof Node &&
-            zoomCanvasRef.current?.contains(target)
-          ) {
-            preserveCurrentInnerScrollPosition(event.target);
           }
         }
         return;
@@ -1734,7 +1698,7 @@ export function App() {
         window.removeEventListener(eventName, handlePointerCapture, { capture: true });
       });
     };
-  }, [placeEditorCursorDuringAppZoom, preserveCurrentInnerScrollPosition, restoreInnerScrollLocks]);
+  }, [placeEditorCursorDuringAppZoom, restoreInnerScrollLocks]);
 
   const updateActiveDocument = (value: string) => {
     if (!activeFileId) {
@@ -3897,7 +3861,11 @@ export function App() {
     top: `${renderedCanvasPlacement?.offsetTop ?? 0}px`,
     width: shouldUseAppCanvasZoom ? `${appCanvasSize.width}px` : "100%",
     height: shouldUseAppCanvasZoom ? `${appCanvasSize.height}px` : "100%",
-    transform: shouldUseAppCanvasZoom
+    transform: shouldUseAppCanvasZoom && (
+      Math.abs(renderedCanvasTransform.scale - NORMAL_APP_ZOOM) > 0.0005 ||
+      Math.abs(renderedCanvasTransform.x) > 0.0005 ||
+      Math.abs(renderedCanvasTransform.y) > 0.0005
+    )
       ? `translate3d(${renderedCanvasTransform.x}px, ${renderedCanvasTransform.y}px, 0) scale(${renderedAppZoom})`
       : "none",
   } satisfies CSSProperties;

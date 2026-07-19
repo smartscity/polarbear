@@ -347,6 +347,27 @@ body,
   font-size: 0.88em;
 }
 
+/* CodeMirror normally hides the browser selection and draws its own layer.
+ * Inline-code marks have an opaque background, so retain a native selection
+ * fallback with enough contrast for both selection paths. */
+.typora-live-editor-pane .cm-typora-inline-code::selection,
+.typora-live-editor-pane .cm-typora-inline-code *::selection {
+  color: var(--color-text-primary, #2f3437) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--color-selection-background, #60a5fa) 90%,
+    var(--color-code-background, #f6f8fa)
+  ) !important;
+}
+
+.typora-live-editor-pane .cm-selectionLayer .cm-selectionBackground {
+  box-shadow: inset 0 0 0 1px color-mix(
+    in srgb,
+    var(--color-text-primary, #2f3437) 22%,
+    transparent
+  );
+}
+
 .cm-typora-mark {
   border-radius: 3px;
   padding: 0 2px;

@@ -1,4 +1,5 @@
 import type { EditorView } from "@codemirror/view";
+import { NORMAL_APP_ZOOM } from "../zoom/appZoomRuntime";
 import { readStoredDebugEnabled } from "../../shared/debug/debugSettings";
 import { translateCurrent } from "../../shared/i18n/translate";
 
@@ -42,7 +43,10 @@ export type LiveDebugState = {
 };
 
 export function isAppCanvasTransformActive(): boolean {
-  return isAppCanvasZooming() || Math.abs(appCanvasZoom()) > 0.0005;
+  return (
+    isAppCanvasZooming() ||
+    Math.abs(appCanvasZoom() - NORMAL_APP_ZOOM) > 0.0005
+  );
 }
 
 export function isLiveDebugEnabled(): boolean {

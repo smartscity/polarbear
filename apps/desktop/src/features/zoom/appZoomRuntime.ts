@@ -216,13 +216,15 @@ export function shouldIgnoreAppZoomEditorPointerTarget(target: EventTarget | nul
     return true;
   }
 
-  if (target.closest(".cm-content, .cm-line")) {
-    return false;
+  // Embedded live-preview widgets own their pointer behavior. Checking this
+  // before the CodeMirror line avoids treating a table cell as plain text.
+  if (target.closest(
+    "button, input, select, textarea, [contenteditable='true'], .cm-typora-diagram-preview, .cm-typora-table-preview, .cm-typora-image-preview",
+  )) {
+    return true;
   }
 
-  return Boolean(target.closest(
-    "button, input, select, textarea, [contenteditable='true'], .cm-typora-diagram-preview, .cm-typora-table-preview, .cm-typora-image-preview",
-  ));
+  return !target.closest(".cm-content, .cm-line");
 }
 
 export type AppZoomPointerLikeEvent = Event & {
