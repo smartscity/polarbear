@@ -331,36 +331,6 @@ export function readAppCanvasSize(): AppCanvasSize {
   };
 }
 
-export function measureAppCanvasSize(canvas: HTMLElement | null): AppCanvasSize {
-  const viewportSize = readAppCanvasSize();
-  if (!canvas) {
-    return viewportSize;
-  }
-
-  const content = canvas.firstElementChild instanceof HTMLElement
-    ? canvas.firstElementChild
-    : canvas;
-  const width = Math.max(
-    viewportSize.width,
-    content.scrollWidth,
-    content.clientWidth,
-    canvas.scrollWidth,
-    canvas.clientWidth,
-  );
-  const height = Math.max(
-    viewportSize.height,
-    content.scrollHeight,
-    content.clientHeight,
-    canvas.scrollHeight,
-    canvas.clientHeight,
-  );
-
-  return {
-    width: Math.ceil(width),
-    height: Math.ceil(height),
-  };
-}
-
 export function isNativePinchEndPhase(phase: unknown): boolean {
   if (typeof phase === "number") {
     // NSEventPhaseEnded = 8, NSEventPhaseCancelled = 16.

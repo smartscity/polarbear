@@ -166,7 +166,6 @@ import {
   isAppZoomPointerLikeEvent,
   isAppZoomWheelEvent,
   isNativePinchEndPhase,
-  measureAppCanvasSize,
   readAppCanvasSize,
   removePolarbearDebugOverlays,
   resolveScrollableElementFromTarget,
@@ -294,6 +293,7 @@ export function App() {
   const [appCanvasSize, setAppCanvasSize] = useState<AppCanvasSize>(() =>
     appCanvasSizeRef.current,
   );
+  const [canvasViewportSyncRevision, setCanvasViewportSyncRevision] = useState(0);
   const [themeName, setThemeName] = useState<ThemeName>(() =>
     readStoredTheme(),
   );
@@ -358,6 +358,10 @@ export function App() {
     openFileIdsRef.current = openFileIds;
   }, [openFileIds]);
 
+  const requestCanvasViewportSync = useCallback(() => {
+    setCanvasViewportSyncRevision((revision) => revision + 1);
+  }, []);
+
   const handleWorkspaceFileTreeRefresh = useCallback(
     (refreshedWorkspaceRoot: string, items: WorkspaceItem[]) => {
       setWorkspaceItems((currentItems) =>
@@ -399,6 +403,7 @@ export function App() {
           ...currentRevisions,
           [changedDocument.fileId]: reloaded.revision,
         }));
+        requestCanvasViewportSync();
         setStatusMessage(
           t("status.externalFileReloaded", { path: changedDocument.relativePath }),
         );
@@ -406,7 +411,7 @@ export function App() {
         setStatusMessage(error instanceof Error ? error.message : String(error));
       }
     },
-    [t],
+    [requestCanvasViewportSync, t],
   );
 
   const reloadExternalDocumentFromDisk = useCallback(async () => {
@@ -428,6 +433,7 @@ export function App() {
         ...currentRevisions,
         [changedDocument.fileId]: reloaded.revision,
       }));
+      requestCanvasViewportSync();
       setDirtyFileIds((currentDirtyFileIds) => {
         const nextDirtyFileIds = new Set(currentDirtyFileIds);
         nextDirtyFileIds.delete(changedDocument.fileId);
@@ -440,7 +446,7 @@ export function App() {
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
-  }, [externalDocumentChange, t]);
+  }, [externalDocumentChange, requestCanvasViewportSync, t]);
 
   const handleExternalDocumentMissing = useCallback(
     (deletedDocument: WorkspaceDocumentRevisionTarget) => {
@@ -770,24 +776,14 @@ export function App() {
     }, allowElasticZoom);
   }, [applyCanvasTransform]);
 
-  const syncCanvasBaseSizePreservingAnchor = useCallback(() => {
+  const syncCanvasViewportBounds = useCallback(() => {
     if (activeZoomAnchorRef.current || zoomRafRef.current || zoomSnapAnimationRef.current) {
       return;
     }
 
-    if (
-      APP_CANVAS_ZOOM_ENABLED &&
-      Math.abs(appZoomRef.current - NORMAL_APP_ZOOM) > 0.0005
-    ) {
-      return;
-    }
-
-    const viewport = zoomViewportRef.current;
-    const currentZoom = appZoomRef.current;
-    const anchor = viewport
-      ? getAnchorCanvasPoint(viewport, currentZoom)
-      : null;
-    const nextSize = measureAppCanvasSize(zoomCanvasRef.current);
+    // The canvas is a window-sized surface. Internal document overflow belongs
+    // to its own scroll container and must never increase the canvas baseline.
+    const nextSize = readAppCanvasSize();
 
     appCanvasSizeRef.current = nextSize;
     setAppCanvasSize((currentSize) =>
@@ -795,13 +791,8 @@ export function App() {
         ? currentSize
         : nextSize,
     );
-    if (viewport && anchor) {
-      applyZoomAtAnchor(currentZoom, anchor, currentZoom < MIN_COMMITTED_APP_ZOOM);
-      return;
-    }
-
-    applyCanvasZoom(currentZoom, currentZoom < MIN_COMMITTED_APP_ZOOM);
-  }, [applyCanvasZoom, applyZoomAtAnchor, getAnchorCanvasPoint]);
+    applyCanvasTransform(appCanvasTransformRef.current, false);
+  }, [applyCanvasTransform]);
 
   const zoomAtPoint = useCallback((nextZoom: number, clientX: number, clientY: number) => {
     const viewport = zoomViewportRef.current;
@@ -1353,7 +1344,7 @@ export function App() {
     }
 
     const syncCanvasSize = () => {
-      syncCanvasBaseSizePreservingAnchor();
+      syncCanvasViewportBounds();
     };
 
     syncCanvasSize();
@@ -1369,7 +1360,7 @@ export function App() {
       window.visualViewport?.removeEventListener("resize", syncCanvasSize);
       resizeObserver.disconnect();
     };
-  }, [syncCanvasBaseSizePreservingAnchor]);
+  }, [canvasViewportSyncRevision, syncCanvasViewportBounds]);
 
   useEffect(() => {
     return () => {
