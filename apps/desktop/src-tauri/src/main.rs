@@ -13,6 +13,7 @@ use tauri::{Emitter, Manager};
 mod app_zoom;
 mod cloud_sync_store;
 mod ipc_contracts;
+mod memory_admin;
 mod native_pinch;
 mod secret_store;
 
@@ -3269,7 +3270,8 @@ fn main() -> tauri::Result<()> {
             repository_get_sync_status,
             repository_push_workspace,
             repository_pull_workspace,
-            repository_sync_now
+            repository_sync_now,
+            memory_admin::memory_admin_request
         ])
         .run(tauri::generate_context!())
 }

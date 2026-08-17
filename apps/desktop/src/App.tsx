@@ -194,6 +194,7 @@ import { STORAGE_KEYS } from "./shared/constants/storageKeys";
 import { APP_EVENTS } from "./shared/events/appEvents";
 import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
+import { MemoryPanel } from "./features/memory/MemoryPanel";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -300,6 +301,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
+  const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(false);
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [dirtyFileIds, setDirtyFileIds] = useState<Set<string>>(new Set());
   const [collapseVersion, setCollapseVersion] = useState(0);
@@ -3902,6 +3904,7 @@ export function App() {
               onCloseTab={(tabId) => void closeTab(tabId)}
               onDebugToggle={() => setDebugEnabled((isEnabled) => !isEnabled)}
               onNewTab={() => executeCommand("file.newFile")}
+              onOpenMemory={() => setIsMemoryPanelOpen(true)}
               onRenameCancel={() => setRenameItemId(null)}
               onRenameConfirm={(item, nextName) => void confirmRename(item, nextName)}
               onSelectDocumentStructureItem={selectDocumentStructureItem}
@@ -4059,6 +4062,9 @@ export function App() {
       ) : null}
       {isAboutDialogOpen ? (
         <AboutPolarbearDialog onClose={() => setIsAboutDialogOpen(false)} />
+      ) : null}
+      {isMemoryPanelOpen ? (
+        <MemoryPanel workspaceRoot={workspaceRoot} onClose={() => setIsMemoryPanelOpen(false)} />
       ) : null}
     </>
   );

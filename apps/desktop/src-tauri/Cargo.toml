@@ -21,6 +21,9 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 urlencoding = "2"
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [features]
 default = []
 custom-protocol = ["tauri/custom-protocol"]

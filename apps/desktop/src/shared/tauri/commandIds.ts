@@ -9,6 +9,7 @@ export const TAURI_COMMANDS = {
   getMarkdownFileRevision: "get_markdown_file_revision",
   listWorkspaceFiles: "list_workspace_files",
   loadMarkdownFile: "load_markdown_file",
+  memoryAdminRequest: "memory_admin_request",
   moveEntry: "move_entry",
   openExternalUrl: "open_external_url",
   openMarkdownFile: "open_markdown_file",
