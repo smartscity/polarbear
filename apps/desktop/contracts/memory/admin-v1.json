@@ -1,0 +1,30 @@
+{
+  "version": "1.1",
+  "capabilities": [
+    "projects.status",
+    "system.shutdown",
+    "memories.list",
+    "memories.get",
+    "memories.history",
+    "memories.update",
+    "memories.verify",
+    "memories.archive",
+    "memories.restore",
+    "memories.relate",
+    "memories.purge_preview",
+    "memories.purge",
+    "contexts.explain",
+    "projects.diagnostics",
+    "projects.config",
+    "projects.config_update",
+    "maintenance.preview",
+    "maintenance.run",
+    "backups.list",
+    "backups.create",
+    "backups.verify",
+    "backups.restore_preview",
+    "backups.restore",
+    "knowledge.promote_preview",
+    "knowledge.promote"
+  ]
+}

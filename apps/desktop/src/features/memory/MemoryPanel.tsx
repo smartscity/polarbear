@@ -3,11 +3,13 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 import { errorMessage } from "../../shared/tauri/invokeTauri";
 import type {
   BackupInspection,
+  BackupRestorePreview,
   ContextExplainResponse,
   DiagnosticsResponse,
   LifecycleStatus,
   MaintenancePlan,
   MemoryCapability,
+  MemoryPurgePreview,
   MemoryRecord,
   MemoryRevision,
   ProjectStatusResponse,
@@ -43,6 +45,15 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
   const [maintenance, setMaintenance] = useState<MaintenancePlan | null>(null);
   const [backups, setBackups] = useState<BackupInspection[]>([]);
   const [config, setConfig] = useState<ProjectMemoryConfig | null>(null);
+  const [restorePreview, setRestorePreview] = useState<BackupRestorePreview | null>(null);
+  const [restoreConfirmation, setRestoreConfirmation] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editSummary, setEditSummary] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [purgePreview, setPurgePreview] = useState<MemoryPurgePreview | null>(null);
+  const [purgeConfirmation, setPurgeConfirmation] = useState("");
+  const [serviceRunning, setServiceRunning] = useState(false);
+  const [engineVersion, setEngineVersion] = useState("");
 
   const supports = useCallback((capability: MemoryCapability) => capabilities.has(capability), [capabilities]);
 
@@ -57,7 +68,10 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
     setBusy(true);
     setError("");
     try {
+      await memoryApi.bindWorkspace(workspaceRoot);
       const hello = await memoryApi.hello(workspaceRoot);
+      setEngineVersion(hello.engineVersion);
+      setServiceRunning((await memoryApi.serviceStatus()).running);
       const negotiated = negotiateMemoryCapabilities(hello.apiVersion, hello.capabilities);
       if (!negotiated.compatible) throw new Error(`${t("memory.incompatible")} ${negotiated.missingCore.join(", ")}`);
       const [nextStatus, list] = await Promise.all([
@@ -84,6 +98,9 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
     setSelected(item);
     setHistory([]);
     setPromotion(null);
+    setEditing(false);
+    setPurgePreview(null);
+    setPurgeConfirmation("");
     setError("");
     try {
       const [detail, revisions] = await Promise.all([
@@ -95,6 +112,52 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
     } catch (detailError) {
       setError(errorMessage(detailError));
     }
+  };
+
+  const beginEdit = () => {
+    if (!selected) return;
+    setEditSummary(selected.summary);
+    setEditContent(selected.content);
+    setEditing(true);
+    setPurgePreview(null);
+  };
+
+  const saveEdit = async () => {
+    if (!selected || !editSummary.trim() || !editContent.trim() || !reason.trim()) return;
+    await mutate(
+      () => memoryApi.update(workspaceRoot, selected.id, editSummary.trim(), editContent.trim(), reason.trim()),
+      t("memory.edited"),
+    );
+    setEditing(false);
+  };
+
+  const previewPurge = async () => {
+    if (!selected) return;
+    setBusy(true);
+    setError("");
+    try {
+      setPurgePreview(await memoryApi.purgePreview(workspaceRoot, selected.id));
+      setPurgeConfirmation("");
+      setEditing(false);
+    } catch (actionError) { setError(errorMessage(actionError)); }
+    finally { setBusy(false); }
+  };
+
+  const purge = async () => {
+    if (!selected || !purgePreview || purgeConfirmation !== purgePreview.confirmation || !reason.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await memoryApi.purge(workspaceRoot, selected.id, purgeConfirmation, reason.trim());
+      setNotice(t("memory.purged"));
+      setSelected(null);
+      setHistory([]);
+      setPurgePreview(null);
+      setPurgeConfirmation("");
+      setReason("");
+      await load();
+    } catch (actionError) { setError(errorMessage(actionError)); }
+    finally { setBusy(false); }
   };
 
   const mutate = async (action: () => Promise<MemoryRecord>, message: string) => {
@@ -203,6 +266,37 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
     finally { setBusy(false); }
   };
 
+  const restoreDatabase = async () => {
+    if (!restorePreview || restoreConfirmation !== restorePreview.confirmation) return;
+    setBusy(true);
+    try {
+      const result = await memoryApi.restoreBackup(workspaceRoot, restorePreview.backup.fileName, restoreConfirmation);
+      setNotice(`${t("memory.databaseRestored")}: ${result.restored.fileName}`);
+      setRestorePreview(null);
+      setRestoreConfirmation("");
+      await load();
+      setBackups((await memoryApi.backups(workspaceRoot)).items);
+    } catch (actionError) { setError(errorMessage(actionError)); }
+    finally { setBusy(false); }
+  };
+
+  const setService = async (running: boolean) => {
+    setBusy(true);
+    setError("");
+    try {
+      if (running) {
+        await memoryApi.startService();
+        setServiceRunning(true);
+        await load();
+      } else {
+        await memoryApi.stopService(workspaceRoot);
+        setServiceRunning(false);
+        setNotice(t("memory.serviceStopped"));
+      }
+    } catch (actionError) { setError(errorMessage(actionError)); }
+    finally { setBusy(false); }
+  };
+
   return (
     <div className="memory-panel-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="memory-panel" role="dialog" aria-modal="true" aria-label={t("memory.title")}>
@@ -234,7 +328,7 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
           <article className="memory-detail">
             {selected ? <>
               <div className="memory-detail-meta">{selected.type} · {selected.verificationState} · {selected.correctnessRisk} · {selected.sourceType}</div>
-              <h3>{selected.summary}</h3><pre>{selected.content}</pre>
+              {editing ? <div className="memory-editor"><input value={editSummary} onChange={(event) => setEditSummary(event.target.value)} aria-label={t("memory.editSummary")} /><textarea value={editContent} onChange={(event) => setEditContent(event.target.value)} aria-label={t("memory.editContent")} /></div> : <><h3>{selected.summary}</h3><pre>{selected.content}</pre></>}
               <dl className="memory-evidence">
                 {selected.commitSha ? <><dt>Commit</dt><dd>{selected.commitSha}</dd></> : null}
                 {selected.branchName ? <><dt>Branch</dt><dd>{selected.branchName}</dd></> : null}
@@ -246,19 +340,23 @@ export function MemoryPanel({ workspaceRoot, onClose }: MemoryPanelProps) {
               {history.length > 0 ? <details><summary>{t("memory.history")} ({history.length})</summary>{history.map((revision) => <div className="memory-revision" key={revision.revision}><strong>#{revision.revision} · {revision.actor}</strong><span>{revision.reason} · {new Date(revision.createdAt).toLocaleString()}</span></div>)}</details> : null}
               <input className="memory-reason" value={reason} onChange={(event) => setReason(event.target.value)} placeholder={t("memory.reason")} />
               <div className="memory-actions">
+                {supports("memories.update") ? editing ? <><button disabled={busy || !reason.trim() || !editSummary.trim() || !editContent.trim()} type="button" onClick={() => void saveEdit()}>{t("memory.saveEdit")}</button><button disabled={busy} type="button" onClick={() => setEditing(false)}>{t("memory.cancelEdit")}</button></> : <button disabled={busy} type="button" onClick={beginEdit}>{t("memory.edit")}</button> : null}
                 {supports("memories.verify") ? <><button disabled={busy || !reason.trim()} type="button" onClick={() => void mutate(() => memoryApi.verify(workspaceRoot, selected.id, "VERIFIED", reason), t("memory.verified"))}>{t("memory.verify")}</button><button disabled={busy || !reason.trim()} type="button" onClick={() => void mutate(() => memoryApi.verify(workspaceRoot, selected.id, "DISPUTED", reason), t("memory.disputed"))}>{t("memory.dispute")}</button></> : null}
                 {selected.lifecycleStatus === "ARCHIVED" && supports("memories.restore") ? <button disabled={busy || !reason.trim()} type="button" onClick={() => void mutate(() => memoryApi.restore(workspaceRoot, selected.id, reason), t("memory.restored"))}>{t("memory.restore")}</button> : supports("memories.archive") ? <button disabled={busy || !reason.trim()} type="button" onClick={() => void mutate(() => memoryApi.archive(workspaceRoot, selected.id, reason), t("memory.archived"))}>{t("memory.archive")}</button> : null}
                 {supports("knowledge.promote_preview") && supports("knowledge.promote") ? <button disabled={busy} type="button" onClick={() => void promote()}>{promotion ? t("memory.confirmPromote") : t("memory.promote")}</button> : null}
+                {supports("memories.purge_preview") && supports("memories.purge") ? <button className="memory-danger-button" disabled={busy} type="button" onClick={() => void previewPurge()}>{t("memory.purge")}</button> : null}
               </div>
               {supports("memories.relate") ? <div className="memory-relation-editor"><select value={relationType} onChange={(event) => setRelationType(event.target.value as "SUPERSEDES" | "CONTRADICTS")}><option value="SUPERSEDES">SUPERSEDES</option><option value="CONTRADICTS">CONTRADICTS</option></select><input value={relationTarget} onChange={(event) => setRelationTarget(event.target.value)} placeholder={t("memory.targetId")} /><button disabled={busy || !reason.trim() || !relationTarget.trim()} onClick={() => void relate()} type="button">{t("memory.addRelation")}</button></div> : null}
               {promotion ? <section className="memory-promotion-preview"><strong>{t("memory.preview")}: {promotion.path}</strong><pre>{promotion.content}</pre></section> : null}
+              {purgePreview ? <section className="memory-danger-zone"><strong>{purgePreview.warning}</strong><code>{purgePreview.confirmation}</code><input value={purgeConfirmation} onChange={(event) => setPurgeConfirmation(event.target.value)} placeholder={purgePreview.confirmation} /><button className="memory-danger-button" type="button" disabled={busy || !reason.trim() || purgeConfirmation !== purgePreview.confirmation} onClick={() => void purge()}>{t("memory.confirmPurge")}</button></section> : null}
             </> : <p className="memory-state">{t("memory.select")}</p>}
             {supports("contexts.explain") ? <section className="memory-context-explain"><h3>{t("memory.contextExplain")}</h3><div><input value={task} onChange={(event) => setTask(event.target.value)} placeholder={t("memory.taskPlaceholder")} /><button disabled={busy || !task.trim()} type="button" onClick={() => void explain()}>{t("memory.explain")}</button></div>{explanation ? <><p>{t("memory.selectedCount").replace("{count}", String(explanation.selected))} · ~{explanation.estimatedTokens} tokens</p><p>Selected: {explanation.selectedMemoryIds.join(", ") || "—"}<br />Warnings: {explanation.warningMemoryIds.join(", ") || "—"}</p><pre>{explanation.markdown}</pre></> : null}</section> : null}
-            <section className="memory-admin-tools"><h3>{t("memory.adminTools")}</h3><div className="memory-actions"><button type="button" disabled={busy} onClick={() => void loadAdmin()}>{t("memory.diagnostics")}</button>{supports("maintenance.preview") && supports("maintenance.run") ? <button type="button" disabled={busy} onClick={() => void maintain()}>{maintenance?.dryRun ? t("memory.confirmMaintenance") : t("memory.previewMaintenance")}</button> : null}{supports("backups.create") ? <button type="button" disabled={busy} onClick={() => void createBackup()}>{t("memory.createBackup")}</button> : null}</div>
+            <section className="memory-admin-tools"><h3>{t("memory.adminTools")}</h3><div className="memory-engine-status"><span>{t("memory.engineVersion")}: {engineVersion || "—"}</span><span>{t("memory.service")}: {serviceRunning ? t("memory.running") : t("memory.stopped")}</span><small>{t("memory.upgradePolicy")}</small></div><div className="memory-actions"><button type="button" disabled={busy || serviceRunning} onClick={() => void setService(true)}>{t("memory.startService")}</button><button type="button" disabled={busy || !serviceRunning} onClick={() => void setService(false)}>{t("memory.stopService")}</button><button type="button" disabled={busy || !serviceRunning} onClick={() => void loadAdmin()}>{t("memory.diagnostics")}</button>{supports("maintenance.preview") && supports("maintenance.run") ? <button type="button" disabled={busy || !serviceRunning} onClick={() => void maintain()}>{maintenance?.dryRun ? t("memory.confirmMaintenance") : t("memory.previewMaintenance")}</button> : null}{supports("backups.create") ? <button type="button" disabled={busy || !serviceRunning} onClick={() => void createBackup()}>{t("memory.createBackup")}</button> : null}</div>
               {diagnostics ? <pre>{JSON.stringify(diagnostics, null, 2)}</pre> : null}
               {config && supports("projects.config_update") ? <div className="memory-config"><label>{t("memory.captureMode")}<select value={config.captureMode} onChange={(event) => setConfig({ ...config, captureMode: event.target.value as ProjectMemoryConfig["captureMode"] })}><option value="off">off</option><option value="manual">manual</option><option value="summary">summary</option></select></label><label>{t("memory.retentionDays")}<input type="number" min="0" max="30" value={config.rawEventRetentionDays} onChange={(event) => setConfig({ ...config, rawEventRetentionDays: Number(event.target.value) })} /></label><button type="button" disabled={busy || config.rawEventRetentionDays < 0 || config.rawEventRetentionDays > 30} onClick={() => void saveConfig()}>{t("memory.saveConfig")}</button></div> : null}
               {maintenance ? <pre>{JSON.stringify(maintenance, null, 2)}</pre> : null}
-              {backups.length > 0 ? <div className="memory-backups">{backups.map((backup) => <button type="button" key={backup.fileName} onClick={() => void memoryApi.verifyBackup(workspaceRoot, backup.fileName).then(() => setNotice(`${t("memory.backupVerified")}: ${backup.fileName}`)).catch((verifyError) => setError(errorMessage(verifyError)))}><strong>{backup.fileName}</strong><span>{backup.bytes} bytes · schema {backup.schemaVersion}</span></button>)}</div> : null}
+              {backups.length > 0 ? <div className="memory-backups">{backups.map((backup) => <div key={backup.fileName}><button type="button" onClick={() => void memoryApi.verifyBackup(workspaceRoot, backup.fileName).then(() => setNotice(`${t("memory.backupVerified")}: ${backup.fileName}`)).catch((verifyError) => setError(errorMessage(verifyError)))}><strong>{backup.fileName}</strong><span>{backup.bytes} bytes · schema {backup.schemaVersion}</span></button>{supports("backups.restore_preview") && supports("backups.restore") ? <button type="button" onClick={() => void memoryApi.restoreBackupPreview(workspaceRoot, backup.fileName).then((preview) => { setRestorePreview(preview); setRestoreConfirmation(""); }).catch((restoreError) => setError(errorMessage(restoreError)))}>{t("memory.restoreDatabase")}</button> : null}</div>)}</div> : null}
+              {restorePreview ? <div className="memory-danger-zone"><strong>{restorePreview.warning}</strong><code>{restorePreview.confirmation}</code><input value={restoreConfirmation} onChange={(event) => setRestoreConfirmation(event.target.value)} placeholder={restorePreview.confirmation} /><button type="button" disabled={busy || restoreConfirmation !== restorePreview.confirmation} onClick={() => void restoreDatabase()}>{t("memory.confirmRestoreDatabase")}</button></div> : null}
             </section>
           </article>
         </div> : null}

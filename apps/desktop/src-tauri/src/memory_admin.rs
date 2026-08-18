@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
@@ -15,13 +16,17 @@ static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 const ALLOWED_METHODS: &[&str] = &[
     "system.hello",
     "projects.status",
+    "system.shutdown",
     "memories.list",
     "memories.get",
     "memories.history",
+    "memories.update",
     "memories.verify",
     "memories.archive",
     "memories.restore",
     "memories.relate",
+    "memories.purge_preview",
+    "memories.purge",
     "contexts.explain",
     "projects.diagnostics",
     "projects.config",
@@ -31,9 +36,47 @@ const ALLOWED_METHODS: &[&str] = &[
     "backups.list",
     "backups.create",
     "backups.verify",
+    "backups.restore_preview",
+    "backups.restore",
     "knowledge.promote_preview",
     "knowledge.promote",
 ];
+
+#[derive(Default)]
+pub struct MemoryAdminState {
+    current_workspace: Mutex<Option<PathBuf>>,
+}
+
+impl MemoryAdminState {
+    fn bind(&self, workspace_root: &str) -> Result<String, String> {
+        let canonical = canonical_memory_workspace(workspace_root)?;
+        let mut current = self.current_workspace.lock().map_err(|_| {
+            error(
+                "MEMORY_STATE_FAILED",
+                "Memory workspace state is unavailable.",
+            )
+        })?;
+        *current = Some(PathBuf::from(&canonical));
+        Ok(canonical)
+    }
+
+    fn authorize(&self, workspace_root: &str) -> Result<String, String> {
+        let canonical = canonical_memory_workspace(workspace_root)?;
+        let current = self.current_workspace.lock().map_err(|_| {
+            error(
+                "MEMORY_STATE_FAILED",
+                "Memory workspace state is unavailable.",
+            )
+        })?;
+        if current.as_deref() != Some(Path::new(&canonical)) {
+            return Err(error(
+                "MEMORY_WORKSPACE_DENIED",
+                "Memory requests are limited to the Desktop's current workspace.",
+            ));
+        }
+        Ok(canonical)
+    }
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -139,6 +182,45 @@ fn connect_or_start(socket_path: &Path) -> Result<std::os::unix::net::UnixStream
         thread::sleep(Duration::from_millis(100));
         if let Ok(stream) = UnixStream::connect(socket_path) {
             return Ok(stream);
+        }
+    }
+    Err(error(
+        "MEMORY_SERVICE_UNAVAILABLE",
+        "Polarbear Memory service did not become ready.",
+    ))
+}
+
+#[cfg(unix)]
+fn service_status_unix() -> Result<Value, String> {
+    use std::os::unix::net::UnixStream;
+    let (directory, socket_path, token_path) = service_paths()?;
+    if !socket_path.exists() {
+        return Ok(json!({ "running": false }));
+    }
+    validate_private_path(&directory, "directory")?;
+    validate_private_path(&socket_path, "socket")?;
+    validate_private_path(&token_path, "file")?;
+    Ok(json!({ "running": UnixStream::connect(socket_path).is_ok() }))
+}
+
+#[cfg(unix)]
+fn start_service_unix() -> Result<Value, String> {
+    if service_status_unix()?
+        .get("running")
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
+        return Ok(json!({ "running": true }));
+    }
+    spawn_service()?;
+    for _ in 0..20 {
+        thread::sleep(Duration::from_millis(100));
+        if service_status_unix()?
+            .get("running")
+            .and_then(Value::as_bool)
+            == Some(true)
+        {
+            return Ok(json!({ "running": true }));
         }
     }
     Err(error(
@@ -293,12 +375,15 @@ fn request_unix(workspace_root: String, method: String, params: Value) -> Result
 }
 
 #[cfg(all(test, unix))]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use super::{canonical_memory_workspace, request_unix};
+    use super::{canonical_memory_workspace, request_unix, MemoryAdminState};
     use std::fs;
     use std::io::{BufRead, BufReader, Write};
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::net::UnixListener;
+    use std::process::{Command, Stdio};
+    use std::time::Duration;
 
     fn temporary(name: &str) -> std::path::PathBuf {
         std::env::temp_dir().join(format!(
@@ -324,6 +409,25 @@ mod tests {
                 .to_string()
         );
         fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn native_state_rejects_a_workspace_that_is_not_currently_bound() {
+        let first = temporary("bound-workspace");
+        let second = temporary("denied-workspace");
+        for root in [&first, &second] {
+            let _ = fs::remove_dir_all(root);
+            fs::create_dir_all(root.join(".git")).expect("create git marker");
+            fs::create_dir_all(root.join(".polarbear")).expect("create project config");
+            fs::write(root.join(".polarbear/config.toml"), "schema_version = 1\n")
+                .expect("write config");
+        }
+        let state = MemoryAdminState::default();
+        state.bind(first.to_str().expect("path")).expect("bind");
+        assert!(state.authorize(first.to_str().expect("path")).is_ok());
+        assert!(state.authorize(second.to_str().expect("path")).is_err());
+        fs::remove_dir_all(first).expect("cleanup first");
+        fs::remove_dir_all(second).expect("cleanup second");
     }
 
     #[test]
@@ -385,19 +489,165 @@ mod tests {
         fs::remove_dir_all(root).expect("cleanup root");
         fs::remove_dir_all(data).expect("cleanup data");
     }
+
+    #[test]
+    #[ignore = "set POLARBEAR_MEMORY_E2E_CLI to the built Engine dist/cli.js"]
+    fn rust_proxy_reaches_the_real_engine_and_sqlite() {
+        let cli = std::env::var("POLARBEAR_MEMORY_E2E_CLI").expect("Engine CLI path");
+        let root = temporary("real-engine-workspace");
+        let data = std::path::PathBuf::from("/tmp")
+            .join(format!("pbm-real-engine-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&data);
+        fs::create_dir_all(&root).expect("create root");
+        assert!(Command::new("git")
+            .arg("init")
+            .arg("-q")
+            .current_dir(&root)
+            .status()
+            .expect("git")
+            .success());
+        let run = |args: &[&str]| {
+            Command::new("node")
+                .arg(&cli)
+                .args(args)
+                .current_dir(&root)
+                .env("POLARBEAR_MEMORY_DATA_DIR", &data)
+                .status()
+                .expect("Engine command")
+        };
+        assert!(run(&["init"]).success());
+        assert!(run(&[
+            "record",
+            "--type",
+            "DECISION",
+            "--summary",
+            "Real cross-process Memory"
+        ])
+        .success());
+        let mut engine = Command::new("node")
+            .arg(&cli)
+            .args(["service", "run"])
+            .current_dir(&root)
+            .env("POLARBEAR_MEMORY_DATA_DIR", &data)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("start real Engine");
+        for _ in 0..30 {
+            if data.join("service/admin-v1.sock").exists() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let previous = std::env::var_os("POLARBEAR_MEMORY_DATA_DIR");
+        unsafe { std::env::set_var("POLARBEAR_MEMORY_DATA_DIR", &data) };
+        let response = request_unix(
+            root.to_string_lossy().to_string(),
+            "projects.status".to_owned(),
+            serde_json::json!({}),
+        )
+        .expect("real Engine response");
+        assert_eq!(response["counts"]["total"], 1);
+        request_unix(
+            root.to_string_lossy().to_string(),
+            "system.shutdown".to_owned(),
+            serde_json::json!({}),
+        )
+        .expect("shutdown real Engine");
+        assert!(engine.wait().expect("Engine exit").success());
+        if let Some(value) = previous {
+            unsafe { std::env::set_var("POLARBEAR_MEMORY_DATA_DIR", value) };
+        } else {
+            unsafe { std::env::remove_var("POLARBEAR_MEMORY_DATA_DIR") };
+        }
+        fs::remove_dir_all(root).expect("cleanup root");
+        fs::remove_dir_all(data).expect("cleanup data");
+    }
+}
+
+#[tauri::command]
+pub fn memory_admin_bind_workspace(
+    state: tauri::State<'_, MemoryAdminState>,
+    workspace_root: String,
+) -> Result<String, String> {
+    state.bind(&workspace_root)
+}
+
+#[tauri::command]
+pub async fn memory_service_status() -> Result<Value, String> {
+    #[cfg(unix)]
+    {
+        tauri::async_runtime::spawn_blocking(service_status_unix)
+            .await
+            .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
+    }
+    #[cfg(not(unix))]
+    Err(error(
+        "MEMORY_PLATFORM_UNSUPPORTED",
+        "Memory service controls require Unix-domain sockets.",
+    ))
+}
+
+#[tauri::command]
+pub async fn memory_service_start() -> Result<Value, String> {
+    #[cfg(unix)]
+    {
+        tauri::async_runtime::spawn_blocking(start_service_unix)
+            .await
+            .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
+    }
+    #[cfg(not(unix))]
+    Err(error(
+        "MEMORY_PLATFORM_UNSUPPORTED",
+        "Memory service controls require Unix-domain sockets.",
+    ))
+}
+
+#[tauri::command]
+pub async fn memory_service_stop(
+    state: tauri::State<'_, MemoryAdminState>,
+    workspace_root: String,
+) -> Result<Value, String> {
+    #[cfg(unix)]
+    {
+        let authorized_workspace = state.authorize(&workspace_root)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            request_unix(
+                authorized_workspace,
+                "system.shutdown".to_owned(),
+                json!({}),
+            )
+        })
+        .await
+        .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (state, workspace_root);
+        Err(error(
+            "MEMORY_PLATFORM_UNSUPPORTED",
+            "Memory service controls require Unix-domain sockets.",
+        ))
+    }
 }
 
 #[tauri::command]
 pub async fn memory_admin_request(
+    state: tauri::State<'_, MemoryAdminState>,
     workspace_root: String,
     method: String,
     params: Value,
 ) -> Result<Value, String> {
     #[cfg(unix)]
     {
-        tauri::async_runtime::spawn_blocking(move || request_unix(workspace_root, method, params))
-            .await
-            .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
+        let authorized_workspace = state.authorize(&workspace_root)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            request_unix(authorized_workspace, method, params)
+        })
+        .await
+        .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
     }
     #[cfg(not(unix))]
     {

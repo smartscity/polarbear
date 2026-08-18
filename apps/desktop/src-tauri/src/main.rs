@@ -3227,6 +3227,7 @@ fn provider_push_workspace_files(
 fn main() -> tauri::Result<()> {
     tauri::Builder::default()
         .manage(app_zoom::AppZoomState::default())
+        .manage(memory_admin::MemoryAdminState::default())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             native_pinch::install_native_pinch(app).map_err(std::io::Error::other)?;
@@ -3271,7 +3272,11 @@ fn main() -> tauri::Result<()> {
             repository_push_workspace,
             repository_pull_workspace,
             repository_sync_now,
-            memory_admin::memory_admin_request
+            memory_admin::memory_admin_bind_workspace,
+            memory_admin::memory_admin_request,
+            memory_admin::memory_service_status,
+            memory_admin::memory_service_start,
+            memory_admin::memory_service_stop
         ])
         .run(tauri::generate_context!())
 }

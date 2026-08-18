@@ -8,6 +8,22 @@ import { memoryApi } from "./memoryApi";
 describe("memoryApi", () => {
   beforeEach(() => invoke.mockReset());
 
+  it("binds the native proxy to the current Desktop workspace", async () => {
+    invoke.mockResolvedValue("/repo");
+    await memoryApi.bindWorkspace("/repo");
+    expect(invoke).toHaveBeenCalledWith("memory_admin_bind_workspace", { workspaceRoot: "/repo" });
+  });
+
+  it("uses dedicated native commands for Engine lifecycle control", async () => {
+    invoke.mockResolvedValue({ running: true });
+    await memoryApi.serviceStatus();
+    expect(invoke).toHaveBeenLastCalledWith("memory_service_status", undefined);
+    await memoryApi.startService();
+    expect(invoke).toHaveBeenLastCalledWith("memory_service_start", undefined);
+    await memoryApi.stopService("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_service_stop", { workspaceRoot: "/repo" });
+  });
+
   it("routes typed requests through the single Rust proxy without a token or database path", async () => {
     invoke.mockResolvedValue({ items: [], offset: 0, limit: 50, nextOffset: null });
     await memoryApi.list("/repo", { query: "socket", status: "ACTIVE", limit: 50 });
@@ -66,5 +82,33 @@ describe("memoryApi", () => {
       method: "projects.config_update",
       params: { captureMode: "manual", rawEventRetentionDays: 3 },
     });
+  });
+
+  it("requires an explicit restore confirmation string", async () => {
+    invoke.mockResolvedValue({ restored: { fileName: "known-good.db" }, rollbackFileName: "pre-restore.db" });
+    await memoryApi.restoreBackup("/repo", "known-good.db", "RESTORE known-good.db");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "backups.restore",
+      params: { fileName: "known-good.db", confirmation: "RESTORE known-good.db" },
+    });
+  });
+
+  it("routes edits and exact-confirmation purge without exposing storage", async () => {
+    invoke.mockResolvedValueOnce({ id: "memory-id", summary: "new", content: "content" });
+    await memoryApi.update("/repo", "memory-id", "new", "content", "fix stale detail");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "memories.update",
+      params: { memoryId: "memory-id", summary: "new", content: "content", reason: "fix stale detail" },
+    });
+    invoke.mockResolvedValueOnce({ purgedMemoryIdHash: "hash" });
+    await memoryApi.purge("/repo", "memory-id", "PURGE memory-id", "user request");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "memories.purge",
+      params: { memoryId: "memory-id", confirmation: "PURGE memory-id", reason: "user request" },
+    });
+    expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|token/u);
   });
 });

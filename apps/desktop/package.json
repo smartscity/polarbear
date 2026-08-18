@@ -9,6 +9,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
+    "memory-contract:generate": "node scripts/generate-memory-admin-contract.mjs",
+    "memory-contract:check": "node scripts/generate-memory-admin-contract.mjs --check",
     "test": "vitest run",
     "tauri": "tauri"
   },

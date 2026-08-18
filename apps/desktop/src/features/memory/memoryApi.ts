@@ -6,10 +6,14 @@ import type {
   LifecycleStatus,
   BackupInspection,
   BackupListResponse,
+  BackupRestorePreview,
+  BackupRestoreResult,
   DiagnosticsResponse,
   MaintenancePlan,
   MemoryHistoryResponse,
   MemoryListResponse,
+  MemoryPurgePreview,
+  MemoryPurgeResult,
   MemoryRecord,
   MemoryType,
   ProjectStatusResponse,
@@ -24,12 +28,18 @@ async function request<T>(workspaceRoot: string, method: string, params: Record<
 }
 
 export const memoryApi = {
+  bindWorkspace: (workspaceRoot: string) => invokeTauri<string>(TAURI_COMMANDS.memoryAdminBindWorkspace, { workspaceRoot }),
+  serviceStatus: () => invokeTauri<{ running: boolean }>(TAURI_COMMANDS.memoryServiceStatus),
+  startService: () => invokeTauri<{ running: boolean }>(TAURI_COMMANDS.memoryServiceStart),
+  stopService: (workspaceRoot: string) => invokeTauri<{ stopping: boolean }>(TAURI_COMMANDS.memoryServiceStop, { workspaceRoot }),
   hello: (workspaceRoot: string) => request<HelloResponse>(workspaceRoot, "system.hello"),
   status: (workspaceRoot: string) => request<ProjectStatusResponse>(workspaceRoot, "projects.status"),
   list: (workspaceRoot: string, filters: { query?: string; status?: LifecycleStatus; type?: MemoryType; limit?: number; offset?: number }) =>
     request<MemoryListResponse>(workspaceRoot, "memories.list", filters),
   get: (workspaceRoot: string, memoryId: string) => request<MemoryRecord>(workspaceRoot, "memories.get", { memoryId }),
   history: (workspaceRoot: string, memoryId: string) => request<MemoryHistoryResponse>(workspaceRoot, "memories.history", { memoryId }),
+  update: (workspaceRoot: string, memoryId: string, summary: string, content: string, reason: string) =>
+    request<MemoryRecord>(workspaceRoot, "memories.update", { memoryId, summary, content, reason }),
   verify: (workspaceRoot: string, memoryId: string, state: VerificationState, reason: string) =>
     request<MemoryRecord>(workspaceRoot, "memories.verify", { memoryId, state, reason }),
   archive: (workspaceRoot: string, memoryId: string, reason: string) =>
@@ -38,6 +48,10 @@ export const memoryApi = {
     request<MemoryRecord>(workspaceRoot, "memories.restore", { memoryId, reason }),
   relate: (workspaceRoot: string, sourceMemoryId: string, targetMemoryId: string, relation: "SUPERSEDES" | "CONTRADICTS", reason: string) =>
     request<{ recorded: true }>(workspaceRoot, "memories.relate", { sourceMemoryId, targetMemoryId, relation, reason }),
+  purgePreview: (workspaceRoot: string, memoryId: string) =>
+    request<MemoryPurgePreview>(workspaceRoot, "memories.purge_preview", { memoryId }),
+  purge: (workspaceRoot: string, memoryId: string, confirmation: string, reason: string) =>
+    request<MemoryPurgeResult>(workspaceRoot, "memories.purge", { memoryId, confirmation, reason }),
   explain: (workspaceRoot: string, task: string, budget = 1000) =>
     request<ContextExplainResponse>(workspaceRoot, "contexts.explain", { task, budget }),
   promotePreview: (workspaceRoot: string, memoryId: string) =>
@@ -53,4 +67,6 @@ export const memoryApi = {
   backups: (workspaceRoot: string) => request<BackupListResponse>(workspaceRoot, "backups.list"),
   createBackup: (workspaceRoot: string) => request<BackupInspection>(workspaceRoot, "backups.create"),
   verifyBackup: (workspaceRoot: string, fileName: string) => request<BackupInspection>(workspaceRoot, "backups.verify", { fileName }),
+  restoreBackupPreview: (workspaceRoot: string, fileName: string) => request<BackupRestorePreview>(workspaceRoot, "backups.restore_preview", { fileName }),
+  restoreBackup: (workspaceRoot: string, fileName: string, confirmation: string) => request<BackupRestoreResult>(workspaceRoot, "backups.restore", { fileName, confirmation }),
 };
