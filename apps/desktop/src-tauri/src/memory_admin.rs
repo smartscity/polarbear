@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-const API_VERSION: &str = "1.1";
+const API_VERSION: &str = "1.2";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 const ALLOWED_METHODS: &[&str] = &[
@@ -19,15 +19,20 @@ const ALLOWED_METHODS: &[&str] = &[
     "system.shutdown",
     "memories.list",
     "memories.get",
+    "memories.record",
     "memories.history",
     "memories.update",
     "memories.verify",
     "memories.archive",
     "memories.restore",
+    "memories.complete",
+    "memories.feedback",
     "memories.relate",
     "memories.purge_preview",
     "memories.purge",
     "contexts.explain",
+    "usage.token_savings",
+    "usage.token_savings_reset",
     "projects.diagnostics",
     "projects.config",
     "projects.config_update",
@@ -550,6 +555,42 @@ mod tests {
         )
         .expect("real Engine response");
         assert_eq!(response["counts"]["total"], 1);
+        let recorded = request_unix(
+            root.to_string_lossy().to_string(),
+            "memories.record".to_owned(),
+            serde_json::json!({
+                "type": "TODO",
+                "summary": "Validate Desktop V2 administration",
+                "entities": [{
+                    "kind": "MODULE",
+                    "canonicalKey": "desktop:memory",
+                    "displayName": "Desktop Memory"
+                }]
+            }),
+        )
+        .expect("record through real Engine");
+        let memory_id = recorded["id"].as_str().expect("recorded Memory id");
+        let feedback = request_unix(
+            root.to_string_lossy().to_string(),
+            "memories.feedback".to_owned(),
+            serde_json::json!({ "memoryId": memory_id, "useful": true, "reason": "E2E validation" }),
+        )
+        .expect("feedback through real Engine");
+        assert_eq!(feedback["usage"]["positiveFeedbackCount"], 1);
+        let completed = request_unix(
+            root.to_string_lossy().to_string(),
+            "memories.complete".to_owned(),
+            serde_json::json!({ "memoryId": memory_id, "state": "COMPLETED", "reason": "E2E passed" }),
+        )
+        .expect("complete through real Engine");
+        assert_eq!(completed["completionState"], "COMPLETED");
+        let savings = request_unix(
+            root.to_string_lossy().to_string(),
+            "usage.token_savings".to_owned(),
+            serde_json::json!({}),
+        )
+        .expect("token savings through real Engine");
+        assert!(savings["estimatedSavedTokens"].is_number());
         request_unix(
             root.to_string_lossy().to_string(),
             "system.shutdown".to_owned(),

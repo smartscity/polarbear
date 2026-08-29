@@ -35,6 +35,38 @@ describe("memoryApi", () => {
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/token|memory\.db/u);
   });
 
+  it("routes V2 creation, completion, feedback and token savings through Admin API 1.2", async () => {
+    invoke.mockResolvedValue({ id: "memory-id" });
+    await memoryApi.record("/repo", {
+      type: "ARCHITECTURE",
+      summary: "Desktop uses the Engine API",
+      validFrom: "2026-08-29T00:00:00.000Z",
+      entities: [{ kind: "MODULE", canonicalKey: "desktop:memory", displayName: "Desktop Memory" }],
+    });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "memories.record",
+      params: expect.objectContaining({ type: "ARCHITECTURE", summary: "Desktop uses the Engine API" }),
+    });
+    await memoryApi.complete("/repo", "memory-id", "COMPLETED", "implemented");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "memories.complete", params: { memoryId: "memory-id", state: "COMPLETED", reason: "implemented" },
+    });
+    await memoryApi.feedback("/repo", "memory-id", true, "useful");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "memories.feedback", params: { memoryId: "memory-id", useful: true, reason: "useful" },
+    });
+    await memoryApi.tokenSavings("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "usage.token_savings", params: {},
+    });
+    await memoryApi.resetTokenSavings("/repo", "RESET");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "usage.token_savings_reset", params: { confirmation: "RESET" },
+    });
+    expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|tokenFile|authToken/u);
+  });
+
   it("requires the preview digest when confirming Promote", async () => {
     invoke.mockResolvedValue({ path: ".polarbear/knowledge/decision/a.md", sha256: "abc" });
     await memoryApi.promote("/repo", "memory-id", "abc");
