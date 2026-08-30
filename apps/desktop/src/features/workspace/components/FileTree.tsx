@@ -430,6 +430,7 @@ export function FileTree({
                 })
               }
             >
+              <span className="tree-caret tree-caret-spacer" aria-hidden="true" />
               <FileTreeIcon />
               {isRenaming ? (
                 <RenameInput

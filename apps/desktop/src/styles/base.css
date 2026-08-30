@@ -604,6 +604,7 @@ button:disabled {
 }
 
 .workspace-tree {
+  --workspace-tree-indent: 18px;
   list-style: none;
   margin: 0;
   padding: 8px;
@@ -612,7 +613,24 @@ button:disabled {
 }
 
 .workspace-tree .workspace-tree {
-  padding: 3px 0 3px 14px;
+  position: relative;
+  margin-left: var(--workspace-tree-indent);
+  padding: 3px 0 3px 10px;
+  border-left: 1px solid color-mix(in srgb, var(--color-divider, #e5e7eb) 76%, transparent);
+}
+
+.workspace-tree .workspace-tree > li {
+  position: relative;
+}
+
+.workspace-tree .workspace-tree > li::before {
+  position: absolute;
+  top: 20px;
+  left: -11px;
+  width: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--color-divider, #e5e7eb) 76%, transparent);
+  content: "";
+  pointer-events: none;
 }
 
 .tree-item {
@@ -638,6 +656,10 @@ button:disabled {
   width: 14px;
   place-items: center;
   color: var(--color-text-secondary, #5f666d);
+}
+
+.tree-caret-spacer {
+  visibility: hidden;
 }
 
 .tree-icon {
