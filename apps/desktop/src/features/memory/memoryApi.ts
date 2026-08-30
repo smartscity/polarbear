@@ -1,7 +1,12 @@
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 import type {
+  AgentConnectionListResponse,
   ContextExplainResponse,
+  ContextExplanation,
+  ContextOsMetrics,
+  ContextPacket,
+  CheckpointState,
   HelloResponse,
   LifecycleStatus,
   BackupInspection,
@@ -9,6 +14,9 @@ import type {
   BackupRestorePreview,
   BackupRestoreResult,
   DiagnosticsResponse,
+  TaskCheckpointListResponse,
+  TaskRunContext,
+  TaskRunListResponse,
   MaintenancePlan,
   MemoryHistoryResponse,
   MemoryListResponse,
@@ -23,6 +31,10 @@ import type {
   PromoteResponse,
   RecordMemoryRequest,
   TokenSavingsStats,
+  TaskCheckpoint,
+  TaskPhase,
+  TaskRecord,
+  TaskStatus,
   VerificationState,
 } from "./generated/adminV1";
 
@@ -62,6 +74,31 @@ export const memoryApi = {
     request<MemoryPurgeResult>(workspaceRoot, "memories.purge", { memoryId, confirmation, reason }),
   explain: (workspaceRoot: string, task: string, budget = 1000) =>
     request<ContextExplainResponse>(workspaceRoot, "contexts.explain", { task, budget }),
+  listTasks: (workspaceRoot: string, status?: TaskStatus) =>
+    request<{ items: TaskRecord[] }>(workspaceRoot, "tasks.list", { ...(status ? { status } : {}) }),
+  getTask: (workspaceRoot: string, taskId: string) => request<TaskRecord>(workspaceRoot, "tasks.get", { taskId }),
+  createTask: (workspaceRoot: string, input: { title: string; objective: string; phase?: TaskPhase; priority?: number }) =>
+    request<TaskRecord>(workspaceRoot, "tasks.create", input),
+  checkpointTask: (workspaceRoot: string, input: {
+    taskId: string; status: TaskStatus; phase: TaskPhase; summary: string; state: CheckpointState; idempotencyKey?: string;
+  }) => request<TaskCheckpoint>(workspaceRoot, "tasks.checkpoint", input),
+  listTaskCheckpoints: (workspaceRoot: string, taskId: string, limit = 20) =>
+    request<TaskCheckpointListResponse>(workspaceRoot, "tasks.checkpoints", { taskId, limit }),
+  listTaskRuns: (workspaceRoot: string, taskId: string, limit = 20) =>
+    request<TaskRunListResponse>(workspaceRoot, "tasks.runs", { taskId, limit }),
+  getTaskRunContext: (workspaceRoot: string, taskId: string, runId: string) =>
+    request<TaskRunContext>(workspaceRoot, "tasks.run_context", { taskId, runId }),
+  agentConnections: (workspaceRoot: string) =>
+    request<AgentConnectionListResponse>(workspaceRoot, "agents.connections"),
+  buildContextPacket: (workspaceRoot: string, input: {
+    currentRequest: string; taskId?: string; maxTokens?: number; provider?: string;
+  }) => request<ContextPacket>(workspaceRoot, "contexts.build", input),
+  explainContextPacket: (workspaceRoot: string, packetId: string) =>
+    request<ContextExplanation>(workspaceRoot, "contexts.packet_explain", { packetId }),
+  contextOsMetrics: (workspaceRoot: string, taskId?: string) =>
+    request<ContextOsMetrics>(workspaceRoot, "usage.context_os", { ...(taskId ? { taskId } : {}) }),
+  distillObservations: (workspaceRoot: string, limit = 200) =>
+    request<{ observations: number; candidates: number; recorded: number }>(workspaceRoot, "observations.distill", { limit }),
   tokenSavings: (workspaceRoot: string) => request<TokenSavingsStats>(workspaceRoot, "usage.token_savings"),
   resetTokenSavings: (workspaceRoot: string, confirmation: "RESET") =>
     request<TokenSavingsStats>(workspaceRoot, "usage.token_savings_reset", { confirmation }),

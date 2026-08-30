@@ -24,6 +24,7 @@ import { InsertTableDialog } from "./features/editor/components/InsertTableDialo
 import { MarkdownPreview } from "./features/editor/components/MarkdownPreview";
 import { TyporaLiveEditor } from "./features/editor/components/TyporaLiveEditor";
 import { AppShell } from "./app/layout/AppShell";
+import { ActivityRail, type AppSurface } from "./app/layout/ActivityRail";
 import { AboutPolarbearDialog } from "./app/layout/AboutPolarbearDialog";
 import {
   CreateItemDialog,
@@ -194,7 +195,7 @@ import { STORAGE_KEYS } from "./shared/constants/storageKeys";
 import { APP_EVENTS } from "./shared/events/appEvents";
 import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
-import { MemoryPanel } from "./features/memory/MemoryPanel";
+import { ContextWorkspace } from "./features/memory/context/ContextWorkspace";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -301,7 +302,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
-  const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(false);
+  const [activeSurface, setActiveSurface] = useState<AppSurface>("workspace");
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [dirtyFileIds, setDirtyFileIds] = useState<Set<string>>(new Set());
   const [collapseVersion, setCollapseVersion] = useState(0);
@@ -3555,6 +3556,16 @@ export function App() {
         return;
       }
 
+      if (command === "surface.workspace") {
+        setActiveSurface("workspace");
+        return;
+      }
+
+      if (command === "surface.context") {
+        setActiveSurface("context");
+        return;
+      }
+
       if (command === "app.quit") {
         void requestAppQuit();
         return;
@@ -3591,6 +3602,7 @@ export function App() {
       }
 
       if (command === "file.openFolder") {
+        setActiveSurface("workspace");
         void openWorkspace();
         return;
       }
@@ -3876,7 +3888,14 @@ export function App() {
             className="app-zoom-canvas"
             style={appZoomCanvasStyle}
           >
-            <AppShell
+            <div className="polarbear-root-surface">
+            <ActivityRail
+              activeSurface={activeSurface}
+              contextLabel={t("context.surface")}
+              workspaceLabel={t("context.workspace")}
+              onSelect={(surface) => executeCommand(surface === "workspace" ? "surface.workspace" : "surface.context")}
+            />
+            {activeSurface === "workspace" ? <AppShell
               activeFileId={activeFileId}
               activeFileName={activeFileName}
               characterCount={markdownContent.length}
@@ -3904,7 +3923,6 @@ export function App() {
               onCloseTab={(tabId) => void closeTab(tabId)}
               onDebugToggle={() => setDebugEnabled((isEnabled) => !isEnabled)}
               onNewTab={() => executeCommand("file.newFile")}
-              onOpenMemory={() => setIsMemoryPanelOpen(true)}
               onRenameCancel={() => setRenameItemId(null)}
               onRenameConfirm={(item, nextName) => void confirmRename(item, nextName)}
               onSelectDocumentStructureItem={selectDocumentStructureItem}
@@ -3982,7 +4000,11 @@ export function App() {
                   </>
                 )}
               </section>
-            </AppShell>
+            </AppShell> : <ContextWorkspace
+              workspaceRoot={workspaceRoot}
+              onOpenWorkspace={() => executeCommand("file.openFolder")}
+            />}
+            </div>
           </div>
         </div>
       </div>
@@ -4062,9 +4084,6 @@ export function App() {
       ) : null}
       {isAboutDialogOpen ? (
         <AboutPolarbearDialog onClose={() => setIsAboutDialogOpen(false)} />
-      ) : null}
-      {isMemoryPanelOpen ? (
-        <MemoryPanel workspaceRoot={workspaceRoot} onClose={() => setIsMemoryPanelOpen(false)} />
       ) : null}
     </>
   );

@@ -53,6 +53,8 @@ export const APP_COMMANDS = {
   repositoryPushWorkspace: "repository.pushWorkspace",
   repositorySyncNow: "repository.syncNow",
   repositoryViewSyncStatus: "repository.viewSyncStatus",
+  surfaceContext: "surface.context",
+  surfaceWorkspace: "surface.workspace",
   tableAlignmentDefault: "table.alignment.setDefault",
   tableAlignmentLeft: "table.alignment.setLeft",
   tableAlignmentCenter: "table.alignment.setCenter",

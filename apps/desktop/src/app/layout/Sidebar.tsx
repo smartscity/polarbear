@@ -16,7 +16,6 @@ type SidebarProps = {
   renameItemId: string | null;
   selectedTreeItemId: string;
   onRenameCancel: () => void;
-  onOpenMemory: () => void;
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectFile: (fileId: string) => void;
   onSelectTreeItem: (itemId: string) => void;
@@ -34,7 +33,6 @@ export function Sidebar({
   renameItemId,
   selectedTreeItemId,
   onRenameCancel,
-  onOpenMemory,
   onRenameConfirm,
   onSelectFile,
   onSelectTreeItem
@@ -44,7 +42,6 @@ export function Sidebar({
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
       <div className="sidebar-header">
         <strong>{workspaceRoot ? t("tree.files") : t("tree.openFolder")}</strong>
-        <button type="button" className="sidebar-memory-button" onClick={onOpenMemory}>{t("memory.open")}</button>
       </div>
       <FileTree
         activeFileId={activeFileId}

@@ -36,7 +36,6 @@ type AppShellProps = {
   onCloseTab: (tabId: string) => void;
   onDebugToggle: () => void;
   onNewTab: () => void;
-  onOpenMemory: () => void;
   onRenameCancel: () => void;
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectDocumentStructureItem: (position: number) => void;
@@ -74,7 +73,6 @@ export function AppShell({
   onCloseTab,
   onDebugToggle,
   onNewTab,
-  onOpenMemory,
   onRenameCancel,
   onRenameConfirm,
   onSelectDocumentStructureItem,
@@ -126,7 +124,6 @@ export function AppShell({
           renameItemId={renameItemId}
           selectedTreeItemId={selectedTreeItemId}
           onRenameCancel={onRenameCancel}
-          onOpenMemory={onOpenMemory}
           onRenameConfirm={onRenameConfirm}
           onSelectFile={onSelectFile}
           onSelectTreeItem={onSelectTreeItem}

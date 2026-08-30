@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-const API_VERSION: &str = "1.2";
+const API_VERSION: &str = "1.4";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 const ALLOWED_METHODS: &[&str] = &[
@@ -31,6 +31,18 @@ const ALLOWED_METHODS: &[&str] = &[
     "memories.purge_preview",
     "memories.purge",
     "contexts.explain",
+    "contexts.build",
+    "contexts.packet_explain",
+    "tasks.list",
+    "tasks.get",
+    "tasks.create",
+    "tasks.checkpoint",
+    "tasks.checkpoints",
+    "tasks.runs",
+    "tasks.run_context",
+    "agents.connections",
+    "observations.distill",
+    "usage.context_os",
     "usage.token_savings",
     "usage.token_savings_reset",
     "projects.diagnostics",

@@ -347,6 +347,12 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "repository.viewSyncStatus": {
     titleKey: "cloud.viewStatus",
   },
+  "surface.context": {
+    titleKey: "context.surface",
+  },
+  "surface.workspace": {
+    titleKey: "context.workspace",
+  },
   "view.toggleSidebar": {
     titleKey: "menu.toggleSidebar",
     shortcut: { key: "l", shiftKey: true, command: "view.toggleSidebar" },

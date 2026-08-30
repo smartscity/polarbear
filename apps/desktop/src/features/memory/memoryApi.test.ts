@@ -35,7 +35,7 @@ describe("memoryApi", () => {
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/token|memory\.db/u);
   });
 
-  it("routes V2 creation, completion, feedback and token savings through Admin API 1.2", async () => {
+  it("routes V2 creation, completion, feedback and token savings through the versioned Admin API", async () => {
     invoke.mockResolvedValue({ id: "memory-id" });
     await memoryApi.record("/repo", {
       type: "ARCHITECTURE",
@@ -63,6 +63,46 @@ describe("memoryApi", () => {
     await memoryApi.resetTokenSavings("/repo", "RESET");
     expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
       workspaceRoot: "/repo", method: "usage.token_savings_reset", params: { confirmation: "RESET" },
+    });
+    expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|tokenFile|authToken/u);
+  });
+
+  it("routes Context OS task, history, packet and metrics operations through Admin API 1.4", async () => {
+    invoke.mockResolvedValue({ id: "task-id" });
+    await memoryApi.createTask("/repo", { title: "Retry", objective: "Implement retry", phase: "IMPLEMENTATION" });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "tasks.create",
+      params: { title: "Retry", objective: "Implement retry", phase: "IMPLEMENTATION" },
+    });
+    await memoryApi.checkpointTask("/repo", {
+      taskId: "task-id", status: "ACTIVE", phase: "IMPLEMENTATION", summary: "Boundary",
+      state: { changed: [], learned: [], decisionsAdded: [], constraintsAdded: [], failedAttempts: [], filesChanged: [], verification: [], unresolved: [], remaining: [] },
+    });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", expect.objectContaining({ method: "tasks.checkpoint" }));
+    await memoryApi.buildContextPacket("/repo", { taskId: "task-id", currentRequest: "Continue", maxTokens: 2_000 });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "contexts.build",
+      params: { taskId: "task-id", currentRequest: "Continue", maxTokens: 2_000 },
+    });
+    await memoryApi.contextOsMetrics("/repo", "task-id");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "usage.context_os", params: { taskId: "task-id" },
+    });
+    await memoryApi.listTaskCheckpoints("/repo", "task-id");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "tasks.checkpoints", params: { taskId: "task-id", limit: 20 },
+    });
+    await memoryApi.listTaskRuns("/repo", "task-id");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "tasks.runs", params: { taskId: "task-id", limit: 20 },
+    });
+    await memoryApi.getTaskRunContext("/repo", "task-id", "run-id");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "tasks.run_context", params: { taskId: "task-id", runId: "run-id" },
+    });
+    await memoryApi.agentConnections("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "agents.connections", params: {},
     });
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|tokenFile|authToken/u);
   });
