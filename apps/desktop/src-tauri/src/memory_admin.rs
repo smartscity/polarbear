@@ -1,6 +1,7 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -12,6 +13,7 @@ use std::time::Duration;
 
 const API_VERSION: &str = "1.4";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
+const RUNTIME_DESCRIPTOR_SCHEMA_VERSION: u32 = 1;
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 const ALLOWED_METHODS: &[&str] = &[
     "system.hello",
@@ -102,6 +104,25 @@ struct MemoryAdminError {
     message: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeDescriptor {
+    schema_version: u32,
+    runtime: RuntimeLaunch,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeLaunch {
+    executable: PathBuf,
+    cli_entrypoint: PathBuf,
+}
+
+struct MemoryServiceLaunch {
+    executable: PathBuf,
+    arguments: Vec<OsString>,
+}
+
 fn error(code: &'static str, message: impl Into<String>) -> String {
     serde_json::to_string(&MemoryAdminError {
         code,
@@ -145,6 +166,130 @@ fn service_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
     ))
 }
 
+fn runtime_descriptor_path(data_root: &Path) -> PathBuf {
+    data_root.join("runtime").join("launch.json")
+}
+
+fn descriptor_recovery_message(reason: &str) -> String {
+    format!("{reason} Run `polarbear-memory install` to repair Polarbear Memory.")
+}
+
+fn validate_runtime_executable(path: &Path) -> Result<(), String> {
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
+
+    if !path.is_absolute() {
+        return Err(error(
+            "MEMORY_RUNTIME_EXECUTABLE_MISSING",
+            descriptor_recovery_message("The managed Memory runtime executable is not absolute."),
+        ));
+    }
+    let metadata = fs::metadata(path).map_err(|_| {
+        error(
+            "MEMORY_RUNTIME_EXECUTABLE_MISSING",
+            descriptor_recovery_message(
+                "The managed Memory runtime executable is missing or stale.",
+            ),
+        )
+    })?;
+    if !metadata.is_file() {
+        return Err(error(
+            "MEMORY_RUNTIME_EXECUTABLE_MISSING",
+            descriptor_recovery_message("The managed Memory runtime executable is not a file."),
+        ));
+    }
+    #[cfg(unix)]
+    if metadata.permissions().mode() & 0o111 == 0 {
+        return Err(error(
+            "MEMORY_RUNTIME_EXECUTABLE_MISSING",
+            descriptor_recovery_message("The managed Memory runtime executable is not executable."),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_cli_entrypoint(path: &Path) -> Result<(), String> {
+    if !path.is_absolute() {
+        return Err(error(
+            "MEMORY_RUNTIME_CLI_MISSING",
+            descriptor_recovery_message("The managed Memory CLI entrypoint is not absolute."),
+        ));
+    }
+    let metadata = fs::metadata(path).map_err(|_| {
+        error(
+            "MEMORY_RUNTIME_CLI_MISSING",
+            descriptor_recovery_message("The managed Memory CLI entrypoint is missing or stale."),
+        )
+    })?;
+    if metadata.is_file() {
+        Ok(())
+    } else {
+        Err(error(
+            "MEMORY_RUNTIME_CLI_MISSING",
+            descriptor_recovery_message("The managed Memory CLI entrypoint is not a file."),
+        ))
+    }
+}
+
+fn managed_service_launch(data_root: &Path) -> Result<MemoryServiceLaunch, String> {
+    let descriptor_path = runtime_descriptor_path(data_root);
+    let source = fs::read_to_string(&descriptor_path).map_err(|_| {
+        error(
+            "MEMORY_RUNTIME_DESCRIPTOR_MISSING",
+            descriptor_recovery_message("Polarbear Memory runtime descriptor was not found."),
+        )
+    })?;
+    let descriptor: RuntimeDescriptor = serde_json::from_str(&source).map_err(|_| {
+        error(
+            "MEMORY_RUNTIME_DESCRIPTOR_INVALID",
+            descriptor_recovery_message("Polarbear Memory runtime descriptor is invalid."),
+        )
+    })?;
+    if descriptor.schema_version != RUNTIME_DESCRIPTOR_SCHEMA_VERSION {
+        return Err(error(
+            "MEMORY_RUNTIME_DESCRIPTOR_INVALID",
+            descriptor_recovery_message(
+                "Polarbear Memory runtime descriptor has an unsupported schema.",
+            ),
+        ));
+    }
+    validate_runtime_executable(&descriptor.runtime.executable)?;
+    validate_cli_entrypoint(&descriptor.runtime.cli_entrypoint)?;
+    Ok(MemoryServiceLaunch {
+        executable: descriptor.runtime.executable,
+        arguments: vec![
+            descriptor.runtime.cli_entrypoint.into_os_string(),
+            OsString::from("service"),
+            OsString::from("run"),
+        ],
+    })
+}
+
+fn override_service_launch(command: OsString) -> Result<MemoryServiceLaunch, String> {
+    let executable = PathBuf::from(command);
+    if !executable.is_absolute() {
+        return Err(error(
+            "MEMORY_RUNTIME_OVERRIDE_INVALID",
+            "POLARBEAR_MEMORY_COMMAND must be an absolute executable path.",
+        ));
+    }
+    validate_runtime_executable(&executable)?;
+    Ok(MemoryServiceLaunch {
+        executable,
+        arguments: vec![OsString::from("service"), OsString::from("run")],
+    })
+}
+
+fn resolve_service_launch(
+    data_root: &Path,
+    override_command: Option<OsString>,
+) -> Result<MemoryServiceLaunch, String> {
+    match override_command {
+        Some(command) => override_service_launch(command),
+        None => managed_service_launch(data_root),
+    }
+}
+
 #[cfg(unix)]
 fn validate_private_path(path: &Path, expected_kind: &str) -> Result<(), String> {
     use std::os::unix::fs::{FileTypeExt, MetadataExt};
@@ -171,19 +316,18 @@ fn validate_private_path(path: &Path, expected_kind: &str) -> Result<(), String>
 
 #[cfg(unix)]
 fn spawn_service() -> Result<(), String> {
-    let executable =
-        env::var("POLARBEAR_MEMORY_COMMAND").unwrap_or_else(|_| "polarbear-memory".to_owned());
-    Command::new(executable)
-        .args(["service", "run"])
+    let launch = resolve_service_launch(&data_root()?, env::var_os("POLARBEAR_MEMORY_COMMAND"))?;
+    Command::new(launch.executable)
+        .args(launch.arguments)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|_| {
             error(
-            "MEMORY_ENGINE_NOT_INSTALLED",
-            "Polarbear Memory Engine was not found. Install it or set POLARBEAR_MEMORY_COMMAND.",
-        )
+                "MEMORY_ENGINE_SPAWN_FAILED",
+                descriptor_recovery_message("Polarbear Memory Engine could not start."),
+            )
         })?;
     Ok(())
 }
@@ -202,8 +346,10 @@ fn connect_or_start(socket_path: &Path) -> Result<std::os::unix::net::UnixStream
         }
     }
     Err(error(
-        "MEMORY_SERVICE_UNAVAILABLE",
-        "Polarbear Memory service did not become ready.",
+        "MEMORY_ENGINE_HANDSHAKE_FAILED",
+        descriptor_recovery_message(
+            "Polarbear Memory Engine started but did not complete its local handshake.",
+        ),
     ))
 }
 
@@ -227,7 +373,7 @@ fn start_service_unix() -> Result<Value, String> {
         .and_then(Value::as_bool)
         == Some(true)
     {
-        return Ok(json!({ "running": true }));
+        return verify_service_handshake();
     }
     spawn_service()?;
     for _ in 0..20 {
@@ -237,13 +383,29 @@ fn start_service_unix() -> Result<Value, String> {
             .and_then(Value::as_bool)
             == Some(true)
         {
-            return Ok(json!({ "running": true }));
+            return verify_service_handshake();
         }
     }
     Err(error(
-        "MEMORY_SERVICE_UNAVAILABLE",
-        "Polarbear Memory service did not become ready.",
+        "MEMORY_ENGINE_HANDSHAKE_FAILED",
+        descriptor_recovery_message(
+            "Polarbear Memory Engine started but did not complete its local handshake.",
+        ),
     ))
+}
+
+#[cfg(unix)]
+fn verify_service_handshake() -> Result<Value, String> {
+    request_unix(String::new(), "system.hello".to_owned(), json!({}))
+        .map(|_| json!({ "running": true }))
+        .map_err(|_| {
+            error(
+                "MEMORY_ENGINE_HANDSHAKE_FAILED",
+                descriptor_recovery_message(
+                    "Polarbear Memory Engine is running but did not complete its local handshake.",
+                ),
+            )
+        })
 }
 
 #[cfg(unix)]
@@ -394,19 +556,170 @@ fn request_unix(workspace_root: String, method: String, params: Value) -> Result
 #[cfg(all(test, unix))]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
-    use super::{canonical_memory_workspace, request_unix, MemoryAdminState};
+    use super::{
+        canonical_memory_workspace, request_unix, resolve_service_launch, start_service_unix,
+        MemoryAdminState, RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
+    };
     use std::fs;
     use std::io::{BufRead, BufReader, Write};
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::net::UnixListener;
-    use std::process::{Command, Stdio};
-    use std::time::Duration;
+    use std::path::Path;
+    use std::process::Command;
 
     fn temporary(name: &str) -> std::path::PathBuf {
         std::env::temp_dir().join(format!(
             "polarbear-memory-admin-{name}-{}",
             std::process::id()
         ))
+    }
+
+    fn write_runtime_descriptor(data_root: &Path, executable: &Path, cli_entrypoint: &Path) {
+        let runtime_dir = data_root.join("runtime");
+        fs::create_dir_all(&runtime_dir).expect("create runtime directory");
+        fs::set_permissions(&runtime_dir, fs::Permissions::from_mode(0o700))
+            .expect("runtime directory mode");
+        fs::write(
+            runtime_dir.join("launch.json"),
+            serde_json::json!({
+                "schemaVersion": RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
+                "runtime": {
+                    "executable": executable,
+                    "cliEntrypoint": cli_entrypoint,
+                }
+            })
+            .to_string(),
+        )
+        .expect("write runtime descriptor");
+    }
+
+    fn write_launch_file(path: &Path, executable: bool) {
+        fs::create_dir_all(path.parent().expect("parent")).expect("create launch parent");
+        fs::write(path, "runtime fixture").expect("write launch file");
+        fs::set_permissions(
+            path,
+            fs::Permissions::from_mode(if executable { 0o700 } else { 0o600 }),
+        )
+        .expect("launch file mode");
+    }
+
+    #[test]
+    fn managed_runtime_descriptor_launches_without_path_or_shell_discovery() {
+        let root = temporary("runtime-descriptor-spaces");
+        let _ = fs::remove_dir_all(&root);
+        let data_root = root.join("data root");
+        let executable = root.join("Node Runtime 24").join("node");
+        let cli_entrypoint = root.join("Polarbear Memory").join("dist").join("cli.js");
+        write_launch_file(&executable, true);
+        write_launch_file(&cli_entrypoint, false);
+        write_runtime_descriptor(&data_root, &executable, &cli_entrypoint);
+
+        let launch = resolve_service_launch(&data_root, None).expect("managed launch");
+        assert_eq!(launch.executable, executable);
+        assert_eq!(
+            launch
+                .arguments
+                .iter()
+                .map(|argument| argument.to_string_lossy().to_string())
+                .collect::<Vec<_>>(),
+            vec![
+                cli_entrypoint.to_string_lossy().to_string(),
+                "service".to_owned(),
+                "run".to_owned(),
+            ]
+        );
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn managed_runtime_descriptor_is_node_version_agnostic() {
+        let root = temporary("runtime-descriptor-versions");
+        let _ = fs::remove_dir_all(&root);
+        let cli_entrypoint = root.join("package").join("dist").join("cli.js");
+        write_launch_file(&cli_entrypoint, false);
+        for version in ["node-v20", "node-v22", "node-v24"] {
+            let data_root = root.join(version).join("data");
+            let executable = root.join(version).join("node");
+            write_launch_file(&executable, true);
+            write_runtime_descriptor(&data_root, &executable, &cli_entrypoint);
+            assert_eq!(
+                resolve_service_launch(&data_root, None)
+                    .expect("version launch")
+                    .executable,
+                executable
+            );
+        }
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn stale_runtime_descriptor_reports_a_repairable_error() {
+        let root = temporary("stale-runtime-descriptor");
+        let _ = fs::remove_dir_all(&root);
+        let data_root = root.join("data");
+        let cli_entrypoint = root.join("package").join("dist").join("cli.js");
+        write_launch_file(&cli_entrypoint, false);
+        write_runtime_descriptor(&data_root, &root.join("missing-node"), &cli_entrypoint);
+
+        let error = resolve_service_launch(&data_root, None)
+            .err()
+            .expect("stale descriptor error");
+        assert!(error.contains("MEMORY_RUNTIME_EXECUTABLE_MISSING"));
+        assert!(error.contains("polarbear-memory install"));
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn missing_runtime_descriptor_reports_a_repairable_error() {
+        let root = temporary("missing-runtime-descriptor");
+        let _ = fs::remove_dir_all(&root);
+
+        let error = resolve_service_launch(&root, None)
+            .err()
+            .expect("missing descriptor error");
+        assert!(error.contains("MEMORY_RUNTIME_DESCRIPTOR_MISSING"));
+        assert!(error.contains("polarbear-memory install"));
+    }
+
+    #[test]
+    fn missing_runtime_cli_reports_a_repairable_error() {
+        let root = temporary("missing-runtime-cli");
+        let _ = fs::remove_dir_all(&root);
+        let data_root = root.join("data");
+        let executable = root.join("runtime").join("node");
+        write_launch_file(&executable, true);
+        write_runtime_descriptor(&data_root, &executable, &root.join("missing-cli.js"));
+
+        let error = resolve_service_launch(&data_root, None)
+            .err()
+            .expect("missing CLI error");
+        assert!(error.contains("MEMORY_RUNTIME_CLI_MISSING"));
+        assert!(error.contains("polarbear-memory install"));
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn explicit_runtime_override_has_priority_over_the_managed_descriptor() {
+        let root = temporary("runtime-override");
+        let _ = fs::remove_dir_all(&root);
+        let override_executable = root.join("override").join("polarbear-memory");
+        write_launch_file(&override_executable, true);
+
+        let launch = resolve_service_launch(
+            &root.join("missing descriptor"),
+            Some(override_executable.clone().into_os_string()),
+        )
+        .expect("override launch");
+        assert_eq!(launch.executable, override_executable);
+        assert_eq!(
+            launch
+                .arguments
+                .iter()
+                .map(|argument| argument.to_string_lossy().to_string())
+                .collect::<Vec<_>>(),
+            vec!["service".to_owned(), "run".to_owned()]
+        );
+        fs::remove_dir_all(root).expect("cleanup");
     }
 
     #[test]
@@ -508,15 +821,19 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "set POLARBEAR_MEMORY_E2E_CLI to the built Engine dist/cli.js"]
-    fn rust_proxy_reaches_the_real_engine_and_sqlite() {
+    #[ignore = "set POLARBEAR_MEMORY_E2E_RUNTIME and POLARBEAR_MEMORY_E2E_CLI to built Engine paths"]
+    fn desktop_starts_the_real_engine_from_the_installed_runtime_descriptor() {
+        let runtime = std::env::var("POLARBEAR_MEMORY_E2E_RUNTIME")
+            .expect("absolute Engine Node runtime path");
         let cli = std::env::var("POLARBEAR_MEMORY_E2E_CLI").expect("Engine CLI path");
         let root = temporary("real-engine-workspace");
         let data = std::path::PathBuf::from("/tmp")
             .join(format!("pbm-real-engine-{}", std::process::id()));
+        let home = data.join("home");
         let _ = fs::remove_dir_all(&root);
         let _ = fs::remove_dir_all(&data);
         fs::create_dir_all(&root).expect("create root");
+        fs::create_dir_all(&home).expect("create isolated home");
         assert!(Command::new("git")
             .arg("init")
             .arg("-q")
@@ -525,15 +842,17 @@ mod tests {
             .expect("git")
             .success());
         let run = |args: &[&str]| {
-            Command::new("node")
+            Command::new(&runtime)
                 .arg(&cli)
                 .args(args)
                 .current_dir(&root)
                 .env("POLARBEAR_MEMORY_DATA_DIR", &data)
+                .env("HOME", &home)
                 .status()
                 .expect("Engine command")
         };
         assert!(run(&["init"]).success());
+        assert!(run(&["install"]).success());
         assert!(run(&[
             "record",
             "--type",
@@ -542,24 +861,12 @@ mod tests {
             "Real cross-process Memory"
         ])
         .success());
-        let mut engine = Command::new("node")
-            .arg(&cli)
-            .args(["service", "run"])
-            .current_dir(&root)
-            .env("POLARBEAR_MEMORY_DATA_DIR", &data)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .expect("start real Engine");
-        for _ in 0..30 {
-            if data.join("service/admin-v1.sock").exists() {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(100));
-        }
         let previous = std::env::var_os("POLARBEAR_MEMORY_DATA_DIR");
         unsafe { std::env::set_var("POLARBEAR_MEMORY_DATA_DIR", &data) };
+        assert_eq!(
+            start_service_unix().expect("start Desktop managed Engine")["running"],
+            true
+        );
         let response = request_unix(
             root.to_string_lossy().to_string(),
             "projects.status".to_owned(),
@@ -609,7 +916,6 @@ mod tests {
             serde_json::json!({}),
         )
         .expect("shutdown real Engine");
-        assert!(engine.wait().expect("Engine exit").success());
         if let Some(value) = previous {
             unsafe { std::env::set_var("POLARBEAR_MEMORY_DATA_DIR", value) };
         } else {
