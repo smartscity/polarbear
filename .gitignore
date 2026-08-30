@@ -2,6 +2,7 @@
 # =========================
 # OS
 # =========================
+.mcp.json
 .polarbear
 .DS_Store
 .AppleDouble
