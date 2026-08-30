@@ -13,7 +13,7 @@ use std::time::Duration;
 
 const API_VERSION: &str = "1.4";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
-const RUNTIME_DESCRIPTOR_SCHEMA_VERSION: u32 = 1;
+include!(concat!(env!("OUT_DIR"), "/runtime_descriptor_contract.rs"));
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 const ALLOWED_METHODS: &[&str] = &[
     "system.hello",
@@ -167,7 +167,9 @@ fn service_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
 }
 
 fn runtime_descriptor_path(data_root: &Path) -> PathBuf {
-    data_root.join("runtime").join("launch.json")
+    RUNTIME_DESCRIPTOR_RELATIVE_PATH
+        .iter()
+        .fold(data_root.to_path_buf(), |path, part| path.join(part))
 }
 
 fn descriptor_recovery_message(reason: &str) -> String {
@@ -557,8 +559,8 @@ fn request_unix(workspace_root: String, method: String, params: Value) -> Result
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::{
-        canonical_memory_workspace, request_unix, resolve_service_launch, start_service_unix,
-        MemoryAdminState, RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
+        canonical_memory_workspace, request_unix, resolve_service_launch, runtime_descriptor_path,
+        start_service_unix, MemoryAdminState, RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
     };
     use std::fs;
     use std::io::{BufRead, BufReader, Write};
@@ -575,12 +577,13 @@ mod tests {
     }
 
     fn write_runtime_descriptor(data_root: &Path, executable: &Path, cli_entrypoint: &Path) {
-        let runtime_dir = data_root.join("runtime");
+        let descriptor_path = runtime_descriptor_path(data_root);
+        let runtime_dir = descriptor_path.parent().expect("runtime descriptor parent");
         fs::create_dir_all(&runtime_dir).expect("create runtime directory");
         fs::set_permissions(&runtime_dir, fs::Permissions::from_mode(0o700))
             .expect("runtime directory mode");
         fs::write(
-            runtime_dir.join("launch.json"),
+            descriptor_path,
             serde_json::json!({
                 "schemaVersion": RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
                 "runtime": {
