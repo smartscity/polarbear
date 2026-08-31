@@ -3273,10 +3273,7 @@ fn main() -> tauri::Result<()> {
             repository_pull_workspace,
             repository_sync_now,
             memory_admin::memory_admin_bind_workspace,
-            memory_admin::memory_admin_request,
-            memory_admin::memory_service_status,
-            memory_admin::memory_service_start,
-            memory_admin::memory_service_stop
+            memory_admin::memory_admin_request
         ])
         .run(tauri::generate_context!())
 }

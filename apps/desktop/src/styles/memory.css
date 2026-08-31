@@ -117,23 +117,46 @@
   background: var(--color-active-background, #eef3f8);
 }
 
-.context-secondary-nav-footer {
-  overflow: hidden;
-  margin-top: auto;
-  padding: 12px 6px 0;
-  border-top: 1px solid var(--color-divider, #e5e7eb);
-  color: var(--color-text-muted, #7d8594);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .context-main-content {
   flex: 1 1 auto;
   min-width: 0;
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--color-editor-background, #ffffff);
+}
+
+.context-workspace-identity {
+  display: grid;
+  width: min(1180px, 100%);
+  gap: 3px;
+  margin: 0 auto;
+  padding: 28px 32px 0;
+  color: var(--color-text-primary, #2f3437);
+}
+
+.context-inline-error {
+  width: min(1180px, calc(100% - 64px));
+  margin: 20px auto 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 58%, var(--color-border, #e5e7eb));
+  border-radius: 6px;
+  color: var(--color-danger, #dc2626);
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 7%, var(--color-editor-background, #ffffff));
+}
+
+.context-workspace-identity h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.context-workspace-identity strong {
+  font-size: 15px;
+}
+
+.context-workspace-identity span {
+  color: var(--color-text-secondary, #5f666d);
+  font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .context-page {
@@ -247,7 +270,6 @@
 }
 
 .context-recent-activity ul,
-.context-capability-list,
 .context-packet-inspector ul,
 .context-detail-section ul {
   display: grid;
@@ -290,8 +312,7 @@
 }
 
 .context-memory-filters label,
-.context-settings-form label,
-.context-reason-field {
+.context-settings-form label {
   display: grid;
   gap: 6px;
   color: var(--color-text-secondary, #5f666d);
@@ -418,13 +439,6 @@
   color: var(--color-text-primary, #2f3437);
 }
 
-.context-subsection-heading {
-  margin: 16px 0 0;
-  font-size: 14px;
-}
-
-.context-reason-field input,
-.context-supersede-row input,
 .context-memory-editor input,
 .context-memory-editor textarea,
 .context-checkpoint-editor textarea,
@@ -456,8 +470,6 @@
   resize: vertical;
 }
 
-.context-reason-field input:focus,
-.context-supersede-row input:focus,
 .context-memory-editor input:focus,
 .context-memory-editor textarea:focus,
 .context-checkpoint-editor textarea:focus,
@@ -474,16 +486,40 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #2f80ed) 24%, transparent);
 }
 
-.context-action-row,
-.context-supersede-row {
+.context-action-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: end;
 }
 
-.context-supersede-row input {
-  flex: 1 1 220px;
+.context-memory-actions-menu {
+  position: relative;
+}
+
+.context-memory-actions-menu summary {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.context-memory-actions-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.context-memory-actions-menu button {
+  position: absolute;
+  z-index: var(--z-menu, 1000);
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 120px;
+  background: var(--color-editor-background, #ffffff);
+  box-shadow: var(--shadow-menu, 0 8px 24px rgb(0 0 0 / 14%));
 }
 
 .context-tasks-layout {
@@ -516,11 +552,22 @@
   gap: 12px;
 }
 
-.context-capability-list {
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  padding-left: 18px;
-  color: var(--color-text-secondary, #5f666d);
-  font: 12px/1.5 var(--type-code-font-family, monospace);
+.context-integration-list {
+  display: grid;
+  gap: 8px;
+}
+
+.context-integration-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-divider, #e5e7eb);
+}
+
+.context-integration-row:first-child {
+  border-top: 0;
 }
 
 @media (max-width: 920px) {
@@ -547,6 +594,10 @@
 
   .context-page {
     padding: 20px;
+  }
+
+  .context-workspace-identity {
+    padding: 20px 20px 0;
   }
 
   .context-overview-primary,

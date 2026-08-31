@@ -5,7 +5,8 @@ import {
   contextOverviewData,
   isStale,
   matchesMemoryStatus,
-  needsReview,
+  needsAttention,
+  tokenImpact,
 } from "./contextOsModel";
 
 function task(status: TaskRecord["status"], id: string): TaskRecord {
@@ -64,8 +65,9 @@ describe("Context OS lean model", () => {
     ])?.id).toBe("active");
   });
 
-  it("keeps review and stale concepts inside Memory filters", () => {
-    const unverified = memory({ verificationState: "UNVERIFIED" });
+  it("only surfaces exceptional active memories as needing attention", () => {
+    const normal = memory({ verificationState: "UNVERIFIED", importance: 500, confidence: 500 });
+    const importantLowConfidence = memory({ verificationState: "UNVERIFIED", importance: 800, confidence: 500 });
     const stale = memory({
       latestAssessment: {
         previousRisk: "LOW",
@@ -80,8 +82,9 @@ describe("Context OS lean model", () => {
       },
     });
 
-    expect(needsReview(unverified)).toBe(true);
-    expect(matchesMemoryStatus(unverified, "needsReview")).toBe(true);
+    expect(needsAttention(normal)).toBe(false);
+    expect(needsAttention(importantLowConfidence)).toBe(true);
+    expect(matchesMemoryStatus(importantLowConfidence, "needsAttention")).toBe(true);
     expect(isStale(stale)).toBe(true);
     expect(matchesMemoryStatus(stale, "stale")).toBe(true);
   });
@@ -102,7 +105,13 @@ describe("Context OS lean model", () => {
       null,
     );
 
-    expect(overview.needsReviewCount).toBe(1);
+    expect(overview.needsAttentionCount).toBe(1);
     expect(overview.conflictCount).toBe(1);
+  });
+
+  it("reports savings and increased token impact without negative percentages", () => {
+    expect(tokenImpact(1_000, 820)).toEqual({ kind: "savings", ratio: 0.18 });
+    expect(tokenImpact(1_000, 1_100)).toEqual({ kind: "impact", ratio: 0.1 });
+    expect(tokenImpact(0, 0)).toBeNull();
   });
 });

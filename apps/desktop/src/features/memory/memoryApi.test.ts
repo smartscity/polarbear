@@ -14,16 +14,6 @@ describe("memoryApi", () => {
     expect(invoke).toHaveBeenCalledWith("memory_admin_bind_workspace", { workspaceRoot: "/repo" });
   });
 
-  it("uses dedicated native commands for Engine lifecycle control", async () => {
-    invoke.mockResolvedValue({ running: true });
-    await memoryApi.serviceStatus();
-    expect(invoke).toHaveBeenLastCalledWith("memory_service_status", undefined);
-    await memoryApi.startService();
-    expect(invoke).toHaveBeenLastCalledWith("memory_service_start", undefined);
-    await memoryApi.stopService("/repo");
-    expect(invoke).toHaveBeenLastCalledWith("memory_service_stop", { workspaceRoot: "/repo" });
-  });
-
   it("routes typed requests through the single Rust proxy without a token or database path", async () => {
     invoke.mockResolvedValue({ items: [], offset: 0, limit: 50, nextOffset: null });
     await memoryApi.list("/repo", { query: "socket", status: "ACTIVE", limit: 50 });
@@ -104,6 +94,14 @@ describe("memoryApi", () => {
     expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
       workspaceRoot: "/repo", method: "agents.connections", params: {},
     });
+    await memoryApi.agentIntegrations("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "agents.integrations", params: {},
+    });
+    await memoryApi.repairAgentIntegration("/repo", "codex");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "agents.integrations_repair", params: { integration: "codex" },
+    });
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|tokenFile|authToken/u);
   });
 
@@ -146,13 +144,19 @@ describe("memoryApi", () => {
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|token/u);
   });
 
-  it("updates only the bounded project capture policy", async () => {
-    invoke.mockResolvedValue({ captureMode: "manual", rawEventRetentionDays: 3, defaultContextBudget: 1000 });
-    await memoryApi.updateConfig("/repo", "manual", 3);
+  it("updates the bounded project Context policy", async () => {
+    const config = {
+      captureMode: "manual" as const,
+      rawEventRetentionDays: 30,
+      contextBudgetMode: "custom" as const,
+      defaultContextBudget: 2400,
+    };
+    invoke.mockResolvedValue(config);
+    await memoryApi.updateConfig("/repo", config);
     expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
       workspaceRoot: "/repo",
       method: "projects.config_update",
-      params: { captureMode: "manual", rawEventRetentionDays: 3 },
+      params: config,
     });
   });
 

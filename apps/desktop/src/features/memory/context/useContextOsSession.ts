@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import type {
-  AgentConnectionStatus,
+  AgentIntegrationStatus,
   ContextExplanation,
   ContextOsMetrics,
   ContextPacket,
   ExecutionRun,
   HelloResponse,
-  MemoryRelationType,
   MemoryRecord,
   ProjectMemoryConfig,
   ProjectStatusResponse,
@@ -57,8 +56,7 @@ export function useContextOsSession(workspaceRoot: string) {
   const [metrics, setMetrics] = useState<ContextOsMetrics | null>(null);
   const [tokenSavings, setTokenSavings] = useState<TokenSavingsStats | null>(null);
   const [config, setConfig] = useState<ProjectMemoryConfig | null>(null);
-  const [connections, setConnections] = useState<AgentConnectionStatus[]>([]);
-  const [serviceRunning, setServiceRunning] = useState<boolean | null>(null);
+  const [integrations, setIntegrations] = useState<AgentIntegrationStatus[]>([]);
   const [lastCheckpoint, setLastCheckpoint] = useState<TaskCheckpoint | null>(null);
   const [lastPacket, setLastPacket] = useState<ContextPacket | null>(null);
   const [packetExplanation, setPacketExplanation] = useState<ContextExplanation | null>(null);
@@ -73,8 +71,7 @@ export function useContextOsSession(workspaceRoot: string) {
       setMetrics(null);
       setTokenSavings(null);
       setConfig(null);
-      setConnections([]);
-      setServiceRunning(null);
+      setIntegrations([]);
       return;
     }
 
@@ -92,17 +89,16 @@ export function useContextOsSession(workspaceRoot: string) {
       }
 
       const supports = (capability: string) => capabilities.available.has(capability);
-      const [nextStatus, nextTasks, nextMemories, nextMetrics, nextSavings, nextConfig, nextService, nextConnections] = await Promise.all([
+      const [nextStatus, nextTasks, nextMemories, nextMetrics, nextSavings, nextConfig, nextIntegrations] = await Promise.all([
         memoryApi.status(workspaceRoot),
         supports("tasks.list") ? memoryApi.listTasks(workspaceRoot) : Promise.resolve({ items: [] }),
         memoryApi.list(workspaceRoot, { limit: 100 }),
         supports("usage.context_os") ? memoryApi.contextOsMetrics(workspaceRoot) : Promise.resolve(null),
         supports("usage.token_savings") ? memoryApi.tokenSavings(workspaceRoot) : Promise.resolve(null),
         supports("projects.config") ? memoryApi.config(workspaceRoot) : Promise.resolve(null),
-        memoryApi.serviceStatus(),
-        supports("agents.connections")
-          ? memoryApi.agentConnections(workspaceRoot)
-          : Promise.resolve({ items: [] as AgentConnectionStatus[] }),
+        supports("agents.integrations")
+          ? memoryApi.agentIntegrations(workspaceRoot)
+          : Promise.resolve({ items: [] as AgentIntegrationStatus[] }),
       ]);
       setHello(nextHello);
       setAvailableCapabilities(capabilities.available);
@@ -112,8 +108,7 @@ export function useContextOsSession(workspaceRoot: string) {
       setMetrics(nextMetrics);
       setTokenSavings(nextSavings);
       setConfig(nextConfig);
-      setConnections(nextConnections.items);
-      setServiceRunning(nextService.running);
+      setIntegrations(nextIntegrations.items);
     } catch (loadError) {
       setError(errorMessage(loadError));
     } finally {
@@ -218,10 +213,6 @@ export function useContextOsSession(workspaceRoot: string) {
     return packet;
   }, [refresh, run, workspaceRoot]);
 
-  const loadMemory = useCallback(async (memoryId: string) => (
-    run(() => memoryApi.get(workspaceRoot, memoryId))
-  ), [run, workspaceRoot]);
-
   const verifyMemory = useCallback(async (
     memoryId: string,
     state: "VERIFIED" | "DISPUTED",
@@ -249,63 +240,38 @@ export function useContextOsSession(workspaceRoot: string) {
     return memory;
   }, [refresh, run, workspaceRoot]);
 
-  const relateMemory = useCallback(async (
-    memoryId: string,
-    targetMemoryId: string,
-    relation: MemoryRelationType,
-    reason: string,
-  ) => {
-    const result = await run(() => memoryApi.relate(
-      workspaceRoot,
-      memoryId,
-      targetMemoryId,
-      relation,
-      reason,
-    ));
-    if (result) await refresh();
-    return result;
-  }, [refresh, run, workspaceRoot]);
-
-  const updateConfig = useCallback(async (captureMode: ProjectMemoryConfig["captureMode"], retentionDays: number) => {
-    const nextConfig = await run(() => memoryApi.updateConfig(workspaceRoot, captureMode, retentionDays));
+  const updateConfig = useCallback(async (next: ProjectMemoryConfig) => {
+    const nextConfig = await run(() => memoryApi.updateConfig(workspaceRoot, next));
     if (nextConfig) setConfig(nextConfig);
     return nextConfig;
   }, [run, workspaceRoot]);
 
-  const setService = useCallback(async (running: boolean) => {
-    const completed = running
-      ? await run(() => memoryApi.startService())
-      : await run(() => memoryApi.stopService(workspaceRoot));
-    if (completed) {
-      setServiceRunning(running);
-      if (running) await refresh();
-    }
-    return completed;
-  }, [refresh, run, workspaceRoot]);
+  const repairIntegration = useCallback(async (integration: AgentIntegrationStatus["id"]) => {
+    const result = await run(() => memoryApi.repairAgentIntegration(workspaceRoot, integration));
+    if (result) setIntegrations(result.items);
+    return result;
+  }, [run, workspaceRoot]);
 
   return {
     archiveMemory,
-    connections,
     config,
     createTask,
     error,
     hello,
     inspectPacket,
     inspectTaskRun,
+    integrations,
     isLoading,
     isMutating,
     lastCheckpoint,
     lastPacket,
-    loadMemory,
     loadTaskActivity,
     memories,
     metrics,
     packetExplanation,
     refresh,
-    relateMemory,
+    repairIntegration,
     saveCheckpoint,
-    serviceRunning,
-    setService,
     status,
     tasks,
     tokenSavings,

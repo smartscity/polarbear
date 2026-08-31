@@ -15,6 +15,8 @@ import {
   CONTEXT_SECTIONS,
   contextOverviewData,
   matchesMemoryStatus,
+  needsAttention,
+  tokenImpact,
   type ContextSection,
   type MemoryStatusFilter,
 } from "./contextOsModel";
@@ -96,14 +98,16 @@ export function ContextWorkspace({ workspaceRoot, onOpenWorkspace }: ContextWork
             </button>
           ))}
         </nav>
-        <div className="context-secondary-nav-footer">
-          <span>{workspaceRoot || t("context.noWorkspace")}</span>
-        </div>
       </aside>
       <section className="context-main-content">
+        {workspaceRoot && session.hello && session.error ? <div className="context-inline-error" role="alert">{session.error}</div> : null}
+        {workspaceRoot && session.hello ? <ContextWorkspaceIdentity
+          name={session.status?.project.name ?? workspaceRoot.split(/[\\/]/u).filter(Boolean).at(-1) ?? workspaceRoot}
+          path={workspaceRoot}
+        /> : null}
         {!workspaceRoot ? (
           <ContextEmptyState onOpenWorkspace={onOpenWorkspace} />
-        ) : session.error ? (
+        ) : session.error && !session.hello ? (
           <ContextError error={session.error} onRetry={() => void session.refresh()} />
         ) : section === "overview" ? (
           <ContextOverview session={session} />
@@ -117,6 +121,15 @@ export function ContextWorkspace({ workspaceRoot, onOpenWorkspace }: ContextWork
       </section>
     </main>
   );
+}
+
+function ContextWorkspaceIdentity({ name, path }: { name: string; path: string }) {
+  const { t } = useI18n();
+  return <header className="context-workspace-identity">
+    <h1>{t("context.surface")}</h1>
+    <strong>{name}</strong>
+    <span title={path}>{path}</span>
+  </header>;
 }
 
 type Session = ReturnType<typeof useContextOsSession>;
@@ -147,6 +160,9 @@ function ContextOverview({ session }: { session: Session }) {
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
     .slice(0, 6);
   const metrics = session.metrics;
+  const impact = session.tokenSavings
+    ? tokenImpact(session.tokenSavings.baselineTokens, session.tokenSavings.contextTokens)
+    : null;
 
   return <div className="context-page context-overview-page" aria-busy={session.isLoading}>
     <PageHeader title={t("context.overview.title")} description={t("context.overview.description")} />
@@ -167,21 +183,27 @@ function ContextOverview({ session }: { session: Session }) {
           <p>{t("context.overview.packetItems", { count: packet.items.length })}</p>
           <span>{t("context.overview.packetSessionOnly")}</span>
         </> : <>
-          <strong>{session.config?.defaultContextBudget.toLocaleString() ?? "—"} {t("context.tokens")}</strong>
+          <strong>— / {session.config?.defaultContextBudget.toLocaleString() ?? "—"} {t("context.tokens")}</strong>
           <p>{t("context.overview.noPacket")}</p>
           <span>{t("context.overview.defaultBudget")}</span>
         </>}
       </ContextSection>
       <ContextSection title={t("context.overview.health")}>
-        <strong>{overview.needsReviewCount === 0 ? t("context.overview.healthClear") : t("context.overview.healthAttention")}</strong>
-        <p>{t("context.overview.needsReview", { count: overview.needsReviewCount })}</p>
+        <strong>{overview.needsAttentionCount === 0 ? t("context.overview.healthClear") : t("context.overview.healthAttention")}</strong>
+        <p>{overview.needsAttentionCount === 0
+          ? t("context.overview.noAttention")
+          : t("context.overview.needsAttention", { count: overview.needsAttentionCount })}</p>
         <span>{t("context.overview.conflicts", { count: overview.conflictCount })}</span>
       </ContextSection>
     </section>
     <section className="context-metric-row" aria-label={t("context.overview.coreMetrics")}>
-      <Metric label={t("context.overview.efficiency")} value={metrics ? percent(metrics.contextReductionRatio) : "—"} hint={t("context.overview.derivedMetric")} />
+      <Metric
+        label={impact?.kind === "impact" ? t("context.overview.tokenImpact") : t("context.overview.tokenSavings")}
+        value={impact ? `${percent(impact.ratio)}${impact.kind === "impact" ? ` ${t("context.overview.more")}` : ""}` : "—"}
+        hint={t("context.overview.estimatedMetric")}
+      />
       <Metric label={t("context.overview.memoryReuse")} value={metrics ? percent(metrics.memoryHitRate) : "—"} hint={t("context.overview.derivedMetric")} />
-      <Metric label={t("context.overview.tokensSaved")} value={session.tokenSavings ? session.tokenSavings.estimatedSavedTokens.toLocaleString() : "—"} hint={t("context.overview.estimatedMetric")} />
+      <Metric label={t("context.overview.contextDelivered")} value={session.tokenSavings ? session.tokenSavings.contextTokens.toLocaleString() : "—"} hint={t("context.overview.estimatedMetric")} />
     </section>
     <ContextSection title={t("context.overview.recentActivity")} className="context-recent-activity">
       {recent.length > 0 ? <ul>
@@ -201,11 +223,9 @@ function ContextMemory({ session }: { session: Session }) {
   const [type, setType] = useState<MemoryType | "all">("all");
   const [status, setStatus] = useState<MemoryStatusFilter>("all");
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
-  const [reason, setReason] = useState("");
   const [editing, setEditing] = useState(false);
   const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
-  const [supersedeTarget, setSupersedeTarget] = useState("");
 
   const items = useMemo(() => session.memories.filter((memory) => {
     const haystack = `${memory.summary}\n${memory.content}`.toLocaleLowerCase();
@@ -220,47 +240,35 @@ function ContextMemory({ session }: { session: Session }) {
     }
   }, [selected, session.memories]);
 
-  const select = async (memory: MemoryRecord) => {
-    const loaded = await session.loadMemory(memory.id);
-    if (loaded) {
-      setSelected(loaded);
-      setReason("");
-      setEditing(false);
-      setSummary(loaded.summary);
-      setContent(loaded.content);
-      setSupersedeTarget("");
-    }
+  const select = (memory: MemoryRecord, edit = false) => {
+    setSelected(memory);
+    setEditing(edit);
+    setSummary(memory.summary);
+    setContent(memory.content);
   };
 
-  const saveAndApprove = async () => {
-    if (!selected || !reason.trim() || !summary.trim() || !content.trim()) return;
-    const revised = await session.updateMemory(selected.id, summary.trim(), content.trim(), reason.trim());
-    if (!revised) return;
-    const approved = await session.verifyMemory(revised.id, "VERIFIED", reason.trim());
-    setSelected(approved ?? revised);
+  const save = async () => {
+    if (!selected || !summary.trim() || !content.trim()) return;
+    const updated = await session.updateMemory(
+      selected.id,
+      summary.trim(),
+      content.trim(),
+      "Edited from Polarbear Desktop.",
+    );
+    if (updated) setSelected(updated);
     setEditing(false);
   };
 
-  const review = async (state: "VERIFIED" | "DISPUTED") => {
-    if (!selected || !reason.trim()) return;
-    const updated = await session.verifyMemory(selected.id, state, reason.trim());
+  const confirm = async () => {
+    if (!selected) return;
+    const updated = await session.verifyMemory(selected.id, "VERIFIED", "Confirmed from Polarbear Desktop.");
     if (updated) setSelected(updated);
   };
 
-  const archive = async () => {
-    if (!selected || !reason.trim()) return;
-    const updated = await session.archiveMemory(selected.id, reason.trim());
+  const archive = async (reason = "Archived from Polarbear Desktop.") => {
+    if (!selected) return;
+    const updated = await session.archiveMemory(selected.id, reason);
     if (updated) setSelected(updated);
-  };
-
-  const supersede = async () => {
-    if (!selected || !reason.trim() || !supersedeTarget.trim()) return;
-    const result = await session.relateMemory(selected.id, supersedeTarget.trim(), "SUPERSEDES", reason.trim());
-    if (result) {
-      const updated = await session.loadMemory(selected.id);
-      if (updated) setSelected(updated);
-      setSupersedeTarget("");
-    }
   };
 
   return <div className="context-page context-memory-page" aria-busy={session.isLoading || session.isMutating}>
@@ -275,14 +283,14 @@ function ContextMemory({ session }: { session: Session }) {
         <label>{t("context.memory.status")}<select value={status} onChange={(event) => setStatus(event.target.value as MemoryStatusFilter)}>
           <option value="all">{t("context.memory.allStates")}</option>
           <option value="active">{t("context.memory.active")}</option>
-          <option value="needsReview">{t("context.memory.needsReview")}</option>
+          <option value="needsAttention">{t("context.memory.needsAttention")}</option>
           <option value="stale">{t("context.memory.stale")}</option>
           <option value="superseded">{t("context.memory.superseded")}</option>
         </select></label>
       </aside>
       <div className="context-memory-list" role="list" aria-label={t("context.memory.list")}>
-        {items.map((memory) => <button type="button" role="listitem" key={memory.id} className={selected?.id === memory.id ? "active" : ""} onClick={() => void select(memory)}>
-          <span>{memory.type} · {memory.lifecycleStatus}</span><strong>{memory.summary}</strong><small>{memory.verificationState} · {new Date(memory.updatedAt).toLocaleString()}</small>
+        {items.map((memory) => <button type="button" role="listitem" key={memory.id} className={selected?.id === memory.id ? "active" : ""} onClick={() => select(memory)} onDoubleClick={() => select(memory, true)}>
+          <span>{memory.type} · {memory.lifecycleStatus}</span><strong>{memory.summary}</strong><small>{needsAttention(memory) ? t("context.memory.needsAttention") : t("context.memory.active")} · {new Date(memory.updatedAt).toLocaleString()}</small>
         </button>)}
         {items.length === 0 && !session.isLoading ? <p>{t("context.memory.empty")}</p> : null}
       </div>
@@ -307,11 +315,18 @@ function ContextMemory({ session }: { session: Session }) {
             {selected.relations.length > 0 ? selected.relations.map((relation) => <span key={`${relation.type}-${relation.targetMemoryId}`}>{relation.type} {relation.targetMemoryId}</span>) : <span>{t("context.memory.noRelations")}</span>}
             {selected.entities.map(({ entity }) => <span key={entity.id}>{entity.kind}: {entity.displayName}</span>)}
           </div></details>
-          <label className="context-reason-field">{t("context.memory.reviewReason")}<input value={reason} onChange={(event) => setReason(event.target.value)} /></label>
           <div className="context-action-row">
-            {editing ? <><button type="button" disabled={session.isMutating || !reason.trim() || !summary.trim() || !content.trim()} onClick={() => void saveAndApprove()}>{t("context.memory.editApprove")}</button><button type="button" disabled={session.isMutating} onClick={() => setEditing(false)}>{t("common.cancel")}</button></> : <><button type="button" disabled={session.isMutating} onClick={() => setEditing(true)}>{t("context.memory.edit")}</button><button type="button" disabled={session.isMutating || !reason.trim()} onClick={() => void review("VERIFIED")}>{t("context.memory.approve")}</button><button type="button" disabled={session.isMutating || !reason.trim()} onClick={() => void review("DISPUTED")}>{t("context.memory.dispute")}</button><button type="button" disabled={session.isMutating || !reason.trim()} onClick={() => void archive()}>{t("context.memory.archive")}</button></>}
+            {editing ? <>
+              <button type="button" disabled={session.isMutating || !summary.trim() || !content.trim()} onClick={() => void save()}>{t("context.memory.save")}</button>
+              <button type="button" disabled={session.isMutating} onClick={() => setEditing(false)}>{t("common.cancel")}</button>
+            </> : needsAttention(selected) ? <>
+              <button type="button" disabled={session.isMutating} onClick={() => void confirm()}>{t("context.memory.confirm")}</button>
+              <button type="button" disabled={session.isMutating} onClick={() => void archive("Rejected from Polarbear Desktop after attention review.")}>{t("context.memory.reject")}</button>
+            </> : selected.lifecycleStatus === "ACTIVE" ? <details className="context-memory-actions-menu">
+              <summary title={t("context.memory.moreActions")} aria-label={t("context.memory.moreActions")}>•••</summary>
+              <button type="button" disabled={session.isMutating} onClick={() => void archive()}>{t("context.memory.archive")}</button>
+            </details> : null}
           </div>
-          <div className="context-supersede-row"><input value={supersedeTarget} onChange={(event) => setSupersedeTarget(event.target.value)} placeholder={t("context.memory.supersedeTarget")} /><button type="button" disabled={session.isMutating || !reason.trim() || !supersedeTarget.trim()} onClick={() => void supersede()}>{t("context.memory.supersede")}</button></div>
         </> : <p>{t("context.memory.select")}</p>}
       </article>
     </div>
@@ -420,7 +435,7 @@ function ContextTasks({ session }: { session: Session }) {
           <ContextDetail title={t("context.tasks.constraints")}><ul>{constraints.length > 0 ? constraints.map((constraint) => <li key={constraint.id}>{constraint.summary}</li>) : <li>{t("context.tasks.noConstraints")}</li>}</ul></ContextDetail>
           <ContextDetail title={t("context.tasks.checkpoint")}><div className="context-checkpoint-editor"><select value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>{TASK_STATUSES.map((item) => <option key={item}>{item}</option>)}</select><select value={phase} onChange={(event) => setPhase(event.target.value as TaskPhase)}>{TASK_PHASES.map((item) => <option key={item}>{item}</option>)}</select><textarea value={checkpointSummary} placeholder={t("context.tasks.checkpointSummary")} onChange={(event) => setCheckpointSummary(event.target.value)} /><textarea value={nextSteps} placeholder={t("context.tasks.nextSteps")} onChange={(event) => setNextSteps(event.target.value)} /><button type="button" disabled={session.isMutating || !checkpointSummary.trim()} onClick={() => void checkpoint()}>{t("context.tasks.saveCheckpoint")}</button></div></ContextDetail>
           <ContextDetail title={t("context.tasks.checkpointHistory")}><ActivityList items={activity?.checkpoints ?? []} emptyLabel={t("context.tasks.noCheckpointHistory")} getItemKey={(checkpoint) => checkpoint.id} renderItem={(checkpoint) => <><strong>{checkpoint.status} · {checkpoint.phase}</strong><span>{checkpoint.summary}</span><time dateTime={checkpoint.createdAt}>{new Date(checkpoint.createdAt).toLocaleString()}</time></>} /></ContextDetail>
-          <ContextDetail title={t("context.tasks.contextInspection")}><textarea value={contextRequest} placeholder={t("context.tasks.contextRequest")} onChange={(event) => setContextRequest(event.target.value)} /><button type="button" disabled={session.isMutating || !contextRequest.trim()} onClick={() => void session.inspectPacket({ currentRequest: contextRequest.trim(), taskId: selected.id, maxTokens: session.config?.defaultContextBudget })}>{t("context.tasks.inspectContext")}</button><PacketInspector packet={session.lastPacket} explanation={session.packetExplanation} /></ContextDetail>
+          <ContextDetail title={t("context.tasks.contextInspection")}><textarea value={contextRequest} placeholder={t("context.tasks.contextRequest")} onChange={(event) => setContextRequest(event.target.value)} /><button type="button" disabled={session.isMutating || !contextRequest.trim()} onClick={() => void session.inspectPacket({ currentRequest: contextRequest.trim(), taskId: selected.id, ...(session.config?.contextBudgetMode === "custom" ? { maxTokens: session.config.defaultContextBudget } : {}) })}>{t("context.tasks.inspectContext")}</button><PacketInspector packet={session.lastPacket} explanation={session.packetExplanation} /></ContextDetail>
           <ContextDetail title={t("context.tasks.recentRuns")}><ActivityList items={activity?.runs ?? []} emptyLabel={t("context.tasks.noRuns")} getItemKey={(run) => run.id} renderItem={(run) => <button type="button" onClick={() => void inspectRun(run)}><strong>{run.provider} · {run.status}</strong><span>{run.phase}{run.model ? ` · ${run.model}` : ""}</span><time dateTime={run.startedAt}>{new Date(run.startedAt).toLocaleString()}</time></button>} /></ContextDetail>
           {runInspection ? <ContextDetail title={t("context.tasks.runContext")}><PacketInspector packet={runInspection.context.packet ?? null} explanation={runInspection.explanation} emptyLabel={t("context.tasks.noRunContext")} /></ContextDetail> : null}
         </> : <p>{t("context.tasks.select")}</p>}
@@ -432,12 +447,16 @@ function ContextTasks({ session }: { session: Session }) {
 function ContextSettings({ session }: { session: Session }) {
   const { t } = useI18n();
   const [captureMode, setCaptureMode] = useState<"off" | "manual" | "summary">("manual");
-  const [retentionDays, setRetentionDays] = useState(0);
+  const [retentionDays, setRetentionDays] = useState(30);
+  const [budgetMode, setBudgetMode] = useState<"auto" | "custom">("auto");
+  const [customBudget, setCustomBudget] = useState(2_000);
 
   useEffect(() => {
     if (session.config) {
       setCaptureMode(session.config.captureMode);
       setRetentionDays(session.config.rawEventRetentionDays);
+      setBudgetMode(session.config.contextBudgetMode);
+      setCustomBudget(session.config.defaultContextBudget);
     }
   }, [session.config]);
 
@@ -445,18 +464,23 @@ function ContextSettings({ session }: { session: Session }) {
     <PageHeader title={t("context.settings.title")} description={t("context.settings.description")} />
     <div className="context-settings-content">
       <ContextSection title={t("context.settings.connections")}>
-        <dl className="context-detail-grid"><dt>{t("context.settings.localApi")}</dt><dd>{session.hello?.transport ?? "—"}</dd><dt>{t("context.settings.service")}</dt><dd>{session.serviceRunning ? t("context.settings.running") : t("context.settings.stopped")}</dd><dt>{t("context.settings.engine")}</dt><dd>{session.hello?.engineVersion ?? "—"}</dd></dl>
-        <div className="context-action-row"><button type="button" disabled={session.isMutating || session.serviceRunning === true} onClick={() => void session.setService(true)}>{t("context.settings.start")}</button><button type="button" disabled={session.isMutating || session.serviceRunning !== true} onClick={() => void session.setService(false)}>{t("context.settings.stop")}</button></div>
-        <h3 className="context-subsection-heading">{t("context.settings.agentConnections")}</h3>
-        <p className="context-subtle">{t("context.settings.connectionStateHint")}</p>
-        <ActivityList items={session.connections} emptyLabel={t("context.settings.noAgentConnections")} getItemKey={(connection) => connection.provider} renderItem={(connection) => <><strong>{connection.provider} · {connection.status}</strong><span>{connection.integrationMode} · {connection.activeRunCount}</span><time dateTime={connection.lastSeenAt}>{new Date(connection.lastSeenAt).toLocaleString()}</time></>} />
+        <div className="context-integration-list">{session.integrations.map((integration) => <div className="context-integration-row" key={integration.id}>
+          <strong>{integration.name}</strong>
+          <span>{integration.status === "CONNECTED" ? t("context.settings.connected") : t("context.settings.needsAttention")}</span>
+          {integration.status === "NEEDS_ATTENTION" ? <button type="button" disabled={session.isMutating} onClick={() => void session.repairIntegration(integration.id)}>{t("context.settings.repair")}</button> : null}
+        </div>)}</div>
       </ContextSection>
       <ContextSection title={t("context.settings.storage")}><p>{t("context.settings.storageManaged")}</p><span>{t("context.settings.storagePrivacy")}</span></ContextSection>
-      <ContextSection title={t("context.settings.contextBudget")}><strong>{session.config?.defaultContextBudget.toLocaleString() ?? "—"} {t("context.tokens")}</strong><p>{t("context.settings.contextBudgetReadOnly")}</p></ContextSection>
       <ContextSection title={t("context.settings.memoryBehavior")}>
-        <div className="context-settings-form"><label>{t("context.settings.captureMode")}<select value={captureMode} onChange={(event) => setCaptureMode(event.target.value as typeof captureMode)}><option value="off">{t("context.settings.captureOff")}</option><option value="manual">{t("context.settings.captureManual")}</option><option value="summary">{t("context.settings.captureSummary")}</option></select></label><label>{t("context.settings.retentionDays")}<input type="number" min="0" max="30" value={retentionDays} onChange={(event) => setRetentionDays(Number(event.target.value))} /></label><button type="button" disabled={session.isMutating || retentionDays < 0 || retentionDays > 30} onClick={() => void session.updateConfig(captureMode, retentionDays)}>{t("context.settings.save")}</button></div>
+        <div className="context-settings-form">
+          <label>{t("context.settings.contextBudgetMode")}<select value={budgetMode} onChange={(event) => setBudgetMode(event.target.value as typeof budgetMode)}><option value="auto">{t("context.settings.contextBudgetAuto")}</option><option value="custom">{t("context.settings.contextBudgetCustom")}</option></select></label>
+          {budgetMode === "custom" ? <label>{t("context.settings.customBudget")}<input type="number" min="400" max="12000" value={customBudget} onChange={(event) => setCustomBudget(Number(event.target.value))} /></label> : null}
+          <label>{t("context.settings.captureMode")}<select value={captureMode} onChange={(event) => setCaptureMode(event.target.value as typeof captureMode)}><option value="off">{t("context.settings.captureOff")}</option><option value="manual">{t("context.settings.captureManual")}</option><option value="summary">{t("context.settings.captureSummary")}</option></select></label>
+          <label>{t("context.settings.retentionDays")}<input type="number" min="0" max="30" value={retentionDays} onChange={(event) => setRetentionDays(Number(event.target.value))} /><small>{t("context.settings.rawEventsHint")}</small></label>
+          <p>{t("context.settings.durableMemoryHint")}</p>
+          <button type="button" disabled={session.isMutating || retentionDays < 0 || retentionDays > 30 || customBudget < 400 || customBudget > 12_000} onClick={() => void session.updateConfig({ captureMode, rawEventRetentionDays: retentionDays, contextBudgetMode: budgetMode, defaultContextBudget: customBudget })}>{t("context.settings.save")}</button>
+        </div>
       </ContextSection>
-      <ContextSection title={t("context.settings.capabilities")}><ul className="context-capability-list">{session.hello?.capabilities.map((capability) => <li key={capability}>{capability}</li>)}</ul></ContextSection>
     </div>
   </div>;
 }

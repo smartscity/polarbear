@@ -2,6 +2,7 @@ import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 import type {
   AgentConnectionListResponse,
+  AgentIntegrationListResponse,
   ContextExplainResponse,
   ContextExplanation,
   ContextOsMetrics,
@@ -44,9 +45,6 @@ async function request<T>(workspaceRoot: string, method: string, params: Record<
 
 export const memoryApi = {
   bindWorkspace: (workspaceRoot: string) => invokeTauri<string>(TAURI_COMMANDS.memoryAdminBindWorkspace, { workspaceRoot }),
-  serviceStatus: () => invokeTauri<{ running: boolean }>(TAURI_COMMANDS.memoryServiceStatus),
-  startService: () => invokeTauri<{ running: boolean }>(TAURI_COMMANDS.memoryServiceStart),
-  stopService: (workspaceRoot: string) => invokeTauri<{ stopping: boolean }>(TAURI_COMMANDS.memoryServiceStop, { workspaceRoot }),
   hello: (workspaceRoot: string) => request<HelloResponse>(workspaceRoot, "system.hello"),
   status: (workspaceRoot: string) => request<ProjectStatusResponse>(workspaceRoot, "projects.status"),
   list: (workspaceRoot: string, filters: { query?: string; status?: LifecycleStatus; type?: MemoryType; limit?: number; offset?: number }) =>
@@ -90,6 +88,10 @@ export const memoryApi = {
     request<TaskRunContext>(workspaceRoot, "tasks.run_context", { taskId, runId }),
   agentConnections: (workspaceRoot: string) =>
     request<AgentConnectionListResponse>(workspaceRoot, "agents.connections"),
+  agentIntegrations: (workspaceRoot: string) =>
+    request<AgentIntegrationListResponse>(workspaceRoot, "agents.integrations"),
+  repairAgentIntegration: (workspaceRoot: string, integration: "codex" | "claude-code") =>
+    request<AgentIntegrationListResponse>(workspaceRoot, "agents.integrations_repair", { integration }),
   buildContextPacket: (workspaceRoot: string, input: {
     currentRequest: string; taskId?: string; maxTokens?: number; provider?: string;
   }) => request<ContextPacket>(workspaceRoot, "contexts.build", input),
@@ -108,8 +110,8 @@ export const memoryApi = {
     request<PromoteResponse>(workspaceRoot, "knowledge.promote", { memoryId, expectedSha256 }),
   diagnostics: (workspaceRoot: string) => request<DiagnosticsResponse>(workspaceRoot, "projects.diagnostics"),
   config: (workspaceRoot: string) => request<ProjectMemoryConfig>(workspaceRoot, "projects.config"),
-  updateConfig: (workspaceRoot: string, captureMode: ProjectMemoryConfig["captureMode"], rawEventRetentionDays: number) =>
-    request<ProjectMemoryConfig>(workspaceRoot, "projects.config_update", { captureMode, rawEventRetentionDays }),
+  updateConfig: (workspaceRoot: string, config: ProjectMemoryConfig) =>
+    request<ProjectMemoryConfig>(workspaceRoot, "projects.config_update", config),
   maintenancePreview: (workspaceRoot: string) => request<MaintenancePlan>(workspaceRoot, "maintenance.preview"),
   maintenanceRun: (workspaceRoot: string) => request<MaintenancePlan>(workspaceRoot, "maintenance.run"),
   backups: (workspaceRoot: string) => request<BackupListResponse>(workspaceRoot, "backups.list"),

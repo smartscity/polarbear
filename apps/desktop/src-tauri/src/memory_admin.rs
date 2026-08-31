@@ -43,6 +43,8 @@ const ALLOWED_METHODS: &[&str] = &[
     "tasks.runs",
     "tasks.run_context",
     "agents.connections",
+    "agents.integrations",
+    "agents.integrations_repair",
     "observations.distill",
     "usage.context_os",
     "usage.token_savings",
@@ -356,61 +358,6 @@ fn connect_or_start(socket_path: &Path) -> Result<std::os::unix::net::UnixStream
 }
 
 #[cfg(unix)]
-fn service_status_unix() -> Result<Value, String> {
-    use std::os::unix::net::UnixStream;
-    let (directory, socket_path, token_path) = service_paths()?;
-    if !socket_path.exists() {
-        return Ok(json!({ "running": false }));
-    }
-    validate_private_path(&directory, "directory")?;
-    validate_private_path(&socket_path, "socket")?;
-    validate_private_path(&token_path, "file")?;
-    Ok(json!({ "running": UnixStream::connect(socket_path).is_ok() }))
-}
-
-#[cfg(unix)]
-fn start_service_unix() -> Result<Value, String> {
-    if service_status_unix()?
-        .get("running")
-        .and_then(Value::as_bool)
-        == Some(true)
-    {
-        return verify_service_handshake();
-    }
-    spawn_service()?;
-    for _ in 0..20 {
-        thread::sleep(Duration::from_millis(100));
-        if service_status_unix()?
-            .get("running")
-            .and_then(Value::as_bool)
-            == Some(true)
-        {
-            return verify_service_handshake();
-        }
-    }
-    Err(error(
-        "MEMORY_ENGINE_HANDSHAKE_FAILED",
-        descriptor_recovery_message(
-            "Polarbear Memory Engine started but did not complete its local handshake.",
-        ),
-    ))
-}
-
-#[cfg(unix)]
-fn verify_service_handshake() -> Result<Value, String> {
-    request_unix(String::new(), "system.hello".to_owned(), json!({}))
-        .map(|_| json!({ "running": true }))
-        .map_err(|_| {
-            error(
-                "MEMORY_ENGINE_HANDSHAKE_FAILED",
-                descriptor_recovery_message(
-                    "Polarbear Memory Engine is running but did not complete its local handshake.",
-                ),
-            )
-        })
-}
-
-#[cfg(unix)]
 fn canonical_memory_workspace(workspace_root: &str) -> Result<String, String> {
     let root = fs::canonicalize(workspace_root).map_err(|_| {
         error(
@@ -560,7 +507,7 @@ fn request_unix(workspace_root: String, method: String, params: Value) -> Result
 mod tests {
     use super::{
         canonical_memory_workspace, request_unix, resolve_service_launch, runtime_descriptor_path,
-        start_service_unix, MemoryAdminState, RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
+        MemoryAdminState, RUNTIME_DESCRIPTOR_SCHEMA_VERSION,
     };
     use std::fs;
     use std::io::{BufRead, BufReader, Write};
@@ -866,10 +813,6 @@ mod tests {
         .success());
         let previous = std::env::var_os("POLARBEAR_MEMORY_DATA_DIR");
         unsafe { std::env::set_var("POLARBEAR_MEMORY_DATA_DIR", &data) };
-        assert_eq!(
-            start_service_unix().expect("start Desktop managed Engine")["running"],
-            true
-        );
         let response = request_unix(
             root.to_string_lossy().to_string(),
             "projects.status".to_owned(),
@@ -935,64 +878,6 @@ pub fn memory_admin_bind_workspace(
     workspace_root: String,
 ) -> Result<String, String> {
     state.bind(&workspace_root)
-}
-
-#[tauri::command]
-pub async fn memory_service_status() -> Result<Value, String> {
-    #[cfg(unix)]
-    {
-        tauri::async_runtime::spawn_blocking(service_status_unix)
-            .await
-            .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
-    }
-    #[cfg(not(unix))]
-    Err(error(
-        "MEMORY_PLATFORM_UNSUPPORTED",
-        "Memory service controls require Unix-domain sockets.",
-    ))
-}
-
-#[tauri::command]
-pub async fn memory_service_start() -> Result<Value, String> {
-    #[cfg(unix)]
-    {
-        tauri::async_runtime::spawn_blocking(start_service_unix)
-            .await
-            .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
-    }
-    #[cfg(not(unix))]
-    Err(error(
-        "MEMORY_PLATFORM_UNSUPPORTED",
-        "Memory service controls require Unix-domain sockets.",
-    ))
-}
-
-#[tauri::command]
-pub async fn memory_service_stop(
-    state: tauri::State<'_, MemoryAdminState>,
-    workspace_root: String,
-) -> Result<Value, String> {
-    #[cfg(unix)]
-    {
-        let authorized_workspace = state.authorize(&workspace_root)?;
-        tauri::async_runtime::spawn_blocking(move || {
-            request_unix(
-                authorized_workspace,
-                "system.shutdown".to_owned(),
-                json!({}),
-            )
-        })
-        .await
-        .map_err(|_| error("MEMORY_SERVICE_FAILED", "Memory service task failed."))?
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = (state, workspace_root);
-        Err(error(
-            "MEMORY_PLATFORM_UNSUPPORTED",
-            "Memory service controls require Unix-domain sockets.",
-        ))
-    }
 }
 
 #[tauri::command]
