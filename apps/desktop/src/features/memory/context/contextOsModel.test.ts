@@ -1,27 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { MemoryRecord, TaskRecord } from "../generated/adminV1";
+import type { MemoryRecord } from "../generated/adminV1";
 import {
-  activeTaskFor,
   contextOverviewData,
   isStale,
+  memoryDisplayState,
   matchesMemoryStatus,
   needsAttention,
+  summarizeContextSources,
   tokenImpact,
 } from "./contextOsModel";
-
-function task(status: TaskRecord["status"], id: string): TaskRecord {
-  return {
-    id,
-    projectId: "project",
-    title: id,
-    objective: id,
-    status,
-    phase: "IMPLEMENTATION",
-    priority: 500,
-    createdAt: "2026-08-29T00:00:00.000Z",
-    updatedAt: "2026-08-29T00:00:00.000Z",
-  };
-}
 
 function memory(overrides: Partial<MemoryRecord> = {}): MemoryRecord {
   return {
@@ -57,14 +44,6 @@ function memory(overrides: Partial<MemoryRecord> = {}): MemoryRecord {
 }
 
 describe("Context OS lean model", () => {
-  it("prioritizes active durable work for the overview", () => {
-    expect(activeTaskFor([
-      task("PLANNED", "planned"),
-      task("ACTIVE", "active"),
-      task("BLOCKED", "blocked"),
-    ])?.id).toBe("active");
-  });
-
   it("only surfaces exceptional active memories as needing attention", () => {
     const normal = memory({ verificationState: "UNVERIFIED", importance: 500, confidence: 500 });
     const importantLowConfidence = memory({ verificationState: "UNVERIFIED", importance: 800, confidence: 500 });
@@ -86,12 +65,11 @@ describe("Context OS lean model", () => {
     expect(needsAttention(importantLowConfidence)).toBe(true);
     expect(matchesMemoryStatus(importantLowConfidence, "needsAttention")).toBe(true);
     expect(isStale(stale)).toBe(true);
-    expect(matchesMemoryStatus(stale, "stale")).toBe(true);
+    expect(memoryDisplayState(stale)).toBe("active");
   });
 
   it("counts only concrete relationship signals in overview health", () => {
     const overview = contextOverviewData(
-      [task("ACTIVE", "active")],
       [memory({
         verificationState: "UNVERIFIED",
         relations: [{
@@ -107,6 +85,20 @@ describe("Context OS lean model", () => {
 
     expect(overview.needsAttentionCount).toBe(1);
     expect(overview.conflictCount).toBe(1);
+  });
+
+  it("maps rejected Memory into history and groups Context sources", () => {
+    const rejected = memory({ lifecycleStatus: "REJECTED", verificationState: "DISPUTED" });
+    expect(memoryDisplayState(rejected)).toBe("rejected");
+    expect(matchesMemoryStatus(rejected, "archived")).toBe(true);
+    expect(summarizeContextSources({ items: [
+      { category: "DECISIONS", estimatedTokens: 120 },
+      { category: "DECISIONS", estimatedTokens: 80 },
+      { category: "ARCHITECTURE", estimatedTokens: 140 },
+    ] })).toEqual([
+      { category: "DECISIONS", tokens: 200, count: 2 },
+      { category: "ARCHITECTURE", tokens: 140, count: 1 },
+    ]);
   });
 
   it("reports savings and increased token impact without negative percentages", () => {

@@ -1,5 +1,5 @@
 {
-  "version": "1.4",
+  "version": "1.5",
   "capabilities": [
     "projects.status",
     "system.shutdown",
@@ -9,6 +9,7 @@
     "memories.history",
     "memories.update",
     "memories.verify",
+    "memories.reject",
     "memories.archive",
     "memories.restore",
     "memories.complete",
@@ -18,6 +19,7 @@
     "memories.purge",
     "contexts.explain",
     "contexts.build",
+    "contexts.current",
     "contexts.packet_explain",
     "tasks.list",
     "tasks.get",

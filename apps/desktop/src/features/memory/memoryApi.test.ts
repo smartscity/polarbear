@@ -74,6 +74,10 @@ describe("memoryApi", () => {
       workspaceRoot: "/repo", method: "contexts.build",
       params: { taskId: "task-id", currentRequest: "Continue", maxTokens: 2_000 },
     });
+    await memoryApi.currentContextPacket("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "contexts.current", params: {},
+    });
     await memoryApi.contextOsMetrics("/repo", "task-id");
     expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
       workspaceRoot: "/repo", method: "usage.context_os", params: { taskId: "task-id" },
@@ -177,6 +181,11 @@ describe("memoryApi", () => {
       workspaceRoot: "/repo",
       method: "memories.update",
       params: { memoryId: "memory-id", summary: "new", content: "content", reason: "fix stale detail" },
+    });
+    invoke.mockResolvedValueOnce({ id: "memory-id", lifecycleStatus: "REJECTED" });
+    await memoryApi.reject("/repo", "memory-id", "incorrect");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "memories.reject", params: { memoryId: "memory-id", reason: "incorrect" },
     });
     invoke.mockResolvedValueOnce({ purgedMemoryIdHash: "hash" });
     await memoryApi.purge("/repo", "memory-id", "PURGE memory-id", "user request");

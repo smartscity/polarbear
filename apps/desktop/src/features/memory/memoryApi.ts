@@ -7,6 +7,7 @@ import type {
   ContextExplanation,
   ContextOsMetrics,
   ContextPacket,
+  CurrentContextResponse,
   CheckpointState,
   HelloResponse,
   LifecycleStatus,
@@ -56,6 +57,8 @@ export const memoryApi = {
     request<MemoryRecord>(workspaceRoot, "memories.update", { memoryId, summary, content, reason }),
   verify: (workspaceRoot: string, memoryId: string, state: VerificationState, reason: string) =>
     request<MemoryRecord>(workspaceRoot, "memories.verify", { memoryId, state, reason }),
+  reject: (workspaceRoot: string, memoryId: string, reason: string) =>
+    request<MemoryRecord>(workspaceRoot, "memories.reject", { memoryId, reason }),
   archive: (workspaceRoot: string, memoryId: string, reason: string) =>
     request<MemoryRecord>(workspaceRoot, "memories.archive", { memoryId, reason }),
   restore: (workspaceRoot: string, memoryId: string, reason: string) =>
@@ -95,6 +98,8 @@ export const memoryApi = {
   buildContextPacket: (workspaceRoot: string, input: {
     currentRequest: string; taskId?: string; maxTokens?: number; provider?: string;
   }) => request<ContextPacket>(workspaceRoot, "contexts.build", input),
+  currentContextPacket: (workspaceRoot: string) =>
+    request<CurrentContextResponse>(workspaceRoot, "contexts.current"),
   explainContextPacket: (workspaceRoot: string, packetId: string) =>
     request<ContextExplanation>(workspaceRoot, "contexts.packet_explain", { packetId }),
   contextOsMetrics: (workspaceRoot: string, taskId?: string) =>

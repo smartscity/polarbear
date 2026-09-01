@@ -302,7 +302,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
-  const [activeSurface, setActiveSurface] = useState<AppSurface>("workspace");
+  const [activeSurface, setActiveSurface] = useState<AppSurface>("context");
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [dirtyFileIds, setDirtyFileIds] = useState<Set<string>>(new Set());
   const [collapseVersion, setCollapseVersion] = useState(0);

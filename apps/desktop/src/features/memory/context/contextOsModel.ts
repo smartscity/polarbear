@@ -1,9 +1,8 @@
-import type { ContextOsMetrics, MemoryRecord, TaskRecord } from "../generated/adminV1";
+import type { ContextOsMetrics, MemoryRecord } from "../generated/adminV1";
 
 export const CONTEXT_SECTIONS = [
   "overview",
   "memory",
-  "tasks",
   "settings",
 ] as const;
 
@@ -11,25 +10,15 @@ export type ContextSection = (typeof CONTEXT_SECTIONS)[number];
 
 export type MemoryStatusFilter =
   | "all"
-  | "active"
   | "needsAttention"
-  | "stale"
-  | "superseded";
+  | "archived";
 
 export type ContextOverviewData = {
-  activeTask: TaskRecord | undefined;
   memoryCount: number;
   needsAttentionCount: number;
   conflictCount: number;
   metrics: ContextOsMetrics | null;
 };
-
-export function activeTaskFor(tasks: readonly TaskRecord[]): TaskRecord | undefined {
-  return tasks.find((task) => task.status === "ACTIVE")
-    ?? tasks.find((task) => task.status === "VERIFYING")
-    ?? tasks.find((task) => task.status === "BLOCKED")
-    ?? tasks[0];
-}
 
 const IMPORTANT_MEMORY_THRESHOLD = 700;
 const LOW_CONFIDENCE_THRESHOLD = 600;
@@ -41,8 +30,15 @@ export function needsAttention(memory: MemoryRecord): boolean {
   const important = memory.importance >= IMPORTANT_MEMORY_THRESHOLD;
   const conflicts = memory.relations.some((relation) => relation.type === "CONTRADICTS");
   return conflicts
+    || memory.correctnessRisk === "HIGH"
     || (important && memory.confidence < LOW_CONFIDENCE_THRESHOLD)
-    || (important && (memory.correctnessRisk === "HIGH" || isStale(memory)));
+    || (important && isStale(memory));
+}
+
+export function memoryDisplayState(memory: MemoryRecord): "active" | "needsAttention" | "rejected" | "archived" {
+  if (memory.lifecycleStatus === "REJECTED") return "rejected";
+  if (memory.lifecycleStatus === "ARCHIVED" || memory.lifecycleStatus === "SUPERSEDED") return "archived";
+  return needsAttention(memory) ? "needsAttention" : "active";
 }
 
 export function isStale(memory: MemoryRecord): boolean {
@@ -61,19 +57,31 @@ export function matchesMemoryStatus(
   filter: MemoryStatusFilter,
 ): boolean {
   if (filter === "all") return true;
-  if (filter === "active") return memory.lifecycleStatus === "ACTIVE";
   if (filter === "needsAttention") return needsAttention(memory);
-  if (filter === "stale") return isStale(memory);
-  return memory.lifecycleStatus === "SUPERSEDED";
+  return memory.lifecycleStatus === "ARCHIVED"
+    || memory.lifecycleStatus === "SUPERSEDED"
+    || memory.lifecycleStatus === "REJECTED";
+}
+
+export type ContextSourceSummary = { category: string; tokens: number; count: number };
+
+export function summarizeContextSources(packet: { items: Array<{ category: string; estimatedTokens: number }> } | null): ContextSourceSummary[] {
+  if (!packet) return [];
+  const summaries = new Map<string, ContextSourceSummary>();
+  for (const item of packet.items) {
+    const current = summaries.get(item.category) ?? { category: item.category, tokens: 0, count: 0 };
+    current.tokens += item.estimatedTokens;
+    current.count += 1;
+    summaries.set(item.category, current);
+  }
+  return [...summaries.values()].sort((left, right) => right.tokens - left.tokens);
 }
 
 export function contextOverviewData(
-  tasks: readonly TaskRecord[],
   memories: readonly MemoryRecord[],
   metrics: ContextOsMetrics | null,
 ): ContextOverviewData {
   return {
-    activeTask: activeTaskFor(tasks),
     memoryCount: memories.length,
     needsAttentionCount: memories.filter(needsAttention).length,
     conflictCount: memories.reduce(
