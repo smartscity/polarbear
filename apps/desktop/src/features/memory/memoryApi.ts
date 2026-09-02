@@ -10,6 +10,7 @@ import type {
   CurrentContextResponse,
   CheckpointState,
   HelloResponse,
+  LifecycleMetrics,
   LifecycleStatus,
   BackupInspection,
   BackupListResponse,
@@ -104,6 +105,8 @@ export const memoryApi = {
     request<ContextExplanation>(workspaceRoot, "contexts.packet_explain", { packetId }),
   contextOsMetrics: (workspaceRoot: string, taskId?: string) =>
     request<ContextOsMetrics>(workspaceRoot, "usage.context_os", { ...(taskId ? { taskId } : {}) }),
+  lifecycleMetrics: (workspaceRoot: string) =>
+    request<LifecycleMetrics>(workspaceRoot, "usage.lifecycle"),
   distillObservations: (workspaceRoot: string, limit = 200) =>
     request<{ observations: number; candidates: number; recorded: number }>(workspaceRoot, "observations.distill", { limit }),
   tokenSavings: (workspaceRoot: string) => request<TokenSavingsStats>(workspaceRoot, "usage.token_savings"),

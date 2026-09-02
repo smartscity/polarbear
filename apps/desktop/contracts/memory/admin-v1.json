@@ -1,5 +1,5 @@
 {
-  "version": "1.5",
+  "version": "1.6",
   "capabilities": [
     "projects.status",
     "system.shutdown",
@@ -33,6 +33,7 @@
     "agents.integrations_repair",
     "observations.distill",
     "usage.context_os",
+    "usage.lifecycle",
     "usage.token_savings",
     "usage.token_savings_reset",
     "projects.diagnostics",

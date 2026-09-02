@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-const API_VERSION: &str = "1.4";
+const API_VERSION: &str = "1.6";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
 include!(concat!(env!("OUT_DIR"), "/runtime_descriptor_contract.rs"));
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -49,6 +49,7 @@ const ALLOWED_METHODS: &[&str] = &[
     "agents.integrations_repair",
     "observations.distill",
     "usage.context_os",
+    "usage.lifecycle",
     "usage.token_savings",
     "usage.token_savings_reset",
     "projects.diagnostics",

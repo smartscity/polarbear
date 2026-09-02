@@ -82,6 +82,10 @@ describe("memoryApi", () => {
     expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
       workspaceRoot: "/repo", method: "usage.context_os", params: { taskId: "task-id" },
     });
+    await memoryApi.lifecycleMetrics("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "usage.lifecycle", params: {},
+    });
     await memoryApi.listTaskCheckpoints("/repo", "task-id");
     expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
       workspaceRoot: "/repo", method: "tasks.checkpoints", params: { taskId: "task-id", limit: 20 },
