@@ -360,7 +360,6 @@ fn connect_or_start(socket_path: &Path) -> Result<std::os::unix::net::UnixStream
     ))
 }
 
-#[cfg(unix)]
 fn canonical_memory_workspace(workspace_root: &str) -> Result<String, String> {
     let root = fs::canonicalize(workspace_root).map_err(|_| {
         error(
