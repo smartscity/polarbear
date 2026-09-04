@@ -3,6 +3,10 @@ import {
   renderPlantUmlSvg,
 } from "./plantUmlRenderer";
 import { describePlantUmlRenderError } from "./plantUmlRenderError";
+import {
+  approvePlantUmlRemoteRender,
+  hasPlantUmlRemoteRenderApproval,
+} from "./plantUmlRemoteConsent";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import {
   exportSvgElementAsPng,
@@ -22,7 +26,14 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   const [svgContent, setSvgContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [actionStatus, setActionStatus] = useState("");
-  const [requestedSource, setRequestedSource] = useState<string | null>(null);
+  const [requestedSource, setRequestedSource] = useState<string | null>(() =>
+    hasPlantUmlRemoteRenderApproval(source) ? source : null,
+  );
+  useEffect(() => {
+    if (hasPlantUmlRemoteRenderApproval(source)) {
+      setRequestedSource(source);
+    }
+  }, [source]);
   useEffect(() => {
     setActionStatus("");
     if (requestedSource !== source) {
@@ -117,7 +128,10 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
           ) : requestedSource !== source ? (
             <div className="plantuml-remote-consent">
               <span>{t("diagram.plantUmlRemoteDisabled")}</span>
-              <button type="button" onClick={() => setRequestedSource(source)}>
+              <button type="button" onClick={() => {
+                approvePlantUmlRemoteRender(source);
+                setRequestedSource(source);
+              }}>
                 {t("diagram.plantUmlRenderRemotely")}
               </button>
             </div>

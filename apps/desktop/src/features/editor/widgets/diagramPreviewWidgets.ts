@@ -9,6 +9,10 @@ import {
   renderPlantUmlSvg,
 } from "../../diagram/plantUmlRenderer";
 import { describePlantUmlRenderError } from "../../diagram/plantUmlRenderError";
+import {
+  approvePlantUmlRemoteRender,
+  hasPlantUmlRemoteRenderApproval,
+} from "../../diagram/plantUmlRemoteConsent";
 import { translateCurrent } from "../../../shared/i18n/translate";
 import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import {
@@ -33,6 +37,7 @@ type DiagramRenderResult = {
 
 const mermaidRenderCache = new Map<string, DiagramRenderResult>();
 const plantUmlRenderCache = new Map<string, DiagramRenderResult>();
+const pendingPlantUmlRenders = new Map<string, Promise<DiagramRenderResult>>();
 
 export class MermaidPreviewWidget extends WidgetType {
   constructor(private readonly block: DiagramPreviewBlock) {
@@ -169,20 +174,28 @@ export class PlantUmlPreviewWidget extends WidgetType {
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
 
-    const consent = document.createElement("div");
-    consent.className = "plantuml-remote-consent";
-    const consentText = document.createElement("span");
-    consentText.textContent = translateCurrent("diagram.plantUmlRemoteDisabled");
-    const renderButton = document.createElement("button");
-    renderButton.type = "button";
-    renderButton.textContent = translateCurrent("diagram.plantUmlRenderRemotely");
-    renderButton.addEventListener("click", () => {
-      consent.remove();
+    const renderApprovedSource = () => {
       content.textContent = translateCurrent("diagram.renderingPlantUml");
       void renderPlantUmlPreview(this.block.source, content);
-    });
-    consent.append(consentText, renderButton);
-    content.append(consent);
+    };
+
+    if (hasPlantUmlRemoteRenderApproval(this.block.source)) {
+      renderApprovedSource();
+    } else {
+      const consent = document.createElement("div");
+      consent.className = "plantuml-remote-consent";
+      const consentText = document.createElement("span");
+      consentText.textContent = translateCurrent("diagram.plantUmlRemoteDisabled");
+      const renderButton = document.createElement("button");
+      renderButton.type = "button";
+      renderButton.textContent = translateCurrent("diagram.plantUmlRenderRemotely");
+      renderButton.addEventListener("click", () => {
+        approvePlantUmlRemoteRender(this.block.source);
+        renderApprovedSource();
+      });
+      consent.append(consentText, renderButton);
+      content.append(consent);
+    }
 
     const privacyNote = document.createElement("p");
     privacyNote.textContent = translateCurrent("diagram.plantUmlPrivacy");
@@ -264,33 +277,39 @@ function showDiagramActionStatus(actionStatus: HTMLOutputElement, message: strin
 }
 
 async function renderPlantUmlPreview(source: string, content: HTMLElement): Promise<void> {
+  const result = await getPlantUmlRenderResult(source);
+  if (result.svgContent) {
+    content.innerHTML = result.svgContent;
+  } else if (result.error) {
+    content.classList.add("cm-typora-diagram-error");
+    content.textContent = result.error;
+  }
+  scheduleEditorMeasureFromDom(content);
+}
+
+function getPlantUmlRenderResult(source: string): Promise<DiagramRenderResult> {
   const cachedResult = plantUmlRenderCache.get(source);
-  if (cachedResult?.svgContent) {
-    content.innerHTML = cachedResult.svgContent;
-    scheduleEditorMeasureFromDom(content);
-    return;
+  if (cachedResult) {
+    return Promise.resolve(cachedResult);
   }
 
-  if (cachedResult?.error) {
-    content.textContent = cachedResult.error;
-    content.classList.add("cm-typora-diagram-error");
-    scheduleEditorMeasureFromDom(content);
-    return;
+  const pendingRender = pendingPlantUmlRenders.get(source);
+  if (pendingRender) {
+    return pendingRender;
   }
 
-  try {
-    const svgContent = await renderPlantUmlSvg(source);
-
-    plantUmlRenderCache.set(source, { svgContent });
-    content.innerHTML = svgContent;
-    scheduleEditorMeasureFromDom(content);
-  } catch (error) {
-    const message = describePlantUmlRenderError(error, translateCurrent);
-    plantUmlRenderCache.set(source, { error: message });
-    content.classList.add("cm-typora-diagram-error");
-    content.textContent = message;
-    scheduleEditorMeasureFromDom(content);
-  }
+  const render = renderPlantUmlSvg(source)
+    .then((svgContent): DiagramRenderResult => ({ svgContent }))
+    .catch((error): DiagramRenderResult => ({
+      error: describePlantUmlRenderError(error, translateCurrent),
+    }))
+    .then((result) => {
+      plantUmlRenderCache.set(source, result);
+      pendingPlantUmlRenders.delete(source);
+      return result;
+    });
+  pendingPlantUmlRenders.set(source, render);
+  return render;
 }
 
 async function renderMermaidPreview(source: string, content: HTMLElement): Promise<void> {

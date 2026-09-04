@@ -10,9 +10,12 @@ permissions:
   contents: write
 
 jobs:
-  build-macos:
+  build_macos:
     name: Build macOS DMG
     runs-on: macos-latest
+    outputs:
+      app_version: ${{ steps.release_metadata.outputs.app_version }}
+      release_tag: ${{ steps.release_metadata.outputs.release_tag }}
 
     steps:
       - name: Checkout
@@ -51,7 +54,8 @@ jobs:
       - name: Rust format
         run: cargo fmt --all -- --check
 
-      - name: Sync Tauri version from tag
+      - name: Resolve release metadata
+        id: release_metadata
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
@@ -64,8 +68,12 @@ jobs:
 
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "app_version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
 
-          export APP_VERSION="$VERSION"
+      - name: Sync Tauri version from tag
+        run: |
+          export APP_VERSION="${APP_VERSION}"
 
           node <<'NODE'
           const fs = require('fs');
@@ -156,3 +164,93 @@ jobs:
               --draft
 
           gh release upload "$TAG" "$DMG_FILE" --clobber
+
+  build_windows:
+    name: Build Windows installers
+    needs: build_macos
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ needs.build_macos.outputs.app_version }}
+      RELEASE_TAG: ${{ needs.build_macos.outputs.release_tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            apps/desktop/src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Tauri version from tag
+        shell: bash
+        run: |
+          export APP_VERSION="${APP_VERSION}"
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const version = process.env.APP_VERSION;
+
+          if (!version) {
+            console.error('APP_VERSION is empty');
+            process.exit(1);
+          }
+
+          const jsonFiles = [
+            'apps/desktop/src-tauri/tauri.conf.json',
+            'apps/desktop/package.json',
+            'package.json'
+          ];
+
+          for (const file of jsonFiles) {
+            if (!fs.existsSync(file)) continue;
+
+            const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+            json.version = version;
+            fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
+
+            console.log(`Updated ${file} -> ${version}`);
+          }
+          NODE
+
+      - name: Build Windows NSIS installer
+        working-directory: apps/desktop
+        run: npx tauri build --bundles nsis
+
+      - name: Locate and rename Windows installer
+        shell: pwsh
+        run: |
+          $nsis = Get-ChildItem -Path . -Recurse -File -Filter *.exe |
+            Where-Object { $_.FullName -like '*\bundle\nsis\*' } |
+            Select-Object -First 1
+
+          if (-not $nsis) {
+            Write-Error 'No NSIS installer found.'
+            exit 1
+          }
+
+          $renamedNsis = "Polarbear_${env:APP_VERSION}_x64-setup.exe"
+          Copy-Item $nsis.FullName $renamedNsis
+
+          "WINDOWS_NSIS=$renamedNsis" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload Windows installer to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: gh release upload $env:RELEASE_TAG $env:WINDOWS_NSIS --clobber
