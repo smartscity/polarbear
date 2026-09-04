@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-const API_VERSION: &str = "1.6";
+const API_VERSION: &str = "1.7";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
 include!(concat!(env!("OUT_DIR"), "/runtime_descriptor_contract.rs"));
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);

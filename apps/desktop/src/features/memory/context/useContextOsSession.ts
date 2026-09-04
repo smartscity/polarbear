@@ -3,6 +3,7 @@ import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import type {
   AgentIntegrationStatus,
   ContextExplanation,
+  ContextReceipt,
   ContextOsMetrics,
   ContextPacket,
   DiagnosticsResponse,
@@ -29,6 +30,10 @@ export function useContextOsSession(workspaceRoot: string) {
   const [integrations, setIntegrations] = useState<AgentIntegrationStatus[]>([]);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsResponse | null>(null);
   const [lastPacket, setLastPacket] = useState<ContextPacket | null>(null);
+  const [contextReceipt, setContextReceipt] = useState<ContextReceipt | null>(null);
+  const [safeToReplaceSession, setSafeToReplaceSession] = useState(false);
+  const [activeTaskTitle, setActiveTaskTitle] = useState("");
+  const [latestCheckpointId, setLatestCheckpointId] = useState("");
   const [packetExplanation, setPacketExplanation] = useState<ContextExplanation | null>(null);
 
   const refresh = useCallback(async () => {
@@ -41,6 +46,10 @@ export function useContextOsSession(workspaceRoot: string) {
       setConfig(null);
       setIntegrations([]);
       setDiagnostics(null);
+      setContextReceipt(null);
+      setSafeToReplaceSession(false);
+      setActiveTaskTitle("");
+      setLatestCheckpointId("");
       return;
     }
 
@@ -66,7 +75,9 @@ export function useContextOsSession(workspaceRoot: string) {
         supports("projects.config") ? memoryApi.config(workspaceRoot) : Promise.resolve(null),
         supports("contexts.current")
           ? memoryApi.currentContextPacket(workspaceRoot)
-          : Promise.resolve({ packet: null }),
+          : Promise.resolve({
+              packet: null, receipt: null, task: null, latestCheckpoint: null, safeToReplaceSession: false,
+            }),
       ]);
       setHello(nextHello);
       setStatus(nextStatus);
@@ -75,6 +86,10 @@ export function useContextOsSession(workspaceRoot: string) {
       setTokenSavings(nextSavings);
       setConfig(nextConfig);
       setLastPacket(nextContext.packet);
+      setContextReceipt(nextContext.receipt ?? null);
+      setSafeToReplaceSession(nextContext.safeToReplaceSession ?? false);
+      setActiveTaskTitle(nextContext.task?.title ?? "");
+      setLatestCheckpointId(nextContext.latestCheckpoint?.id ?? "");
     } catch (loadError) {
       setError(errorMessage(loadError));
     } finally {
@@ -180,6 +195,7 @@ export function useContextOsSession(workspaceRoot: string) {
   return {
     archiveMemory,
     config,
+    contextReceipt,
     diagnostics,
     error,
     hello,
@@ -188,6 +204,8 @@ export function useContextOsSession(workspaceRoot: string) {
     isLoading,
     isMutating,
     lastPacket,
+    activeTaskTitle,
+    latestCheckpointId,
     loadMemoryHistory,
     memories,
     metrics,
@@ -198,6 +216,7 @@ export function useContextOsSession(workspaceRoot: string) {
     repairIntegration,
     runDiagnostics,
     status,
+    safeToReplaceSession,
     tokenSavings,
     updateMemory,
     updateConfig,

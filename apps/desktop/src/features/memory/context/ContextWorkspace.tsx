@@ -158,6 +158,29 @@ function ContextOverview({ session, onReview }: { session: Session; onReview: ()
         hint={t("context.overview.comparedBaseline")}
       />
     </section>
+    <ContextSection title={t("context.overview.activation")} className="context-source-summary">
+      <ul>
+        <li>
+          <span>{t("context.overview.activeTask")}</span>
+          <strong>{session.activeTaskTitle || t("context.overview.noActiveTask")}</strong>
+        </li>
+        <li>
+          <span>{t("context.overview.delivery")}</span>
+          <strong>{session.contextReceipt
+            ? t(`context.overview.delivery.${session.contextReceipt.status.toLocaleLowerCase()}`)
+            : t("context.overview.delivery.none")}</strong>
+        </li>
+        <li>
+          <span>{t("context.overview.sessionBoundary")}</span>
+          <strong>{session.safeToReplaceSession
+            ? t("context.overview.safeToReplace")
+            : t("context.overview.notSafeToReplace")}</strong>
+        </li>
+      </ul>
+      {session.latestCheckpointId
+        ? <p>{t("context.overview.checkpointId", { id: session.latestCheckpointId })}</p>
+        : <p>{t("context.overview.noCheckpoint")}</p>}
+    </ContextSection>
     <ContextSection title={t("context.overview.sources")} className="context-source-summary">
       {sources.length > 0 ? <ul>{sources.map((source) => <li key={source.category}>
         <span>{t(`context.source.${source.category.toLocaleLowerCase()}`)}</span>
