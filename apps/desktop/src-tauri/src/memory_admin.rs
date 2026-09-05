@@ -528,8 +528,8 @@ mod tests {
     fn write_runtime_descriptor(data_root: &Path, executable: &Path, cli_entrypoint: &Path) {
         let descriptor_path = runtime_descriptor_path(data_root);
         let runtime_dir = descriptor_path.parent().expect("runtime descriptor parent");
-        fs::create_dir_all(&runtime_dir).expect("create runtime directory");
-        fs::set_permissions(&runtime_dir, fs::Permissions::from_mode(0o700))
+        fs::create_dir_all(runtime_dir).expect("create runtime directory");
+        fs::set_permissions(runtime_dir, fs::Permissions::from_mode(0o700))
             .expect("runtime directory mode");
         fs::write(
             descriptor_path,

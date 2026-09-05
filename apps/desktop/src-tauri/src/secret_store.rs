@@ -59,9 +59,9 @@ pub(crate) fn read_repository_secret(
 
     #[cfg(debug_assertions)]
     {
-        return Ok(read_fallback_secrets(app)?
+        Ok(read_fallback_secrets(app)?
             .remove(key)
-            .filter(|secret| !secret.trim().is_empty()));
+            .filter(|secret| !secret.trim().is_empty()))
     }
 
     #[cfg(not(debug_assertions))]
@@ -88,7 +88,7 @@ pub(crate) fn save_repository_secret(
     {
         let mut fallback_secrets = read_fallback_secrets(app)?;
         fallback_secrets.insert(key.to_owned(), token.to_owned());
-        return write_fallback_secrets(app, &fallback_secrets);
+        write_fallback_secrets(app, &fallback_secrets)
     }
 
     #[cfg(not(debug_assertions))]

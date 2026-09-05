@@ -17,6 +17,8 @@ mod memory_admin;
 mod native_pinch;
 mod secret_store;
 
+type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct WorkspaceItemDto {
@@ -425,12 +427,36 @@ fn normalize_relative_path(relative_path: &str) -> Result<PathBuf, String> {
 
 fn workspace_path(workspace_root: &str, relative_path: &str) -> Result<PathBuf, String> {
     let root = PathBuf::from(workspace_root);
-
-    if !root.is_dir() {
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|_| "Workspace root is not a directory.".to_owned())?;
+    if !canonical_root.is_dir() {
         return Err("Workspace root is not a directory.".to_owned());
     }
 
-    Ok(root.join(normalize_relative_path(relative_path)?))
+    let path = root.join(normalize_relative_path(relative_path)?);
+    let mut existing_ancestor = path.as_path();
+    loop {
+        match fs::symlink_metadata(existing_ancestor) {
+            Ok(_) => {
+                let canonical_ancestor = existing_ancestor
+                    .canonicalize()
+                    .map_err(|error| error.to_string())?;
+                if !canonical_ancestor.starts_with(&canonical_root) {
+                    return Err("Path must stay inside the workspace.".to_owned());
+                }
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                existing_ancestor = existing_ancestor
+                    .parent()
+                    .ok_or_else(|| "Path must stay inside the workspace.".to_owned())?;
+            }
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+
+    Ok(path)
 }
 
 fn validate_entry_name(name: &str) -> Result<(), String> {
@@ -591,7 +617,14 @@ fn resolve_markdown_asset_path(
         return Err("Image is outside the current workspace.".to_owned());
     }
 
-    Ok(normalized_path)
+    let canonical_asset_path = normalized_path
+        .canonicalize()
+        .map_err(|_| "Image not found.".to_owned())?;
+    if !canonical_asset_path.starts_with(&canonical_workspace_root) {
+        return Err("Image is outside the current workspace.".to_owned());
+    }
+
+    Ok(canonical_asset_path)
 }
 
 fn now_unix_seconds() -> i64 {
@@ -954,6 +987,13 @@ fn scan_sync_files(root: &Path, current: &Path) -> Result<BTreeMap<String, PathB
     for entry_result in fs::read_dir(current).map_err(|error| error.to_string())? {
         let entry = entry_result.map_err(|error| error.to_string())?;
         let path = entry.path();
+        if entry
+            .file_type()
+            .map_err(|error| error.to_string())?
+            .is_symlink()
+        {
+            continue;
+        }
 
         if path.is_dir() {
             files.extend(scan_sync_files(root, &path)?);
@@ -996,10 +1036,7 @@ fn local_manifest(
     Ok(local_snapshot(app, workspace_root)?.1)
 }
 
-fn local_snapshot(
-    app: &tauri::AppHandle,
-    workspace_root: &str,
-) -> Result<(BTreeMap<String, PathBuf>, BTreeMap<String, String>), String> {
+fn local_snapshot(app: &tauri::AppHandle, workspace_root: &str) -> Result<LocalSnapshot, String> {
     let root = PathBuf::from(workspace_root);
     let files = scan_sync_files(&root, &root)?;
     let database_path = cloud_sync_database_path(app)?;
@@ -1130,6 +1167,13 @@ fn list_directory(root: &Path, current_path: &Path) -> Result<Vec<WorkspaceItemD
     for entry_result in fs::read_dir(current_path).map_err(|error| error.to_string())? {
         let entry = entry_result.map_err(|error| error.to_string())?;
         let path = entry.path();
+        if entry
+            .file_type()
+            .map_err(|error| error.to_string())?
+            .is_symlink()
+        {
+            continue;
+        }
         let relative_path = path
             .strip_prefix(root)
             .map_err(|error| error.to_string())?
@@ -1536,6 +1580,13 @@ fn next_duplicate_path(source: &Path, parent: &Path) -> PathBuf {
 }
 
 fn copy_workspace_entry_recursive(source: &Path, destination: &Path) -> Result<(), String> {
+    if fs::symlink_metadata(source)
+        .map_err(|error| error.to_string())?
+        .file_type()
+        .is_symlink()
+    {
+        return Err("Symbolic links cannot be duplicated.".to_owned());
+    }
     if source.is_dir() {
         fs::create_dir_all(destination).map_err(|error| error.to_string())?;
         for entry in fs::read_dir(source).map_err(|error| error.to_string())? {
@@ -1810,9 +1861,11 @@ fn copy_image_asset(
     }
 
     let markdown_parent = markdown_parent_relative_path(&markdown_relative_path)?;
-    let asset_directory = PathBuf::from(&workspace_root)
-        .join(markdown_parent)
-        .join("assets");
+    let asset_relative_path = markdown_parent.join("assets");
+    let asset_directory = workspace_path(
+        &workspace_root,
+        asset_relative_path.to_string_lossy().as_ref(),
+    )?;
     fs::create_dir_all(&asset_directory).map_err(|error| error.to_string())?;
 
     let source_name = source_path
@@ -1855,9 +1908,11 @@ fn save_image_asset(
     }
 
     let markdown_parent = markdown_parent_relative_path(&markdown_relative_path)?;
-    let asset_directory = PathBuf::from(&workspace_root)
-        .join(markdown_parent)
-        .join("assets");
+    let asset_relative_path = markdown_parent.join("assets");
+    let asset_directory = workspace_path(
+        &workspace_root,
+        asset_relative_path.to_string_lossy().as_ref(),
+    )?;
     fs::create_dir_all(&asset_directory).map_err(|error| error.to_string())?;
 
     let name = file_name.unwrap_or_else(|| format!("image.{}", extension));
@@ -3283,7 +3338,8 @@ fn main() -> tauri::Result<()> {
 mod tests {
     use super::{
         create_markdown_file, create_workspace_directory, get_markdown_file_revision,
-        list_workspace_files, load_markdown_file, rename_entry, save_markdown_file_content,
+        list_workspace_files, load_markdown_file, rename_entry, resolve_markdown_asset_path,
+        save_markdown_file_content,
     };
     use std::fs;
 
@@ -3293,9 +3349,8 @@ mod tests {
             .expect("system time after unix epoch")
             .as_nanos();
         let root = std::env::temp_dir().join(format!(
-            "polarbear-workspace-test-{}-{}",
-            std::process::id(),
-            format!("{test_name}-{test_id}")
+            "polarbear-workspace-test-{}-{test_name}-{test_id}",
+            std::process::id()
         ));
 
         if root.exists() {
@@ -3358,6 +3413,45 @@ mod tests {
         assert!(source
             .markdown_content
             .contains("Start writing in Polarbear"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn workspace_commands_do_not_follow_symlinks_outside_the_workspace() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_workspace_root("reject-symlink-escape");
+        let external_root = test_workspace_root("symlink-escape-target");
+        fs::write(
+            std::path::Path::new(&external_root).join("outside.md"),
+            "# Outside\n",
+        )
+        .expect("create external markdown file");
+        fs::write(
+            std::path::Path::new(&external_root).join("outside.png"),
+            b"not-a-real-image",
+        )
+        .expect("create external image file");
+        symlink(&external_root, std::path::Path::new(&root).join("linked"))
+            .expect("create workspace symlink");
+
+        assert!(load_markdown_file(root.clone(), "linked/outside.md".to_owned()).is_err());
+        assert!(create_markdown_file(root.clone(), "linked/new.md".to_owned()).is_err());
+        assert!(list_workspace_files(root.clone())
+            .expect("list workspace files")
+            .is_empty());
+        assert!(resolve_markdown_asset_path(
+            std::path::Path::new(&root),
+            "note.md",
+            "linked/outside.png",
+        )
+        .is_err());
+        assert!(!std::path::Path::new(&external_root).join("new.md").exists());
+
+        fs::remove_file(std::path::Path::new(&root).join("linked"))
+            .expect("remove workspace symlink");
+        fs::remove_dir_all(root).expect("cleanup workspace");
+        fs::remove_dir_all(external_root).expect("cleanup external workspace");
     }
 
     #[test]
