@@ -8,6 +8,7 @@ import type { AppCommand } from "../../../shared/commands/appCommandTypes";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
 import { createEditorCommandBindings } from "../editorCommandKeymap";
+import { richMarkdownCopyExtension } from "../richMarkdownClipboard";
 import { platformNavigationKeymap } from "./platformNavigationKeymap";
 
 export type MarkdownEditorView = EditorView;
@@ -82,6 +83,7 @@ export function MarkdownEditor({
         extensions={[
           platformNavigationKeymap(),
           commandKeymap,
+          richMarkdownCopyExtension,
           markdown(),
           search({ top: true }),
         ]}

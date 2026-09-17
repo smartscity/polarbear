@@ -35,24 +35,22 @@ export async function exportSvgElementAsPng(
   });
   if (!selectedPath) return "cancelled";
 
-  const clonedSvg = cloneSvgForExport(svg);
-  const width = Number.parseFloat(
-    clonedSvg.getAttribute("width") || String(DIAGRAM_CONFIG.export.fallbackWidth),
-  ) || DIAGRAM_CONFIG.export.fallbackWidth;
-  const height = Number.parseFloat(
-    clonedSvg.getAttribute("height") || String(DIAGRAM_CONFIG.export.fallbackHeight),
-  ) || DIAGRAM_CONFIG.export.fallbackHeight;
-
-  sanitizeSvgForXmlExport(clonedSvg);
-  sanitizeSvgForCanvas(clonedSvg);
-
-  const svgData = new XMLSerializer().serializeToString(clonedSvg);
-  const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`;
-  const blob = await pngBlobFromSvg(svgDataUrl, width, height);
+  const blob = await svgElementAsPngBlob(svg);
   const arrayBuffer = await blob.arrayBuffer();
   const imageBytes = Array.from(new Uint8Array(arrayBuffer));
   await invokeTauri(TAURI_COMMANDS.exportPngFile, { path: selectedPath, imageBytes });
   return "exported";
+}
+
+export async function svgContentAsPngDataUrl(svgContent: string): Promise<string> {
+  const parsedDocument = new DOMParser().parseFromString(svgContent, "image/svg+xml");
+  const parsedSvg = parsedDocument.documentElement;
+  if (parsedSvg.tagName.toLowerCase() !== "svg") {
+    throw new Error(translateCurrent("diagram.exportPngFailed"));
+  }
+
+  const blob = await svgElementAsPngBlob(parsedSvg as unknown as SVGSVGElement);
+  return blobAsDataUrl(blob);
 }
 
 export function findRenderedSvg(container: HTMLElement | null): SVGSVGElement | null {
@@ -94,14 +92,66 @@ function pngBlobFromSvg(svgDataUrl: string, width: number, height: number): Prom
   });
 }
 
+async function svgElementAsPngBlob(svg: SVGSVGElement): Promise<Blob> {
+  const clonedSvg = cloneSvgForExport(svg);
+  const width = Number(clonedSvg.getAttribute("width"));
+  const height = Number(clonedSvg.getAttribute("height"));
+
+  clonedSvg.setAttribute("width", String(width));
+  clonedSvg.setAttribute("height", String(height));
+  sanitizeSvgForXmlExport(clonedSvg);
+  sanitizeSvgForCanvas(clonedSvg);
+
+  const svgData = new XMLSerializer().serializeToString(clonedSvg);
+  const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`;
+  return pngBlobFromSvg(svgDataUrl, width, height);
+}
+
+function svgDimension(value: string | null, viewBoxValue: number, fallback: number): number {
+  const parsed = value && /^\s*\d+(?:\.\d+)?(?:px)?\s*$/.test(value)
+    ? Number.parseFloat(value)
+    : Number.NaN;
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  if (Number.isFinite(viewBoxValue) && viewBoxValue > 0) return viewBoxValue;
+  return fallback;
+}
+
+function blobAsDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error(translateCurrent("diagram.exportPngFailed")));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error(translateCurrent("diagram.exportPngFailed")));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function safeDiagramFileBase(diagramId: string): string {
   return diagramId.replace(/[^a-z0-9_-]/gi, "_");
 }
 
 function cloneSvgForExport(svg: SVGSVGElement): SVGSVGElement {
   const rect = svg.getBoundingClientRect();
-  const width = Math.ceil(rect.width) || DIAGRAM_CONFIG.export.fallbackWidth;
-  const height = Math.ceil(rect.height) || DIAGRAM_CONFIG.export.fallbackHeight;
+  const sourceViewBox = parseSvgViewBox(
+    svg.getAttribute("viewBox"),
+    DIAGRAM_CONFIG.export.fallbackWidth,
+    DIAGRAM_CONFIG.export.fallbackHeight,
+  );
+  const width = Math.ceil(rect.width) || svgDimension(
+    svg.getAttribute("width"),
+    sourceViewBox.width,
+    DIAGRAM_CONFIG.export.fallbackWidth,
+  );
+  const height = Math.ceil(rect.height) || svgDimension(
+    svg.getAttribute("height"),
+    sourceViewBox.height,
+    DIAGRAM_CONFIG.export.fallbackHeight,
+  );
   const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
   clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clonedSvg.setAttribute("width", String(width));

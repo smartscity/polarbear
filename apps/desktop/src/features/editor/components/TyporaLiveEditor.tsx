@@ -63,6 +63,7 @@ import {
 import { useCodeFenceLanguageHover } from "../hooks/useCodeFenceLanguageHover";
 import { executeMarkdownFormatCommand } from "../editorCommandAdapter";
 import { createEditorCommandBindings } from "../editorCommandKeymap";
+import { richMarkdownCopyExtension } from "../richMarkdownClipboard";
 import {
   createImagePasteExtension,
   type ImagePasteHandler,
@@ -435,6 +436,7 @@ export function TyporaLiveEditor({
   const editorExtensions = useMemo(
     () => [
       typoraLiveKeymap(userSettings.keybindings),
+      richMarkdownCopyExtension,
       trimSingleLineBreakSelectionExtension,
       preserveLargeEnterScrollJumpExtension,
       markdownLanguage(),
