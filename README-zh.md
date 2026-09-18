@@ -6,10 +6,11 @@
 
 Polarbear 使用 Rust、Tauri、React 和 TypeScript 构建，专注于流畅写作、实时预览、Mermaid/PlantUML 图表以及 GitHub/GitLab 云同步。
 
-当前主要目标平台：
+当前平台状态：
 
-- macOS 桌面应用
-- iOS 实验性支持
+- macOS 桌面应用：支持，CI 会构建安装包
+- Windows 桌面应用：发布流程会构建安装包
+- iOS：规划中，当前仓库尚未初始化 Tauri iOS 工程
 
 ---
 
@@ -84,11 +85,12 @@ Mermaid、PlantUML、云同步和导出目前都是内置 Feature。Polarbear �
 ```text
 polarbear/
   Cargo.toml
+  Cargo.lock
+  package.json
+  package-lock.json
   README.md
   README-zh.md
   ARCHITECTURE.md
-  CONTRIBUTING.md
-  LICENSE
   apps/
     desktop/
       package.json
@@ -130,25 +132,27 @@ polarbear/
 - Node.js LTS
 - npm
 - macOS 上的 Tauri v2 构建依赖
-- iOS 开发需要 Xcode
+- iOS 尚未初始化；后续平台工作需要完整 Xcode
 
 ### 安装依赖
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 启动 macOS 开发环境
 
 ```bash
-npm run tauri -- dev
+npm run tauri:dev
 ```
 
 或：
 
 ```bash
-npm --workspace apps/desktop run tauri:dev
+npm --workspace apps/desktop run tauri -- dev
 ```
+
+`tauri:dev` 是仓库根目录的脚本；`apps/desktop/package.json` 中不存在同名脚本，直接使用 workspace 时必须写成上面的 `run tauri -- dev`。当前仓库也没有生成 `apps/desktop/src-tauri/gen/apple`，因此 iOS 的 `dev` 和 `build` 命令目前不能作为可用流程；需要先完成独立的 iOS 初始化和原生能力审计。
 
 ### 前端检查
 
@@ -156,26 +160,27 @@ npm --workspace apps/desktop run tauri:dev
 npm run lint
 npm run typecheck
 npm test
+npm run build
 ```
 
 ### Rust 检查
 
 ```bash
 cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace
 ```
 
 ### 构建 macOS 安装包
 
 ```bash
-npm run tauri -- build
+npm run tauri:build
 ```
 
 产物通常位于：
 
 ```text
-apps/desktop/src-tauri/target/release/bundle/
+target/release/bundle/
 ```
 
 ---
@@ -202,9 +207,9 @@ apps/desktop/src-tauri/target/release/bundle/
 
 ### 下一阶段
 
-- 更完整的搜索与文档结构能力
-- PDF / HTML 导出
-- 本地知识索引
+- 初始化并验证 iOS 目标
+- PDF / HTML 完整文档导出
+- 扩充原生命令和发布打包的集成测试
 - 更完善的跨平台适配
 
 ### 未来
@@ -217,4 +222,4 @@ apps/desktop/src-tauri/target/release/bundle/
 
 ## License
 
-MIT 或 Apache-2.0。首次正式发布前应明确最终许可证选择。
+Cargo 清单当前声明 `MIT OR Apache-2.0`，但仓库在正式分发前仍需补齐对应的许可证正文文件。

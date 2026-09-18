@@ -167,8 +167,7 @@ body,
   -webkit-user-select: text;
 }
 
-.typora-live-editor-pane .cm-selectionLayer {
-  z-index: 5;
+.typora-live-editor-pane .cm-live-selection-layer {
   pointer-events: none;
 }
 
@@ -177,15 +176,32 @@ body,
   z-index: 2;
 }
 
-.typora-live-editor-pane .cm-selectionBackground,
-.typora-live-editor-pane .cm-focused .cm-selectionBackground {
-  background: rgba(96, 165, 250, 0.72) !important;
+.typora-live-editor-pane .cm-selectionBackground {
+  display: none;
+}
+
+.typora-live-editor-pane .cm-live-text-selection {
+  background: color-mix(in srgb, var(--color-accent, #60a5fa) 28%, transparent);
   border-radius: 2px;
 }
 
-.typora-live-editor-pane .cm-line.cm-typora-code-line .cm-selectionBackground,
-.typora-live-editor-pane .cm-focused .cm-line.cm-typora-code-line .cm-selectionBackground {
-  background: rgba(65, 128, 220, 0.78) !important;
+.typora-live-editor-pane .cm-live-block-selection {
+  background: color-mix(in srgb, var(--color-accent, #60a5fa) 12%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-accent, #60a5fa) 65%, transparent);
+  border-radius: 4px;
+}
+
+.typora-live-editor-pane .cm-editor:not(.cm-focused) .cm-live-selection-layer {
+  opacity: 0.6;
+}
+
+.typora-live-editor-pane [data-live-widget-selection="true"] .cm-live-selection-layer {
+  visibility: hidden;
+}
+
+.typora-live-editor-pane .cm-editor[data-live-document-selection="true"]:not([data-live-widget-selection="true"]) [data-markdown-block-from]::selection,
+.typora-live-editor-pane .cm-editor[data-live-document-selection="true"]:not([data-live-widget-selection="true"]) [data-markdown-block-from] ::selection {
+  background: transparent !important;
 }
 
 .typora-live-editor-pane .cm-selectionMatch {
@@ -347,25 +363,10 @@ body,
   font-size: 0.88em;
 }
 
-/* CodeMirror normally hides the browser selection and draws its own layer.
- * Inline-code marks have an opaque background, so retain a native selection
- * fallback with enough contrast for both selection paths. */
+/* The document selection layer also covers opaque inline-code backgrounds. */
 .typora-live-editor-pane .cm-typora-inline-code::selection,
 .typora-live-editor-pane .cm-typora-inline-code *::selection {
-  color: var(--color-text-primary, #2f3437) !important;
-  background-color: color-mix(
-    in srgb,
-    var(--color-selection-background, #60a5fa) 90%,
-    var(--color-code-background, #f6f8fa)
-  ) !important;
-}
-
-.typora-live-editor-pane .cm-selectionLayer .cm-selectionBackground {
-  box-shadow: inset 0 0 0 1px color-mix(
-    in srgb,
-    var(--color-text-primary, #2f3437) 22%,
-    transparent
-  );
+  background: transparent !important;
 }
 
 .cm-typora-mark {
@@ -1008,12 +1009,12 @@ body,
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-accent, #2f80ed) 72%, transparent);
 }
 
-.cm-typora-table-preview .cm-typora-table-cell-selected {
+.cm-editor:is(:not([data-live-document-selection="true"]), [data-live-widget-selection="true"]) .cm-typora-table-preview .cm-typora-table-cell-selected {
   background: color-mix(in srgb, var(--color-accent, #2f80ed) 12%, var(--color-preview-background, #ffffff)) !important;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent, #2f80ed) 52%, transparent);
 }
 
-.cm-typora-table-preview.cm-typora-table-selected table {
+.cm-editor:is(:not([data-live-document-selection="true"]), [data-live-widget-selection="true"]) .cm-typora-table-preview.cm-typora-table-selected table {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #2f80ed) 65%, transparent);
 }
 
@@ -1301,11 +1302,11 @@ body,
 
 .cm-typora-diagram-preview {
   margin: 0;
-  padding: 14px 12px 18px;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
+  padding: 8px 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--color-text-primary, #2f3437);
-  background: var(--color-preview-background, #ffffff);
+  background: transparent;
   font-family:
     Inter,
     ui-sans-serif,
@@ -1313,11 +1314,27 @@ body,
     sans-serif;
 }
 
+.cm-typora-diagram-preview:hover,
+.cm-typora-diagram-preview:focus-within {
+  border-color: var(--color-border, #e5e7eb);
+}
+
 .cm-typora-diagram-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Keep controls in the tab order and reserve their space while idle. */
+.cm-typora-diagram-preview:hover .cm-typora-diagram-toolbar,
+.cm-typora-diagram-preview:focus-within .cm-typora-diagram-toolbar {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .cm-typora-diagram-toolbar .cm-typora-diagram-title {
@@ -1359,6 +1376,33 @@ body,
 .cm-typora-diagram-toolbar button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.cm-typora-diagram-toolbar button {
+  border-color: transparent;
+  background: transparent;
+}
+
+.cm-typora-diagram-toolbar button:hover:not(:disabled) {
+  border-color: var(--color-border, #e5e7eb);
+  background: var(--color-active-background, #eff6ff);
+}
+
+.cm-typora-diagram-toolbar button:focus-visible {
+  outline: 2px solid var(--color-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+@media (hover: none), (any-pointer: coarse) {
+  .cm-typora-diagram-toolbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .cm-typora-diagram-toolbar button {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .cm-typora-diagram-content {
