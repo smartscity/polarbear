@@ -57,6 +57,114 @@ describe("memoryApi", () => {
     expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|tokenFile|authToken/u);
   });
 
+  it("routes the complete source-backed knowledge slice through the native proxy", async () => {
+    invoke.mockResolvedValue({});
+    await memoryApi.projectContext("/repo");
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo", method: "projects.context", params: {},
+    });
+    const locator = { startLine: 3, endLine: 3, startOffset: 9, endOffset: 28 };
+    await memoryApi.registerSource("/repo", {
+      worktreeId: "worktree-a",
+      relativePath: "docs/retry.md",
+      ...locator,
+      selectedText: "Never retry FAILED.",
+      requestId: "register-1",
+    });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "sources.register",
+      params: {
+        worktreeId: "worktree-a",
+        relativePath: "docs/retry.md",
+        ...locator,
+        selectedText: "Never retry FAILED.",
+        requestId: "register-1",
+      },
+    });
+    await memoryApi.captureKnowledge("/repo", {
+      ownerKind: "TASK",
+      taskId: "task-a",
+      kind: "DECISION",
+      answer: "Never retry FAILED settlements.",
+      appliesWhen: "The state is FAILED.",
+      reason: "The operation may already have completed.",
+      workingCopyPolicy: "CAPTURED_CONTEXT",
+      sourceId: "source-a",
+      sourceRevision: "source-r1",
+      sectionDigest: "section-r1",
+      validationDigest: "document-r1",
+      ...locator,
+      requestId: "capture-1",
+    });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "knowledge.capture",
+      params: {
+        ownerKind: "TASK",
+        taskId: "task-a",
+        kind: "DECISION",
+        answer: "Never retry FAILED settlements.",
+        appliesWhen: "The state is FAILED.",
+        reason: "The operation may already have completed.",
+        workingCopyPolicy: "CAPTURED_CONTEXT",
+        sourceId: "source-a",
+        sourceRevision: "source-r1",
+        sectionDigest: "section-r1",
+        validationDigest: "document-r1",
+        ...locator,
+        requestId: "capture-1",
+      },
+    });
+    await memoryApi.searchKnowledge("/repo", { query: "Can FAILED retry?", taskId: "task-a", limit: 5 });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "knowledge.search",
+      params: { query: "Can FAILED retry?", taskId: "task-a", limit: 5 },
+    });
+    await memoryApi.resolveSource("/repo", {
+      cardId: "card-a",
+      expectedCardRevision: 2,
+      taskId: "task-a",
+    });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "sources.resolve",
+      params: { cardId: "card-a", expectedCardRevision: 2, taskId: "task-a" },
+    });
+    await memoryApi.reviewKnowledge("/repo", {
+      cardId: "card-a",
+      expectedRevision: 2,
+      expectedSourceVersion: 2,
+      expectedObservedRevision: "source-r2",
+      answer: "Retry only after review.",
+      appliesWhen: "The operator approved it.",
+      reason: "The source changed.",
+      taskId: "task-a",
+      workingCopyPolicy: "COMPATIBLE_SOURCES",
+      ...locator,
+      requestId: "review-1",
+    });
+    expect(invoke).toHaveBeenLastCalledWith("memory_admin_request", {
+      workspaceRoot: "/repo",
+      method: "knowledge.review",
+      params: {
+        cardId: "card-a",
+        expectedRevision: 2,
+        expectedSourceVersion: 2,
+        expectedObservedRevision: "source-r2",
+        answer: "Retry only after review.",
+        appliesWhen: "The operator approved it.",
+        reason: "The source changed.",
+        taskId: "task-a",
+        workingCopyPolicy: "COMPATIBLE_SOURCES",
+        ...locator,
+        requestId: "review-1",
+      },
+    });
+    expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/memory\.db|tokenFile|authToken/u);
+  });
+
   it("routes Context OS task, history, packet and metrics operations through Admin API 1.4", async () => {
     invoke.mockResolvedValue({ id: "task-id" });
     await memoryApi.createTask("/repo", { title: "Retry", objective: "Implement retry", phase: "IMPLEMENTATION" });

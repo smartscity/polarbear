@@ -11,7 +11,11 @@
     "lint": "eslint src",
     "memory-contract:generate": "node scripts/generate-memory-admin-contract.mjs",
     "memory-contract:check": "node scripts/generate-memory-admin-contract.mjs --check",
-    "test": "vitest run",
+    "memory-m1:fixtures:check": "node scripts/validate-memory-m1-fixtures.mjs",
+    "memory-m1:assets:test": "node --test scripts/memory-m1-assets.node-test.mjs",
+    "memory-m1:evaluate": "node scripts/evaluate-memory-m1-results.mjs",
+    "memory-m1:engine-evaluate": "node scripts/run-memory-m1-engine-evaluation.mjs",
+    "test": "vitest run && node --test scripts/memory-m1-assets.node-test.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

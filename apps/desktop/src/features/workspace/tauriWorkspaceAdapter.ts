@@ -231,6 +231,10 @@ export async function openMarkdownFile(filePath: string): Promise<{
   };
 }
 
+export async function takePendingOpenFiles(): Promise<string[]> {
+  return invokeTauri<string[]>(TAURI_COMMANDS.takePendingOpenFiles);
+}
+
 export async function revealInFileManager(params: {
   workspaceRoot: string;
   relativePath: string;

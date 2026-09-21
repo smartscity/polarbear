@@ -3,6 +3,7 @@ export const APP_EVENTS = {
   appZoomChanged: "app-zoom-changed",
   debugChanged: "polarbear-debug-changed",
   nativePinch: "polarbear-native-pinch",
+  openFilesRequested: "polarbear-open-files-requested",
   repositorySyncProgress: "repository-sync-progress",
   settingsChanged: "polarbear-settings-changed",
   windowCloseRequested: "polarbear-window-close-requested",

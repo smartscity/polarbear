@@ -2,6 +2,7 @@ import type { ContextOsMetrics, MemoryRecord } from "../generated/adminV1";
 
 export const CONTEXT_SECTIONS = [
   "overview",
+  "knowledge",
   "memory",
   "settings",
 ] as const;

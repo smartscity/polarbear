@@ -21,6 +21,8 @@ import type {
   TaskRunContext,
   TaskRunListResponse,
   MaintenancePlan,
+  KnowledgeCard,
+  KnowledgeSearchResponse,
   MemoryHistoryResponse,
   MemoryListResponse,
   MemoryPurgePreview,
@@ -30,6 +32,7 @@ import type {
   MemoryType,
   ProjectStatusResponse,
   ProjectMemoryConfig,
+  ProjectWorkContext,
   PromotePreviewResponse,
   PromoteResponse,
   RecordMemoryRequest,
@@ -38,6 +41,7 @@ import type {
   TaskPhase,
   TaskRecord,
   TaskStatus,
+  SourceResolution,
   VerificationState,
 } from "./generated/adminV1";
 
@@ -49,6 +53,7 @@ export const memoryApi = {
   bindWorkspace: (workspaceRoot: string) => invokeTauri<string>(TAURI_COMMANDS.memoryAdminBindWorkspace, { workspaceRoot }),
   hello: (workspaceRoot: string) => request<HelloResponse>(workspaceRoot, "system.hello"),
   status: (workspaceRoot: string) => request<ProjectStatusResponse>(workspaceRoot, "projects.status"),
+  projectContext: (workspaceRoot: string) => request<ProjectWorkContext>(workspaceRoot, "projects.context"),
   list: (workspaceRoot: string, filters: { query?: string; status?: LifecycleStatus; type?: MemoryType; limit?: number; offset?: number }) =>
     request<MemoryListResponse>(workspaceRoot, "memories.list", filters),
   get: (workspaceRoot: string, memoryId: string) => request<MemoryRecord>(workspaceRoot, "memories.get", { memoryId }),
@@ -116,6 +121,67 @@ export const memoryApi = {
     request<PromotePreviewResponse>(workspaceRoot, "knowledge.promote_preview", { memoryId }),
   promote: (workspaceRoot: string, memoryId: string, expectedSha256: string) =>
     request<PromoteResponse>(workspaceRoot, "knowledge.promote", { memoryId, expectedSha256 }),
+  registerSource: (workspaceRoot: string, input: {
+    worktreeId: string;
+    relativePath: string;
+    startLine: number;
+    endLine: number;
+    startOffset: number;
+    endOffset: number;
+    selectedText: string;
+    requestId: string;
+  }) => request<SourceResolution>(workspaceRoot, "sources.register", input),
+  resolveSource: (workspaceRoot: string, input: {
+    sourceId?: string;
+    cardId?: string;
+    expectedCardRevision?: number;
+    taskId?: string;
+    expectedRevision?: string;
+    startLine?: number;
+    endLine?: number;
+    startOffset?: number;
+    endOffset?: number;
+  }) => request<SourceResolution>(workspaceRoot, "sources.resolve", input),
+  captureKnowledge: (workspaceRoot: string, input: {
+    ownerKind: "PROJECT" | "TASK";
+    taskId?: string;
+    kind: MemoryType;
+    answer: string;
+    appliesWhen: string;
+    reason: string;
+    workingCopyPolicy: "CAPTURED_CONTEXT" | "COMPATIBLE_SOURCES";
+    sourceId: string;
+    sourceRevision: string;
+    sectionDigest: string;
+    validationDigest: string;
+    startLine: number;
+    endLine: number;
+    startOffset?: number;
+    endOffset?: number;
+    requestId: string;
+  }) => request<KnowledgeCard>(workspaceRoot, "knowledge.capture", input),
+  searchKnowledge: (workspaceRoot: string, input: {
+    query: string;
+    taskId?: string;
+    limit?: number;
+    cursor?: string;
+  }) => request<KnowledgeSearchResponse>(workspaceRoot, "knowledge.search", input),
+  reviewKnowledge: (workspaceRoot: string, input: {
+    cardId: string;
+    expectedRevision: number;
+    expectedSourceVersion: number;
+    expectedObservedRevision: string;
+    answer: string;
+    appliesWhen: string;
+    reason: string;
+    taskId?: string;
+    workingCopyPolicy?: "CAPTURED_CONTEXT" | "COMPATIBLE_SOURCES";
+    startLine: number;
+    endLine: number;
+    startOffset?: number;
+    endOffset?: number;
+    requestId: string;
+  }) => request<KnowledgeCard>(workspaceRoot, "knowledge.review", input),
   diagnostics: (workspaceRoot: string) => request<DiagnosticsResponse>(workspaceRoot, "projects.diagnostics"),
   config: (workspaceRoot: string) => request<ProjectMemoryConfig>(workspaceRoot, "projects.config"),
   updateConfig: (workspaceRoot: string, config: ProjectMemoryConfig) =>

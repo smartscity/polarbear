@@ -11,13 +11,14 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-const API_VERSION: &str = "1.7";
+const API_VERSION: &str = "1.8";
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
 include!(concat!(env!("OUT_DIR"), "/runtime_descriptor_contract.rs"));
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 const ALLOWED_METHODS: &[&str] = &[
     "system.hello",
     "projects.status",
+    "projects.context",
     "system.shutdown",
     "memories.list",
     "memories.get",
@@ -64,6 +65,11 @@ const ALLOWED_METHODS: &[&str] = &[
     "backups.restore",
     "knowledge.promote_preview",
     "knowledge.promote",
+    "sources.register",
+    "sources.resolve",
+    "knowledge.capture",
+    "knowledge.search",
+    "knowledge.review",
 ];
 
 #[derive(Default)]
@@ -805,59 +811,122 @@ mod tests {
         };
         assert!(run(&["init"]).success());
         assert!(run(&["install"]).success());
-        assert!(run(&[
-            "record",
-            "--type",
-            "DECISION",
-            "--summary",
-            "Real cross-process Memory"
-        ])
-        .success());
+        let selected_text = "FAILED settlements are terminal and must not retry.";
+        let source_text = format!("# Retry policy\n\n{selected_text}\n");
+        fs::write(root.join("retry-policy.md"), &source_text).expect("write source");
+        let start_offset = source_text.find(selected_text).expect("selection offset");
         let previous = std::env::var_os("POLARBEAR_MEMORY_DATA_DIR");
         unsafe { std::env::set_var("POLARBEAR_MEMORY_DATA_DIR", &data) };
-        let response = request_unix(
+        let context = request_unix(
             root.to_string_lossy().to_string(),
-            "projects.status".to_owned(),
+            "projects.context".to_owned(),
             serde_json::json!({}),
         )
-        .expect("real Engine response");
-        assert_eq!(response["counts"]["total"], 1);
-        let recorded = request_unix(
+        .expect("real Engine context");
+        let worktree_id = context["worktreeId"].as_str().expect("worktree id");
+        let registered = request_unix(
             root.to_string_lossy().to_string(),
-            "memories.record".to_owned(),
+            "sources.register".to_owned(),
             serde_json::json!({
-                "type": "TODO",
-                "summary": "Validate Desktop V2 administration",
-                "entities": [{
-                    "kind": "MODULE",
-                    "canonicalKey": "desktop:memory",
-                    "displayName": "Desktop Memory"
-                }]
+                "worktreeId": worktree_id,
+                "relativePath": "retry-policy.md",
+                "startLine": 3,
+                "endLine": 3,
+                "startOffset": start_offset,
+                "endOffset": start_offset + selected_text.len(),
+                "selectedText": selected_text,
+                "requestId": "desktop-real-source-1",
             }),
         )
-        .expect("record through real Engine");
-        let memory_id = recorded["id"].as_str().expect("recorded Memory id");
-        let feedback = request_unix(
+        .expect("register source through real Engine");
+        assert_eq!(registered["decision"], "REUSABLE");
+        let captured = request_unix(
             root.to_string_lossy().to_string(),
-            "memories.feedback".to_owned(),
-            serde_json::json!({ "memoryId": memory_id, "useful": true, "reason": "E2E validation" }),
+            "knowledge.capture".to_owned(),
+            serde_json::json!({
+                "ownerKind": "PROJECT",
+                "kind": "DECISION",
+                "answer": "FAILED settlements must not be retried automatically.",
+                "appliesWhen": "The settlement state is FAILED.",
+                "reason": "The terminal state may include irreversible side effects.",
+                "workingCopyPolicy": "CAPTURED_CONTEXT",
+                "sourceId": registered["source"]["id"],
+                "sourceRevision": registered["observedRevision"],
+                "sectionDigest": registered["approvedSection"]["sectionDigest"],
+                "validationDigest": registered["approvedSection"]["validationDigest"],
+                "startLine": registered["approvedSection"]["locator"]["startLine"],
+                "endLine": registered["approvedSection"]["locator"]["endLine"],
+                "startOffset": registered["approvedSection"]["locator"]["startOffset"],
+                "endOffset": registered["approvedSection"]["locator"]["endOffset"],
+                "requestId": "desktop-real-card-1",
+            }),
         )
-        .expect("feedback through real Engine");
-        assert_eq!(feedback["usage"]["positiveFeedbackCount"], 1);
-        let completed = request_unix(
+        .expect("capture through real Engine");
+        let card_id = captured["id"]
+            .as_str()
+            .expect("captured card id")
+            .to_owned();
+
+        request_unix(
             root.to_string_lossy().to_string(),
-            "memories.complete".to_owned(),
-            serde_json::json!({ "memoryId": memory_id, "state": "COMPLETED", "reason": "E2E passed" }),
-        )
-        .expect("complete through real Engine");
-        assert_eq!(completed["completionState"], "COMPLETED");
-        let savings = request_unix(
-            root.to_string_lossy().to_string(),
-            "usage.token_savings".to_owned(),
+            "system.shutdown".to_owned(),
             serde_json::json!({}),
         )
-        .expect("token savings through real Engine");
-        assert!(savings["estimatedSavedTokens"].is_number());
+        .expect("stop real Engine before restart");
+        let socket_path = data.join("service/admin-v1.sock");
+        for _ in 0..50 {
+            if !socket_path.exists() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        assert!(
+            !socket_path.exists(),
+            "Engine did not stop before restart validation"
+        );
+
+        let searched = request_unix(
+            root.to_string_lossy().to_string(),
+            "knowledge.search".to_owned(),
+            serde_json::json!({
+                "query": "Should FAILED settlements retry automatically?",
+            }),
+        )
+        .expect("search after real Engine restart");
+        assert_eq!(searched["items"][0]["card"]["id"], card_id);
+        assert_eq!(searched["items"][0]["decision"], "REUSABLE");
+        let source = request_unix(
+            root.to_string_lossy().to_string(),
+            "sources.resolve".to_owned(),
+            serde_json::json!({
+                "cardId": card_id,
+                "expectedCardRevision": searched["items"][0]["card"]["revision"],
+            }),
+        )
+        .expect("resolve exact source after restart");
+        assert_eq!(source["decision"], "REUSABLE");
+        assert_eq!(source["observedSection"]["excerpt"], selected_text);
+
+        fs::write(
+            root.join("retry-policy.md"),
+            source_text.replace("must not retry", "may now retry!"),
+        )
+        .expect("mutate source");
+        let changed = request_unix(
+            root.to_string_lossy().to_string(),
+            "knowledge.search".to_owned(),
+            serde_json::json!({
+                "query": "Should FAILED settlements retry automatically?",
+            }),
+        )
+        .expect("search after source mutation");
+        assert!(changed["items"]
+            .as_array()
+            .expect("reusable items")
+            .is_empty());
+        assert_eq!(changed["reviewNotices"][0]["card"]["id"], card_id);
+        assert_eq!(changed["reviewNotices"][0]["decision"], "NEEDS_REVIEW");
+
         request_unix(
             root.to_string_lossy().to_string(),
             "system.shutdown".to_owned(),

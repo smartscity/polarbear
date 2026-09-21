@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import type {
   AgentIntegrationStatus,
@@ -8,14 +8,28 @@ import type {
   ContextPacket,
   DiagnosticsResponse,
   HelloResponse,
+  KnowledgeCard,
+  KnowledgeSearchHit,
+  KnowledgeSearchResponse,
   MemoryHistoryResponse,
   MemoryRecord,
   ProjectMemoryConfig,
   ProjectStatusResponse,
+  ProjectWorkContext,
+  MemoryType,
+  SourceResolution,
+  TaskRecord,
   TokenSavingsStats,
 } from "../generated/adminV1";
 import { negotiateMemoryCapabilities } from "../memoryCapabilities";
 import { memoryApi } from "../memoryApi";
+import type { MemoryDocumentContext } from "../documentContext";
+import {
+  KnowledgeSearchRequestGate,
+  LONG_MEMORY_CAPABILITIES,
+  mergeKnowledgeSearchResponses,
+  selectedEvidenceMatches,
+} from "../knowledgeModel";
 
 export function useContextOsSession(workspaceRoot: string) {
   const [isLoading, setIsLoading] = useState(false);
@@ -35,8 +49,15 @@ export function useContextOsSession(workspaceRoot: string) {
   const [activeTaskTitle, setActiveTaskTitle] = useState("");
   const [latestCheckpointId, setLatestCheckpointId] = useState("");
   const [packetExplanation, setPacketExplanation] = useState<ContextExplanation | null>(null);
+  const [workContext, setWorkContext] = useState<ProjectWorkContext | null>(null);
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [knowledgeSearch, setKnowledgeSearch] = useState<KnowledgeSearchResponse | null>(null);
+  const [longMemoryAvailable, setLongMemoryAvailable] = useState(false);
+  const searchRequestGateRef = useRef(new KnowledgeSearchRequestGate());
 
   const refresh = useCallback(async () => {
+    searchRequestGateRef.current.invalidate();
+    setKnowledgeSearch(null);
     if (!workspaceRoot) {
       setHello(null);
       setStatus(null);
@@ -50,6 +71,10 @@ export function useContextOsSession(workspaceRoot: string) {
       setSafeToReplaceSession(false);
       setActiveTaskTitle("");
       setLatestCheckpointId("");
+      setWorkContext(null);
+      setTasks([]);
+      setKnowledgeSearch(null);
+      setLongMemoryAvailable(false);
       return;
     }
 
@@ -67,7 +92,8 @@ export function useContextOsSession(workspaceRoot: string) {
       }
 
       const supports = (capability: string) => capabilities.available.has(capability);
-      const [nextStatus, nextMemories, nextMetrics, nextSavings, nextConfig, nextContext] = await Promise.all([
+      const supportsLongMemory = LONG_MEMORY_CAPABILITIES.every((capability) => supports(capability));
+      const [nextStatus, nextMemories, nextMetrics, nextSavings, nextConfig, nextContext, nextWorkContext, nextTasks] = await Promise.all([
         memoryApi.status(workspaceRoot),
         memoryApi.list(workspaceRoot, { limit: 100 }),
         supports("usage.context_os") ? memoryApi.contextOsMetrics(workspaceRoot) : Promise.resolve(null),
@@ -78,6 +104,8 @@ export function useContextOsSession(workspaceRoot: string) {
           : Promise.resolve({
               packet: null, receipt: null, task: null, latestCheckpoint: null, safeToReplaceSession: false,
             }),
+        supportsLongMemory ? memoryApi.projectContext(workspaceRoot) : Promise.resolve(null),
+        supports("tasks.list") ? memoryApi.listTasks(workspaceRoot) : Promise.resolve({ items: [] }),
       ]);
       setHello(nextHello);
       setStatus(nextStatus);
@@ -90,6 +118,9 @@ export function useContextOsSession(workspaceRoot: string) {
       setSafeToReplaceSession(nextContext.safeToReplaceSession ?? false);
       setActiveTaskTitle(nextContext.task?.title ?? "");
       setLatestCheckpointId(nextContext.latestCheckpoint?.id ?? "");
+      setWorkContext(nextWorkContext);
+      setTasks(nextTasks.items);
+      setLongMemoryAvailable(supportsLongMemory);
     } catch (loadError) {
       setError(errorMessage(loadError));
     } finally {
@@ -98,6 +129,10 @@ export function useContextOsSession(workspaceRoot: string) {
   }, [workspaceRoot]);
 
   useEffect(() => {
+    setWorkContext(null);
+    setTasks([]);
+    setKnowledgeSearch(null);
+    setLongMemoryAvailable(false);
     void refresh();
   }, [refresh]);
 
@@ -192,6 +227,112 @@ export function useContextOsSession(workspaceRoot: string) {
     return result;
   }, [run, workspaceRoot]);
 
+  const captureKnowledge = useCallback(async (input: {
+    documentContext: MemoryDocumentContext;
+    ownerKind: "PROJECT" | "TASK";
+    taskId?: string;
+    kind: MemoryType;
+    answer: string;
+    appliesWhen: string;
+    reason: string;
+    workingCopyPolicy: "CAPTURED_CONTEXT" | "COMPATIBLE_SOURCES";
+    requestIds: { register: string; capture: string };
+  }): Promise<KnowledgeCard | null> => {
+    const selection = input.documentContext.selection;
+    if (!workContext || !selection) return null;
+    const card = await run(async () => {
+      const registered = await memoryApi.registerSource(workspaceRoot, {
+        worktreeId: workContext.worktreeId,
+        relativePath: input.documentContext.relativePath,
+        startLine: selection.startLine,
+        endLine: selection.endLine,
+        startOffset: selection.from,
+        endOffset: selection.to,
+        selectedText: selection.text,
+        requestId: input.requestIds.register,
+      });
+      if (!registered.approvedSection || !registered.observedRevision
+        || !selectedEvidenceMatches({ selection, section: registered.approvedSection })) {
+        throw new Error("The saved source no longer matches the selected evidence.");
+      }
+      return memoryApi.captureKnowledge(workspaceRoot, {
+        ownerKind: input.ownerKind,
+        ...(input.taskId ? { taskId: input.taskId } : {}),
+        kind: input.kind,
+        answer: input.answer,
+        appliesWhen: input.appliesWhen,
+        reason: input.reason,
+        workingCopyPolicy: input.workingCopyPolicy,
+        sourceId: registered.source.id,
+        sourceRevision: registered.observedRevision,
+        sectionDigest: registered.approvedSection.sectionDigest,
+        validationDigest: registered.approvedSection.validationDigest,
+        ...registered.approvedSection.locator,
+        requestId: input.requestIds.capture,
+      });
+    });
+    if (card) await refresh();
+    return card;
+  }, [refresh, run, workContext, workspaceRoot]);
+
+  const searchKnowledge = useCallback(async (input: {
+    query: string;
+    taskId?: string;
+    cursor?: string;
+  }): Promise<KnowledgeSearchResponse | null> => {
+    const requestSequence = searchRequestGateRef.current.start();
+    if (!input.cursor) setKnowledgeSearch(null);
+    const result = await run(() => memoryApi.searchKnowledge(workspaceRoot, {
+      query: input.query,
+      ...(input.taskId ? { taskId: input.taskId } : {}),
+      ...(input.cursor ? { cursor: input.cursor } : {}),
+      limit: 20,
+    }));
+    if (result && searchRequestGateRef.current.isCurrent(requestSequence)) {
+      setKnowledgeSearch((current) => input.cursor && current
+        ? mergeKnowledgeSearchResponses(current, result)
+        : result);
+    }
+    return searchRequestGateRef.current.isCurrent(requestSequence) ? result : null;
+  }, [run, workspaceRoot]);
+
+  const resolveKnowledgeSource = useCallback(async (
+    hit: KnowledgeSearchHit,
+    taskId?: string,
+  ): Promise<SourceResolution | null> => run(() => memoryApi.resolveSource(workspaceRoot, {
+    cardId: hit.card.id,
+    expectedCardRevision: hit.card.revision,
+    ...(taskId ? { taskId } : {}),
+  })), [run, workspaceRoot]);
+
+  const reviewKnowledge = useCallback(async (input: {
+    hit: KnowledgeSearchHit;
+    answer: string;
+    appliesWhen: string;
+    reason: string;
+    taskId?: string;
+    workingCopyPolicy: "CAPTURED_CONTEXT" | "COMPATIBLE_SOURCES";
+    requestId: string;
+  }): Promise<KnowledgeCard | null> => {
+    const evidence = input.hit.evidence;
+    if (!evidence?.observedRevision || !evidence.observedSection) return null;
+    const reviewed = await run(() => memoryApi.reviewKnowledge(workspaceRoot, {
+      cardId: input.hit.card.id,
+      expectedRevision: input.hit.card.revision,
+      expectedSourceVersion: evidence.source.version,
+      expectedObservedRevision: evidence.observedRevision!,
+      answer: input.answer,
+      appliesWhen: input.appliesWhen,
+      reason: input.reason,
+      ...(input.taskId ? { taskId: input.taskId } : {}),
+      workingCopyPolicy: input.workingCopyPolicy,
+      ...evidence.observedSection!.locator,
+      requestId: input.requestId,
+    }));
+    if (reviewed) await refresh();
+    return reviewed;
+  }, [refresh, run, workspaceRoot]);
+
   return {
     archiveMemory,
     config,
@@ -205,21 +346,33 @@ export function useContextOsSession(workspaceRoot: string) {
     isMutating,
     lastPacket,
     activeTaskTitle,
+    captureKnowledge,
     latestCheckpointId,
+    knowledgeSearch,
+    clearKnowledgeSearch: () => {
+      searchRequestGateRef.current.invalidate();
+      setKnowledgeSearch(null);
+    },
+    longMemoryAvailable,
     loadMemoryHistory,
     memories,
     metrics,
     packetExplanation,
     refresh,
     refreshIntegrations,
+    resolveKnowledgeSource,
     rejectMemory,
     repairIntegration,
     runDiagnostics,
+    searchKnowledge,
     status,
     safeToReplaceSession,
     tokenSavings,
+    tasks,
     updateMemory,
     updateConfig,
     verifyMemory,
+    reviewKnowledge,
+    workContext,
   };
 }

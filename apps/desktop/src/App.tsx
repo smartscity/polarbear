@@ -140,6 +140,7 @@ import {
   revealInFileManager,
   saveMarkdownFile,
   saveImageAsset,
+  takePendingOpenFiles,
   writeMarkdownFile,
   type MarkdownSaveResult,
 } from "./features/workspace/tauriWorkspaceAdapter";
@@ -196,6 +197,16 @@ import { APP_EVENTS } from "./shared/events/appEvents";
 import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 import { ContextWorkspace } from "./features/memory/context/ContextWorkspace";
+import {
+  captureMemoryDocumentContext,
+  snapshotMemoryEditor,
+  type MemoryDocumentContext,
+} from "./features/memory/documentContext";
+import {
+  focusMemorySource,
+  isMemorySourceTargetCurrent,
+  type MemorySourceNavigationTarget,
+} from "./features/memory/sourceNavigation";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -270,6 +281,8 @@ export function App() {
   const lastNativeGestureAtRef = useRef(0);
   const lastZoomClientRef = useRef<{ x: number; y: number } | null>(null);
   const lastSavedFileIdRef = useRef<string | null>(null);
+  const pendingMemorySourceRef = useRef<MemorySourceNavigationTarget | null>(null);
+  const systemOpenQueueRef = useRef<Promise<void>>(Promise.resolve());
   const zoomScrollUnlockTimerRef = useRef<number | null>(null);
   const zoomScrollLockUntilRef = useRef(0);
   const zoomInnerScrollLocksRef = useRef<Map<HTMLElement, InnerScrollLock>>(new Map());
@@ -303,7 +316,13 @@ export function App() {
   const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [activeSurface, setActiveSurface] = useState<AppSurface>("context");
+  const [memoryDocumentContext, setMemoryDocumentContext] =
+    useState<MemoryDocumentContext | null>(null);
   const [workspaceRoot, setWorkspaceRoot] = useState("");
+  const workspaceRootRef = useRef(workspaceRoot);
+  useLayoutEffect(() => {
+    workspaceRootRef.current = workspaceRoot;
+  }, [workspaceRoot]);
   const [dirtyFileIds, setDirtyFileIds] = useState<Set<string>>(new Set());
   const [collapseVersion, setCollapseVersion] = useState(0);
   const [folderRevealRequest, setFolderRevealRequest] = useState<{
@@ -562,6 +581,23 @@ export function App() {
     documentRelativePaths,
     t("top.untitled"),
   );
+
+  const snapshotActiveMemoryDocument = useEventCallback(() => {
+    const activeDocumentWorkspaceRoot = documentWorkspaceRootForId(
+      activeFileId,
+      documentWorkspaceRoots,
+      workspaceRoot,
+    );
+    const relativePath = documentRelativePathForId(activeFileId, documentRelativePaths);
+    setMemoryDocumentContext(captureMemoryDocumentContext({
+      fileId: activeFileId,
+      workspaceRoot: activeDocumentWorkspaceRoot,
+      relativePath,
+      editorRevision: documentRevisions[activeFileId] ?? "",
+      dirty: dirtyFileIds.has(activeFileId),
+      editorSnapshot: snapshotMemoryEditor(editorViewRef.current),
+    }));
+  });
   const isDirty = dirtyFileIds.has(activeFileId);
   const documentStructureItems = useMemo(
     () => extractDocumentStructure(markdownContent),
@@ -1818,28 +1854,39 @@ export function App() {
     }
   };
 
-  const openFile = async () => {
+  const openMarkdownPath = useEventCallback(async (filePath: string) => {
     try {
-      const selectedFile = await chooseMarkdownFile();
+      const openedFile = await openMarkdownFile(filePath);
+      const existingDocumentId = findOpenDocumentIdForWorkspaceFile(
+        openFileIdsRef.current,
+        documentWorkspaceRoots,
+        documentRelativePaths,
+        openedFile.workspaceRoot,
+        openedFile.relativePath,
+      );
 
-      if (!selectedFile) {
-        setStatusMessage(t("status.openFileCancelled"));
-        return;
-      }
-
-      const openedFile = await openMarkdownFile(selectedFile);
-      const documentId = makeWorkspaceDocumentId({
-        currentDocumentIds: new Set([...openFileIds, ...Object.keys(documents)]),
-        currentWorkspaceRoot: workspaceRoot,
-        relativePath: openedFile.relativePath,
-        workspaceRoot: openedFile.workspaceRoot,
-      });
+      setActiveSurface("workspace");
       setWorkspaceRoot(openedFile.workspaceRoot);
       setWorkspaceItems(openedFile.tree);
       setWorkspaceItemsByRoot((currentTrees) => ({
         ...currentTrees,
         [openedFile.workspaceRoot]: openedFile.tree,
       }));
+
+      if (existingDocumentId) {
+        setActiveFileId(existingDocumentId);
+        setSelectedTreeItemId(openedFile.relativePath);
+        revealFolder(parentFolderIdOf(openedFile.relativePath));
+        setStatusMessage(t("status.openedPath", { path: openedFile.relativePath }));
+        return;
+      }
+
+      const documentId = makeWorkspaceDocumentId({
+        currentDocumentIds: new Set([...openFileIdsRef.current, ...Object.keys(documents)]),
+        currentWorkspaceRoot: workspaceRoot,
+        relativePath: openedFile.relativePath,
+        workspaceRoot: openedFile.workspaceRoot,
+      });
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
         [documentId]: openedFile.markdownContent,
@@ -1868,7 +1915,60 @@ export function App() {
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
+  });
+
+  const openFile = async () => {
+    try {
+      const selectedFile = await chooseMarkdownFile();
+
+      if (!selectedFile) {
+        setStatusMessage(t("status.openFileCancelled"));
+        return;
+      }
+
+      await openMarkdownPath(selectedFile);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : String(error));
+    }
   };
+
+  useEffect(() => {
+    let disposed = false;
+    let unlistenOpenFiles: UnlistenFn | null = null;
+
+    const drainSystemOpenQueue = () => {
+      systemOpenQueueRef.current = systemOpenQueueRef.current.then(async () => {
+        const filePaths = await takePendingOpenFiles();
+        for (const filePath of filePaths) {
+          await openMarkdownPath(filePath);
+        }
+      }).catch((error: unknown) => {
+        if (!disposed) {
+          setStatusMessage(error instanceof Error ? error.message : String(error));
+        }
+      });
+    };
+
+    void listen(APP_EVENTS.openFilesRequested, drainSystemOpenQueue)
+      .then((unlisten) => {
+        if (disposed) {
+          unlisten();
+          return;
+        }
+        unlistenOpenFiles = unlisten;
+        drainSystemOpenQueue();
+      })
+      .catch((error: unknown) => {
+        if (!disposed) {
+          setStatusMessage(error instanceof Error ? error.message : String(error));
+        }
+      });
+
+    return () => {
+      disposed = true;
+      unlistenOpenFiles?.();
+    };
+  }, [openMarkdownPath]);
 
   const refreshRepositoryState = useCallback(async () => {
     try {
@@ -2352,6 +2452,85 @@ export function App() {
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
   };
+
+  const openMemorySource = useEventCallback(async (
+    target: MemorySourceNavigationTarget,
+  ) => {
+    if (!isMemorySourceTargetCurrent(target, workspaceRootRef.current)) {
+      setStatusMessage(t("context.knowledge.sourceNavigationStale"));
+      return;
+    }
+    const openDocumentId = findOpenDocumentIdForWorkspaceFile(
+      openFileIds,
+      documentWorkspaceRoots,
+      documentRelativePaths,
+      workspaceRoot,
+      target.relativePath,
+    );
+    if (openDocumentId && !dirtyFileIds.has(openDocumentId)) {
+      try {
+        const document = await loadMarkdownFile({
+          workspaceRoot,
+          relativePath: target.relativePath,
+        });
+        setDocuments((current) => ({
+          ...current,
+          [openDocumentId]: document.markdownContent,
+        }));
+        setDocumentRevisions((current) => ({
+          ...current,
+          [openDocumentId]: document.revision,
+        }));
+      } catch (error) {
+        setStatusMessage(error instanceof Error ? error.message : String(error));
+      }
+    }
+    if (!isMemorySourceTargetCurrent(target, workspaceRootRef.current)) {
+      setStatusMessage(t("context.knowledge.sourceNavigationStale"));
+      return;
+    }
+    pendingMemorySourceRef.current = target;
+    if (viewMode === "preview") setViewMode("edit");
+    setActiveSurface("workspace");
+    await selectFile(target.relativePath);
+  });
+
+  const handleEditorReady = useEventCallback((editorView: MarkdownEditorView | null) => {
+    editorViewRef.current = editorView;
+    const target = pendingMemorySourceRef.current;
+    if (target && !isMemorySourceTargetCurrent(target, workspaceRoot)) {
+      pendingMemorySourceRef.current = null;
+      return;
+    }
+    if (editorView && target && target.relativePath === activeRelativePath) {
+      const focused = focusMemorySource(editorView, target);
+      pendingMemorySourceRef.current = null;
+      if (!focused) setStatusMessage(t("context.knowledge.sourceNavigationStale"));
+    }
+  });
+
+  useEffect(() => {
+    const target = pendingMemorySourceRef.current;
+    const editorView = editorViewRef.current;
+    if (
+      activeSurface === "workspace"
+      && target
+      && isMemorySourceTargetCurrent(target, workspaceRoot)
+      && target.relativePath === activeRelativePath
+      && editorView
+    ) {
+      const focused = focusMemorySource(editorView, target);
+      pendingMemorySourceRef.current = null;
+      if (!focused) setStatusMessage(t("context.knowledge.sourceNavigationStale"));
+    }
+  }, [activeRelativePath, activeSurface, markdownContent, t, workspaceRoot]);
+
+  useEffect(() => {
+    const target = pendingMemorySourceRef.current;
+    if (target && !isMemorySourceTargetCurrent(target, workspaceRoot)) {
+      pendingMemorySourceRef.current = null;
+    }
+  }, [workspaceRoot]);
 
   const activateTab = async (fileId: string) => {
     if (!fileId) {
@@ -3562,6 +3741,7 @@ export function App() {
       }
 
       if (command === "surface.context") {
+        snapshotActiveMemoryDocument();
         setActiveSurface("context");
         return;
       }
@@ -3954,9 +4134,7 @@ export function App() {
                       <MarkdownEditor
                         markdownContent={markdownContent}
                         onCommand={executeCommand}
-                        onEditorReady={(editorView) => {
-                          editorViewRef.current = editorView;
-                        }}
+                        onEditorReady={handleEditorReady}
                         onImageDrop={(filePaths) => {
                           filePaths.forEach(
                             (filePath) => void insertImageFromPath(filePath),
@@ -3972,9 +4150,7 @@ export function App() {
                       <TyporaLiveEditor
                         activeFileId={activeRelativePath}
                         markdownContent={markdownContent}
-                        onEditorReady={(editorView) => {
-                          editorViewRef.current = editorView;
-                        }}
+                        onEditorReady={handleEditorReady}
                         onImagePaste={(
                           items: DataTransferItemList,
                           insertMarkdown?: (markdown: string) => void,
@@ -4001,7 +4177,10 @@ export function App() {
                 )}
               </section>
             </AppShell> : <ContextWorkspace
+              key={workspaceRoot}
+              documentContext={memoryDocumentContext}
               workspaceRoot={workspaceRoot}
+              onOpenSource={(target) => void openMemorySource(target)}
               onOpenWorkspace={() => executeCommand("file.openFolder")}
             />}
             </div>

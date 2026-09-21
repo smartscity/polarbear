@@ -16,6 +16,7 @@ mod ipc_contracts;
 mod memory_admin;
 mod native_pinch;
 mod secret_store;
+mod system_open;
 
 type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
 
@@ -3280,12 +3281,24 @@ fn provider_push_workspace_files(
 }
 
 fn main() -> tauri::Result<()> {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(app_zoom::AppZoomState::default())
         .manage(memory_admin::MemoryAdminState::default())
+        .manage(system_open::PendingOpenFiles::default());
+
+    #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+        system_open::enqueue_open_files(app, system_open::markdown_paths_from_args(args));
+    }));
+
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             native_pinch::install_native_pinch(app).map_err(std::io::Error::other)?;
+            system_open::enqueue_open_files(
+                app.handle(),
+                system_open::markdown_paths_from_args(std::env::args()),
+            );
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -3328,9 +3341,19 @@ fn main() -> tauri::Result<()> {
             repository_pull_workspace,
             repository_sync_now,
             memory_admin::memory_admin_bind_workspace,
-            memory_admin::memory_admin_request
+            memory_admin::memory_admin_request,
+            system_open::take_pending_open_files
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())?;
+
+    app.run(|app, event| {
+        #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+        if let tauri::RunEvent::Opened { urls } = event {
+            system_open::enqueue_open_files(app, system_open::markdown_paths_from_urls(urls));
+        }
+    });
+
+    Ok(())
 }
 
 #[cfg(test)]

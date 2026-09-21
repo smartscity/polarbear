@@ -13,13 +13,23 @@ import {
   type MemoryStatusFilter,
 } from "./contextOsModel";
 import { useContextOsSession } from "./useContextOsSession";
+import type { MemoryDocumentContext } from "../documentContext";
+import type { MemorySourceNavigationTarget } from "../sourceNavigation";
+import { KnowledgeWorkspace } from "./KnowledgeWorkspace";
 
 type ContextWorkspaceProps = {
+  documentContext: MemoryDocumentContext | null;
   workspaceRoot: string;
+  onOpenSource: (target: MemorySourceNavigationTarget) => void;
   onOpenWorkspace: () => void;
 };
 
-export function ContextWorkspace({ workspaceRoot, onOpenWorkspace }: ContextWorkspaceProps) {
+export function ContextWorkspace({
+  documentContext,
+  workspaceRoot,
+  onOpenSource,
+  onOpenWorkspace,
+}: ContextWorkspaceProps) {
   const { t } = useI18n();
   const [section, setSection] = useState<ContextSection>("overview");
   const [memoryStatus, setMemoryStatus] = useState<MemoryStatusFilter>("all");
@@ -70,6 +80,13 @@ export function ContextWorkspace({ workspaceRoot, onOpenWorkspace }: ContextWork
             setMemoryStatus("needsAttention");
             setSection("memory");
           }} />
+        ) : section === "knowledge" ? (
+          <KnowledgeWorkspace
+            documentContext={documentContext}
+            workspaceRoot={workspaceRoot}
+            session={session}
+            onOpenSource={onOpenSource}
+          />
         ) : section === "memory" ? (
           <ContextMemory session={session} status={memoryStatus} onStatusChange={setMemoryStatus} />
         ) : (

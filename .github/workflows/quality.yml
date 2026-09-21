@@ -33,8 +33,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Memory Admin contract
+        run: npm --workspace apps/desktop run memory-contract:check
+
       - name: Unit tests
         run: npm test
+
+      - name: Production build
+        run: npm run build
 
   rust-format:
     name: Rust format
@@ -50,3 +56,22 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  native-tests:
+    name: Native tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            apps/desktop/src-tauri -> target
+
+      - name: Run native tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast

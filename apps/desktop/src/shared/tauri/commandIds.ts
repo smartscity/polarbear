@@ -32,6 +32,7 @@ export const TAURI_COMMANDS = {
   saveImageAsset: "save_image_asset",
   saveMarkdownFile: "save_markdown_file",
   setAppZoom: "set_app_zoom",
+  takePendingOpenFiles: "take_pending_open_files",
   writeMarkdownFile: "write_markdown_file"
 } as const;
 
