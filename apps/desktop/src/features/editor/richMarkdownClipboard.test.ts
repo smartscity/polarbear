@@ -41,6 +41,28 @@ describe("rich Markdown clipboard", () => {
     expect(html).toContain("graph LR");
   });
 
+  it("renders multiple Mermaid images one at a time", async () => {
+    let activeRenders = 0;
+    let maximumActiveRenders = 0;
+    let completedRenders = 0;
+    const renderMermaid = vi.fn(async () => {
+      activeRenders += 1;
+      maximumActiveRenders = Math.max(maximumActiveRenders, activeRenders);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      activeRenders -= 1;
+      return `data:image/png;base64,diagram-${completedRenders++}`;
+    });
+
+    const html = await buildRichMarkdownClipboardHtml(
+      "```mermaid\ngraph TD\nA-->B\n```\n\n```mermaid\nsequenceDiagram\nA->>B: Hi\n```\n",
+      renderMermaid,
+    );
+
+    expect(renderMermaid).toHaveBeenCalledTimes(2);
+    expect(maximumActiveRenders).toBe(1);
+    expect(html.indexOf("diagram-0")).toBeLessThan(html.indexOf("diagram-1"));
+  });
+
   it("only identifies a complete document selection", () => {
     const document = "# Title\n\nBody";
     const completeView = {

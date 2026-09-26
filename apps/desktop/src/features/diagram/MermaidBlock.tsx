@@ -18,31 +18,96 @@ export type MermaidBlockProps = {
 export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const { t } = useI18n();
   const renderVersionRef = useRef(0);
+  const renderingRef = useRef(false);
   const renderTargetRef = useRef<HTMLDivElement | null>(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
   const [svgContent, setSvgContent] = useState("");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState("");
 
   useEffect(() => {
     renderVersionRef.current += 1;
-    const renderVersion = renderVersionRef.current;
-
+    renderingRef.current = false;
     setSvgContent("");
     setRenderError(null);
     setActionStatus("");
-
-    void renderMermaidSvg(`${diagramId}-${renderVersion}`, source)
-      .then((svgContent) => {
-        if (renderVersionRef.current === renderVersion) {
-          setSvgContent(svgContent);
-        }
-      })
-      .catch((error: unknown) => {
-        if (renderVersionRef.current === renderVersion) {
-          setRenderError(errorMessage(error));
-        }
-      });
   }, [diagramId, source]);
+
+  useEffect(() => () => {
+    renderVersionRef.current += 1;
+  }, []);
+
+  useEffect(() => {
+    const target = renderTargetRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const scrollRoot = target.closest<HTMLElement>(".markdown-preview");
+    const observer = new IntersectionObserver((entries) => {
+      setIsNearViewport(entries.some((entry) => entry.isIntersecting));
+    }, { root: scrollRoot, rootMargin: "300px 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isNearViewport || svgContent || renderError || renderingRef.current) return;
+
+    let cancelled = false;
+    let started = false;
+    let idleCallbackId: number | null = null;
+    let timerId: number | null = null;
+    const scrollRoot = renderTargetRef.current?.closest<HTMLElement>(".markdown-preview");
+
+    const render = () => {
+      idleCallbackId = null;
+      timerId = null;
+      if (cancelled || started) return;
+      started = true;
+      renderingRef.current = true;
+      renderVersionRef.current += 1;
+      const renderVersion = renderVersionRef.current;
+
+      void renderMermaidSvg(`${diagramId}-${renderVersion}`, source)
+        .then((nextSvgContent) => {
+          if (renderVersionRef.current === renderVersion) {
+            setSvgContent(nextSvgContent);
+          }
+        })
+        .catch((error: unknown) => {
+          if (renderVersionRef.current === renderVersion) {
+            setRenderError(errorMessage(error));
+          }
+        })
+        .finally(() => {
+          if (renderVersionRef.current === renderVersion) {
+            renderingRef.current = false;
+          }
+        });
+    };
+
+    const scheduleRender = () => {
+      if (cancelled || started) return;
+      if (idleCallbackId !== null) window.cancelIdleCallback(idleCallbackId);
+      if (timerId !== null) window.clearTimeout(timerId);
+      if (typeof window.requestIdleCallback === "function") {
+        idleCallbackId = window.requestIdleCallback(render);
+      } else {
+        timerId = window.setTimeout(render, 180);
+      }
+    };
+    scrollRoot?.addEventListener("scroll", scheduleRender, { passive: true });
+    scheduleRender();
+
+    return () => {
+      cancelled = true;
+      scrollRoot?.removeEventListener("scroll", scheduleRender);
+      if (idleCallbackId !== null) window.cancelIdleCallback(idleCallbackId);
+      if (timerId !== null) window.clearTimeout(timerId);
+    };
+  }, [diagramId, isNearViewport, renderError, source, svgContent]);
 
   const copySource = async () => {
     try {

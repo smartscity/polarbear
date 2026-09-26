@@ -5,6 +5,7 @@ import { renderMermaidSvg } from "../diagram/mermaidRenderer";
 import { splitMarkdownIntoSegments } from "../preview/splitMarkdownIntoSegments";
 
 type MermaidImageRenderer = (source: string, index: number) => Promise<string>;
+type BeforeMermaidRender = () => Promise<void>;
 
 type ClipboardCacheEntry = {
   html: string | null;
@@ -12,7 +13,9 @@ type ClipboardCacheEntry = {
 
 const MAX_CACHE_ENTRIES = 3;
 const PREPARE_DELAY_MS = 250;
+const SCROLL_QUIET_MS = 180;
 const clipboardCache = new Map<string, ClipboardCacheEntry>();
+let lastEditorScrollAt = 0;
 const markdownRenderer = new MarkdownIt({
   html: false,
   linkify: true,
@@ -21,9 +24,16 @@ const markdownRenderer = new MarkdownIt({
 
 export const richMarkdownCopyExtension = ViewPlugin.fromClass(
   class {
+    private readonly view: EditorView;
     private prepareTimer: number | null = null;
+    private preparationRevision = 0;
+    private readonly onScroll = () => {
+      lastEditorScrollAt = Date.now();
+    };
 
     constructor(view: EditorView) {
+      this.view = view;
+      view.scrollDOM.addEventListener("scroll", this.onScroll, { passive: true });
       this.schedulePreparation(view.state.doc.toString());
     }
 
@@ -34,18 +44,21 @@ export const richMarkdownCopyExtension = ViewPlugin.fromClass(
     }
 
     destroy() {
+      this.preparationRevision += 1;
+      this.view.scrollDOM.removeEventListener("scroll", this.onScroll);
       if (this.prepareTimer !== null) {
         window.clearTimeout(this.prepareTimer);
       }
     }
 
     private schedulePreparation(markdown: string) {
+      const revision = ++this.preparationRevision;
       if (this.prepareTimer !== null) {
         window.clearTimeout(this.prepareTimer);
       }
       this.prepareTimer = window.setTimeout(() => {
         this.prepareTimer = null;
-        prepareRichMarkdownClipboard(markdown);
+        prepareRichMarkdownClipboard(markdown, () => this.preparationRevision === revision);
       }, PREPARE_DELAY_MS);
     }
   },
@@ -61,30 +74,33 @@ export const richMarkdownCopyExtension = ViewPlugin.fromClass(
 export async function buildRichMarkdownClipboardHtml(
   markdown: string,
   renderMermaidImage: MermaidImageRenderer = renderMermaidAsPngDataUrl,
+  beforeMermaidRender: BeforeMermaidRender = async () => {},
 ): Promise<string> {
   const segments = splitMarkdownIntoSegments(markdown);
-  const renderedSegments = await Promise.all(
-    segments.map(async (segment, index) => {
-      if (segment.type === "mermaid") {
-        try {
-          const imageDataUrl = await renderMermaidImage(segment.content, index);
-          return [
-            '<figure style="margin: 1em 0;">',
-            `<img alt="Mermaid diagram" src="${imageDataUrl}" style="display: block; max-width: 100%; height: auto;" />`,
-            "</figure>",
-          ].join("");
-        } catch {
-          return markdownRenderer.render(`\`\`\`mermaid\n${segment.content}\`\`\`\n`);
-        }
+  const renderedSegments: string[] = [];
+  for (const [index, segment] of segments.entries()) {
+    if (segment.type === "mermaid") {
+      await beforeMermaidRender();
+      try {
+        const imageDataUrl = await renderMermaidImage(segment.content, index);
+        renderedSegments.push([
+          '<figure style="margin: 1em 0;">',
+          `<img alt="Mermaid diagram" src="${imageDataUrl}" style="display: block; max-width: 100%; height: auto;" />`,
+          "</figure>",
+        ].join(""));
+      } catch {
+        renderedSegments.push(markdownRenderer.render(`\`\`\`mermaid\n${segment.content}\`\`\`\n`));
       }
+      continue;
+    }
 
-      if (segment.type === "plantuml") {
-        return markdownRenderer.render(`\`\`\`plantuml\n${segment.content}\`\`\`\n`);
-      }
+    if (segment.type === "plantuml") {
+      renderedSegments.push(markdownRenderer.render(`\`\`\`plantuml\n${segment.content}\`\`\`\n`));
+      continue;
+    }
 
-      return markdownRenderer.render(segment.content);
-    }),
-  );
+    renderedSegments.push(markdownRenderer.render(segment.content));
+  }
 
   return [
     "<!doctype html>",
@@ -128,20 +144,60 @@ function copyEntireRichMarkdownDocument(event: ClipboardEvent, view: EditorView)
   }
 }
 
-function prepareRichMarkdownClipboard(markdown: string): void {
+function prepareRichMarkdownClipboard(markdown: string, isCurrent = () => true): void {
   if (!containsMermaid(markdown) || clipboardCache.has(markdown)) return;
 
   const entry: ClipboardCacheEntry = { html: null };
   clipboardCache.set(markdown, entry);
   trimClipboardCache();
-  void buildRichMarkdownClipboardHtml(markdown).then(
+  void buildRichMarkdownClipboardHtml(
+    markdown,
+    renderMermaidAsPngDataUrl,
+    () => waitForBrowserIdle(isCurrent),
+  ).then(
     (html) => {
-      entry.html = html;
+      if (isCurrent()) {
+        entry.html = html;
+      } else if (clipboardCache.get(markdown) === entry) {
+        clipboardCache.delete(markdown);
+      }
     },
     () => {
-      clipboardCache.delete(markdown);
+      if (clipboardCache.get(markdown) === entry) clipboardCache.delete(markdown);
     },
   );
+}
+
+function waitForBrowserIdle(isCurrent: () => boolean): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const wait = () => {
+      if (!isCurrent()) {
+        reject(new Error("Clipboard preparation cancelled"));
+        return;
+      }
+      const quietFor = Date.now() - lastEditorScrollAt;
+      if (quietFor < SCROLL_QUIET_MS) {
+        window.setTimeout(wait, SCROLL_QUIET_MS - quietFor);
+        return;
+      }
+
+      const finish = () => {
+        if (!isCurrent()) {
+          reject(new Error("Clipboard preparation cancelled"));
+        } else if (Date.now() - lastEditorScrollAt < SCROLL_QUIET_MS) {
+          wait();
+        } else {
+          resolve();
+        }
+      };
+      if (typeof window.requestIdleCallback === "function") {
+        window.requestIdleCallback(finish);
+      } else {
+        window.setTimeout(finish, 0);
+      }
+    };
+    wait();
+  });
 }
 
 function containsMermaid(markdown: string): boolean {

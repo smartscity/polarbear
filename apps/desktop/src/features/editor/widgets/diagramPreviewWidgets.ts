@@ -36,6 +36,7 @@ type DiagramRenderResult = {
 };
 
 const mermaidRenderCache = new Map<string, DiagramRenderResult>();
+const pendingMermaidRenders = new Map<string, Promise<DiagramRenderResult>>();
 const plantUmlRenderCache = new Map<string, DiagramRenderResult>();
 const pendingPlantUmlRenders = new Map<string, Promise<DiagramRenderResult>>();
 
@@ -313,34 +314,37 @@ function getPlantUmlRenderResult(source: string): Promise<DiagramRenderResult> {
 }
 
 async function renderMermaidPreview(source: string, content: HTMLElement): Promise<void> {
+  const result = await getMermaidRenderResult(source);
+  if (result.svgContent) {
+    content.innerHTML = result.svgContent;
+  } else if (result.error) {
+    content.classList.add("cm-typora-diagram-error");
+    content.textContent = result.error;
+  }
+  scheduleEditorMeasureFromDom(content);
+}
+
+function getMermaidRenderResult(source: string): Promise<DiagramRenderResult> {
   const cachedResult = mermaidRenderCache.get(source);
-  if (cachedResult?.svgContent) {
-    content.innerHTML = cachedResult.svgContent;
-    scheduleEditorMeasureFromDom(content);
-    return;
-  }
+  if (cachedResult) return Promise.resolve(cachedResult);
 
-  if (cachedResult?.error) {
-    content.textContent = cachedResult.error;
-    content.classList.add("cm-typora-diagram-error");
-    scheduleEditorMeasureFromDom(content);
-    return;
-  }
+  const pendingRender = pendingMermaidRenders.get(source);
+  if (pendingRender) return pendingRender;
 
-  try {
-    const svgContent = await renderMermaidSvg(diagramIdForSource(source), source);
-    mermaidRenderCache.set(source, { svgContent });
-    content.innerHTML = svgContent;
-    scheduleEditorMeasureFromDom(content);
-  } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : translateCurrent("diagram.mermaidRenderError", { error: String(error) });
-    mermaidRenderCache.set(source, { error: message });
-    content.classList.add("cm-typora-diagram-error");
-    content.textContent = message;
-    scheduleEditorMeasureFromDom(content);
-  }
+  const render = renderMermaidSvg(diagramIdForSource(source), source)
+    .then((svgContent): DiagramRenderResult => ({ svgContent }))
+    .catch((error): DiagramRenderResult => ({
+      error: error instanceof Error
+        ? error.message
+        : translateCurrent("diagram.mermaidRenderError", { error: String(error) }),
+    }))
+    .then((result) => {
+      mermaidRenderCache.set(source, result);
+      pendingMermaidRenders.delete(source);
+      return result;
+    });
+  pendingMermaidRenders.set(source, render);
+  return render;
 }
 
 function diagramIdForSource(source: string): string {
