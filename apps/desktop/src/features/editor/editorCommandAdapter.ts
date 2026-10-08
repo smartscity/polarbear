@@ -10,6 +10,14 @@ import type { MarkdownFormatCommand } from "../../shared/commands/markdownFormat
 
 type StandardEditorCommand = Extract<AppCommand, "edit.redo" | "edit.selectAll" | "edit.undo">;
 
+export function selectEntirePreviewDocument(): boolean {
+  const surface = document.querySelector<HTMLElement>('.markdown-preview-surface');
+  const selection = window.getSelection();
+  if (!surface || !selection) return false;
+  selection.selectAllChildren(surface);
+  return true;
+}
+
 /**
  * Runs the standard commands that CodeMirror can execute as one document
  * transaction. Native menus and global commands share this adapter instead of

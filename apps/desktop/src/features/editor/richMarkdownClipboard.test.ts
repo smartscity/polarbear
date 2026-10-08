@@ -5,6 +5,9 @@ import {
   buildRichMarkdownClipboardHtml,
   isEntireDocumentSelected,
 } from "./richMarkdownClipboard";
+vi.mock("../../shared/i18n/translate", () => ({
+  translateCurrent: (key: string) => key === "diagram.mermaid" ? "Mermaid" : key,
+}));
 
 describe("rich Markdown clipboard", () => {
   it("replaces Mermaid fences with embedded PNG images", async () => {
@@ -22,7 +25,7 @@ describe("rich Markdown clipboard", () => {
 
     const html = await buildRichMarkdownClipboardHtml(markdown, renderMermaid);
 
-    expect(renderMermaid).toHaveBeenCalledWith("graph TD\n  A --> B\n", 1);
+    expect(renderMermaid).toHaveBeenCalledWith("graph TD\n  A --> B\n", 0);
     expect(html).toContain("<h1>Architecture</h1>");
     expect(html).toContain('src="data:image/png;base64,diagram"');
     expect(html).toContain("After the diagram.");
@@ -80,5 +83,41 @@ describe("rich Markdown clipboard", () => {
 
     expect(isEntireDocumentSelected(completeView)).toBe(true);
     expect(isEntireDocumentSelected(partialView)).toBe(false);
+  });
+
+  it.each([
+    "~~~mermaid\nflowchart TD\nA-->B\n~~~",
+    "````mermaid\nflowchart TD\nA-->B\n````",
+    "```mermaid\r\nflowchart TD\r\nA-->B\r\n```",
+    "> ```mermaid\n> flowchart TD\n> A-->B\n> ```",
+    "- Diagram\n\n  ```mermaid\n  flowchart TD\n  A-->B\n  ```",
+  ])("recognizes CommonMark diagram fences: %s", async (markdown) => {
+    const render = vi.fn().mockResolvedValue("data:image/png;base64,diagram");
+    const html = await buildRichMarkdownClipboardHtml(markdown, render);
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(html).toContain('<img alt="Mermaid');
+    expect(html).not.toContain('class="language-mermaid"');
+  });
+
+  it("preserves nested document structure and ordinary code verbatim", async () => {
+    const render = vi.fn().mockResolvedValue("data:image/png;base64,diagram");
+    const html = await buildRichMarkdownClipboardHtml(
+      '> Intro\n>\n> ~~~mermaid\n> pie\n> "A" : 2\n> ~~~\n\n```text\n![not an image](file.png)\n```', render,
+    );
+    expect(html).toMatch(/<blockquote>[\s\S]*<img[\s\S]*<\/blockquote>/);
+    expect(html).toContain('![not an image](file.png)');
+    expect(html.match(/<img/g)).toHaveLength(1);
+  });
+
+  it("isolates an invalid diagram without losing later diagrams or text", async () => {
+    const render = vi.fn().mockRejectedValueOnce(new Error("syntax"))
+      .mockResolvedValueOnce("data:image/png;base64,valid");
+    const html = await buildRichMarkdownClipboardHtml(
+      "~~~mermaid\nbad source\n~~~\n\nBetween\n\n~~~mermaid\npie\n\"A\": 2\n~~~\n\nAfter", render,
+    );
+    expect(html).toContain("bad source");
+    expect(html).toContain("data:image/png;base64,valid");
+    expect(html).toContain("Between");
+    expect(html).toContain("After");
   });
 });

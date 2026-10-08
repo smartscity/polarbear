@@ -37,6 +37,7 @@ export function getCommandState(
   const hasDocument = Boolean(context.activeDocumentId);
   if (command === "vocab.lookup") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
   const hasEditableDocument = hasDocument && context.activeViewMode !== "preview";
+  if (command === "edit.selectAll") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
   const hasFileTarget = Boolean(context.selectedTreeItemId || context.activeDocumentId);
 
   if (
@@ -61,8 +62,7 @@ export function getCommandState(
 
   if (
     command === "edit.undo" ||
-    command === "edit.redo" ||
-    command === "edit.selectAll"
+    command === "edit.redo"
   ) {
     return {
       ...DEFAULT_COMMAND_STATE,

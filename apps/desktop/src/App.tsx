@@ -44,6 +44,7 @@ import { codeFenceTemplate } from "./features/editor/markdown/markdownTemplates"
 import {
   executeMarkdownFormatCommand,
   executeStandardEditorCommand,
+  selectEntirePreviewDocument,
 } from "./features/editor/editorCommandAdapter";
 import {
   isMarkdownFormatCommand,
@@ -3818,7 +3819,11 @@ export function App() {
         command === "edit.redo" ||
         command === "edit.selectAll"
       ) {
-        executeStandardEditorCommand(editorViewRef.current, command);
+        if (command === "edit.selectAll" && viewMode === "preview") {
+          selectEntirePreviewDocument();
+        } else {
+          executeStandardEditorCommand(editorViewRef.current, command);
+        }
         return;
       }
 
@@ -4147,6 +4152,7 @@ export function App() {
                     {viewMode === "edit" || viewMode === "split" ? (
                       <MarkdownEditor
                         markdownContent={markdownContent}
+                        onClipboardStatus={setStatusMessage}
                         onCommand={executeCommand}
                         onEditorReady={handleEditorReady}
                         onImageDrop={(filePaths) => {
@@ -4163,6 +4169,7 @@ export function App() {
                     {viewMode === "live" ? (
                       <TyporaLiveEditor
                         activeFileId={activeRelativePath}
+                        onClipboardStatus={setStatusMessage}
                         markdownContent={markdownContent}
                         onEditorReady={handleEditorReady}
                         onImagePaste={(
@@ -4183,6 +4190,7 @@ export function App() {
                     {viewMode === "preview" || viewMode === "split" ? (
                       <MarkdownPreview
                         activeFileId={activeRelativePath}
+                        onClipboardStatus={setStatusMessage}
                         markdownContent={markdownContent}
                         workspaceRoot={workspaceRoot}
                       />

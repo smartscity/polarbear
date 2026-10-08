@@ -63,7 +63,7 @@ import {
 import { useCodeFenceLanguageHover } from "../hooks/useCodeFenceLanguageHover";
 import { executeMarkdownFormatCommand } from "../editorCommandAdapter";
 import { createEditorCommandBindings } from "../editorCommandKeymap";
-import { richMarkdownCopyExtension } from "../richMarkdownClipboard";
+import { createRichMarkdownCopyExtension } from "../richMarkdownClipboard";
 import { liveDocumentSelection } from "../liveDocumentSelection";
 import {
   createImagePasteExtension,
@@ -157,6 +157,7 @@ type TyporaLiveEditorProps = {
   markdownContent?: string;
   onChange?: (nextMarkdown: string) => void;
   onMarkdownChange?: (nextMarkdown: string) => void;
+  onClipboardStatus?: (message: string) => void;
   onEditorReady?: (editorView: MarkdownEditorView | null) => void;
   onImageDrop?: ImageDropHandler;
   onImagePaste?: ImagePasteHandler;
@@ -372,6 +373,7 @@ export function TyporaLiveEditor({
   markdownContent,
   onChange,
   onMarkdownChange,
+  onClipboardStatus,
   onEditorReady,
   onImageDrop,
   onImagePaste,
@@ -437,7 +439,7 @@ export function TyporaLiveEditor({
   const editorExtensions = useMemo(
     () => [
       typoraLiveKeymap(userSettings.keybindings),
-      richMarkdownCopyExtension,
+      createRichMarkdownCopyExtension(onClipboardStatus),
       liveDocumentSelection,
       trimSingleLineBreakSelectionExtension,
       preserveLargeEnterScrollJumpExtension,
@@ -452,7 +454,7 @@ export function TyporaLiveEditor({
       }),
       EditorView.lineWrapping,
     ],
-    [activeFileId, stableImagePasteHandler, userSettings.keybindings, workspaceRoot],
+    [activeFileId, onClipboardStatus, stableImagePasteHandler, userSettings.keybindings, workspaceRoot],
   );
 
   useCodeFenceLanguageHover(paneRef);

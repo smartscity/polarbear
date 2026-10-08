@@ -1,23 +1,39 @@
-import { useMemo, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, type MouseEvent } from "react";
 import MarkdownIt from "markdown-it";
 import { MarkdownImage } from "./MarkdownImage";
 import { MermaidBlock } from "../../diagram/MermaidBlock";
 import { PlantUmlBlock } from "../../diagram/PlantUmlBlock";
 import { splitMarkdownIntoSegments } from "../../preview/splitMarkdownIntoSegments";
 import { useI18n, type Translate } from "../../../shared/i18n/I18nProvider";
+import { copyRichMarkdownDocument, isEntirePreviewSelected, prepareRichMarkdownClipboard } from "../richMarkdownClipboard";
 
 type MarkdownPreviewProps = {
   activeFileId: string;
   markdownContent: string;
   workspaceRoot: string;
+  onClipboardStatus?: (message: string) => void;
 };
 
 export function MarkdownPreview({
   activeFileId,
   markdownContent,
-  workspaceRoot
+  workspaceRoot,
+  onClipboardStatus,
 }: MarkdownPreviewProps) {
   const { t } = useI18n();
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let current = true;
+    prepareRichMarkdownClipboard(markdownContent, () => current);
+    // Non-editable selections may dispatch copy at the document, not the article.
+    const copy = (event: ClipboardEvent) => {
+      if (surfaceRef.current && isEntirePreviewSelected(surfaceRef.current)) {
+        copyRichMarkdownDocument(event, markdownContent, onClipboardStatus);
+      }
+    };
+    document.addEventListener("copy", copy);
+    return () => { current = false; document.removeEventListener("copy", copy); };
+  }, [markdownContent, onClipboardStatus]);
   const markdownRenderer = useMemo(
     () => {
       const renderer = new MarkdownIt({
@@ -86,6 +102,7 @@ export function MarkdownPreview({
         onClick={(event) => handlePreviewClick(event, t)}
       >
         <div
+          ref={surfaceRef}
           className="markdown-preview-surface"
           data-editor-document-surface="true"
         >

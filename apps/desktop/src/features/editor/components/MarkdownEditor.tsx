@@ -8,7 +8,7 @@ import type { AppCommand } from "../../../shared/commands/appCommandTypes";
 import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
 import { createEditorCommandBindings } from "../editorCommandKeymap";
-import { richMarkdownCopyExtension } from "../richMarkdownClipboard";
+import { createRichMarkdownCopyExtension } from "../richMarkdownClipboard";
 import { platformNavigationKeymap } from "./platformNavigationKeymap";
 
 export type MarkdownEditorView = EditorView;
@@ -24,6 +24,7 @@ type MarkdownEditorProps = {
   onCommand: (command: AppCommand) => void;
   onEditorReady: (editorView: MarkdownEditorView | null) => void;
   onMarkdownChange: (markdownContent: string) => void;
+  onClipboardStatus?: (message: string) => void;
 };
 
 export function MarkdownEditor({
@@ -32,9 +33,11 @@ export function MarkdownEditor({
   onImagePaste,
   onCommand,
   onEditorReady,
-  onMarkdownChange
+  onMarkdownChange,
+  onClipboardStatus,
 }: MarkdownEditorProps) {
   const userSettings = useUserSettings();
+  const clipboardExtension = useMemo(() => createRichMarkdownCopyExtension(onClipboardStatus), [onClipboardStatus]);
   const commandKeymap = useMemo(
     () => sourceEditorCommandKeymap(userSettings.keybindings, onCommand),
     [onCommand, userSettings.keybindings],
@@ -83,7 +86,7 @@ export function MarkdownEditor({
         extensions={[
           platformNavigationKeymap(),
           commandKeymap,
-          richMarkdownCopyExtension,
+          clipboardExtension,
           markdown(),
           search({ top: true }),
         ]}
