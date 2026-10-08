@@ -1,4 +1,5 @@
 export const TAURI_COMMANDS = {
+  vocabRequest: "vocab_request",
   copyImageAsset: "copy_image_asset",
   createMarkdownFile: "create_markdown_file",
   createWorkspaceDirectory: "create_workspace_directory",

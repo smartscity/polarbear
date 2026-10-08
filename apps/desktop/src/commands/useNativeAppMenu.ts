@@ -150,6 +150,11 @@ export function useNativeAppMenu(
               id: "edit",
               text: t("menu.edit"),
               items: [
+                { id: "vocab.lookup", text: commandTitle("vocab.lookup"),
+                  accelerator: accelerator("vocab.lookup"),
+                  enabled: commandState("vocab.lookup").enabled,
+                  action: () => executeCommand("vocab.lookup") },
+                { item: "Separator" },
                 {
                   text: commandTitle("edit.undo"),
                   accelerator: accelerator("edit.undo"),

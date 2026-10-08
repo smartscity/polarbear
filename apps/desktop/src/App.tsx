@@ -196,6 +196,7 @@ import { STORAGE_KEYS } from "./shared/constants/storageKeys";
 import { APP_EVENTS } from "./shared/events/appEvents";
 import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
+import { useVocabReading } from "./features/vocab/useVocabReading";
 import { ContextWorkspace } from "./features/memory/context/ContextWorkspace";
 import {
   captureMemoryDocumentContext,
@@ -599,6 +600,12 @@ export function App() {
     }));
   });
   const isDirty = dirtyFileIds.has(activeFileId);
+  const vocab = useVocabReading({
+    editor: editorViewRef, markdown: markdownContent, title: activeFileName,
+    preview: viewMode === "preview" || viewMode === "split", onStatus: setStatusMessage,
+    filePath: isUntitledDocument(activeFileId) ? null : joinWorkspacePath(
+      documentWorkspaceRootForId(activeFileId, documentWorkspaceRoots, workspaceRoot), activeRelativePath),
+  });
   const documentStructureItems = useMemo(
     () => extractDocumentStructure(markdownContent),
     [markdownContent],
@@ -3720,6 +3727,10 @@ export function App() {
       }
 
       const targetPath = payload?.targetPath;
+      if (command === "vocab.lookup") {
+        if (activeSurface === "workspace") vocab.open();
+        return;
+      }
       const targetItem = targetPath
         ? findWorkspaceItem(workspaceItems, targetPath)
         : null;
@@ -4057,6 +4068,7 @@ export function App() {
 
   return (
     <>
+      {vocab.controls(executeCommand)}
       <div ref={zoomViewportRef} className="app-zoom-viewport">
         <div
           ref={zoomCanvasSizeRef}
@@ -4116,7 +4128,9 @@ export function App() {
               }
               onToggleSidebar={() => setSidebarOpen((isOpen) => !isOpen)}
             >
-              <section className={`editor-workspace editor-workspace-${viewMode}`}>
+              <section className={`editor-workspace editor-workspace-${viewMode}`}
+                onContextMenuCapture={(event) => vocab.contextMenu(event, executeCommand)}
+                onPointerUp={vocab.onPointerUp} onScrollCapture={vocab.onScroll}>
                 {!activeFileId && !workspaceRoot ? (
                   <section className="editor-empty-state">
                     <h1>{PRODUCT_CONFIG.name}</h1>

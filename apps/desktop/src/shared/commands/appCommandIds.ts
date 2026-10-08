@@ -1,4 +1,5 @@
 export const APP_COMMANDS = {
+  vocabLookup: "vocab.lookup",
   appAbout: "app.about",
   appNewWindow: "app.newWindow",
   appQuit: "app.quit",

@@ -17,6 +17,7 @@ mod memory_admin;
 mod native_pinch;
 mod secret_store;
 mod system_open;
+mod vocab_bridge;
 
 type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
 
@@ -3342,7 +3343,8 @@ fn main() -> tauri::Result<()> {
             repository_sync_now,
             memory_admin::memory_admin_bind_workspace,
             memory_admin::memory_admin_request,
-            system_open::take_pending_open_files
+            system_open::take_pending_open_files,
+            vocab_bridge::vocab_request
         ])
         .build(tauri::generate_context!())?;
 

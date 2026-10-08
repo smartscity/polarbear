@@ -30,6 +30,10 @@ type CommandDefinition = {
 };
 
 export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
+  "vocab.lookup": {
+    titleKey: "vocab.lookup",
+    shortcut: { key: "d", altKey: true, command: "vocab.lookup" },
+  },
   "app.about": {
     titleKey: "menu.about",
   },
