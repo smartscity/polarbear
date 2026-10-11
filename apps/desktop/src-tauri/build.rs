@@ -71,5 +71,73 @@ fn main() -> Result<(), Box<dyn Error>> {
     let output = PathBuf::from(output_directory).join("runtime_descriptor_contract.rs");
     fs::write(output, generated)?;
     tauri_build::build();
+    build_reading_native()?;
+    Ok(())
+}
+
+fn build_reading_native() -> Result<(), Box<dyn Error>> {
+    if env::var("CARGO_CFG_TARGET_OS")? != "macos" {
+        return Ok(());
+    }
+    let files = [
+        "native/DocumentClipboard.swift",
+        "native/LocalTranslation.swift",
+    ];
+    for file in files {
+        println!("cargo:rerun-if-changed={file}");
+    }
+    let xcrun = |args: &[&str]| -> Result<String, Box<dyn Error>> {
+        let output = std::process::Command::new("xcrun").args(args).output()?;
+        if !output.status.success() {
+            return Err(
+                io::Error::other(String::from_utf8_lossy(&output.stderr).into_owned()).into(),
+            );
+        }
+        Ok(String::from_utf8(output.stdout)?.trim().to_owned())
+    };
+    let compiler = PathBuf::from(xcrun(&["--find", "swiftc"])?);
+    let sdk = xcrun(&["--show-sdk-path"])?;
+    let architecture = if env::var("CARGO_CFG_TARGET_ARCH")? == "aarch64" {
+        "arm64"
+    } else {
+        "x86_64"
+    };
+    let output = PathBuf::from(env::var("OUT_DIR")?);
+    let status = std::process::Command::new(&compiler)
+        .arg("-module-cache-path")
+        .arg(output.join("swift-module-cache"))
+        .args([
+            "-parse-as-library",
+            "-emit-library",
+            "-static",
+            "-O",
+            "-swift-version",
+            "5",
+            "-module-name",
+            "PolarbearReadingNative",
+            "-sdk",
+            &sdk,
+            "-target",
+            &format!("{architecture}-apple-macos11.0"),
+        ])
+        .args(files)
+        .arg("-o")
+        .arg(output.join("libPolarbearReadingNative.a"))
+        .status()?;
+    if !status.success() {
+        return Err(io::Error::other("Swift reading bridge compilation failed").into());
+    }
+    println!("cargo:rustc-link-search=native={}", output.display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        compiler
+            .parent()
+            .unwrap()
+            .join("../lib/swift/macosx")
+            .display()
+    );
+    println!("cargo:rustc-link-search=native={sdk}/usr/lib/swift");
+    println!("cargo:rustc-link-lib=static=PolarbearReadingNative");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift");
     Ok(())
 }

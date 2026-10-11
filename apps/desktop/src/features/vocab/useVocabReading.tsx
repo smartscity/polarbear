@@ -1,11 +1,11 @@
-import { useRef, useState, type RefObject, type MouseEvent } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import type { MarkdownEditorView } from "../editor/components/MarkdownEditor";
 import type { ExecuteAppCommand } from "../../shared/commands/appCommandTypes";
 import { APP_COMMANDS } from "../../shared/commands/appCommandIds";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import { useEventCallback } from "../../shared/hooks/useEventCallback";
-import { normalizeReadingTerm, readingContext } from "./readingSelection";
+import { normalizeReadingSelection, readingContext } from "./readingSelection";
 import { VocabPopover, type ReadingTarget } from "./VocabPopover";
 
 type Options = {
@@ -24,6 +24,19 @@ export function useVocabReading(options: Options) {
   const pending = useRef<ReadingTarget | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const nativeRange = useRef<Range | null>(null);
+  const suggestionButton = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const button = suggestionButton.current;
+    if (!button || !suggestion || target) return;
+    const place = () => {
+      const bounds = button.getBoundingClientRect();
+      button.style.left = `${Math.max(12, Math.min(suggestion.rect.left, window.innerWidth - bounds.width - 12))}px`;
+      button.style.top = `${Math.max(12, Math.min(suggestion.rect.bottom + 6, window.innerHeight - bounds.height - 12))}px`;
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [suggestion, target, t]);
 
   const snapshot = useEventCallback((): ReadingTarget | null => {
     const selection = window.getSelection();
@@ -35,7 +48,7 @@ export function useVocabReading(options: Options) {
     const cmRange = view?.state.selection.main;
     const useDom = range && !range.collapsed && (options.preview || !view?.contentDOM.contains(node ?? null));
     const raw = useDom ? selection?.toString() ?? "" : cmRange && view ? view.state.sliceDoc(cmRange.from, cmRange.to) : "";
-    const term = normalizeReadingTerm(raw);
+    const term = normalizeReadingSelection(raw);
     if (!term) return null;
     nativeRange.current = range?.cloneRange() ?? null;
     const context = useDom ? {
@@ -85,16 +98,15 @@ export function useVocabReading(options: Options) {
   };
 
   const controls = (execute: ExecuteAppCommand) => <>
-    {suggestion && !target && createPortal(<button type="button" className="vocab-selection-action"
-      style={{ left: Math.max(12, Math.min(suggestion.rect.left, window.innerWidth - 110)), top: Math.min(suggestion.rect.bottom + 6, window.innerHeight - 44) }}
+    {suggestion && !target && createPortal(<button ref={suggestionButton} type="button" className="vocab-selection-action"
       onPointerDown={(event) => event.preventDefault()}
       onClick={() => { pending.current = suggestion; execute(APP_COMMANDS.vocabLookup, { commandSource: "toolbar" }); }}
-      title={t("vocab.lookup")}>Vocab</button>, document.body)}
+      title={t("vocab.lookup")}>{t("vocab.readSelection")}</button>, document.body)}
     {target && <VocabPopover key={target.capture.requestId} target={target} onClose={close} />}
   </>;
 
   return { open, contextMenu, controls,
-    onPointerUp: () => { if (options.preview && !target) setSuggestion(snapshot()); },
+    onPointerUp: () => { if (!target) setSuggestion(snapshot()); },
     onScroll: () => setSuggestion(null),
   };
 }

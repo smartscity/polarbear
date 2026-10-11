@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { copyRichMarkdownDocument } from "./richMarkdownClipboard";
 
-const mocks = vi.hoisted(() => ({ render: vi.fn(), png: vi.fn() }));
+const mocks = vi.hoisted(() => ({ render: vi.fn(), png: vi.fn(), native: vi.fn(), begin: vi.fn(), writeNative: vi.fn() }));
+vi.mock("./nativeDocumentClipboard", () => ({
+  supportsNativeDocumentCopy: mocks.native, beginNativeDocumentCopy: mocks.begin, writeNativeDocumentCopy: mocks.writeNative,
+}));
 vi.mock("../diagram/mermaidRenderer", () => ({ renderMermaidSvg: mocks.render }));
 vi.mock("../diagram/diagramExport", () => ({ svgContentAsPngDataUrl: mocks.png }));
 vi.mock("../../shared/i18n/translate", () => ({ translateCurrent: (key: string) => key }));
@@ -22,6 +25,9 @@ describe("whole-document copy", () => {
   beforeEach(() => {
     mocks.render.mockReset().mockResolvedValue("<svg/>");
     mocks.png.mockReset().mockResolvedValue("data:image/png;base64,diagram");
+    mocks.native.mockReset().mockReturnValue(false);
+    mocks.begin.mockReset().mockResolvedValue(42);
+    mocks.writeNative.mockReset().mockResolvedValue(undefined);
     vi.stubGlobal("ClipboardItem", Item);
     vi.stubGlobal("document", new EventTarget());
   });
@@ -83,5 +89,24 @@ describe("whole-document copy", () => {
     const state = setup();
     expect(copyRichMarkdownDocument(state.event, "ordinary text", state.report)).toBe(false);
     expect(state.values.size).toBe(0);
+  });
+
+  it("writes native document attachments with the clipboard ownership lease", async () => {
+    mocks.native.mockReturnValue(true);
+    const state = setup();
+    copyRichMarkdownDocument(state.event, state.markdown, state.report);
+    await vi.waitFor(() => expect(mocks.writeNative).toHaveBeenCalledWith(state.markdown, expect.stringContaining("data:image/png"), 42));
+    expect(mocks.begin).toHaveBeenCalledWith(state.markdown);
+    expect(state.values.get("text/plain")).toBe(state.markdown);
+    expect(state.report).toHaveBeenLastCalledWith("clipboard.richCopied");
+  });
+
+  it("reports native write failures rather than claiming converted images were copied", async () => {
+    mocks.native.mockReturnValue(true);
+    mocks.writeNative.mockRejectedValue(new Error("native write denied"));
+    const state = setup();
+    copyRichMarkdownDocument(state.event, state.markdown, state.report);
+    await vi.waitFor(() => expect(state.report).toHaveBeenLastCalledWith("clipboard.richCopyFailed"));
+    expect(state.report).not.toHaveBeenCalledWith("clipboard.richCopied");
   });
 });

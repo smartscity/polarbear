@@ -15,6 +15,7 @@ mod cloud_sync_store;
 mod ipc_contracts;
 mod memory_admin;
 mod native_pinch;
+mod reading_native;
 mod secret_store;
 mod system_open;
 mod vocab_bridge;
@@ -3309,6 +3310,9 @@ fn main() -> tauri::Result<()> {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            reading_native::begin_document_copy,
+            reading_native::write_document_copy,
+            reading_native::translate_reading_local,
             app_zoom::set_app_zoom,
             list_workspace_files,
             load_markdown_file,

@@ -59,7 +59,7 @@ jobs:
 
   native-tests:
     name: Native tests
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -75,3 +75,11 @@ jobs:
 
       - name: Run native tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast
+
+      - name: Setup Node.js for clipboard receiver test
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Native rich document paste
+        run: node apps/desktop/scripts/test-native-clipboard.mjs

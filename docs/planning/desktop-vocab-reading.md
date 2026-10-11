@@ -8,9 +8,45 @@ selection also exposes a small Vocab action. The lookup stays in Desktop.
 
 Vocab owns dictionary lookup, pronunciation, vocabulary membership and source
 history. Desktop never opens Vocab databases. No article is sent to a remote
-service. There is no AI dependency or background network lookup.
+service. Dictionary lookup has no AI dependency or background network lookup;
+passage translation uses installed system language models.
 
 ## Interaction and persistence
+
+### Passage reading
+
+Selection accepts English sentences and paragraphs, punctuation and line breaks
+included, up to 2,000 characters. The selection action is available in source,
+live and preview views, alongside the existing menu and command shortcut.
+Dictionary term normalization remains separate: selections that do not qualify
+as dictionary terms are not silently saved or sent to the lookup endpoint.
+
+The existing popover includes local translation and English playback. Translation
+is explicitly requested with a button; English playback reuses Vocab's `speak`
+operation. Words retain dictionary pronunciation (IPA), senses and vocabulary
+membership. For a passage, users can enter a word/phrase to look up and save with
+the original reading context. Each new capture uses a new request ID; retries of
+the same save retain its ID and payload.
+
+The Desktop native translation adapter uses Apple's installed-device
+`TranslationSession` for English to Simplified Chinese. It requires macOS 26+
+and a build using Xcode 26+. No remote provider or automatic model download is
+configured. Missing language packs produce an actionable message referring to
+System Settings > General > Language & Region > Translation Languages. Earlier
+macOS and non-macOS platforms receive an explicit unsupported-system result;
+dictionary lookup and Vocab speech remain separate capabilities.
+
+The Swift bridge is statically linked by the existing Cargo build script. Native
+CI and macOS releases use the `macos-26` runner so the translation API is included.
+The application's minimum deployment target is not raised for unrelated features.
+Requests have a bounded UI timeout and discard late results after dismissal.
+
+[Apple's TranslationSession documentation](https://developer.apple.com/documentation/translation/translationsession)
+states that translation content is processed on-device. Apple may collect system
+API usage metrics, but not the original or translated content. Polarbear adds no
+telemetry and never accesses the Vocab database.
+
+### Vocabulary capture
 
 - Exact local dictionary matches precede dictionary-validated inflection hints.
 - Phrases remain intact. Multiple senses require an explicit choice.
@@ -62,6 +98,15 @@ the article. Test missing Vocab, a stale/insecure socket and unsupported version
 Run Desktop typecheck/lint/tests and Rust tests, and Vocab typecheck/tests/Clippy.
 
 ## Implementation verification
+
+The passage UI regression covers a full sentence/paragraph speech request, local
+translation response, missing language packs, word lookup and saving, live locale
+switching, and narrow-screen layout. Native IPC is mocked in that browser test.
+An actual native translation probe on the development Mac returned
+`languagePackMissing`; successful model inference is therefore not claimed for
+that machine. No language packs were downloaded during verification.
+
+### Initial capture release verification
 
 Desktop typecheck, lint, frontend production build, 163 Vitest cases, four asset
 checks, and 20 native Rust tests passed. One pre-existing Memory Engine installation

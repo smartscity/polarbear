@@ -20,6 +20,31 @@ These paths were not an intentional allowlist of supported Mermaid types.
 
 ## Implementation
 
+### Native receivers (macOS)
+
+HTML data URLs alone are not a sufficient cross-application clipboard contract.
+On macOS, copying now publishes one native pasteboard item with UTF-8 Markdown,
+HTML, RTF with embedded PNG bytes, and flat RTFD with actual text attachments.
+The native writer uses locally generated text/style/image runs; it never imports
+arbitrary HTML, reads referenced files, or downloads remote images.
+
+The browser first commits the plain-text fallback. The native adapter captures
+the pasteboard change count only when that fallback is still current, then checks
+the same count before publishing prepared attachments. A newer copy in this or
+another application must not be overwritten by late diagram rendering.
+
+`nativeDocumentClipboard.ts` performs the format adaptation through typed Tauri
+commands. `reading_native.rs` schedules AppKit access on the main thread.
+`native/DocumentClipboard.swift` builds and writes native representations. It is
+statically linked into the existing app, not launched as a shell helper.
+
+The checked-in `npm --workspace apps/desktop run test:native-clipboard` test uses
+a private named pasteboard and an image-enabled `NSTextView` receiver. It checks
+the actual paste result, including image attachments, Unicode text, and stale
+clipboard rejection. It does not read or modify the user's general pasteboard.
+
+### Browser fallback
+
 `richMarkdownClipboard.ts` parses the complete document with MarkdownIt and
 replaces Mermaid fence tokens with locally rendered PNG images. This preserves
 the surrounding list and blockquote structure. Plain text retains the original
@@ -65,9 +90,15 @@ These checks do not prove visual fidelity for every possible diagram.
    failed diagram should remain source, with a partial-failure status.
 6. Select a single paragraph: ordinary partial copying must remain unchanged.
 
-Packaged macOS WebKit clipboard permission behavior and actual destination-app
-pasting still require manual verification. Some destinations strip data-URL
-images or prefer plain text; the application does not upload images to work
-around that restriction. If asynchronous clipboard writes are unavailable,
-Markdown remains available and a second copy after preparation can use the
-synchronous HTML path. PlantUML conversion is outside this change.
+The native receiver regression also passed with a payload of all 17 real Mermaid
+renders listed above. This verifies pasted attachments, not merely PNG generation.
+Individual third-party applications and packaged WebKit event timing still need
+manual acceptance. A text-only field cannot accept pictures, and applications
+may choose or strip clipboard representations. No universal receiver support is
+claimed. Native text formatting currently preserves bold, italic, code, list
+markers and table text separated by tabs; full table layout uses the HTML flavor.
+
+Other platforms retain the browser HTML/plain-text path. If asynchronous browser
+clipboard writes are unavailable, Markdown remains available and a second copy
+after preparation can use synchronous HTML. No files are uploaded to work around
+destination restrictions. PlantUML conversion is outside this change.

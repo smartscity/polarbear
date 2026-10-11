@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../../shared/i18n/I18nProvider";
-import { TauriCommandError } from "../../shared/tauri/invokeTauri";
-import { lookupVocab, saveVocab, speakVocab, type ReadingCapture, type VocabEntry } from "./vocabAdapter";
+import { lookupVocab, saveVocab, speakVocab, vocabErrorKey, type ReadingCapture, type VocabEntry } from "./vocabAdapter";
+import { normalizeReadingTerm } from "./readingSelection";
+import { PassageReading } from "./PassageReading";
 
 export type ReadingTarget = { capture: ReadingCapture; rect: { left: number; bottom: number } };
 const EDGE_GAP = 12;
@@ -11,6 +12,7 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
   const { t } = useI18n();
   const panel = useRef<HTMLDivElement>(null);
   const attemptedCapture = useRef<ReadingCapture | null>(null);
+  const captureRequestId = useRef(target.capture.requestId);
   const [entries, setEntries] = useState<VocabEntry[]>([]);
   const [sense, setSense] = useState("");
   const [loading, setLoading] = useState(true);
@@ -19,11 +21,14 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
   const [includeSource, setIncludeSource] = useState(true);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [lookupText, setLookupText] = useState(normalizeReadingTerm(target.capture.selectedText));
   const selected = entries.find((entry) => entry.senseUid === sense);
 
   useEffect(() => {
+    if (!lookupText) { setLoading(false); return; }
     let active = true;
-    lookupVocab(target.capture.selectedText).then((result) => {
+    setLoading(true);
+    lookupVocab(lookupText).then((result) => {
       if (!active) return;
       setEntries(result);
       setSense(result.length === 1 ? result[0].senseUid : "");
@@ -32,7 +37,7 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
       if (active) { setError(vocabErrorKey(reason)); setLoading(false); }
     });
     return () => { active = false; };
-  }, [target, attempt]);
+  }, [lookupText, attempt]);
 
   useLayoutEffect(() => {
     const element = panel.current;
@@ -56,7 +61,7 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
     setSaving(true);
     setError("");
     try {
-      const capture = attemptedCapture.current ?? { ...target.capture, senseUid: selected?.senseUid ?? null };
+      const capture = attemptedCapture.current ?? { ...target.capture, requestId: captureRequestId.current, selectedText: lookupText ?? target.capture.selectedText, senseUid: selected?.senseUid ?? null };
       if (!attemptedCapture.current && !includeSource) Object.assign(capture, { sentence: "", title: "", filePath: null, heading: "", line: null });
       attemptedCapture.current = capture;
       const record = await saveVocab(capture);
@@ -71,9 +76,14 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
     aria-label={t("vocab.lookup")} onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(true); }
     }} onToggle={(event) => { if (event.newState === "closed") onClose(false); }}>
-    <header><strong lang="en">{target.capture.selectedText}</strong>
+    <header className={!normalizeReadingTerm(target.capture.selectedText) ? "reading-passage-header" : undefined}><strong lang="en">{target.capture.selectedText}</strong>
       <button type="button" onClick={() => onClose(true)} aria-label={t("common.close")}>×</button></header>
-    {loading ? <p role="status">{t("vocab.loading")}</p> : <>
+    <PassageReading text={target.capture.selectedText} lookupDisabled={saving} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
+      if (saving) return;
+      captureRequestId.current = crypto.randomUUID();
+      attemptedCapture.current = null; setSaved(false); setError(""); setSense(""); setEntries([]); setLookupText(term); setAttempt((value) => value + 1);
+    }} />
+    {lookupText && (loading ? <p role="status">{t("vocab.loading")}</p> : <>
       {entries.length > 0 ? <fieldset disabled={saved || saving || Boolean(attemptedCapture.current)}>
         <legend>{t("vocab.chooseSense")}</legend>
         {entries.map((entry) => <label className="vocab-sense" key={entry.senseUid}>
@@ -84,7 +94,7 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
             {entry.inMyVocabulary && <small>{t("vocab.alreadyAdded")}</small>}</span>
         </label>)}
       </fieldset> : !error && <p>{t("vocab.notFound")}</p>}
-      {selected && <button type="button" onClick={() => {
+      {selected && lookupText !== target.capture.selectedText && <button type="button" onClick={() => {
         void speakVocab(selected.lemma).catch((reason: unknown) => setError(vocabErrorKey(reason)));
       }}>{t("vocab.pronounce")}</button>}
       <blockquote lang="en">{target.capture.sentence}</blockquote>
@@ -94,16 +104,10 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
       {saved ? <p role="status">{t(selected ? "vocab.saved" : "vocab.pendingSaved")}</p>
         : <button type="button" className="vocab-save" disabled={saving || (entries.length > 0 && !sense) || Boolean(error && !entries.length)}
           onClick={() => void save()}>{t(saving ? "vocab.saving" : selected?.inMyVocabulary ? "vocab.addSource" : entries.length ? "vocab.add" : "vocab.savePending")}</button>}
-    </>}
+    </>)}
     {error && <div role="alert"><p>{t(error)}</p><button type="button" onClick={() => {
       if (attemptedCapture.current) { void save(); return; }
       setError(""); setLoading(true); setAttempt((value) => value + 1);
     }}>{t("vocab.retry")}</button></div>}
   </div>, document.body);
-}
-
-function vocabErrorKey(error: unknown): string {
-  const code = error instanceof TauriCommandError ? error.code : "operationFailed";
-  return ["notInstalled", "unavailable", "unsupportedPlatform", "unsupportedVersion", "timeout", "unsafeEndpoint"].includes(code)
-    ? `vocab.error.${code}` : "vocab.error.operationFailed";
 }

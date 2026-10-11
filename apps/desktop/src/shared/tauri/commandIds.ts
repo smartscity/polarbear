@@ -1,4 +1,7 @@
 export const TAURI_COMMANDS = {
+  beginDocumentCopy: "begin_document_copy",
+  writeDocumentCopy: "write_document_copy",
+  translateReadingLocal: "translate_reading_local",
   vocabRequest: "vocab_request",
   copyImageAsset: "copy_image_asset",
   createMarkdownFile: "create_markdown_file",

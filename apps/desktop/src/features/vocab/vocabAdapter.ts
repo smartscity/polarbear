@@ -1,5 +1,5 @@
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
-import { invokeTauri } from "../../shared/tauri/invokeTauri";
+import { invokeTauri, TauriCommandError } from "../../shared/tauri/invokeTauri";
 
 export type VocabEntry = {
   senseUid: string;
@@ -40,3 +40,12 @@ export const saveVocab = (capture: ReadingCapture) =>
 
 export const speakVocab = (text: string) =>
   invokeTauri(TAURI_COMMANDS.vocabRequest, { operation: { method: "speak", text } });
+
+export const translateReadingLocal = (text: string) =>
+  invokeTauri<string>(TAURI_COMMANDS.translateReadingLocal, { text });
+
+export function vocabErrorKey(error: unknown): string {
+  const code = error instanceof TauriCommandError ? error.code : "operationFailed";
+  return ["notInstalled", "unavailable", "unsupportedPlatform", "unsupportedVersion", "timeout", "unsafeEndpoint"].includes(code)
+    ? `vocab.error.${code}` : "vocab.error.operationFailed";
+}

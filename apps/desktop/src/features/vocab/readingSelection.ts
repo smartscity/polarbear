@@ -1,6 +1,13 @@
 export const MAX_TERM_LENGTH = 80;
 export const MAX_SENTENCE_LENGTH = 2000;
 
+export function normalizeReadingSelection(text: string): string | null {
+  const selection = text.trim();
+  if (!selection || selection.length > MAX_SENTENCE_LENGTH || !/[a-z]/iu.test(selection)
+    || Array.from(selection).some((char) => char.charCodeAt(0) < 32 && ![9, 10, 13].includes(char.charCodeAt(0)))) return null;
+  return selection;
+}
+
 export function normalizeReadingTerm(text: string): string | null {
   const term = text.trim().replace(/\s+/gu, " ");
   if (!term || term.length > MAX_TERM_LENGTH || !/[a-z]/iu.test(term)

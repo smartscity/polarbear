@@ -12,7 +12,7 @@ permissions:
 jobs:
   build_macos:
     name: Build macOS DMG
-    runs-on: macos-latest
+    runs-on: macos-26
     outputs:
       app_version: ${{ steps.release_metadata.outputs.app_version }}
       release_tag: ${{ steps.release_metadata.outputs.release_tag }}
@@ -50,6 +50,9 @@ jobs:
 
       - name: Frontend tests
         run: npm --workspace apps/desktop run test
+
+      - name: Native rich document paste
+        run: npm --workspace apps/desktop run test:native-clipboard
 
       - name: Rust format
         run: cargo fmt --all -- --check

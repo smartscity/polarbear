@@ -8,6 +8,7 @@
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "test:native-clipboard": "node scripts/test-native-clipboard.mjs",
     "lint": "eslint src",
     "memory-contract:generate": "node scripts/generate-memory-admin-contract.mjs",
     "memory-contract:check": "node scripts/generate-memory-admin-contract.mjs --check",

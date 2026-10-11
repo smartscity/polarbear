@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { normalizeReadingTerm, readingContext } from "./readingSelection";
+import { normalizeReadingSelection, normalizeReadingTerm, readingContext } from "./readingSelection";
 
 describe("reading selection", () => {
+  it("accepts sentences and paragraphs without treating them as vocabulary terms", () => {
+    const passage = "This is a sentence.\nHere is another one!";
+    expect(normalizeReadingSelection(passage)).toBe(passage);
+    expect(normalizeReadingTerm(passage)).toBeNull();
+    expect(normalizeReadingSelection("a".repeat(2001))).toBeNull();
+    expect(normalizeReadingSelection("hello\0world")).toBeNull();
+  });
   it("preserves phrases, casing, apostrophes and hyphens", () => {
     expect(normalizeReadingTerm("  Look   forward to ")).toBe("Look forward to");
     expect(normalizeReadingTerm("don't")).toBe("don't");
