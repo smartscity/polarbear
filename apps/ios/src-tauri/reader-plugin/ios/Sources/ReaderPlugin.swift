@@ -7,6 +7,8 @@ private struct ImportArgs: Decodable { let folder: Bool }
 private struct ResourceArgs: Decodable { let collection: String; let path: String }
 private struct CollectionArgs: Decodable { let collection: String }
 private struct EntriesResponse: Encodable { let entries: [ReaderEntry] }
+private struct OpenArgs: Decodable { let url: String }
+private struct OpenResponse: Encodable { let entries: [ReaderEntry]; let error: String? }
 
 final class ReaderPlugin: Plugin, UIDocumentPickerDelegate {
     private let queue = DispatchQueue(label: "dev.polarbear.reader.library", qos: .userInitiated)
@@ -41,18 +43,18 @@ final class ReaderPlugin: Plugin, UIDocumentPickerDelegate {
         guard let invoke = pending, let source = urls.first else { return }
         pending = nil
         queue.async {
-            let scoped = source.startAccessingSecurityScopedResource()
-            defer { if scoped { source.stopAccessingSecurityScopedResource() } }
-            var coordinationError: NSError?
-            var result: Result<[ReaderEntry], Error>?
-            NSFileCoordinator().coordinate(readingItemAt: source, options: [], error: &coordinationError) { url in
-                result = Result { try self.library.importSnapshot(url) }
-            }
             do {
-                if let coordinationError { throw coordinationError }
-                guard let result else { throw ReaderFailure.unavailable }
-                invoke.resolve(EntriesResponse(entries: try result.get()))
+                invoke.resolve(EntriesResponse(entries: try self.library.importCoordinatedSnapshot(source)))
             } catch { self.reject(invoke, error) }
+        }
+    }
+
+    // Called only by the Rust OS-open event handler, not exposed through WebView permissions.
+    @objc func openDocument(_ invoke: Invoke) throws {
+        let args = try invoke.parseArgs(OpenArgs.self)
+        queue.async {
+            do { invoke.resolve(OpenResponse(entries: try self.library.importOpenedDocument(args.url), error: nil)) }
+            catch { invoke.resolve(OpenResponse(entries: [], error: (error as? ReaderFailure)?.rawValue ?? ReaderFailure.unavailable.rawValue)) }
         }
     }
 

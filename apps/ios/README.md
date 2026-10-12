@@ -6,6 +6,7 @@ entry point, Cargo workspace, styles, commands, and release workflow.
 ## Available functionality
 
 - Import a Markdown document or a folder using the native iOS Files picker.
+- Receive `.md` and `.markdown` documents through iOS Open In and open the imported copy automatically.
 - Keep an immutable local copy, including supported relative image assets.
 - Browse/search document names, follow links within a collection, and open a heading outline.
 - Read tables, task lists, code, local images and lazily rendered Mermaid diagrams.
@@ -64,6 +65,7 @@ npm --workspace apps/ios run test:storage
 npm exec --workspace apps/ios -- playwright install chromium
 npm --workspace apps/ios run test:ui
 cargo fmt --manifest-path apps/ios/src-tauri/Cargo.toml --all -- --check
+cargo test --manifest-path apps/ios/src-tauri/reader-plugin/Cargo.toml --locked
 ```
 
 `test:storage` uses the macOS Swift compiler to exercise the same Foundation
@@ -80,6 +82,14 @@ slow on the Intel-host iOS 26.5 simulator; physical-device startup performance i
 not established by this check. Physical
 iPhone import, iCloud-provider permissions, background restoration and signed-device
 distribution remain separate release gates.
+
+The Open In increment passed 33 reader unit/boundary tests, seven browser integration
+tests, the Foundation storage regression executable, one Rust inbox test, TypeScript,
+ESLint, rustfmt, Clippy with warnings denied, and the frontend production build.
+The native simulator target built successfully with the document associations in its
+installed Info.plist. OS delivery of a `.md` file was verified both after terminating
+the app and while it was running; both imports opened directly in the reader.
+These checks do not establish physical-device or third-party file-provider behavior.
 
 ## Boundaries and storage
 
@@ -115,10 +125,46 @@ viewing. Mermaid runs in the WebView with lazy loading and a source-size guard,
 not in a cancellable worker; pathological diagrams still need device profiling.
 
 Not included in this first slice: linked-folder refresh/sync, Share Extension or
-direct AirDrop/open-in registration, editing, PDF export, in-document full-text
+generic share-sheet actions, editing, PDF export, in-document full-text
 search, external-link launching, mobile Vocab handoff, local translation or speech.
-Documents received by AirDrop can be saved to Files and imported through the picker.
+Documents received by AirDrop can be saved to Files and opened with Polarbear Reader
+through the system document-opening interface or imported through the picker.
 There is no TestFlight/App Store upload or signed distribution in this change.
 
 The separate `iPhone Reader Quality` workflow runs reader checks. `ios-v*` tags
 identify reader milestones and do not trigger the existing `v*` desktop release workflow.
+
+## Open In document delivery
+
+`src-tauri/Info.ios.plist` imports the standard Markdown type for `.md` and
+`.markdown` and registers a read-only, alternate viewer. It does not claim ownership
+of Markdown, associate all plain-text files, or enable editing in place. Rebuild and
+reinstall the native app after changing this metadata; refreshing Vite is insufficient.
+
+An OS `RunEvent::Opened` is routed through the existing reader plugin to a coordinated,
+security-scoped snapshot import. The arbitrary-URL native method is not allowed from
+the WebView. Only imported collection identifiers and relative paths reach React.
+The native inbox retains completed imports and localized error codes until the UI
+acknowledges them. The UI subscribes before reading that inbox, also checks on resume,
+and opens a successful import directly. Repeated wake-up notifications do not reimport
+the file. Relaunching a document intentionally creates another immutable snapshot.
+
+A single received Markdown file does not grant access to sibling images. Use folder
+import when those attachments are required. Source files are never modified or removed.
+This is document Open In support, not an iOS Share Extension: apps that offer only their
+own private sharing UI may not list it. Save to Files and use the document-opening menu
+in that case. Actual menu wording and placement depend on the sending app and iOS.
+
+Manual device acceptance:
+
+1. Install the rebuilt app, then use Files or another document app to open `sample.md`
+   with Polarbear Reader. Confirm direct navigation to its content and a library copy.
+2. Terminate Polarbear and repeat to exercise cold-start delivery.
+3. Repeat with a Unicode/space filename and `.markdown`; open a second document while
+   a first document or settings sheet is visible.
+4. Try invalid UTF-8 and oversized documents. Confirm a localized error, then verify a
+   subsequent valid document still opens and the original remains unchanged.
+5. Test AirDrop, an iCloud-backed file, and the actual messaging app used to send files
+   on a physical iPhone. Simulator and unit checks do not establish those providers' UI.
+
+Platform reference: [Tauri mobile file associations](https://tauri.app/learn/mobile-file-associations/).

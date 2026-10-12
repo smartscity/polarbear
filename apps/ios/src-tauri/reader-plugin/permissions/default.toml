@@ -1,3 +1,3 @@
 [default]
 description = "Import user-selected snapshots and read only the private reader library."
-permissions = ["allow-importDocuments", "allow-listDocuments", "allow-readDocument", "allow-readAsset", "allow-removeCollection"]
+permissions = ["allow-importDocuments", "allow-listDocuments", "allow-readDocument", "allow-readAsset", "allow-removeCollection", "allow-pending-open-documents", "allow-acknowledge-open-document"]

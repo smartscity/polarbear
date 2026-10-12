@@ -45,6 +45,7 @@ jobs:
       - run: npm --workspace apps/ios run build
       - run: npm --workspace apps/ios run test:storage
       - run: cargo fmt --manifest-path apps/ios/src-tauri/Cargo.toml --all -- --check
+      - run: cargo test --manifest-path apps/ios/src-tauri/Cargo.toml -p tauri-plugin-reader --locked
       - run: npm exec --workspace apps/ios -- playwright install chromium
       - run: npm --workspace apps/ios run test:ui
       - uses: actions/upload-artifact@v6

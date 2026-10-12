@@ -111,6 +111,12 @@ Remote images and PlantUML rendering are disabled. iCloud may download a file on
 an explicit user action in the native Files picker. No new synchronization service, Node
 runtime, direct Memory database access or mobile background daemon is introduced.
 
+The iOS target registers Markdown document Open In support through its own plist.
+OS-delivered URLs go directly to the native reader plugin's coordinated snapshot
+import, not through a WebView arbitrary-path API. An acknowledged native inbox bridges
+cold-start and warm-open delivery to the reader UI. This does not add a Share Extension
+or change desktop file associations.
+
 See [the iPhone reader implementation guide](apps/ios/README.md) for startup, limits,
 verification and deferred capabilities. Mobile milestones use `ios-v*` tags and a separate
 quality workflow; the desktop release workflow is unchanged.

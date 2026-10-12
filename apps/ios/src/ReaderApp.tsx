@@ -5,7 +5,8 @@ import type { ReaderHeading } from "@polarbear/reader-core";
 import { useI18n } from "../../desktop/src/shared/i18n/I18nProvider";
 import { titleForCommand } from "../../desktop/src/commands/appCommandRegistry";
 import { browserLibrary, importBrowserDocuments } from "./library/browserLibrary";
-import { nativeLibrary, importNativeDocuments } from "./library/nativeLibrary";
+import { nativeLibrary, importNativeDocuments, nativeOpenDocuments } from "./library/nativeLibrary";
+import { subscribeToOpenedDocuments } from "./library/openedDocuments";
 import { entryId, readerErrorKey, type LibraryEntry } from "./library/library";
 import { readPositions, readSettings, saveSettings, type ReadingSettings } from "./reader/readingState";
 import { ReaderSurface } from "./reader/ReaderSurface";
@@ -39,6 +40,31 @@ export function ReaderApp() {
     setEntries(result.sort((a, b) => (positions[entryId(b)]?.openedAt ?? b.importedAt) - (positions[entryId(a)]?.openedAt ?? a.importedAt)));
   }, []);
   useEffect(() => { refresh().catch((e: unknown) => report(readerErrorKey(e))); }, [refresh, report]);
+  useEffect(() => {
+    if (!isTauri()) return;
+    const subscription = subscribeToOpenedDocuments(nativeOpenDocuments, async (item, mounted) => {
+      if (item.error) { report(readerErrorKey(item.error)); return; }
+      const entry = item.entries[0];
+      if (!entry) return;
+      const generation = ++request.current;
+      setBusy(true);
+      try {
+        const content = await library.read(entry);
+        const all = await library.list();
+        if (!mounted() || generation !== request.current) return;
+        setEntries(all); setActive({ entry, content }); setPanel(null);
+        setMedia(null); setRemove(null); setError("");
+      } finally { if (mounted() && generation === request.current) setBusy(false); }
+    }, (error) => report(readerErrorKey(error)));
+    const resume = () => { if (document.visibilityState === "visible") subscription.refresh(); };
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("focus", subscription.refresh);
+    return () => {
+      subscription.stop();
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("focus", subscription.refresh);
+    };
+  }, [report]);
   useEffect(() => {
     const system = matchMedia("(prefers-color-scheme: dark)");
     const apply = () => { document.documentElement.dataset.readerTheme = settings.theme === "system" ? (system.matches ? "dark" : "light") : settings.theme; };

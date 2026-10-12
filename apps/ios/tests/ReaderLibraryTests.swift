@@ -36,6 +36,26 @@ import Foundation
         try library.remove(collection: entry.collection)
         try check(library.list().isEmpty)
         assert(fm.fileExists(atPath: invalid.path))
+        let incoming = temp.appendingPathComponent("中文 shared #1.MARKDOWN")
+        try "# Shared document".write(to: incoming, atomically: true, encoding: .utf8)
+        let opened = try library.importOpenedDocument(incoming.absoluteString)
+        assert(opened.count == 1)
+        try check(library.document(collection: opened[0].collection, path: opened[0].path) == "# Shared document")
+        try check(String(contentsOf: incoming, encoding: .utf8) == "# Shared document")
+        try fm.removeItem(at: incoming)
+        try check(library.document(collection: opened[0].collection, path: opened[0].path) == "# Shared document")
+        try fails(.invalidPath) { _ = try library.importOpenedDocument("https://example.invalid/file.md") }
+        try fails(.invalidPath) { _ = try library.importOpenedDocument("file://remote-server/path/file.md") }
+        try fails(.invalidPath) { _ = try library.importOpenedDocument(invalid.absoluteString + "?query=1") }
+        try fails(.unsupportedFile) { _ = try library.importOpenedDocument(temp.appendingPathComponent("file.pdf").absoluteString) }
+        try fails(.invalidEncoding) { _ = try library.importOpenedDocument(invalid.absoluteString) }
+        try fails(.tooLarge) { _ = try library.importOpenedDocument(large.absoluteString) }
+        try fails(.invalidPath) { _ = try library.importOpenedDocument(link.absoluteString) }
+        let directory = temp.appendingPathComponent("directory.md")
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        try fails(.invalidPath) { _ = try library.importOpenedDocument(directory.absoluteString) }
+        try check(library.list().count == 1)
+        print("PASS: OS-open URL validation, Unicode/space escaping, offline copy, source protection, unsupported/invalid/oversized input")
         print("PASS: snapshot, offline assets, unicode, source isolation, traversal, missing asset, encoding, atomic failure, size limit, symlink, deletion")
     }
 

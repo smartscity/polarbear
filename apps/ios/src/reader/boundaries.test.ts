@@ -24,4 +24,14 @@ describe("reader isolation", () => {
     const cargo = readFileSync(resolve("../../Cargo.toml"), "utf8");
     expect(cargo).not.toContain("apps/ios");
   });
+  it("registers Markdown as an imported read-only type without exposing arbitrary URL import to JavaScript", () => {
+    const plist = readFileSync(resolve("src-tauri/Info.ios.plist"), "utf8");
+    expect(plist).toContain("UTImportedTypeDeclarations");
+    expect(plist).not.toContain("UTExportedTypeDeclarations");
+    expect(plist).toContain("<string>Viewer</string>");
+    expect(plist).toContain("<string>md</string><string>markdown</string>");
+    const permissions = readFileSync(resolve("src-tauri/reader-plugin/permissions/default.toml"), "utf8");
+    expect(permissions).not.toContain("openDocument");
+    expect(readFileSync(resolve("src-tauri/reader-plugin/build.rs"), "utf8")).not.toContain('"openDocument"');
+  });
 });

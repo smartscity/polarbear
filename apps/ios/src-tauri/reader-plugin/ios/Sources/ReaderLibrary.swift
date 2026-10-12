@@ -24,6 +24,33 @@ final class ReaderLibrary {
 
     init(root: URL) { self.root = root.resolvingSymlinksInPath().standardizedFileURL }
 
+    func importOpenedDocument(_ value: String) throws -> [ReaderEntry] {
+        guard let url = URL(string: value), url.isFileURL,
+              url.host == nil || url.host == "" || url.host == "localhost",
+              url.query == nil, url.fragment == nil else { throw ReaderFailure.invalidPath }
+        guard isMarkdown(url) else { throw ReaderFailure.unsupportedFile }
+        return try importCoordinatedSnapshot(url, documentOnly: true)
+    }
+
+    func importCoordinatedSnapshot(_ source: URL, documentOnly: Bool = false) throws -> [ReaderEntry] {
+        let scoped = source.startAccessingSecurityScopedResource()
+        defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+        var coordinationError: NSError?
+        var result: Result<[ReaderEntry], Error>?
+        NSFileCoordinator().coordinate(readingItemAt: source, options: [], error: &coordinationError) { url in
+            result = Result {
+                if documentOnly {
+                    let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard info.isRegularFile == true, info.isSymbolicLink != true else { throw ReaderFailure.invalidPath }
+                }
+                return try self.importSnapshot(url)
+            }
+        }
+        if let coordinationError { throw coordinationError }
+        guard let result else { throw ReaderFailure.unavailable }
+        return try result.get()
+    }
+
     func list() throws -> [ReaderEntry] {
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         return try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
