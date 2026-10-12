@@ -260,9 +260,22 @@ Error boundaries should distinguish:
 - Add frontend interaction tests around editor and workspace regressions.
 - Add integration tests around Tauri commands after command boundaries stabilize.
 
+## Linked Apple Document Foundation
+
+`packages/apple-document-store` is the shared Foundation persistence foundation
+for planned iCloud folder editing. Desktop's native build and the iOS plugin
+include the same bookmark, coordinated access, revision, session, and draft code.
+It is not yet connected to either application's editing UI. Existing Desktop
+saves and immutable Reader imports remain separate and unchanged.
+
+See [the implementation TRD](docs/planning/icloud-markdown-sync.md) for the
+remaining adapter, mobile editor, recovery, provider lifecycle, and physical-device
+acceptance gates. A successful coordinated local save is not cloud synchronization.
+
 ## Current Architecture Gaps
 
-- The iOS Tauri project has not been initialized or validated.
+- The iOS Reader builds and has simulator coverage; physical-device iCloud editing
+  and distribution are not yet validated.
 - Complete-document PDF and HTML export are not implemented.
 - Native command integration and release packaging need broader automated coverage.
 - `App.tsx`, `TyporaLiveEditor.tsx`, and the Tauri `main.rs` still contain responsibilities that should move into focused feature services incrementally.

@@ -79,12 +79,25 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
     if env::var("CARGO_CFG_TARGET_OS")? != "macos" {
         return Ok(());
     }
-    let files = [
+    let mut files = vec![
         "native/DocumentClipboard.swift",
         "native/LocalTranslation.swift",
-    ];
-    for file in files {
-        println!("cargo:rerun-if-changed={file}");
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .collect::<Vec<_>>();
+    // Compile the same native document core as the iOS package, without replacing local saves.
+    let document_core =
+        PathBuf::from("../../../packages/apple-document-store/Sources/PolarbearDocumentStore");
+    println!("cargo:rerun-if-changed={}", document_core.display());
+    let mut document_files = fs::read_dir(document_core)?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<Vec<_>, _>>()?;
+    document_files.retain(|path| path.extension().is_some_and(|ext| ext == "swift"));
+    document_files.sort();
+    files.extend(document_files);
+    for file in &files {
+        println!("cargo:rerun-if-changed={}", file.display());
     }
     let xcrun = |args: &[&str]| -> Result<String, Box<dyn Error>> {
         let output = std::process::Command::new("xcrun").args(args).output()?;

@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/ios/**'
       - 'packages/reader-core/**'
+      - 'packages/apple-document-store/**'
       - 'apps/desktop/src/shared/**'
       - 'apps/desktop/src/features/diagram/**'
       - 'apps/desktop/src/commands/appCommandRegistry.ts'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'apps/ios/**'
       - 'packages/reader-core/**'
+      - 'packages/apple-document-store/**'
       - 'apps/desktop/src/shared/**'
       - 'apps/desktop/src/features/diagram/**'
       - 'apps/desktop/src/commands/appCommandRegistry.ts'
@@ -44,6 +46,13 @@ jobs:
       - run: npm --workspace apps/ios run test
       - run: npm --workspace apps/ios run build
       - run: npm --workspace apps/ios run test:storage
+      - run: swift test --package-path packages/apple-document-store
+      - name: Check shared document core against iOS 16
+        run: >-
+          xcrun swiftc -typecheck -parse-as-library -swift-version 5
+          -target arm64-apple-ios16.0-simulator
+          -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          packages/apple-document-store/Sources/PolarbearDocumentStore/*.swift
       - run: cargo fmt --manifest-path apps/ios/src-tauri/Cargo.toml --all -- --check
       - run: cargo test --manifest-path apps/ios/src-tauri/Cargo.toml -p tauri-plugin-reader --locked
       - run: npm exec --workspace apps/ios -- playwright install chromium

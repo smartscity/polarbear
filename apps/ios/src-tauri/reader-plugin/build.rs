@@ -1,4 +1,5 @@
 fn main() {
+    println!("cargo:rerun-if-changed=../../../../packages/apple-document-store");
     tauri_plugin::Builder::new(&[
         "importDocuments",
         "listDocuments",
