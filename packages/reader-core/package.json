@@ -1,0 +1,8 @@
+{
+  "name": "@polarbear/reader-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/markdown.ts", "./paths": "./src/paths.ts" },
+  "dependencies": { "markdown-it": "^14.1.0" }
+}

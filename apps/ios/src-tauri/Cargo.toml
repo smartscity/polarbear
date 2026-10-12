@@ -1,0 +1,21 @@
+[package]
+name = "polarbear-ios"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["reader-plugin"]
+
+[lib]
+name = "polarbear_ios"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-reader = { path = "reader-plugin" }

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Polarbear Reader",
+  "version": "0.1.0",
+  "identifier": "dev.polarbear.reader",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://127.0.0.1:1430",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{ "title": "Polarbear", "width": 390, "height": 844 }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "iOS": { "minimumSystemVersion": "16.0" },
+    "icon": ["../../desktop/src-tauri/icons/32x32.png", "../../desktop/src-tauri/icons/128x128.png", "../../desktop/src-tauri/icons/icon.icns"]
+  }
+}

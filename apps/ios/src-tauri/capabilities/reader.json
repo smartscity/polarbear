@@ -1,0 +1,6 @@
+{
+  "identifier": "reader",
+  "description": "Local, read-only imported document library.",
+  "windows": ["main"],
+  "permissions": ["core:default", "reader:default"]
+}

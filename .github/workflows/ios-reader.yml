@@ -1,0 +1,54 @@
+name: iPhone Reader Quality
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/ios/**'
+      - 'packages/reader-core/**'
+      - 'apps/desktop/src/shared/**'
+      - 'apps/desktop/src/features/diagram/**'
+      - 'apps/desktop/src/commands/appCommandRegistry.ts'
+      - 'package*.json'
+      - '.github/workflows/ios-reader.yml'
+  push:
+    branches: [main]
+    tags: ['ios-v*']
+    paths:
+      - 'apps/ios/**'
+      - 'packages/reader-core/**'
+      - 'apps/desktop/src/shared/**'
+      - 'apps/desktop/src/features/diagram/**'
+      - 'apps/desktop/src/commands/appCommandRegistry.ts'
+      - 'package*.json'
+      - '.github/workflows/ios-reader.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reader:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: npm ci
+      - run: npm --workspace apps/ios run typecheck
+      - run: npm --workspace apps/ios run lint
+      - run: npm --workspace apps/ios run test
+      - run: npm --workspace apps/ios run build
+      - run: npm --workspace apps/ios run test:storage
+      - run: cargo fmt --manifest-path apps/ios/src-tauri/Cargo.toml --all -- --check
+      - run: npm exec --workspace apps/ios -- playwright install chromium
+      - run: npm --workspace apps/ios run test:ui
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: iphone-reader-test-results
+          path: apps/ios/test-results

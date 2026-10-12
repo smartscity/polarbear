@@ -1,6 +1,6 @@
 # Polarbear Architecture
 
-Polarbear is a local-first Markdown editor built with Rust, Tauri, and TypeScript. The current release targets are macOS and Windows. iOS remains planned but is not initialized in this repository.
+Polarbear is a local-first Markdown editor built with Rust, Tauri, and TypeScript. The current desktop release targets are macOS and Windows. An isolated, experimental iPhone reader lives in `apps/ios`; it is not a mobile port of the desktop editor or a published App Store application.
 
 The architecture is designed around a simple rule:
 
@@ -15,7 +15,7 @@ The architecture is designed around a simple rule:
 - Keep Markdown editing, Mermaid rendering, repository sync, export, and settings as separate capabilities.
 - Make feature behavior testable without a running Tauri shell.
 - Keep application state explicit and auditable.
-- Keep portable boundaries suitable for a future iOS target without presenting it as currently runnable.
+- Keep desktop behavior stable while validating the independent iPhone reader on simulators and devices.
 - Use Tauri v2 with mobile compatibility.
 - Keep UI and command boundaries suitable for desktop and mobile screen sizes.
 
@@ -69,9 +69,17 @@ polarbear/
           memory_admin.rs
           native_pinch.rs
           secret_store.rs
+    ios/
+      src/library/
+      src/reader/
+      src/ui/
+      src-tauri/reader-plugin/ios/Sources/
+      tests/
+  packages/
+    reader-core/src/
 ```
 
-`apps/desktop` is the React application. `apps/desktop/src-tauri` is the only Rust application crate and packages the WebView UI. Earlier unused `polarbear-core` and `polarbear-tauri` prototype crates were removed because they duplicated the documented architecture without participating in the running product.
+`apps/desktop` is the desktop React application. Its Rust crate remains the only member of the root Cargo workspace. `apps/ios/src-tauri` owns a separate Cargo workspace, lockfile and mobile entry point so mobile dependencies do not enter the desktop native build. Root npm scripts still target Desktop. Earlier unused `polarbear-core` and `polarbear-tauri` prototype crates remain removed.
 
 ## Module Responsibilities
 
@@ -83,6 +91,29 @@ polarbear/
 | `apps/desktop/src/shared/commands` | Stable command IDs and execution payload contracts |
 | `apps/desktop/src/commands` | Command metadata, native menus, global shortcuts, and keybinding resolution |
 | `apps/desktop/src-tauri` | Native shell plus filesystem, secure storage, export, Cloud Sync, and the versioned Memory Engine Admin API adapter |
+| `apps/ios` | Read-only mobile library, reader UI, settings and platform adapters |
+| `apps/ios/src-tauri/reader-plugin` | Security-scoped iOS document import, immutable snapshots and confined local resource reads |
+| `packages/reader-core` | Pure Markdown presentation model and collection-relative path validation |
+
+## iPhone Reader Boundary
+
+The reader imports snapshots rather than linking to arbitrary desktop paths. Markdown and
+supported images are copied into a private native collection after size, encoding and path
+validation. Publication is atomic, and the bridge exposes no source-file write operation.
+The browser preview uses an IndexedDB adapter to exercise the same read-only UI contract.
+
+The mobile shell reuses the existing property-file i18n provider, command labels, logo and
+pure Mermaid rendering modules. It does not import the desktop App, CodeMirror editor,
+clipboard implementation, Git services or Memory Engine. Further sharing must extract
+tested, platform-neutral code rather than importing additional desktop services.
+
+Remote images and PlantUML rendering are disabled. iCloud may download a file only through
+an explicit user action in the native Files picker. No new synchronization service, Node
+runtime, direct Memory database access or mobile background daemon is introduced.
+
+See [the iPhone reader implementation guide](apps/ios/README.md) for startup, limits,
+verification and deferred capabilities. Mobile milestones use `ios-v*` tags and a separate
+quality workflow; the desktop release workflow is unchanged.
 
 ## Platform Targets
 
@@ -93,7 +124,7 @@ Current release targets:
 
 Planned targets:
 
-- iOS, after Tauri mobile initialization and a native capability audit.
+- iOS distribution, after physical-device validation and signing; the reader target is initialized.
 - Linux.
 - Android.
 
