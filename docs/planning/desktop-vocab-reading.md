@@ -121,3 +121,11 @@ payloads, source opt-out, Escape, outside-click dismissal, live locale changes,
 pending saves and light/dark layouts at 1100px and 390px widths. That harness mocks
 the native API. Launching the two newly packaged applications through LaunchServices
 and end-to-end return-to-source remain manual release acceptance checks.
+
+### iPhone reading integration
+
+The standalone iPhone reader now provides native local translation/speech and a
+versioned offline capture transfer consumed by Vocab's existing ReadingService.
+It does not reuse the desktop Unix socket or access Vocab storage. See
+[iPhone Reading Assistant](iphone-reading-assistant.md) for the interaction,
+pending-versus-imported states, file contract and remaining mobile limitations.

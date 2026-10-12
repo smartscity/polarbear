@@ -7,8 +7,11 @@ import { useI18n } from "../../../desktop/src/shared/i18n/I18nProvider";
 import { entryId, type LibraryEntry, type ReaderLibrary } from "../library/library";
 import { readPosition, savePosition } from "./readingState";
 import { ReaderDiagramView, ReaderImageView } from "./ReaderMedia";
+import { useReadingSelection } from "../reading/useReadingSelection";
+import { ReadingAssistant } from "../reading/ReadingAssistant";
 
-export function ReaderSurface({ content, entry, library, onHeadings, navigate, expand, report }: {
+export function ReaderSurface({ content, entry, library, onHeadings, navigate, expand, report, readingTools, closeReadingTools }: {
+  readingTools: boolean; closeReadingTools: () => void;
   content: string; entry: LibraryEntry; library: ReaderLibrary;
   onHeadings: (headings: ReaderHeading[]) => void;
   navigate: (path: string, anchor?: string) => void;
@@ -23,6 +26,7 @@ export function ReaderSurface({ content, entry, library, onHeadings, navigate, e
   }), [document.html]);
   const innerHTML = useMemo(() => ({ __html: html }), [html]);
   const ref = useRef<HTMLElement>(null);
+  const reading = useReadingSelection(ref, entry.path.split("/").pop() ?? "");
   const [targets, setTargets] = useState<Map<string, HTMLElement>>(new Map());
   useLayoutEffect(() => {
     const elements = ref.current?.querySelectorAll<HTMLElement>("[data-reader-image], [data-reader-diagram]");
@@ -97,5 +101,6 @@ export function ReaderSurface({ content, entry, library, onHeadings, navigate, e
     {document.images.map((image) => targets.has(image.id) ? createPortal(<ReaderImageView image={image} entry={entry} library={library} expand={expand} />, targets.get(image.id)!, image.id) : null)}
     {document.diagrams.map((diagram) => targets.has(diagram.id) ? createPortal(<ReaderDiagramView diagram={diagram} expand={expand} />, targets.get(diagram.id)!, diagram.id) : null)}
     {!content.trim() && <p className="empty-document">{t("reader.emptyDocument")}</p>}
+    <ReadingAssistant selection={reading.selection} dismiss={() => reading.setSelection(null)} manual={readingTools} closeManual={closeReadingTools} />
   </>;
 }

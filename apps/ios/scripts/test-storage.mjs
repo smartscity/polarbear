@@ -8,7 +8,7 @@ const output = mkdtempSync(join(tmpdir(), "polarbear-reader-tests-"));
 const binary = join(output, "reader-tests");
 try {
   for (const [command, args] of [
-    ["swiftc", ["-module-cache-path", join(output, "cache"), join(root, "src-tauri/reader-plugin/ios/Sources/ReaderLibrary.swift"), join(root, "tests/ReaderLibraryTests.swift"), "-o", binary]],
+    ["swiftc", ["-module-cache-path", join(output, "cache"), join(root, "src-tauri/reader-plugin/ios/Sources/ReaderLibrary.swift"), join(root, "src-tauri/reader-plugin/ios/Sources/ReadingCaptureStore.swift"), join(root, "tests/ReadingCaptureTests.swift"), join(root, "tests/ReaderLibraryTests.swift"), "-o", binary]],
     [binary, []],
   ]) {
     const result = spawnSync(command, args, { stdio: "inherit" });

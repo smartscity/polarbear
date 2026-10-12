@@ -11,6 +11,11 @@ private struct OpenArgs: Decodable { let url: String }
 private struct OpenResponse: Encodable { let entries: [ReaderEntry]; let error: String? }
 
 final class ReaderPlugin: Plugin, UIDocumentPickerDelegate {
+    let language = ReaderLanguage()
+    let readingQueue = DispatchQueue(label: "dev.polarbear.reader.captures", qos: .userInitiated)
+    var captureStore: ReadingCaptureStore {
+        ReadingCaptureStore(root: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ReadingCaptures", isDirectory: true))
+    }
     private let queue = DispatchQueue(label: "dev.polarbear.reader.library", qos: .userInitiated)
     private var pending: Invoke?
     private var library: ReaderLibrary {

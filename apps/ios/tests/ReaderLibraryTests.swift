@@ -6,6 +6,7 @@ import Foundation
         let temp = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try fm.createDirectory(at: temp, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: temp) }
+        try testReadingCaptures(temp)
         let source = temp.appendingPathComponent("source")
         try fm.createDirectory(at: source.appendingPathComponent("images"), withIntermediateDirectories: true)
         try "# 中文\n![image](images/a.png)".write(to: source.appendingPathComponent("read me.md"), atomically: true, encoding: .utf8)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { isTauri } from "@tauri-apps/api/core";
-import { ArrowLeft, BookOpen, FilePlus2, FolderOpen, List, Search, Settings2, Trash2 } from "lucide-react";
+import { ArrowLeft, BookOpen, FilePlus2, FolderOpen, Languages, List, Search, Settings2, Trash2 } from "lucide-react";
 import type { ReaderHeading } from "@polarbear/reader-core";
 import { useI18n } from "../../desktop/src/shared/i18n/I18nProvider";
 import { titleForCommand } from "../../desktop/src/commands/appCommandRegistry";
@@ -28,6 +28,7 @@ export function ReaderApp() {
   const [remove, setRemove] = useState<LibraryEntry | null>(null);
   const [media, setMedia] = useState<{ url: string; title: string } | null>(null);
   const [mediaZoom, setMediaZoom] = useState(100);
+  const [readingTools, setReadingTools] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const request = useRef(0);
@@ -52,7 +53,7 @@ export function ReaderApp() {
         const content = await library.read(entry);
         const all = await library.list();
         if (!mounted() || generation !== request.current) return;
-        setEntries(all); setActive({ entry, content }); setPanel(null);
+        setEntries(all); setActive({ entry, content }); setPanel(null); setReadingTools(false);
         setMedia(null); setRemove(null); setError("");
       } finally { if (mounted() && generation === request.current) setBusy(false); }
     }, (error) => report(readerErrorKey(error)));
@@ -78,7 +79,7 @@ export function ReaderApp() {
     try {
       const content = await library.read(entry);
       if (generation !== request.current) return;
-      setActive({ entry, content }); setPanel(null);
+      setActive({ entry, content }); setPanel(null); setReadingTools(false);
       if (anchor) requestAnimationFrame(() => requestAnimationFrame(() => {
         let id: string; try { id = decodeURIComponent(anchor); } catch { return; }
         document.getElementById(id)?.scrollIntoView({ block: "start" });
@@ -104,12 +105,13 @@ export function ReaderApp() {
       {active ? <button className="icon-button" onClick={() => { ++request.current; setBusy(false); setActive(null); refresh().catch((e: unknown) => report(readerErrorKey(e))); }} aria-label={t("reader.library")}><ArrowLeft /></button> : <img src={logo} className="brand-icon" alt="" />}
       <div className="app-title"><h1>{active ? active.entry.path.split("/").pop() : "Polarbear"}</h1><span>{active ? t("reader.localCopy") : t("reader.library")}</span></div>
       {active && <button className="icon-button" onClick={() => setPanel("contents")} aria-label={t("reader.contents")}><List /></button>}
+      {active && <button className="icon-button" onClick={() => setReadingTools(true)} aria-label={t("reader.reading.tools")}><Languages /></button>}
       <button className="icon-button" onClick={() => setPanel("settings")} aria-label={t("reader.settings")}><Settings2 /></button>
     </header>
     {busy && <div className="status-strip" role="status">{t("reader.loading")}</div>}
     {error && <div className="error-strip" role="alert"><span>{t(error)}</span><button onClick={() => setError("")}>{t("common.close")}</button></div>}
     {active ? <div className="reading-scroll" key={entryId(active.entry)}>
-      <ReaderSurface content={active.content} entry={active.entry} library={library} onHeadings={setHeadings} report={report} expand={expand} navigate={(path, anchor) => {
+      <ReaderSurface readingTools={readingTools} closeReadingTools={() => setReadingTools(false)} content={active.content} entry={active.entry} library={library} onHeadings={setHeadings} report={report} expand={expand} navigate={(path, anchor) => {
         const target = entries.find((e) => e.collection === active.entry.collection && e.path === path);
         if (target) void open(target, anchor); else report("reader.missingDocument");
       }} />
