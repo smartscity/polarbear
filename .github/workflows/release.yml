@@ -2,6 +2,11 @@ name: Release Polarbear
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing desktop release tag, for example v0.9.1"
+        required: true
+        type: string
   push:
     tags:
       - "v*"
@@ -20,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -59,11 +66,13 @@ jobs:
 
       - name: Resolve release metadata
         id: release_metadata
+        env:
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${INPUT_RELEASE_TAG:-$GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
 
-          if [ -z "$VERSION" ] || [ "$VERSION" = "$TAG" ]; then
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "Invalid tag: $TAG"
             echo "Expected tag format: v0.1.7"
             exit 1
@@ -152,6 +161,13 @@ jobs:
           echo "macOS app bundles:"
           find . -type d -path "*/bundle/macos/*.app" -print
 
+      - name: Upload DMG build artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: Polarbear-macOS-${{ env.APP_VERSION }}
+          path: ${{ env.DMG_FILE }}
+          if-no-files-found: error
+
       - name: Upload DMG to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -179,6 +195,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

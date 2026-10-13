@@ -9,6 +9,7 @@ import { useUserSettings } from "../../../shared/settings/useUserSettings";
 import type { KeybindingOverrides } from "../../../shared/settings/userSettings";
 import { createEditorCommandBindings } from "../editorCommandKeymap";
 import { createRichMarkdownCopyExtension } from "../richMarkdownClipboard";
+import { createMermaidPasteExtension } from "../mermaidPasteExtension";
 import { platformNavigationKeymap } from "./platformNavigationKeymap";
 
 export type MarkdownEditorView = EditorView;
@@ -38,6 +39,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const userSettings = useUserSettings();
   const clipboardExtension = useMemo(() => createRichMarkdownCopyExtension(onClipboardStatus), [onClipboardStatus]);
+  const pasteExtension = useMemo(() => createMermaidPasteExtension(onClipboardStatus), [onClipboardStatus]);
   const commandKeymap = useMemo(
     () => sourceEditorCommandKeymap(userSettings.keybindings, onCommand),
     [onCommand, userSettings.keybindings],
@@ -87,6 +89,7 @@ export function MarkdownEditor({
           platformNavigationKeymap(),
           commandKeymap,
           clipboardExtension,
+          pasteExtension,
           markdown(),
           search({ top: true }),
         ]}

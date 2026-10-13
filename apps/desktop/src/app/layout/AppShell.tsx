@@ -152,6 +152,7 @@ export function AppShell({
         ) : null}
       </section>
       <StatusBar
+        onSettings={() => executeCommand("app.settings")}
         activeFileName={activeFileName}
         characterCount={characterCount}
         debugEnabled={debugEnabled}

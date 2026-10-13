@@ -198,6 +198,7 @@ import { APP_EVENTS } from "./shared/events/appEvents";
 import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 import { useVocabReading } from "./features/vocab/useVocabReading";
+import { SettingsDialog } from "./app/layout/SettingsDialog";
 import { ContextWorkspace } from "./features/memory/context/ContextWorkspace";
 import {
   captureMemoryDocumentContext,
@@ -317,6 +318,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [activeSurface, setActiveSurface] = useState<AppSurface>("context");
   const [memoryDocumentContext, setMemoryDocumentContext] =
     useState<MemoryDocumentContext | null>(null);
@@ -3732,6 +3734,15 @@ export function App() {
         if (activeSurface === "workspace") vocab.open();
         return;
       }
+      if (command === "app.settings") { setIsSettingsDialogOpen(true); return; }
+      if (command === "edit.copyMarkdown") {
+        const range = editorViewRef.current?.state.selection.main;
+        const source = viewMode !== "preview" && range && !range.empty
+          ? markdownContent.slice(range.from, range.to) : markdownContent;
+        void navigator.clipboard.writeText(source).then(() => setStatusMessage(t("clipboard.markdownCopied")),
+          () => setStatusMessage(t("clipboard.sourceCopyFailed")));
+        return;
+      }
       const targetItem = targetPath
         ? findWorkspaceItem(workspaceItems, targetPath)
         : null;
@@ -4073,7 +4084,7 @@ export function App() {
 
   return (
     <>
-      {vocab.controls(executeCommand)}
+      {vocab.controls()}
       <div ref={zoomViewportRef} className="app-zoom-viewport">
         <div
           ref={zoomCanvasSizeRef}
@@ -4134,8 +4145,7 @@ export function App() {
               onToggleSidebar={() => setSidebarOpen((isOpen) => !isOpen)}
             >
               <section className={`editor-workspace editor-workspace-${viewMode}`}
-                onContextMenuCapture={(event) => vocab.contextMenu(event, executeCommand)}
-                onPointerUp={vocab.onPointerUp} onScrollCapture={vocab.onScroll}>
+                onPointerDown={vocab.onPointerDown} onPointerUp={vocab.onPointerUp} onScrollCapture={vocab.onScroll}>
                 {!activeFileId && !workspaceRoot ? (
                   <section className="editor-empty-state">
                     <h1>{PRODUCT_CONFIG.name}</h1>
@@ -4286,6 +4296,7 @@ export function App() {
       {isAboutDialogOpen ? (
         <AboutPolarbearDialog onClose={() => setIsAboutDialogOpen(false)} />
       ) : null}
+      {isSettingsDialogOpen && <SettingsDialog onClose={() => setIsSettingsDialogOpen(false)} />}
     </>
   );
 }

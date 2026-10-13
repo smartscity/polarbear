@@ -126,11 +126,15 @@ test("keeps PlantUML source readable and does not render remotely", async ({ pag
   expect(remote).toEqual([]);
 });
 
-test("flushes a mid-document position when leaving before the debounce completes", async ({ page }) => {
+for (const hidden of [false, true]) test(`flushes a mid-document position before debounce with a ${hidden ? "hidden" : "visible"} container`, async ({ page }) => {
   await page.goto("/");
   await page.locator('input[type="file"]').first().setInputFiles({ name: "Long.md", mimeType: "text/plain", buffer: Buffer.from("# Start\n\n" + Array.from({ length: 60 }, (_, i) => `Paragraph ${i} with readable content.`).join("\n\n")) });
   await page.getByRole("button", { name: "Long.md Long.md" }).click();
-  await page.locator(".reading-scroll").evaluate((el) => { el.scrollTop = 900; });
+  await page.locator(".reading-scroll").evaluate((el, hidden) => {
+    el.scrollTop = 900;
+    el.dispatchEvent(new Event("scroll"));
+    if (hidden) (el as HTMLElement).style.display = "none";
+  }, hidden);
   await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Long.md Long.md" }).click();
   await expect.poll(async () => Math.abs(await page.locator(".reading-scroll").evaluate((el) => el.scrollTop) - 900)).toBeLessThan(2);

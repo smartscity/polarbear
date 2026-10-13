@@ -37,6 +37,11 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
   "app.about": {
     titleKey: "menu.about",
   },
+  "app.settings": {
+    titleKey: "settings.title",
+    shortcut: { key: ",", command: "app.settings" },
+  },
+  "edit.copyMarkdown": { titleKey: "clipboard.copyMarkdown" },
   "app.newWindow": {
     titleKey: "menu.newWindow",
     shortcut: { key: "n", shiftKey: true, command: "app.newWindow" },

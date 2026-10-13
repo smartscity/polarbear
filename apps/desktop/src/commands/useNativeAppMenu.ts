@@ -79,6 +79,7 @@ export function useNativeAppMenu(
                   enabled: commandState("app.about").enabled,
                   action: () => executeCommand("app.about")
                 },
+                { id: "app.settings", text: commandTitle("app.settings"), accelerator: accelerator("app.settings"), action: () => executeCommand("app.settings") },
                 { item: "Separator" },
                 {
                   id: "app.quit",
@@ -150,10 +151,8 @@ export function useNativeAppMenu(
               id: "edit",
               text: t("menu.edit"),
               items: [
-                { id: "vocab.lookup", text: commandTitle("vocab.lookup"),
-                  accelerator: accelerator("vocab.lookup"),
-                  enabled: commandState("vocab.lookup").enabled,
-                  action: () => executeCommand("vocab.lookup") },
+                { id: "edit.copyMarkdown", text: commandTitle("edit.copyMarkdown"), enabled: commandState("edit.copyMarkdown").enabled,
+                  action: () => executeCommand("edit.copyMarkdown") },
                 { item: "Separator" },
                 {
                   text: commandTitle("edit.undo"),

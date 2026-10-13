@@ -5,7 +5,7 @@ import { lookupVocab, saveVocab, speakVocab, vocabErrorKey, type ReadingCapture,
 import { normalizeReadingTerm } from "./readingSelection";
 import { PassageReading } from "./PassageReading";
 
-export type ReadingTarget = { capture: ReadingCapture; rect: { left: number; bottom: number } };
+export type ReadingTarget = { capture: ReadingCapture; rect: { left: number; top?: number; bottom: number } };
 const EDGE_GAP = 12;
 
 export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClose: (restoreFocus: boolean) => void }) {
@@ -45,16 +45,26 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
     const place = () => {
       const bounds = element.getBoundingClientRect();
       element.style.left = `${Math.max(EDGE_GAP, Math.min(target.rect.left, window.innerWidth - bounds.width - EDGE_GAP))}px`;
-      element.style.top = `${Math.max(EDGE_GAP, Math.min(target.rect.bottom + EDGE_GAP, window.innerHeight - bounds.height - EDGE_GAP))}px`;
+      const below = target.rect.bottom + EDGE_GAP;
+      const above = (target.rect.top ?? target.rect.bottom) - bounds.height - EDGE_GAP;
+      const top = below + bounds.height <= window.innerHeight - EDGE_GAP ? below : above >= EDGE_GAP ? above : window.innerHeight - bounds.height - EDGE_GAP;
+      element.style.top = `${Math.max(EDGE_GAP, top)}px`;
     };
     element.showPopover();
     place();
-    element.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
     const observer = new ResizeObserver(place);
     observer.observe(element);
     window.addEventListener("resize", place);
     return () => { observer.disconnect(); window.removeEventListener("resize", place); };
   }, [target]);
+
+  useEffect(() => {
+    const outside = (event: PointerEvent) => { if (!panel.current?.contains(event.target as Node)) onClose(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(true); } };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape, true);
+    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape, true); };
+  }, [onClose]);
 
   const save = async () => {
     if (saving || saved || (entries.length > 0 && !selected)) return;
@@ -72,13 +82,13 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
     finally { setSaving(false); }
   };
 
-  return createPortal(<div ref={panel} popover="auto" className="vocab-popover" role="dialog"
+  return createPortal(<div ref={panel} popover="manual" className="vocab-popover" role="dialog"
     aria-label={t("vocab.lookup")} onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(true); }
     }} onToggle={(event) => { if (event.newState === "closed") onClose(false); }}>
     <header className={!normalizeReadingTerm(target.capture.selectedText) ? "reading-passage-header" : undefined}><strong lang="en">{target.capture.selectedText}</strong>
       <button type="button" onClick={() => onClose(true)} aria-label={t("common.close")}>×</button></header>
-    <PassageReading text={target.capture.selectedText} lookupDisabled={saving} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
+    <PassageReading text={target.capture.selectedText} autoTranslate={!normalizeReadingTerm(target.capture.selectedText) || (!loading && !entries.length)} lookupDisabled={saving} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
       if (saving) return;
       captureRequestId.current = crypto.randomUUID();
       attemptedCapture.current = null; setSaved(false); setError(""); setSense(""); setEntries([]); setLookupText(term); setAttempt((value) => value + 1);
@@ -90,6 +100,7 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
           <input type="radio" name="vocab-sense" checked={sense === entry.senseUid}
             onChange={() => setSense(entry.senseUid)} />
           <span><b lang="en">{entry.lemma}</b> <small>{entry.ipa} · {entry.partOfSpeech}</small>
+            {entry.ipaUk && <small>{t("reading.ipaUk")}: {entry.ipaUk}</small>}{entry.ipaUs && <small>{t("reading.ipaUs")}: {entry.ipaUs}</small>}
             <span lang="zh-CN">{entry.zhGloss}</span>
             {entry.inMyVocabulary && <small>{t("vocab.alreadyAdded")}</small>}</span>
         </label>)}

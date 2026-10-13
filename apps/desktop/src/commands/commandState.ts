@@ -35,6 +35,7 @@ export function getCommandState(
   context: CommandRuntimeContext,
 ): CommandState {
   const hasDocument = Boolean(context.activeDocumentId);
+  if (command === "edit.copyMarkdown") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
   if (command === "vocab.lookup") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
   const hasEditableDocument = hasDocument && context.activeViewMode !== "preview";
   if (command === "edit.selectAll") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };

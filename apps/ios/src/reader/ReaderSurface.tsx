@@ -5,7 +5,7 @@ import { renderReaderMarkdown, type ReaderHeading } from "@polarbear/reader-core
 import { resolveDocumentPath, isMarkdownPath } from "@polarbear/reader-core/paths";
 import { useI18n } from "../../../desktop/src/shared/i18n/I18nProvider";
 import { entryId, type LibraryEntry, type ReaderLibrary } from "../library/library";
-import { readPosition, savePosition } from "./readingState";
+import { readPosition, savePosition, type ReadingPosition } from "./readingState";
 import { ReaderDiagramView, ReaderImageView } from "./ReaderMedia";
 import { useReadingSelection } from "../reading/useReadingSelection";
 import { ReadingAssistant } from "../reading/ReadingAssistant";
@@ -41,30 +41,45 @@ export function ReaderSurface({ content, entry, library, onHeadings, navigate, e
     let interacted = false;
     let failed = false;
     const position = readPosition(entryId(entry));
+    let latest: ReadingPosition | null = position;
+    let restoredTop: number | null = null;
     const restore = () => {
       if (!position || interacted) return;
+      if (restoredTop !== null && Math.abs(scroller.scrollTop - restoredTop) > 1) {
+        interacted = true;
+        return;
+      }
       const anchor = position.anchor ? Array.from(article.querySelectorAll<HTMLElement>("[id]")).find((el) => el.id === position.anchor) : null;
       scroller.scrollTop = anchor
         ? anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop + position.offset
         : position.ratio * Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+      restoredTop = scroller.scrollTop;
     };
-    const save = () => {
+    const capture = () => {
+      // Hidden or detached containers no longer describe the last reading position.
+      if (!article.isConnected || !scroller.isConnected || scroller.clientHeight === 0) return;
       const headings = Array.from(article.querySelectorAll<HTMLElement>("h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]"));
       const top = scroller.getBoundingClientRect().top;
       const anchor = headings.filter((h) => h.getBoundingClientRect().top <= top + 2).at(-1);
+      latest = {
+        anchor: anchor?.id ?? null, offset: anchor ? top - anchor.getBoundingClientRect().top : 0,
+        ratio: scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight), openedAt: Date.now(),
+      };
+    };
+    const save = () => {
+      capture();
+      if (!latest) return;
       try {
-        savePosition(entryId(entry), {
-          anchor: anchor?.id ?? null, offset: anchor ? top - anchor.getBoundingClientRect().top : 0,
-          ratio: scroller.scrollTop / Math.max(1, scroller.scrollHeight - scroller.clientHeight), openedAt: Date.now(),
-        });
+        savePosition(entryId(entry), latest);
       } catch { if (!failed) { failed = true; report("reader.storageError"); } }
     };
-    const touch = () => { interacted = true; };
+    const touch = () => { interacted = true; capture(); };
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const scroll = () => { clearTimeout(timer); timer = setTimeout(save, 200); };
+    const scroll = () => { capture(); clearTimeout(timer); timer = setTimeout(save, 200); };
     const observer = new ResizeObserver(restore);
     observer.observe(article);
     restore();
+    capture();
     scroller.addEventListener("pointerdown", touch, { passive: true });
     scroller.addEventListener("touchstart", touch, { passive: true });
     scroller.addEventListener("wheel", touch, { passive: true });

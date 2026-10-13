@@ -32,7 +32,7 @@ describe("rich Markdown clipboard", () => {
     expect(html).not.toContain("language-mermaid");
   });
 
-  it("keeps Mermaid source as a code block when image rendering fails", async () => {
+  it("identifies a failed image without silently pasting diagram source", async () => {
     const html = await buildRichMarkdownClipboardHtml(
       "```mermaid\ngraph LR\n  A --> B\n```\n",
       async () => {
@@ -40,8 +40,8 @@ describe("rich Markdown clipboard", () => {
       },
     );
 
-    expect(html).toContain('class="language-mermaid"');
-    expect(html).toContain("graph LR");
+    expect(html).toContain("clipboard.diagramUnavailable");
+    expect(html).not.toContain("graph LR");
   });
 
   it("renders multiple Mermaid images one at a time", async () => {
@@ -115,7 +115,8 @@ describe("rich Markdown clipboard", () => {
     const html = await buildRichMarkdownClipboardHtml(
       "~~~mermaid\nbad source\n~~~\n\nBetween\n\n~~~mermaid\npie\n\"A\": 2\n~~~\n\nAfter", render,
     );
-    expect(html).toContain("bad source");
+    expect(html).not.toContain("bad source");
+    expect(html).toContain("clipboard.diagramUnavailable");
     expect(html).toContain("data:image/png;base64,valid");
     expect(html).toContain("Between");
     expect(html).toContain("After");

@@ -15,6 +15,7 @@ describe("parseUserSettings", () => {
         "view.zoomIn": null
       }
     })).toEqual({
+      selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "system",
       theme: "system",
@@ -32,6 +33,7 @@ describe("parseUserSettings", () => {
       theme: "dark",
       keybindings: {},
     })).toEqual({
+      selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "zh-CN",
       theme: "dark",
@@ -44,6 +46,7 @@ describe("parseUserSettings", () => {
       version: 1,
       keybindings: { "file.save": "Mod+S" },
     })).toEqual({
+      selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "system",
       theme: "system",
@@ -55,5 +58,10 @@ describe("parseUserSettings", () => {
     expect(parseUserSettings({ version: 99, keybindings: {} })).toBe(
       DEFAULT_USER_SETTINGS,
     );
+  });
+  it("defaults selection translation on and preserves an explicit opt-out", () => {
+    expect(parseUserSettings({ version: 2 }).selectionTranslation).toBe(true);
+    expect(parseUserSettings({ version: 2, selectionTranslation: false }).selectionTranslation).toBe(false);
+    expect(parseUserSettings({ version: 2, selectionTranslation: "false" }).selectionTranslation).toBe(true);
   });
 });

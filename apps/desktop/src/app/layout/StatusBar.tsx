@@ -5,6 +5,7 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 import { PRODUCT_CONFIG } from "../../shared/config/productConfig";
 import { displayAccelerator } from "../../shared/platform/keyboard";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
+import { Settings2 } from "lucide-react";
 
 type StatusBarProps = {
   activeFileName: string;
@@ -15,6 +16,7 @@ type StatusBarProps = {
   syncState: "idle" | "busy" | "success" | "error";
   onDebugToggle: () => void;
   onSync: () => void;
+  onSettings: () => void;
 };
 
 export function StatusBar({
@@ -25,7 +27,8 @@ export function StatusBar({
   syncMessage,
   syncState,
   onDebugToggle,
-  onSync
+  onSync,
+  onSettings
 }: StatusBarProps) {
   const { language, languages, setLanguage, t } = useI18n();
   const userSettings = useUserSettings();
@@ -45,6 +48,7 @@ export function StatusBar({
         <span>{t("status.characters", { count: characterCount })}</span>
       </div>
       <div className="status-bar-right">
+        <button type="button" className="status-sync-button" aria-label={t("settings.title")} title={t("settings.title")} onClick={onSettings}><Settings2 size={16} /></button>
         {syncState !== "idle" && syncMessage ? (
           <span
             className={`status-sync-message ${syncState}`}

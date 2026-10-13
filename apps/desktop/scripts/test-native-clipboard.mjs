@@ -17,6 +17,6 @@ if (process.platform !== "darwin") {
   try {
     run("xcrun", ["swiftc", "-module-cache-path", join(directory, "modules"), "-parse-as-library",
       join(native, "DocumentClipboard.swift"), join(native, "DocumentClipboardTests.swift"), "-o", binary]);
-    run(binary, []);
+    run(binary, process.argv.slice(2));
   } finally { rmSync(directory, { recursive: true, force: true }); }
 }

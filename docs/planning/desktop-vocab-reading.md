@@ -2,11 +2,13 @@
 
 ## Scope
 
-Read a Markdown article in Desktop, select an English word or phrase, and use
-Edit > Look Up in Vocab, the selection context menu, or primary+Alt+D. Preview
-selection also exposes a small Vocab action. The lookup stays in Desktop.
+Read a Markdown article in Desktop and select an English word, sentence or
+paragraph. After pointer release and a stable 180 ms selection, the reading card
+opens automatically in source, live and preview modes. Settings > Selection
+translation is enabled by default and persists opt-out. The existing command
+remains available for keyboard access; no manual Read Selection step is required.
 
-Vocab owns dictionary lookup, pronunciation, vocabulary membership and source
+Vocab owns dictionary lookup, dictionary pronunciation data, vocabulary membership and source
 history. Desktop never opens Vocab databases. No article is sent to a remote
 service. Dictionary lookup has no AI dependency or background network lookup;
 passage translation uses installed system language models.
@@ -16,30 +18,38 @@ passage translation uses installed system language models.
 ### Passage reading
 
 Selection accepts English sentences and paragraphs, punctuation and line breaks
-included, up to 2,000 characters. The selection action is available in source,
-live and preview views, alongside the existing menu and command shortcut.
+included, up to 8,000 characters. Saved sentence context remains bounded at 2,000
+characters. Code, controls, empty selections and Chinese-only selections do not
+automatically open the card. Selecting, copying and editing retain their focus.
 Dictionary term normalization remains separate: selections that do not qualify
 as dictionary terms are not silently saved or sent to the lookup endpoint.
 
 The existing popover includes local translation and English playback. Translation
-is explicitly requested with a button; English playback reuses Vocab's `speak`
-operation. Words retain dictionary pronunciation (IPA), senses and vocabulary
+starts automatically for passages and when dictionary lookup has no result;
+English playback uses installed macOS US/UK voices independently of Vocab.
+Words retain dictionary pronunciation (IPA), senses and vocabulary
 membership. For a passage, users can enter a word/phrase to look up and save with
 the original reading context. Each new capture uses a new request ID; retries of
 the same save retain its ID and payload.
 
-The Desktop native translation adapter uses Apple's installed-device
-`TranslationSession` for English to Simplified Chinese. It requires macOS 26+
-and a build using Xcode 26+. No remote provider or automatic model download is
-configured. Missing language packs produce an actionable message referring to
-System Settings > General > Language & Region > Translation Languages. Earlier
-macOS and non-macOS platforms receive an explicit unsupported-system result;
-dictionary lookup and Vocab speech remain separate capabilities.
+The Desktop native translation adapter uses SwiftUI `translationTask` and
+`LanguageAvailability` for English to Simplified Chinese on macOS 15+, compiled
+with Xcode 16+. The macOS 26-only `TranslationSession(installedSource:)`
+initializer is not required. An AppKit-owned hosting view supplies the session
+for each request. Both before creating the session and before translating, the
+adapter requires installed models. It never calls `prepareTranslation`, selects
+a remote provider, or downloads models. OS availability, SDK availability,
+missing language packs, unsupported languages, window availability, cancellation,
+timeout and translation failures have distinct error codes. Dictionary lookup
+and installed-voice speech remain usable when translation is unavailable.
 
 The Swift bridge is statically linked by the existing Cargo build script. Native
 CI and macOS releases use the `macos-26` runner so the translation API is included.
 The application's minimum deployment target is not raised for unrelated features.
-Requests have a bounded UI timeout and discard late results after dismissal.
+Requests have a 30-second native timeout and stable request IDs. Dismissal,
+replacement, document changes, window blur and disabling the setting cancel
+pending work. Each native callback completes once; late results cannot replace
+a new selection. Temporary hosting views and timers are released on completion.
 
 [Apple's TranslationSession documentation](https://developer.apple.com/documentation/translation/translationsession)
 states that translation content is processed on-device. Apple may collect system

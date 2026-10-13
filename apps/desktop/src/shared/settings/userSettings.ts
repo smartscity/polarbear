@@ -13,6 +13,7 @@ export type UserSettings = {
   version: typeof USER_SETTINGS_VERSION;
   language: LanguagePreference;
   theme: ThemePreference;
+  selectionTranslation: boolean;
   keybindings: KeybindingOverrides;
 };
 
@@ -20,6 +21,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   version: USER_SETTINGS_VERSION,
   language: "system",
   theme: "system",
+  selectionTranslation: true,
   keybindings: {}
 };
 
@@ -46,7 +48,7 @@ export function writeUserSettings(settings: UserSettings): void {
 }
 
 export function updateUserSettings(
-  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme">>,
+  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme" | "selectionTranslation">>,
 ): UserSettings {
   const nextSettings = parseUserSettings({
     ...readUserSettings(),
@@ -78,6 +80,7 @@ export function parseUserSettings(value: unknown): UserSettings {
     version: USER_SETTINGS_VERSION,
     language: isLanguagePreference(value.language) ? value.language : "system",
     theme: isThemePreference(value.theme) ? value.theme : "system",
+    selectionTranslation: typeof value.selectionTranslation === "boolean" ? value.selectionTranslation : true,
     keybindings
   };
 }

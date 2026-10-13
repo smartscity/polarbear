@@ -9,6 +9,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test:native-clipboard": "node scripts/test-native-clipboard.mjs",
+    "test:native-translation": "node scripts/test-native-translation.mjs",
+    "test:ui": "playwright test",
     "lint": "eslint src",
     "memory-contract:generate": "node scripts/generate-memory-admin-contract.mjs",
     "memory-contract:check": "node scripts/generate-memory-admin-contract.mjs --check",
@@ -35,6 +37,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2.11.2",
     "@types/markdown-it": "^14.1.2",

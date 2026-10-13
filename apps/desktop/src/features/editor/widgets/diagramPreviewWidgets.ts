@@ -3,6 +3,7 @@ import {
   exportSvgElementAsPng,
   exportSvgElementAsSvg,
   findRenderedSvg,
+  copySvgElementAsPng,
 } from "../../diagram/diagramExport";
 import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
 import {
@@ -89,6 +90,12 @@ export class MermaidPreviewWidget extends WidgetType {
       translateCurrent("diagram.copySource"),
       "M6 5.5A1.5 1.5 0 0 1 7.5 4h7A1.5 1.5 0 0 1 16 5.5v7A1.5 1.5 0 0 1 14.5 14h-7A1.5 1.5 0 0 1 6 12.5v-7ZM3 8.5A1.5 1.5 0 0 1 4.5 7H5v5.5A2.5 2.5 0 0 0 7.5 15H13v.5A1.5 1.5 0 0 1 11.5 17h-7A1.5 1.5 0 0 1 3 15.5v-7Z",
     );
+    const imageButton = createDiagramIconButton(translateCurrent("diagram.copyImage"), "M4 4h12v12H4V4Zm2 9 3-4 3 3 2-2v4H6Z");
+    imageButton.addEventListener("click", () => {
+      const svg = findRenderedSvg(content);
+      if (svg) void copySvgElementAsPng(svg).then(() => showDiagramActionStatus(actionStatus, translateCurrent("common.copied")),
+        (error: unknown) => showDiagramActionStatus(actionStatus, errorMessage(error)));
+    });
     copyButton.addEventListener("click", () => {
       void navigator.clipboard.writeText(this.block.source).then(
         () => showDiagramActionStatus(actionStatus, translateCurrent("common.copied")),
@@ -96,7 +103,7 @@ export class MermaidPreviewWidget extends WidgetType {
       );
     });
 
-    toolbar.append(title, actionStatus, editButton, pngButton, svgButton, copyButton);
+    toolbar.append(title, actionStatus, editButton, imageButton, pngButton, svgButton, copyButton);
 
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";

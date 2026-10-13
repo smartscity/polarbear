@@ -6,7 +6,8 @@ describe("reading selection", () => {
     const passage = "This is a sentence.\nHere is another one!";
     expect(normalizeReadingSelection(passage)).toBe(passage);
     expect(normalizeReadingTerm(passage)).toBeNull();
-    expect(normalizeReadingSelection("a".repeat(2001))).toBeNull();
+    expect(normalizeReadingSelection("a".repeat(8001))).toBeNull();
+    expect(normalizeReadingSelection("a".repeat(4000))).toHaveLength(4000);
     expect(normalizeReadingSelection("hello\0world")).toBeNull();
   });
   it("preserves phrases, casing, apostrophes and hyphens", () => {

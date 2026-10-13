@@ -1,9 +1,11 @@
 export const APP_COMMANDS = {
   vocabLookup: "vocab.lookup",
   appAbout: "app.about",
+  appSettings: "app.settings",
   appNewWindow: "app.newWindow",
   appQuit: "app.quit",
   editCopy: "edit.copy",
+  editCopyMarkdown: "edit.copyMarkdown",
   editCut: "edit.cut",
   editFind: "edit.find",
   editFindNext: "edit.findNext",

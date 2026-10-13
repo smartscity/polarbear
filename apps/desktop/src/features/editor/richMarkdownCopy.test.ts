@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { copyRichMarkdownDocument } from "./richMarkdownClipboard";
+import { markdownClipboardText } from "./markdownClipboardText";
 
 const mocks = vi.hoisted(() => ({ render: vi.fn(), png: vi.fn(), native: vi.fn(), begin: vi.fn(), writeNative: vi.fn() }));
 vi.mock("./nativeDocumentClipboard", () => ({
@@ -41,7 +42,8 @@ describe("whole-document copy", () => {
     const state = setup();
     expect(copyRichMarkdownDocument(state.event, state.markdown, state.report)).toBe(true);
     expect(write).toHaveBeenCalledTimes(1);
-    expect(state.values.get("text/plain")).toBe(state.markdown);
+    expect(state.values.get("text/plain")).toBe(markdownClipboardText(state.markdown));
+    expect(state.values.get("text/markdown")).toBe(state.markdown);
     expect(state.report).toHaveBeenLastCalledWith("clipboard.preparing");
     await Promise.resolve();
     finish("<svg/>");
@@ -59,7 +61,7 @@ describe("whole-document copy", () => {
     const state = setup();
     copyRichMarkdownDocument(state.event, state.markdown, state.report);
     await vi.waitFor(() => expect(state.report).toHaveBeenLastCalledWith("clipboard.richCopyFailed"));
-    expect(state.values.get("text/plain")).toBe(state.markdown);
+    expect(state.values.get("text/plain")).toBe(markdownClipboardText(state.markdown));
   });
 
   it("cancels a pending payload when another copy supersedes it", async () => {
@@ -76,12 +78,12 @@ describe("whole-document copy", () => {
     expect(state.report).not.toHaveBeenCalledWith("clipboard.richCopied");
   });
 
-  it("preserves source and explains the fallback in older WebViews", () => {
+  it("provides readable text and an explicit image fallback in older WebViews", () => {
     vi.stubGlobal("ClipboardItem", undefined);
     vi.stubGlobal("navigator", {});
     const state = setup();
     copyRichMarkdownDocument(state.event, state.markdown, state.report);
-    expect(state.values.get("text/plain")).toBe(state.markdown);
+    expect(state.values.get("text/plain")).toBe(markdownClipboardText(state.markdown));
     expect(state.report).toHaveBeenCalledWith("clipboard.richNotReady");
   });
 
@@ -95,9 +97,9 @@ describe("whole-document copy", () => {
     mocks.native.mockReturnValue(true);
     const state = setup();
     copyRichMarkdownDocument(state.event, state.markdown, state.report);
-    await vi.waitFor(() => expect(mocks.writeNative).toHaveBeenCalledWith(state.markdown, expect.stringContaining("data:image/png"), 42));
-    expect(mocks.begin).toHaveBeenCalledWith(state.markdown);
-    expect(state.values.get("text/plain")).toBe(state.markdown);
+    await vi.waitFor(() => expect(mocks.writeNative).toHaveBeenCalledWith(state.markdown, expect.stringContaining("data:image/png"), 42, markdownClipboardText(state.markdown)));
+    expect(mocks.begin).toHaveBeenCalledWith(markdownClipboardText(state.markdown));
+    expect(state.values.get("text/plain")).not.toContain("flowchart TD");
     expect(state.report).toHaveBeenLastCalledWith("clipboard.richCopied");
   });
 

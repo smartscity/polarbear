@@ -5,6 +5,7 @@ import { renderMermaidSvg } from "../diagram/mermaidRenderer";
 import { translateCurrent } from "../../shared/i18n/translate";
 import { beginNativeDocumentCopy, supportsNativeDocumentCopy, writeNativeDocumentCopy } from "./nativeDocumentClipboard";
 import { hasTauriErrorCode } from "../../shared/tauri/invokeTauri";
+import { markdownClipboardText } from "./markdownClipboardText";
 
 type MermaidImageRenderer = (source: string, index: number) => Promise<string>;
 type BeforeMermaidRender = () => Promise<void>;
@@ -82,6 +83,7 @@ async function buildClipboard(markdown: string, renderImage: MermaidImageRendere
       images.set(index, `<img alt="${renderer.utils.escapeHtml(translateCurrent("diagram.mermaid"))}" src="${renderer.utils.escapeHtml(image)}" style="display:block;max-width:100%;height:auto;" />`);
     } catch {
       failedDiagrams++;
+      images.set(index, `<p role="note">${renderer.utils.escapeHtml(translateCurrent("clipboard.diagramUnavailable"))}</p>`);
     }
   }
   const defaultFence = renderer.renderer.rules.fence!;
@@ -110,7 +112,8 @@ export function isEntirePreviewSelected(surface: HTMLElement): boolean {
 export function copyRichMarkdownDocument(event: ClipboardEvent, markdown: string, onStatus?: CopyStatus): boolean {
   if (event.defaultPrevented || !event.clipboardData || !containsMermaid(markdown)) return false;
   const entry = preparedDocument(markdown, true);
-  try { event.clipboardData.setData("text/plain", markdown); } catch { return false; }
+  const plainText = markdownClipboardText(markdown);
+  try { event.clipboardData.setData("text/plain", plainText); } catch { return false; }
   try { event.clipboardData.setData("text/markdown", markdown); } catch { /* Optional MIME type. */ }
   event.preventDefault();
   if (supportsNativeDocumentCopy()) {
@@ -119,9 +122,9 @@ export function copyRichMarkdownDocument(event: ClipboardEvent, markdown: string
     let cancelled = false;
     const cancel = () => { cancelled = true; onStatus?.(translateCurrent("clipboard.copyReplaced")); };
     document.addEventListener("copy", cancel, true);
-    void Promise.all([beginNativeDocumentCopy(markdown), entry.promise]).then(async ([count, result]) => {
+    void Promise.all([beginNativeDocumentCopy(plainText), entry.promise]).then(async ([count, result]) => {
       if (cancelled) return;
-      await writeNativeDocumentCopy(markdown, result.html, count);
+      await writeNativeDocumentCopy(markdown, result.html, count, plainText);
       if (!cancelled) reportResult(result, onStatus);
     }).catch((error: unknown) => {
       if (!cancelled) onStatus?.(translateCurrent(hasTauriErrorCode(error, "clipboardChanged") ? "clipboard.copyReplaced" : "clipboard.richCopyFailed"));
@@ -152,7 +155,7 @@ export function copyRichMarkdownDocument(event: ClipboardEvent, markdown: string
   onStatus?.(translateCurrent("clipboard.preparing"));
   try {
     const write = navigator.clipboard.write([new ClipboardItem({
-      "text/plain": new Blob([markdown], { type: "text/plain" }), "text/html": html,
+      "text/plain": new Blob([plainText], { type: "text/plain" }), "text/html": html,
     })]);
     void write.then(() => {
       if (!cancelled && entry.result) reportResult(entry.result, onStatus);

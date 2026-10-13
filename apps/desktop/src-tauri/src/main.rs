@@ -3311,8 +3311,13 @@ fn main() -> tauri::Result<()> {
         })
         .invoke_handler(tauri::generate_handler![
             reading_native::begin_document_copy,
+            reading_native::begin_image_copy,
+            reading_native::write_clipboard_image,
             reading_native::write_document_copy,
             reading_native::translate_reading_local,
+            reading_native::cancel_reading_translation,
+            reading_native::speak_reading,
+            reading_native::stop_reading_speech,
             app_zoom::set_app_zoom,
             list_workspace_files,
             load_markdown_file,

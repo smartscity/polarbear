@@ -3,8 +3,23 @@ import { DIAGRAM_CONFIG } from "./diagramConfig";
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 import { translateCurrent } from "../../shared/i18n/translate";
+import { isTauri } from "@tauri-apps/api/core";
+import { isApplePlatform } from "../../shared/platform/keyboard";
+import { sanitizeDiagramSvg } from "./sanitizeDiagramSvg";
 
 export type DiagramExportResult = "cancelled" | "exported";
+
+export async function copySvgElementAsPng(svg: SVGSVGElement): Promise<void> {
+  if (isTauri() && isApplePlatform()) {
+    const count = await invokeTauri<number>(TAURI_COMMANDS.beginImageCopy);
+    const blob = await svgElementAsPngBlob(svg);
+    const url = await blobAsDataUrl(blob);
+    await invokeTauri(TAURI_COMMANDS.writeClipboardImage, { png: url.slice("data:image/png;base64,".length), expectedChangeCount: count });
+    return;
+  }
+  if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) throw new Error(translateCurrent("clipboard.imageUnsupported"));
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": svgElementAsPngBlob(svg) })]);
+}
 
 export async function exportSvgElementAsSvg(
   svg: SVGSVGElement,
@@ -43,9 +58,12 @@ export async function exportSvgElementAsPng(
 }
 
 export async function svgContentAsPngDataUrl(svgContent: string): Promise<string> {
-  const parsedDocument = new DOMParser().parseFromString(svgContent, "image/svg+xml");
-  const parsedSvg = parsedDocument.documentElement;
-  if (parsedSvg.tagName.toLowerCase() !== "svg") {
+  // Sanitized Mermaid labels contain HTML void elements inside foreignObject.
+  // Parse them as HTML, then serialize the cloned SVG as valid XML for Canvas.
+  const template = document.createElement("template");
+  template.innerHTML = sanitizeDiagramSvg(svgContent);
+  const parsedSvg = template.content.firstElementChild;
+  if (!parsedSvg || parsedSvg.namespaceURI !== "http://www.w3.org/2000/svg" || parsedSvg.localName !== "svg") {
     throw new Error(translateCurrent("diagram.exportPngFailed"));
   }
 
@@ -63,7 +81,8 @@ function pngBlobFromSvg(svgDataUrl: string, width: number, height: number): Prom
     const image = new Image();
     image.onload = () => {
       try {
-        const scale = DIAGRAM_CONFIG.export.pngScale;
+        const scale = Math.min(DIAGRAM_CONFIG.export.pngScale,
+          DIAGRAM_CONFIG.export.maxDimension / Math.max(width, height), Math.sqrt(DIAGRAM_CONFIG.export.maxPixels / (width * height)));
         const canvas = document.createElement("canvas");
         canvas.width = width * scale;
         canvas.height = height * scale;

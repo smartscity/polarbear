@@ -82,6 +82,7 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
     let mut files = vec![
         "native/DocumentClipboard.swift",
         "native/LocalTranslation.swift",
+        "native/ReadingSpeech.swift",
     ]
     .into_iter()
     .map(PathBuf::from)

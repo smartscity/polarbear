@@ -3,6 +3,8 @@ export const DIAGRAM_CONFIG = {
     background: "#ffffff",
     fallbackHeight: 600,
     fallbackWidth: 800,
+    maxDimension: 8192,
+    maxPixels: 16_777_216,
     pngScale: 2
   },
   plantUml: {

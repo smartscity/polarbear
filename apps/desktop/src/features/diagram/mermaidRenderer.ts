@@ -15,6 +15,11 @@ function initializeMermaidRenderer(): void {
   isMermaidInitialized = true;
 }
 
+export async function validateMermaidSource(source: string): Promise<boolean> {
+  initializeMermaidRenderer();
+  return Boolean(await mermaid.parse(source, { suppressErrors: true }));
+}
+
 export async function renderMermaidSvg(
   diagramId: string,
   source: string,

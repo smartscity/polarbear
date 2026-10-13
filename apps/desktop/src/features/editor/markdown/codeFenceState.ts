@@ -60,7 +60,9 @@ export function isSelectionInsideFencedCode(view: EditorView): boolean {
     }
 
     if (insideFence && line.text.trimStart().startsWith(fenceMarker)) {
-      return position <= line.to;
+      if (position <= line.to) return true;
+      insideFence = false;
+      fenceMarker = "";
     }
   }
 

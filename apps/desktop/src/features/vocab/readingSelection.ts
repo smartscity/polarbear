@@ -1,5 +1,7 @@
 export const MAX_TERM_LENGTH = 80;
-export const MAX_SENTENCE_LENGTH = 2000;
+export const MAX_SENTENCE_LENGTH = 8000;
+export const MAX_CAPTURE_SENTENCE_LENGTH = 2000;
+export const READING_SELECTION_DELAY_MS = 180;
 
 export function normalizeReadingSelection(text: string): string | null {
   const selection = text.trim();
@@ -23,7 +25,7 @@ export function readingContext(text: string, from: number, to: number) {
   const left = Math.max(preceding.lastIndexOf("\n"), preceding.search(/[.!?][^.!?]*$/u));
   const right = following.search(/[.!?\n]/u);
   const sentence = (preceding.slice(left + 1) + text.slice(start, end)
-    + following.slice(0, right < 0 ? following.length : right + 1)).trim().slice(0, MAX_SENTENCE_LENGTH);
+    + following.slice(0, right < 0 ? following.length : right + 1)).trim().slice(0, MAX_CAPTURE_SENTENCE_LENGTH);
   const headings = [...text.slice(0, start).matchAll(/^#{1,6}\s+(.+)$/gmu)];
   return {
     sentence,

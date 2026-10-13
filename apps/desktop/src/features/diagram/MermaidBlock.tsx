@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { Image } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import {
   exportSvgElementAsPng,
   exportSvgElementAsSvg,
   findRenderedSvg,
+  copySvgElementAsPng,
 } from "./diagramExport";
 import { renderMermaidSvg } from "./mermaidRenderer";
 import { errorMessage } from "../../shared/tauri/invokeTauri";
@@ -152,6 +154,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       <figure className="mermaid-card mermaid-card-error">
         <figcaption>{t("diagram.mermaidRenderFailed")}</figcaption>
         <pre>{renderError}</pre>
+        <details className="mermaid-source"><summary>{t("diagram.source")}</summary><pre><code>{source}</code></pre></details>
       </figure>
     );
   }
@@ -163,6 +166,10 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
         {actionStatus ? <span role="status">{actionStatus}</span> : null}
       </figcaption>
       <div className="mermaid-block-toolbar">
+        <button type="button" aria-label={t("diagram.copyImage")} title={t("diagram.copyImage")} disabled={!svgContent} onClick={() => {
+          const svg = findRenderedSvg(renderTargetRef.current);
+          if (svg) void copySvgElementAsPng(svg).then(() => setActionStatus(t("common.copied")), (error: unknown) => setActionStatus(errorMessage(error)));
+        }}><Image size={16} /></button>
         <button type="button" aria-label={t("diagram.copySource")} title={t("diagram.copySource")} onClick={() => void copySource()}>
           <CopyIcon />
         </button>

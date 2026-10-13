@@ -2,7 +2,8 @@ import { isApplePlatform } from "../../shared/platform/keyboard";
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 
-export type ClipboardRun = { text?: string; png?: string; bold?: boolean; italic?: boolean; code?: boolean };
+export type ClipboardCell = { id: number; row: number; column: number; columns: number };
+export type ClipboardRun = { text?: string; png?: string; bold?: boolean; italic?: boolean; code?: boolean; heading?: number; link?: string; table?: ClipboardCell };
 
 export function supportsNativeDocumentCopy(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window && isApplePlatform();
@@ -13,6 +14,7 @@ export function supportsNativeDocumentCopy(): boolean {
 export function nativeClipboardRuns(html: string): ClipboardRun[] {
   const body = new DOMParser().parseFromString(html, "text/html").body;
   const runs: ClipboardRun[] = [];
+  let tableId = 0;
   const newline = () => {
     if (runs.length && !runs.at(-1)?.text?.endsWith("\n")) runs.push({ text: "\n" });
   };
@@ -24,6 +26,18 @@ export function nativeClipboardRuns(html: string): ClipboardRun[] {
     if (!(node instanceof Element)) return;
     const tag = node.tagName.toLowerCase();
     if (["script", "style", "iframe", "object"].includes(tag)) return;
+    if (tag === "table") {
+      newline();
+      const id = tableId++;
+      const rows = Array.from(node.querySelectorAll("tr"));
+      const columns = Math.max(1, ...rows.map((row) => row.children.length));
+      rows.forEach((row, rowIndex) => Array.from(row.children).forEach((cell, column) => {
+        const cellStyle = { ...style, table: { id, row: rowIndex, column, columns } };
+        visit(cell, cellStyle);
+        runs.push({ ...cellStyle, text: "\n" });
+      }));
+      return;
+    }
     if (tag === "img") {
       const source = node.getAttribute("src") ?? "";
       if (source.startsWith("data:image/png;base64,")) runs.push({ png: source.slice("data:image/png;base64,".length) });
@@ -40,9 +54,11 @@ export function nativeClipboardRuns(html: string): ClipboardRun[] {
       runs.push({ text: ordered ? `${(Number.isFinite(start) ? start : 1) + index}. ` : "• " });
     }
     const nextStyle = { ...style, bold: style.bold || /^(strong|b|th|h[1-6])$/.test(tag),
-      italic: style.italic || tag === "em" || tag === "i", code: style.code || tag === "code" || tag === "pre" };
+      italic: style.italic || tag === "em" || tag === "i", code: style.code || tag === "code" || tag === "pre",
+      heading: /^h[1-6]$/.test(tag) ? Number(tag[1]) : style.heading,
+      link: tag === "a" && /^(https?:|mailto:)/i.test(node.getAttribute("href") ?? "") ? node.getAttribute("href") ?? undefined : style.link };
     for (const child of node.childNodes) visit(child, nextStyle);
-    if ((tag === "td" || tag === "th") && node.nextElementSibling) runs.push({ text: "\t" });
+    if (!style.table && (tag === "td" || tag === "th") && node.nextElementSibling) runs.push({ text: "\t" });
     if (block) newline();
   };
   for (const child of body.childNodes) visit(child);
@@ -55,8 +71,8 @@ export async function beginNativeDocumentCopy(markdown: string): Promise<number>
   return invokeTauri<number>(TAURI_COMMANDS.beginDocumentCopy, { markdown });
 }
 
-export async function writeNativeDocumentCopy(markdown: string, html: string, expectedChangeCount: number): Promise<void> {
+export async function writeNativeDocumentCopy(markdown: string, html: string, expectedChangeCount: number, plainText: string): Promise<void> {
   await invokeTauri(TAURI_COMMANDS.writeDocumentCopy, {
-    document: { markdown, html, runs: nativeClipboardRuns(html), expectedChangeCount },
+    document: { markdown, plainText, html, runs: nativeClipboardRuns(html), expectedChangeCount },
   });
 }
