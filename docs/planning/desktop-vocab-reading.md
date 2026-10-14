@@ -1,5 +1,20 @@
 # Desktop Vocabulary Capture
 
+## Current status: v0.9.3 (2026-10-14)
+
+This page describes the Desktop reading implementation at `66eec710`, the
+`v0.9.3` release commit. See the [v0.9.3 release record](../releases/v0.9.3.md)
+for current release and verification status, and the
+[documentation index](../README.md) for related implementation and historical reports.
+
+Bundled Bergamot translation supersedes the earlier Apple language-pack path.
+Production Chromium/WebKit inference and cancellation/recovery are recorded as
+PASS. Installed-DMG/actual Tauri WebView verification remains `NOT_RUN` in the
+written record; that is an evidence gap, not proof that nobody tested the app.
+The successful release build and uploaded installers do not by themselves close
+that runtime-verification gap. The results below are retained evidence, not
+application tests rerun during this documentation review.
+
 ## Scope
 
 Read a Markdown article in Desktop and select an English word, sentence or
@@ -63,9 +78,10 @@ installation, not as a routine language setup step. Listening and favorites stay
 available independently.
 
 This is English-to-Chinese neural translation, not a replacement for dictionary
-senses or IPA. Acronyms such as OEMS may remain unchanged; specialist terms can
-be mistranslated. Vocab still owns word lookup, pronunciation data and vocabulary
-membership through its existing IPC boundary. No database access is introduced.
+senses or IPA. Acronyms and specialist terms can be mistranslated; the recorded
+`OEMS` output was `制造商`, which is not a validated domain-specific definition.
+Vocab still owns word lookup, pronunciation data and vocabulary membership
+through its existing IPC boundary. No database access is introduced.
 The standalone iOS reader's native translation implementation is outside this
 Desktop change and must not be described as using the bundled engine yet.
 
@@ -155,6 +171,10 @@ Run Desktop typecheck/lint/tests and Rust tests, and Vocab typecheck/tests/Clipp
 
 ### Bundled offline translation verification
 
+These are the recorded implementation-verification results. Test counts describe
+that verification pass rather than a fresh v0.9.3 test run. Release CI evidence
+is tracked separately in the [release record](../releases/v0.9.3.md).
+
 The Desktop translation path now uses real bundled inference in browser tests;
 it is not replaced by a mocked Tauri translation response. Vocab lookup,
 favorites and speech IPC remain mocked in browser UI tests, with separate native
@@ -171,8 +191,8 @@ tests for the actual storage/protocol boundaries.
 | Production frontend bundle | PASS | Includes model files, WASM, worker scripts and license notices |
 | Native compile/tests | PASS | 22 passed; one existing real Memory installation test is opt-in; socket tests need sandbox permission |
 | Rust formatting | PASS | `cargo fmt --all -- --check` |
-| Installed DMG / actual Tauri WebView | NOT_RUN | Production browser tests are not a substitute for installing the release DMG |
-| Older macOS / Windows devices | NOT_RUN | Requires compatible WebAssembly/Web Worker support; Apple Translation API availability is no longer the gate |
+| Installed DMG / actual Tauri WebView | NOT_RUN | No result is recorded for this layer; production browser passes and installer builds do not establish installed-app behavior |
+| Older macOS / Windows devices | NOT_RUN | No device result is recorded; compatible WebAssembly/Web Worker support is required, while Apple Translation API availability is no longer the gate |
 
 The production probe translates `This is an English sentence.` to
 `这是一句英文句子。` and preserves paragraph breaks. It also exposes a quality
@@ -181,23 +201,30 @@ which is not a validated domain-specific definition. Do not present neural outpu
 as authoritative dictionary data. The original selection remains visible and
 favorite capture preserves that original text.
 
-Manual release acceptance: install the new DMG without Apple translation packs,
-disconnect external networking, select a word absent from the dictionary and a
-full paragraph, copy the translation, reselect quickly, close/reopen the card,
-and verify header favorites still queue while Vocab is unavailable. No language
+To close the installed-runtime evidence gap, install the v0.9.3 DMG without Apple
+translation packs, disconnect external networking, select a word absent from the
+dictionary and a full paragraph, copy the translation, reselect quickly,
+close/reopen the card, and verify header favorites still queue while Vocab is unavailable. No language
 download button or system setup sheet should appear. Check the same flow after
-restarting Desktop. The standalone iOS app is unchanged in this release.
+restarting Desktop. Record the installer version, OS version and result. This
+Desktop translation change does not replace the standalone iOS implementation.
 
 ### Previous Apple translation implementation (superseded)
 
-The passage UI regression covers a full sentence/paragraph speech request, local
-translation response, missing language packs, word lookup and saving, live locale
-switching, and narrow-screen layout. Native IPC is mocked in that browser test.
+The earlier passage UI regression covered a full sentence/paragraph speech
+request, local translation response, missing language packs, word lookup and saving, live locale
+switching, and narrow-screen layout. Native IPC was mocked in that browser test.
 An actual native translation probe on the development Mac returned
-`languagePackMissing`; successful model inference is therefore not claimed for
-that machine. No language packs were downloaded during verification.
+`languagePackMissing`; successful Apple-model inference was therefore not claimed
+for that machine. That historical resource limitation does not apply to the current
+bundled Desktop translation path. No language packs were downloaded during that
+verification.
 
-### Background favorite verification
+### Background favorite verification (historical v0.9.2 record)
+
+The outbox and socket evidence below remains relevant. The Apple translation
+probe and language-pack acceptance items in this older pass were superseded by
+the bundled-engine verification above; they are not current Desktop prerequisites.
 
 The installed Vocab socket initially returned `ECONNREFUSED`. A normal background
 LaunchServices start recovered a real v1 lookup; `OEMS` returned an empty result,
@@ -208,18 +235,20 @@ Native outbox tests cover disk reopen, exact acknowledgement, deduplication,
 immutable retry payloads, concurrent claims, retry backoff, receiver-side sense
 resolution, invalid input and queue capacity. Browser tests cover an offline
 favorite, source opt-out, card dismissal, completion, header placement, narrow
-dark layout and explicit model preparation in v0.9.2. Browser IPC is mocked. The native
-translation probe covers missing resources and cancellation without downloads;
-actual Apple consent/download UI and successful translation after installation
-remain manual acceptance items.
+dark layout and the then-current explicit model preparation in v0.9.2. Browser
+IPC was mocked. The historical native translation probe covered missing resources
+and cancellation without downloads; Apple consent/download UI and successful
+Apple translation after language-pack installation were still unverified in that
+record. Those Apple-specific acceptance items are now superseded.
 
-Validation for this change: Desktop typecheck and lint, 192 unit tests, four asset
+Validation for that change: Desktop typecheck and lint, 192 unit tests, four asset
 checks, 11 browser tests, the production frontend build, Rust formatting and 22
 native tests passed (one existing engine-installation test remains opt-in).
 The native Swift probe compiled and passed cancellation/resource checks; actual
-model inference remains blocked by missing installed language packs.
+Apple-model inference was blocked by missing installed language packs in that
+historical pass. Current bundled inference is recorded as PASS above.
 
-### Initial capture release verification
+### Initial capture release verification (historical)
 
 Desktop typecheck, lint, frontend production build, 163 Vitest cases, four asset
 checks, and 20 native Rust tests passed. One pre-existing Memory Engine installation
@@ -233,7 +262,8 @@ A Chromium component harness verified explicit sense selection, identical retry
 payloads, source opt-out, Escape, outside-click dismissal, live locale changes,
 pending saves and light/dark layouts at 1100px and 390px widths. That harness mocks
 the native API. Launching the two newly packaged applications through LaunchServices
-and end-to-end return-to-source remain manual release acceptance checks.
+and end-to-end return-to-source remained manual release acceptance checks in
+that historical record.
 
 ### iPhone reading integration
 
@@ -242,3 +272,4 @@ versioned offline capture transfer consumed by Vocab's existing ReadingService.
 It does not reuse the desktop Unix socket or access Vocab storage. See
 [iPhone Reading Assistant](iphone-reading-assistant.md) for the interaction,
 pending-versus-imported states, file contract and remaining mobile limitations.
+

@@ -4,6 +4,11 @@ Status: Acceptance specification with the automated M1 technical slice and froze
 
 Date: 2026-09-19.
 
+Release scope reviewed on 2026-10-14: the acceptance decisions and pending gates
+below concern the recorded Memory M1/M2 work, not the status of the
+[Desktop v0.9.3 release workflow](../releases/v0.9.3.md). Passing Desktop CI does
+not establish Memory M1 acceptance or supersede the dated evaluation evidence.
+
 Companions: [Implementation plan](desktop-memory-implementation-plan.md) and [Architecture rationale](desktop-memory-context-design.md).
 
 This document owns M1's validation scope, decision rules, test oracle, and exit gates. It refines the earlier ownership/applicability model and narrows the first delivery to P1 → minimal P2 → minimal P3. Later runtime work is not a prerequisite. Admin API 1.8 now implements the six-method M1 surface described below; unimplemented rows and targets remain explicit validation or later-roadmap requirements.
@@ -241,3 +246,4 @@ Gate sequence:
 Only after M1 passes should P0/P4–P7 measure the next hypotheses. Evaluate later token/cost effects separately for simple one-off tasks, repeated architecture lookup, ongoing maintenance, long tasks, and cross-session continuation. The older 20% cost target is a workload-specific experimental ambition, not M1 acceptance or a universal product success line.
 
 The next validation action is to execute both frozen query partitions through Admin API 1.8, run supported-profile latency/availability measurements, and complete the delayed-use study against the implemented P1 → minimal P2 → minimal P3 slice. Do not expand into provider runtime or token experiments until those results support an M1 proceed decision.
+

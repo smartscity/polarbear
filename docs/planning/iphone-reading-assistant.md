@@ -2,6 +2,10 @@
 
 ## Scope and current delivery
 
+Scope reviewed on 2026-10-14 against [Desktop v0.9.3](../releases/v0.9.3.md)
+(`66eec710`). This document describes the standalone iPhone implementation;
+Desktop release verification does not establish signed-iPhone acceptance.
+
 The standalone `apps/ios` reader now supports selection-based local translation,
 English speech, the installed system dictionary, and durable pending Vocab captures.
 Desktop editing and its private Unix-socket Vocab bridge are unchanged. The existing
@@ -31,6 +35,11 @@ uses Apple TranslationSession's installed-only initializer on iOS 26+. The reade
 continues to support iOS 16: older systems retain speech, dictionary and captures,
 with a clear unsupported-translation message. No remote fallback or model download
 is initiated. Missing models direct the user to system language settings.
+
+This Apple language-pack requirement applies to iPhone only. Desktop uses its
+[bundled Bergamot engine and English-to-Chinese model](desktop-vocab-reading.md)
+without Apple Translation or system language setup; that engine has not replaced
+the native iPhone implementation.
 
 The inline Chinese result is a translation, not a Vocab dictionary sense. IPA is not
 fabricated or inferred from speech. Available pronunciation details remain in the
@@ -87,7 +96,11 @@ responses, speech controls, bilingual light/dark UI, export state, atomic queue
 persistence, corrupt storage, bounds, Vocab import validation and retry semantics.
 Browser native APIs are mocked; they do not prove real voice output or model inference.
 
+The [iPhone Reader Quality run for the v0.9.3 checkpoint](https://github.com/smartscity/polarbear/actions/runs/38588952736)
+passed; it does not replace the following native acceptance.
+
 Before a signed-device release, verify installed language packs, audible playback,
 native selection handles, VoiceOver, and Files export/import between both signed apps.
 App Group background delivery, authenticated receipts, inline IPA and lookup against
 Vocab's iOS dictionary are follow-up work, not features claimed by this release.
+

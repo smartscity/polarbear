@@ -6,6 +6,11 @@ iCloud synchronization feature**. Desktop compiles these sources in its Swift
 bridge and the iOS plugin includes the Swift package. Neither application routes
 user edits here yet. Existing local saves and Reader snapshots remain unchanged.
 
+Scope reviewed on 2026-10-14 against [Desktop v0.9.3](../../docs/releases/v0.9.3.md)
+(`66eec710`). The foundation checkpoint below is historical; the open gates apply
+to enabling the linked-folder feature, not to the overall Desktop release workflow.
+Passing CI does not establish physical-device iCloud acceptance.
+
 ## Responsibilities
 
 - `WorkspaceGrants`: native-picker URLs become device-local bookmarks and opaque
@@ -70,7 +75,7 @@ plugin `cargo check`, an arm64 iOS 16 SDK typecheck, and Rust formatting checks.
 No physical iCloud synchronization test, mobile editing UX test, or signed-device
 distribution was performed for this checkpoint.
 
-## Release gates still open
+## Linked-folder feature gates still open
 
 - Host IPC adapters and typed TypeScript document contracts.
 - Linked-folder picker UI, reconnection, and one-transport-per-workspace checks.
@@ -84,3 +89,4 @@ distribution was performed for this checkpoint.
 Do not enable editing-in-place or declare the mobile document role as Editor until
 these user-facing safety paths are wired and validated. The complete requirements
 remain in [the implementation TRD](../../docs/planning/icloud-markdown-sync.md).
+

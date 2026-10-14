@@ -1,8 +1,13 @@
 # Desktop-led memory and context design
 
-Status: M1 technical slice and validation assets implemented. The [automated M1 report](desktop-memory-m1-automated-report.md) records development **PASS**, held-out **FAIL**, and a **REVISE** decision; product rollout remains blocked, the human pilot remains unrun, and M2 remains proposed.
+Status: M1 technical slice and validation assets implemented. The [automated M1 report](desktop-memory-m1-automated-report.md) records development **PASS**, held-out **FAIL**, and a **REVISE** decision; Memory M1 rollout remains blocked, the human pilot remains unrun, and M2 remains proposed.
 
 Date: 2026-09-19.
+
+Release scope reviewed on 2026-10-14: the acceptance decisions and pending gates
+below concern the recorded Memory M1/M2 work, not the status of the
+[Desktop v0.9.3 release workflow](../releases/v0.9.3.md). Passing Desktop CI does
+not establish Memory M1 acceptance or supersede the dated evaluation evidence.
 
 M1 refinement: [Reliable next-day reuse validation plan](desktop-memory-m1-validation-plan.md) owns the first milestone's acceptance rules. It narrows initial work to durable capture, accurate retrieval, exact evidence, and safe applicability; runtime/checkpoint and token experiments follow only after that gate.
 
@@ -294,3 +299,4 @@ The implementation choices above are Polarbear-specific design recommendations, 
 - [LongMemEval](https://arxiv.org/abs/2410.10813) tests extraction, cross-session reasoning, temporal reasoning, updates, and abstention. These inform the failure scenarios above; the benchmark is not a direct measurement of coding-task token savings.
 
 Local design context: Memory `docs/en/planning/memory-activation-proposal.md`, Desktop `ARCHITECTURE.md`, and the source locations listed in section 2.
+
