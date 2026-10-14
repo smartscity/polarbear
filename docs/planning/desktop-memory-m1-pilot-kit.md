@@ -2,6 +2,10 @@
 
 Status: Not run. The [automated M1 report](desktop-memory-m1-automated-report.md) records a held-out **FAIL** and **REVISE** decision, so the human pilot remains deferred until the automated technical gate passes.
 
+Scope reviewed on 2026-10-14: the deferred pilot belongs to Memory M1 acceptance.
+It does not describe the status of the [Desktop v0.9.3 release workflow](../releases/v0.9.3.md);
+that workflow's success is not evidence that this human pilot ran or passed.
+
 ## Purpose and stop rule
 
 This pilot tests one claim: a conclusion captured today can be found and assessed later without unsafe reuse after task, working-copy, or source changes. It does not test Token savings, automatic extraction, provider injection, or general truth.
@@ -73,3 +77,4 @@ Report raw numerators and denominators overall and per scenario class. The initi
 - More than 20% unnecessary review on unaffected cases triggers a boundary or UX redesign.
 
 A small pilot cannot establish a production zero-error rate. A pass authorizes only the next evaluated increment; it does not authorize provider injection or a Token-saving claim.
+

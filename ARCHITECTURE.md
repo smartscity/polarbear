@@ -2,6 +2,10 @@
 
 Polarbear is a local-first Markdown editor built with Rust, Tauri, and TypeScript. The current desktop release targets are macOS and Windows. An isolated, experimental iPhone reader lives in `apps/ios`; it is not a mobile port of the desktop editor or a published App Store application.
 
+For the release verification baseline and remaining acceptance limits, see
+[Desktop v0.9.3](docs/releases/v0.9.3.md). Feature plans and historical reports
+are indexed in [the documentation guide](docs/README.md).
+
 The architecture is designed around a simple rule:
 
 > React features own interaction and presentation.
@@ -121,6 +125,23 @@ See [the iPhone reader implementation guide](apps/ios/README.md) for startup, li
 verification and deferred capabilities. Mobile milestones use `ios-v*` tags and a separate
 quality workflow; the desktop release workflow is unchanged.
 
+## Reading Tools Boundary
+
+Desktop selection translation uses the bundled BrowserMT Bergamot engine and
+English-to-Chinese model in a local worker. It does not depend on Apple Translation,
+installed Apple language packs, a running Vocab app, or a first-run model download.
+Vocab remains the owner of dictionary senses, pronunciation data, and vocabulary
+membership through its existing IPC boundary. Native installed-voice speech is
+separate from translation. See [Desktop Vocabulary Capture](docs/planning/desktop-vocab-reading.md)
+for packaging, cancellation, integrity checks, and terminology limits.
+
+The standalone iPhone reader has a different native implementation: installed-only
+Apple Translation on iOS 26+, installed-voice speech, the system dictionary, and
+an explicit file export/import handoff for pending Vocab captures. Older supported
+iOS versions retain the other reading tools but cannot run that translation API.
+The Desktop bundled-engine change does not replace this iPhone boundary. See
+[the iPhone Reading Assistant](docs/planning/iphone-reading-assistant.md).
+
 ## Platform Targets
 
 Current release targets:
@@ -141,8 +162,8 @@ Platform rules:
 - Keep macOS-only APIs isolated in platform modules such as `native_pinch.rs`.
 - Put platform-specific frontend behavior behind feature adapters.
 - Keep GitHub and GitLab sync on provider REST APIs so it does not require a local Git executable.
-- Treat local file access as an adapter capability because a future iOS target will use sandboxed document access.
-- Keep Mermaid rendering in the WebView layer so it remains portable to a future iOS target.
+- Treat local file access as an adapter capability; the iPhone reader uses sandboxed document access.
+- Keep Mermaid rendering in the WebView layer; the iPhone reader reuses the pure rendering modules.
 - Do not use dynamic native library loading for MVP plugins.
 - Keep Tauri commands thin and free of platform-specific business logic.
 
@@ -331,3 +352,4 @@ Configuration and state are deliberately separate:
 5. Move workspace, repository sync, and export business logic out of `src-tauri/src/main.rs` incrementally; do not create parallel unused implementations.
 
 Large-file splits must be behavior-preserving and vertical. Do not rewrite the editor, Cloud Sync, zoom, or workspace subsystems in one change.
+

@@ -4,6 +4,12 @@ Status: Automated development and held-out evaluation completed. Decision: **REV
 
 Date: 2026-09-21.
 
+Historical evidence scope, reviewed 2026-10-14: this report preserves the measured
+Memory M1 results below. It is not a verification report for Desktop `v0.9.3`
+(`66eec710`), and that release's passing workflows do not change its **FAIL** or
+**REVISE** outcomes. See [the v0.9.3 release record](../releases/v0.9.3.md) for
+current Desktop release evidence and acceptance limits.
+
 Acceptance specification: [M1 validation: reliable next-day knowledge reuse](desktop-memory-m1-validation-plan.md).
 
 ## 1. Decision and scope
@@ -128,3 +134,4 @@ Before an M1 `PROCEED` decision:
 4. Run the delayed-use pilot only after the automated technical gate passes, and report all human denominators and failures.
 
 Until those steps pass, the decision remains **REVISE**, M1 remains unaccepted, provider/runtime expansion remains out of scope, and no token-saving claim is warranted.
+

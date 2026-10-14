@@ -1,12 +1,18 @@
 # Polarbear Markdown editing and iCloud synchronization
 
 Status: Implementation started; native foundation only, not feature-complete.
+
+Scope reviewed on 2026-10-14 against [Desktop v0.9.3](../releases/v0.9.3.md)
+(`66eec710`). Requirements and release gates below concern the planned linked-folder
+editing feature, not the overall Desktop release workflow. A passing release or
+iPhone quality workflow does not establish physical-device iCloud acceptance.
+
 Scope: Markdown editing and synchronization on
 macOS, iPhone, and iPad, using the same Apple Account with iCloud Drive enabled.
 
 Use a user-selected iCloud Drive folder as the authoritative document location.
-Polarbear edits ordinary Markdown files in that folder. Apple manages transport
-between devices; Polarbear manages authorized file access, durable editing,
+In the proposed workflow, Polarbear edits ordinary Markdown files in that folder.
+Apple manages transport between devices; Polarbear manages authorized file access, durable editing,
 external changes, offline recovery, and conflict resolution. All three clients
 must support editing before this feature is considered complete.
 
@@ -80,7 +86,7 @@ access grant.
 This uses the system document provider chosen by the user. It does not require a
 Polarbear account, a custom sync server, a CloudKit record schema, or an app-owned
 iCloud container. An app-owned container would be a separate onboarding choice.
-The supported cloud provider for this release is iCloud Drive; other Files
+The initial planned linked-folder release targets iCloud Drive; other Files
 providers require their own acceptance tests before being advertised.
 
 ## Storage and responsibilities
@@ -365,3 +371,4 @@ and presenter lifecycle. Physical-device tests establish provider conflicts,
 background behavior, and editing usability. Measure local save and refresh
 latency separately from cloud propagation; do not advertise a fixed cross-device
 synchronization deadline.
+

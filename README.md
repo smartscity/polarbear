@@ -1,17 +1,24 @@
 # Polarbear
 
-[English](README.md) | [简体中文](README-zh.md)
+[English](README.md) | [简体中文](README-zh.md) | [Documentation index](docs/README.md) | [v0.9.3 status](docs/releases/v0.9.3.md)
 
 > A local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows.
 
 Polarbear is an open-source, local-first Markdown editor built with Rust, Tauri, and TypeScript.  
 It focuses on clean writing, live preview, Mermaid and PlantUML diagrams, and GitHub/GitLab document workflows.
 
-Current platform status:
+Current platform status (verified against v0.9.3, 2026-10-14):
 
-- macOS desktop app: supported and built by CI
-- Windows desktop app: packaged by the release workflow
-- iOS: planned, but the Tauri iOS project has not been initialized in this repository
+- macOS desktop app: universal DMG built successfully
+- Windows desktop app: x64 NSIS installer built successfully
+- iPhone: separate experimental, read-only Tauri/React reader in `apps/ios`, with native document import and reading tools; signed-device distribution remains unverified
+
+The existing v0.9.3 tag identifies commit `66eec710`. Release, Desktop Quality and
+iPhone Reader Quality workflows passed for that commit. The release workflow
+intentionally creates a draft release; successful packaging does not establish
+installed-device acceptance. See [the verification record](docs/releases/v0.9.3.md)
+for evidence, current limits and the distinction between recorded passes and
+checks without a recorded pass.
 
 ---
 
@@ -31,7 +38,7 @@ It aims to become a local-first writing workspace with:
 
 Write locally. Preview clearly. Sync when needed.
 
-Polarbear is not intended to remain macOS-only. The current product is a desktop application; mobile support remains a design constraint, not a runnable target in this checkout. Platform-specific behavior must stay behind traits or adapter modules so portable code remains reusable.
+Desktop and the experimental iPhone reader are separate applications. The reader is not a mobile editor or a published App Store product. Platform-specific behavior stays behind adapters so portable code remains reusable without importing Desktop services into the reader.
 
 ---
 
@@ -57,7 +64,7 @@ Polarbear is not intended to remain macOS-only. The current product is a desktop
 - Copy Mermaid source
 - Export SVG
 - Export Mermaid and PlantUML diagrams as SVG or PNG
-- Keep Mermaid rendering in the WebView layer so it remains portable to a future iOS target
+- Keep Mermaid rendering in the WebView layer; the iPhone reader reuses the pure rendering modules
 
 ### Cloud Sync
 
@@ -71,6 +78,28 @@ Polarbear is not intended to remain macOS-only. The current product is a desktop
 ```text
 docs: update {file_path}
 ```
+
+### Reading and Vocabulary
+
+- Desktop English-to-Chinese translation uses bundled Bergamot 0.4.9 and verified model assets, with no first-run model download, Apple language-pack requirement or cloud fallback
+- Selection reading supports cancellation, rapid reselection and a persistent opt-out
+- Dictionary senses, available IPA and vocabulary membership come from Vocab; neural translation is not authoritative dictionary data
+- macOS Vocab integration uses the existing local protocol, with a durable background favorite queue and source-context opt-out
+- The iPhone reader has its own installed-only Apple translation path, speech, system dictionary and explicit offline capture-file handoff
+
+See [Desktop reading](docs/planning/desktop-vocab-reading.md) and
+[iPhone reading](docs/planning/iphone-reading-assistant.md) for platform limits.
+Production Chromium/WebKit inference has passed; actual installed DMG/Tauri
+WebView and older-macOS/Windows-device acceptance have no recorded pass yet.
+
+### Rich Document Copy
+
+- Whole-document copy can carry readable text, rich HTML and Mermaid images while retaining a separate Markdown flavor
+- Copy Markdown Source explicitly preserves raw Markdown
+- macOS native rich-text receiver checks cover table structure and multiple Mermaid images
+- Mixed text/table/Mermaid paste into Lark and Word has no recorded acceptance pass; receiver behavior must be checked separately
+
+See [rich document copy](docs/planning/desktop-rich-document-copy.md).
 
 ### Extensibility
 
@@ -112,9 +141,30 @@ polarbear/
         shared/
       src-tauri/
         Cargo.toml
+    ios/
+      package.json
+      src/
+      src-tauri/
+        reader-plugin/
+  packages/
+    reader-core/
+    apple-document-store/
+  docs/
+    README.md
+    planning/
+    releases/
 ```
 
-The `apps/desktop` package contains the React application. Its `src-tauri` directory is the only Rust application crate and the native Tauri entry point. The repository does not currently contain separate `CONTRIBUTING.md` or license-text files; license metadata is declared as `MIT OR Apache-2.0` in Cargo manifests.
+`apps/desktop/src-tauri` is the only member of the root Cargo workspace.
+`apps/ios/src-tauri` has a separate Cargo workspace and native reader plugin.
+Root npm scripts target Desktop; use explicit `apps/ios` workspace scripts for
+the reader. `packages/reader-core` holds portable reader logic, while
+`packages/apple-document-store` contains a shared native linked-document
+foundation whose user-facing editing/sync integration is not yet delivered.
+
+The repository does not contain a separate `CONTRIBUTING.md` or root project
+license-text files. Cargo declares `MIT OR Apache-2.0`; bundled translation assets
+have their own included third-party license notices.
 
 ---
 
@@ -141,16 +191,16 @@ Polarbear follows these principles:
 
 ## Platform Support
 
-Polarbear currently ships as a desktop application.
+Desktop packaging targets macOS and Windows; the iPhone reader is an experimental development target.
 
 Supported release targets:
 
 - macOS
 - Windows
 
-Planned target:
+Experimental target:
 
-- iOS, after the Tauri iOS project is initialized and native capabilities are audited
+- iPhone reader, with a dedicated workspace, simulator checks and browser preview; physical-device/provider acceptance and signed distribution remain separate gates
 
 Future targets:
 
@@ -165,7 +215,7 @@ Platform rules:
 - Put platform-specific behavior behind traits or adapter modules.
 - Keep Tauri commands thin and free of platform-specific business logic.
 - Use provider REST APIs for sync so repository workflows do not depend on a local Git executable.
-- Treat local file access as capability-based because a future iOS target will run inside an app sandbox.
+- Treat local file access as capability-based; the iPhone reader imports authorized snapshots inside its app sandbox.
 - Keep Mermaid rendering in the WebView layer.
 - Avoid dynamic native plugin loading for the MVP.
 
@@ -229,7 +279,19 @@ The `tauri:dev` alias is defined at the repository root. There is no script with
 
 ### iOS Status
 
-The iOS icons exist, but this checkout does not contain Tauri's generated `gen/apple` project. Therefore `npm run tauri -- ios dev` and `npm run tauri -- ios build` are not currently runnable workflows. Initializing iOS requires an explicit platform setup pass with Xcode, `npm run tauri -- ios init`, and an audit of native capabilities before these commands can be documented as supported.
+Use the separate reader workspace rather than running Desktop's Tauri script
+with an iOS subcommand:
+
+```bash
+npm --workspace apps/ios run dev
+npm --workspace apps/ios run ios:init -- --ci
+npm --workspace apps/ios run ios:dev
+```
+
+The browser preview runs on port 1430. Native development requires Xcode and the
+iOS prerequisites; generated Xcode files and signing credentials are local build
+outputs, not committed source. See [the reader guide](apps/ios/README.md) for
+simulator commands, checks, device setup and known limitations.
 
 ### Build Rust Workspace
 
@@ -249,7 +311,7 @@ The release binary is generated under:
 target/release/
 ```
 
-### Build Shared Frontend
+### Build Desktop Frontend
 
 ```bash
 npm run build
@@ -293,7 +355,7 @@ For local installation on macOS after packaging:
 
 ### Mobile Notes
 
-Future iOS support requires Tauri mobile initialization and Xcode. It must account for sandboxed file access, Keychain-backed secrets, responsive layouts, and WebView-based Mermaid rendering. Do not treat the presence of iOS icon files as proof that the target is initialized.
+The reader already has a native Tauri entry point and iOS plugin. It uses immutable imports, sandboxed document access and WebView rendering. Generating its local Xcode project is a development setup step; a working browser preview or simulator build does not establish physical-device, provider or signed-distribution acceptance.
 
 ### Run Rust Checks
 
@@ -310,7 +372,35 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
+npm --workspace apps/desktop run test:translation-assets
+npm exec --workspace apps/desktop -- playwright install chromium webkit
+npm --workspace apps/desktop run test:offline-translation -- --webkit
+npm --workspace apps/desktop run test:ui
 ```
+
+The native clipboard receiver check runs on macOS:
+
+```bash
+npm --workspace apps/desktop run test:native-clipboard
+```
+
+These commands describe checks to run. Their inclusion is not a claim that they
+were rerun for a documentation-only change. Recorded v0.9.3 results and remaining
+manual checks are in [the status page](docs/releases/v0.9.3.md).
+
+### Release Packaging
+
+The [release workflow](.github/workflows/release.yml) runs for `v*` tags or an
+explicit existing desktop release tag supplied through manual dispatch. It builds
+a universal macOS DMG and a Windows x64 NSIS installer, uploads the DMG as an
+Actions artifact, and attaches both installers to a draft GitHub Release.
+Publication is a separate action. `ios-v*` milestones use the independent iPhone
+quality workflow and do not trigger Desktop packaging.
+
+Release builds derive the app version from the selected tag and update build-local
+JSON metadata. Source manifest versions do not by themselves identify the packaged
+release. A documentation-only correction does not require changing versions,
+rebuilding artifacts or moving an existing tag.
 
 ---
 
@@ -344,7 +434,9 @@ graph TD
 
 ### Current gaps
 
-- Initialize and validate the iOS target before advertising mobile development commands
+- Complete physical-iPhone/provider acceptance and signed distribution for the experimental reader
+- Record installed Desktop/Tauri WebView acceptance and receiver-specific Lark/Word rich-paste results
+- Integrate the shared Apple document foundation before claiming linked cross-device editing or iCloud synchronization
 - Export complete documents to PDF and HTML
 - Continue extracting workspace, repository sync, and export services from the large Tauri entry point
 - Expand integration coverage around native commands and release packaging
@@ -361,4 +453,4 @@ graph TD
 
 ## License
 
-Cargo manifests currently declare `MIT OR Apache-2.0`. The repository still needs the corresponding license-text files before distribution.
+Cargo manifests declare `MIT OR Apache-2.0`; corresponding root project license-text files are still absent. Bundled Bergamot/model MPL-2.0 notices and the fflate MIT notice are separate third-party notices and do not replace the project license texts. See [the bundled asset notice](apps/desktop/public/models/en-zh/README.md).

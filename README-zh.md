@@ -4,13 +4,21 @@
 
 > 一个本地优先、面向写作者与开发者的 Markdown 编辑器和知识工作台。
 
+> Current status, 2026-10-14: see the [v0.9.3 verification record](docs/releases/v0.9.3.md)
+> and [documentation index](docs/README.md). Desktop now bundles offline Bergamot
+> translation; iPhone has a separate experimental reader and native reading tools.
+> Release and both quality workflows passed for `66eec710`. The release is an
+> intentional draft with DMG/EXE assets; installed-device and Lark/Word mixed-paste
+> acceptance still have no recorded pass. New corrections are in English under the
+> repository language policy; existing localized overview content is retained.
+
 Polarbear 使用 Rust、Tauri、React 和 TypeScript 构建，专注于流畅写作、实时预览、Mermaid/PlantUML 图表以及 GitHub/GitLab 云同步。
 
 当前平台状态：
 
 - macOS 桌面应用：支持，CI 会构建安装包
 - Windows 桌面应用：发布流程会构建安装包
-- iOS：规划中，当前仓库尚未初始化 Tauri iOS 工程
+- iPhone: a separate experimental Tauri/React reader exists in `apps/ios`; physical-device/provider acceptance and signed distribution remain separate gates
 
 ---
 
@@ -61,6 +69,17 @@ Polarbear 面向技术文档、工程笔记、产品规格、架构图和代码�
 
 Polarbear 使用服务商 REST API 完成同步，不要求用户安装或学习本地 Git 命令。
 
+### Reading and rich-copy status
+
+- Desktop English-to-Chinese translation bundles verified Bergamot/model assets; no Apple language pack, first-run download or cloud fallback is required.
+- Vocab owns dictionary senses/IPA and vocabulary membership; macOS favorites use a durable delivery queue. Neural output can mistranslate acronyms such as OEMS.
+- The iPhone reader uses its own installed-only Apple translation path, speech, dictionary and explicit capture-file handoff.
+- Whole-document copy provides rich content and readable text; use Copy Markdown Source for raw Markdown. Native receiver checks do not establish Lark/Word mixed-paste compatibility.
+
+See [Desktop reading](docs/planning/desktop-vocab-reading.md),
+[iPhone reading](docs/planning/iphone-reading-assistant.md) and
+[rich document copy](docs/planning/desktop-rich-document-copy.md).
+
 ### 扩展边界
 
 Mermaid、PlantUML、云同步和导出目前都是内置 Feature。Polarbear 暂不提供运行时插件 API；只有在权限、版本化协议与沙箱边界明确后才会考虑插件系统。
@@ -104,7 +123,12 @@ polarbear/
         src/
 ```
 
-`apps/desktop/src-tauri` 是当前唯一的 Rust 应用 crate。项目不会维护一套未接入产品的平行“架构示例”。
+`apps/desktop/src-tauri` is the only member of the root Cargo workspace.
+`apps/ios/src-tauri` owns a separate Cargo workspace and reader plugin.
+`packages/reader-core` contains portable reader logic; `packages/apple-document-store`
+contains a native linked-document foundation whose user-facing editing/sync
+integration is not yet delivered. Root npm scripts target Desktop; use explicit
+`apps/ios` workspace scripts for the reader.
 
 ---
 
@@ -132,7 +156,7 @@ polarbear/
 - Node.js LTS
 - npm
 - macOS 上的 Tauri v2 构建依赖
-- iOS 尚未初始化；后续平台工作需要完整 Xcode
+- Native iPhone development requires Xcode and local project generation; see [the reader guide](apps/ios/README.md)
 
 ### 安装依赖
 
@@ -152,7 +176,19 @@ npm run tauri:dev
 npm --workspace apps/desktop run tauri -- dev
 ```
 
-`tauri:dev` 是仓库根目录的脚本；`apps/desktop/package.json` 中不存在同名脚本，直接使用 workspace 时必须写成上面的 `run tauri -- dev`。当前仓库也没有生成 `apps/desktop/src-tauri/gen/apple`，因此 iOS 的 `dev` 和 `build` 命令目前不能作为可用流程；需要先完成独立的 iOS 初始化和原生能力审计。
+`tauri:dev` 是仓库根目录的脚本；`apps/desktop/package.json` 中不存在同名脚本，直接使用 workspace 时必须写成上面的 `run tauri -- dev`。
+
+For iPhone, use the separate workspace rather than Desktop's Tauri script:
+
+```bash
+npm --workspace apps/ios run dev
+npm --workspace apps/ios run ios:init -- --ci
+npm --workspace apps/ios run ios:dev
+```
+
+The reader preview uses port 1430. Generated Xcode files and signing credentials
+are local outputs; browser/simulator checks do not establish signed-device acceptance.
+See [the reader guide](apps/ios/README.md) for full checks and limitations.
 
 ### 前端检查
 
@@ -162,6 +198,9 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+For translation integrity, production Chromium/WebKit inference and clipboard
+checks, use the additional commands in the maintained [English development guide](README.md#run-frontend-checks).
 
 ### Rust 检查
 
@@ -185,6 +224,14 @@ target/release/bundle/
 
 ---
 
+## Release status
+
+Desktop `v*` tags or an explicit existing release tag supplied through manual dispatch
+build the macOS universal DMG and Windows x64 NSIS installer. The workflow intentionally
+creates a draft release. `ios-v*` milestones use a separate quality channel. Build-local
+versions are derived from the selected tag; this documentation correction does not
+bump manifest versions, rebuild installers or move tags.
+
 ## 云同步令牌安全
 
 - 不在普通配置文件中明文保存 Token
@@ -207,7 +254,9 @@ target/release/bundle/
 
 ### 下一阶段
 
-- 初始化并验证 iOS 目标
+- Complete physical-iPhone/provider acceptance and signed distribution for the existing reader
+- Record installed Desktop/Tauri WebView and Lark/Word mixed-paste acceptance
+- Integrate linked editing before claiming cross-device iCloud synchronization
 - PDF / HTML 完整文档导出
 - 扩充原生命令和发布打包的集成测试
 - 更完善的跨平台适配
@@ -223,3 +272,6 @@ target/release/bundle/
 ## License
 
 Cargo 清单当前声明 `MIT OR Apache-2.0`，但仓库在正式分发前仍需补齐对应的许可证正文文件。
+
+Bundled translation assets have separate included third-party notices; those do not
+replace the missing root project license texts. See [the asset notice](apps/desktop/public/models/en-zh/README.md).

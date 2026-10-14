@@ -4,6 +4,11 @@ Status: M1 technical slice and validation assets implemented. The [automated M1 
 
 Date: 2026-09-19.
 
+Release scope reviewed on 2026-10-14: the acceptance decisions and pending gates
+below concern the recorded Memory M1/M2 work, not the status of the
+[Desktop v0.9.3 release workflow](../releases/v0.9.3.md). Passing Desktop CI does
+not establish Memory M1 acceptance or supersede the dated evaluation evidence.
+
 Companion: [Desktop-led memory and context design](desktop-memory-context-design.md). That document owns the product rationale and experimental success criteria; this document defines implementation boundaries, migration order, and acceptance work.
 
 M1 acceptance owner: [Reliable next-day reuse validation plan](desktop-memory-m1-validation-plan.md). Its scope resolution table, held-out retrieval cases, delayed-use study, and joint safety/usability gates govern the first milestone. M1 does not attempt to establish token savings.
@@ -361,13 +366,13 @@ cargo test -p polarbear-desktop
 git diff --check
 ```
 
-Add the missing contract check and applicable native tests to Desktop CI; the inspected frontend quality workflow does not run all of them. The existing real-Engine native smoke test is ignored by default. After configuring the documented absolute `POLARBEAR_MEMORY_E2E_RUNTIME` and `POLARBEAR_MEMORY_E2E_CLI` fixture paths, run it separately on a supported local platform:
+At the inspected baseline, the frontend quality workflow did not run all contract and native checks. Before implementing this plan, audit the current Desktop workflows and add only the checks still missing. The existing real-Engine native smoke test is ignored by default. After configuring the documented absolute `POLARBEAR_MEMORY_E2E_RUNTIME` and `POLARBEAR_MEMORY_E2E_CLI` fixture paths, run it separately on a supported local platform:
 
 ```sh
 cargo test -p polarbear-desktop desktop_starts_the_real_engine_from_the_installed_runtime_descriptor -- --ignored --test-threads=1
 ```
 
-These remain release gates even where focused M1 checks have passed. Use isolated temporary databases/worktrees and fixture runtimes; never migrate the user's production database just to test a PR.
+These remain gates for the Memory work described here even where focused M1 checks have passed. Use isolated temporary databases/worktrees and fixture runtimes; never migrate the user's production database just to test a PR.
 
 ## 12. Rollout, fallback, and definition of done
 
@@ -389,3 +394,4 @@ M1 is done only when the dedicated validation plan's technical and delayed-use g
 M2 is done when an interrupted task resumes through the qualified runtime with current recovery state and bounded relevant knowledge, passes the same acceptance checks, preserves permissions, and produces complete enough paired usage evidence to decide whether it saves tokens and cost. If the experiment is inconclusive or worse, deliver that result and keep automatic rollout disabled.
 
 Production rollout, provider runs, commits, tags, and pushes remain separate actions. The implementation does not migrate a user's database until that Engine build opens the project normally.
+
