@@ -46,19 +46,6 @@ export const speakVocab = (text: string, accent: "en-US" | "en-GB" = "en-US") =>
   invokeTauri(TAURI_COMMANDS.speakReading, { text, accent });
 export const stopReadingSpeech = () => invokeTauri(TAURI_COMMANDS.stopReadingSpeech);
 
-/** User-initiated system consent survives dismissal of the reading card. */
-export const prepareReadingLanguages = () => invokeTauri<string>(TAURI_COMMANDS.translateReadingLocal,
-  { text: "Prepare languages", requestId: crypto.randomUUID(), prepareLanguages: true });
-
-export async function translateReadingLocal(text: string, signal?: AbortSignal): Promise<string> {
-  if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
-  const requestId = crypto.randomUUID();
-  const cancel = () => { void invokeTauri(TAURI_COMMANDS.cancelReadingTranslation, { requestId }).catch(() => undefined); };
-  signal?.addEventListener("abort", cancel, { once: true });
-  try { return await invokeTauri<string>(TAURI_COMMANDS.translateReadingLocal, { text, requestId }); }
-  finally { signal?.removeEventListener("abort", cancel); }
-}
-
 export function vocabErrorKey(error: unknown): string {
   const code = error instanceof TauriCommandError ? error.code : "operationFailed";
   return ["notInstalled", "unavailable", "unsupportedPlatform", "unsupportedVersion", "timeout", "unsafeEndpoint", "storageFailed", "queueFull"].includes(code)

@@ -1,0 +1,10 @@
+{
+  "from": "en",
+  "to": "zh",
+  "files": {
+    "lex": { "name": "lex.50.50.enzh.s2t.bin.gz", "sha256": "8575d8daa10e2dbff316dcdf8e1ce475357bcc2c92bdc63b736a2d5add22f681", "compressedSha256": "806f75821c0b838f4a8f4afe5bab3db8289cb7e5187753ba04c3bceadd75687a" },
+    "model": { "name": "model.enzh.intgemm.alphas.bin.gz", "sha256": "4e5accc141373565ddc8fa1565bceaa8d0c3482a82cab8131c719ebcc6c2157c", "compressedSha256": "7f255403b3bb2502f08ac4d5ca397a8a5a13f899d2f2e987a4934e089d241d16" },
+    "srcvocab": { "name": "srcvocab.enzh.spm.gz", "sha256": "bd9b65504acc6d9726dd281f7defc2adb7c2c22d0688fe2f84697de25197c8c5", "compressedSha256": "7846e3c236388390f4e5d321f8413d67f34c1bab5f066165eeb673bfd07607cc" },
+    "trgvocab": { "name": "trgvocab.enzh.spm.gz", "sha256": "aded6993c36e440284d11cec3f6b8aef9c0e43188a772d80be342a713adf223d", "compressedSha256": "4d641ce165b1f8478ee2ffb5149d2d46fab3779dc8fa1e9b97f9af1d2206c091" }
+  }
+}

@@ -84,9 +84,6 @@ jobs:
       - name: Native rich document paste
         run: node apps/desktop/scripts/test-native-clipboard.mjs
 
-      - name: Native local translation compatibility
-        run: node apps/desktop/scripts/test-native-translation.mjs
-
   desktop-browser:
     name: Desktop editor and clipboard
     runs-on: macos-26
@@ -97,7 +94,9 @@ jobs:
           node-version: lts/*
           cache: npm
       - run: npm ci
-      - run: npm exec --workspace apps/desktop -- playwright install chromium
+      - run: npm exec --workspace apps/desktop -- playwright install chromium webkit
+      - name: Bundled offline translation with production CSP
+        run: npm --workspace apps/desktop run test:offline-translation -- --webkit
       - run: npm --workspace apps/desktop run test:ui
       - name: Paste actual Mermaid images into a native rich text receiver
         run: npm --workspace apps/desktop run test:native-clipboard -- test-results/real-mermaid-clipboard.json

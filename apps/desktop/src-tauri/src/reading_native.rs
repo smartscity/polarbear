@@ -139,92 +139,6 @@ pub async fn write_document_copy(
 }
 
 #[tauri::command]
-pub async fn translate_reading_local(
-    app: tauri::AppHandle,
-    text: String,
-    request_id: String,
-    prepare_languages: Option<bool>,
-) -> Result<String, ReadingError> {
-    if text.trim().is_empty()
-        || text.chars().count() > 8000
-        || text.contains('\0')
-        || request_id.len() > 64
-        || request_id.is_empty()
-    {
-        return Err(failure("invalidInput"));
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let prepare_languages = prepare_languages.unwrap_or(false);
-        let text = std::ffi::CString::new(text).map_err(|_| failure("invalidInput"))?;
-        let request = std::ffi::CString::new(request_id).map_err(|_| failure("invalidInput"))?;
-        let (sender, receiver) = std::sync::mpsc::channel();
-        app.run_on_main_thread(move || {
-            let context = Box::into_raw(Box::new(sender));
-            unsafe {
-                polarbear_translate_local(
-                    request.as_ptr(),
-                    text.as_ptr(),
-                    i32::from(prepare_languages),
-                    context.cast(),
-                    translation_reply,
-                );
-            }
-        })
-        .map_err(|_| failure("translationFailed"))?;
-        return tauri::async_runtime::spawn_blocking(move || {
-            let reply: String = receiver
-                .recv_timeout(std::time::Duration::from_secs(if prepare_languages {
-                    210
-                } else {
-                    60
-                }))
-                .map_err(|_| failure("timeout"))?;
-            let result: serde_json::Value =
-                serde_json::from_str(&reply).map_err(|_| failure("translationFailed"))?;
-            if let Some(error) = result.get("error").and_then(serde_json::Value::as_str) {
-                return Err(failure(error));
-            }
-            result
-                .get("text")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-                .ok_or_else(|| failure("translationFailed"))
-        })
-        .await
-        .map_err(|_| failure("translationFailed"))?;
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = (app, request_id, prepare_languages);
-        Err(failure("unsupportedSystem"))
-    }
-}
-
-#[tauri::command]
-pub async fn cancel_reading_translation(
-    app: tauri::AppHandle,
-    request_id: String,
-) -> Result<(), ReadingError> {
-    #[cfg(target_os = "macos")]
-    {
-        let request = std::ffi::CString::new(request_id).map_err(|_| failure("invalidInput"))?;
-        on_main(app, move || {
-            unsafe {
-                polarbear_cancel_translation(request.as_ptr());
-            }
-            Ok(())
-        })
-        .await
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = (app, request_id);
-        Ok(())
-    }
-}
-
-#[tauri::command]
 pub async fn speak_reading(
     app: tauri::AppHandle,
     text: String,
@@ -293,32 +207,11 @@ async fn on_main<T: Send + 'static>(
 }
 
 #[cfg(target_os = "macos")]
-unsafe extern "C" fn translation_reply(
-    context: *mut std::ffi::c_void,
-    json: *const std::ffi::c_char,
-) {
-    // Swift calls once; ownership stays with the callback even after a timeout.
-    let sender = unsafe { Box::from_raw(context.cast::<std::sync::mpsc::Sender<String>>()) };
-    let result = unsafe { std::ffi::CStr::from_ptr(json) }
-        .to_string_lossy()
-        .into_owned();
-    let _ = sender.send(result);
-}
-
-#[cfg(target_os = "macos")]
 extern "C" {
     fn polarbear_image_copy_begin() -> i64;
     fn polarbear_clipboard_image(png: *const std::ffi::c_char, count: i64) -> i32;
     fn polarbear_clipboard_begin(markdown: *const std::ffi::c_char) -> i64;
     fn polarbear_clipboard_write(json: *const std::ffi::c_char) -> i32;
-    fn polarbear_translate_local(
-        identifier: *const std::ffi::c_char,
-        text: *const std::ffi::c_char,
-        prepare_languages: i32,
-        context: *mut std::ffi::c_void,
-        reply: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_char),
-    );
-    fn polarbear_cancel_translation(identifier: *const std::ffi::c_char);
     fn polarbear_speak_reading(
         text: *const std::ffi::c_char,
         locale: *const std::ffi::c_char,

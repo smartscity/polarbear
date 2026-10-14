@@ -3316,8 +3316,6 @@ fn main() -> tauri::Result<()> {
             reading_native::begin_image_copy,
             reading_native::write_clipboard_image,
             reading_native::write_document_copy,
-            reading_native::translate_reading_local,
-            reading_native::cancel_reading_translation,
             reading_native::speak_reading,
             reading_native::stop_reading_speech,
             app_zoom::set_app_zoom,

@@ -1,5 +1,11 @@
 # Markdown Reading P0 Verification
 
+> Historical report: the Apple translation implementation described below has
+> been superseded by bundled offline Bergamot translation. See
+> [Desktop Vocabulary Capture](desktop-vocab-reading.md) for the current boundary,
+> packaging and verification results. System language setup is no longer part of
+> Desktop's reading flow. The Mermaid/clipboard findings below remain relevant.
+
 ## Scope and environment
 
 This change completes the implementation work for Mermaid paste detection, rich

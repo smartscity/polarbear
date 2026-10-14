@@ -9,7 +9,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test:native-clipboard": "node scripts/test-native-clipboard.mjs",
-    "test:native-translation": "node scripts/test-native-translation.mjs",
+    "test:translation-assets": "node --input-type=module -e \"import('./scripts/bundled-translation-assets.mjs').then(m => m.verifyTranslationAssets())\"",
+    "test:offline-translation": "node scripts/test-bundled-translation.mjs",
     "test:ui": "playwright test",
     "lint": "eslint src",
     "memory-contract:generate": "node scripts/generate-memory-admin-contract.mjs",
@@ -22,6 +23,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@browsermt/bergamot-translator": "0.4.9",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-markdown": "^6.3.4",
     "@codemirror/search": "^6.5.11",
@@ -31,6 +33,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@uiw/react-codemirror": "^4.23.13",
     "dompurify": "^3.4.12",
+    "fflate": "0.8.3",
     "markdown-it": "^14.1.0",
     "mermaid": "^11.12.1",
     "react": "^19.1.0",

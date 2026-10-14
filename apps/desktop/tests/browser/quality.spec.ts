@@ -13,11 +13,7 @@ async function initialize(page: Page) {
           if (operation.query === "slow") { await new Promise((resolve) => setTimeout(resolve, 900)); return [{ senseUid: "old", lemma: "slow", ipa: "", partOfSpeech: "adjective", zhGloss: "OLD", inMyVocabulary: false }]; }
           return [{ senseUid: "attractive", lemma: operation.query, ipa: "/əˈtræktɪv/", partOfSpeech: "adjective", zhGloss: "有吸引力的", inMyVocabulary: false }];
         }
-        if (command === "translate_reading_local") {
-          if (String(args.text).includes("missing")) throw { code: "languagePackMissing", message: "Not installed" };
-          return "这是一个英文句子。";
-        }
-        if (["cancel_reading_translation", "speak_reading", "stop_reading_speech", "write_document_copy", "write_clipboard_image"].includes(command)) return;
+        if (["speak_reading", "stop_reading_speech", "write_document_copy", "write_clipboard_image"].includes(command)) return;
         if (["begin_document_copy", "begin_image_copy"].includes(command)) return 42;
         return undefined;
       },
@@ -161,7 +157,8 @@ test("automatically translates settled selections without stealing focus and per
   await page.screenshot({ path: "test-results/automatic-word-translation.png" });
   await page.keyboard.press("Escape"); await expect(card).toHaveCount(0);
   await selectText(page, ".markdown-preview-segment p:nth-child(2)", "This is an English sentence.");
-  await expect(card).toContainText("这是一个英文句子。");
+  await expect(card.locator(".reading-translation")).toContainText(/这是.*句子/, { timeout: 30_000 });
+  await page.screenshot({ path: "test-results/bundled-offline-translation.png" });
   await card.getByRole("button", { name: "Copy translation" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("switch").uncheck();
@@ -194,7 +191,7 @@ test("does not open while dragging or selecting code and discards stale dictiona
   await expect(card).toHaveCount(0);
 });
 
-test("supports source and live selections, cancels on blur and distinguishes missing translation models", async ({ page }) => {
+test("supports source and live selections, cancels on blur and translates a real long paragraph", async ({ page }) => {
   await initialize(page);
   const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
   for (const mode of ["source", "live"] as const) {
@@ -204,11 +201,6 @@ test("supports source and live selections, cancels on blur and distinguishes mis
     await page.evaluate(() => window.dispatchEvent(new Event("blur")));
     await expect(card).toHaveCount(0);
   }
-  await setSource(page, "The missing language models cannot translate this sentence.", "preview");
-  await selectText(page, ".markdown-preview-segment p", "The missing language models cannot translate this sentence.");
-  await expect(card.getByRole("status")).toContainText("language packs");
-  await expect(card.getByRole("button", { name: "US pronunciation" })).toBeEnabled();
-  await page.keyboard.press("Escape");
   const paragraph = "This is an English paragraph with enough detail for local reading. ".repeat(35);
   await setSource(page, paragraph, "preview");
   await expect(page.locator(".markdown-preview-segment p")).toHaveText(paragraph.trim());
@@ -218,8 +210,8 @@ test("supports source and live selections, cancels on blur and distinguishes mis
     window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
     element.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
   });
-  await expect(card).toContainText("这是一个英文句子。");
-  expect(await page.evaluate(() => (window as unknown as { __qualityCalls: { command: string; args: { text?: string } }[] }).__qualityCalls.filter((call) => call.command === "translate_reading_local").at(-1)?.args.text?.length)).toBeGreaterThan(2000);
+  await expect(card.locator(".reading-translation")).toContainText(/英文|英语/, { timeout: 45_000 });
+  expect((await card.locator(".reading-translation").innerText()).length).toBeGreaterThan(300);
 });
 
 test("favorites an offline unknown word in the header and delivers after the card closes", async ({ page }) => {
@@ -232,7 +224,6 @@ test("favorites an offline unknown word in the header and delivers after the car
     Object.assign(window, { __favoriteCaptures: captures });
     runtime.invoke = async (command, args) => {
       if (command === "vocab_request") throw { code: "unavailable", message: "Vocab offline" };
-      if (command === "translate_reading_local") throw { code: "languagePackMissing", message: "Missing models" };
       if (command === "enqueue_vocab_capture") {
         if (!captures.length) {
           captures.push(structuredClone(args.capture as Record<string, unknown>));
@@ -272,29 +263,30 @@ test("favorites an offline unknown word in the header and delivers after the car
   await page.screenshot({ path: "test-results/favorite-dark-narrow.png" });
 });
 
-test("requests model preparation only on explicit consent and retries translation afterwards", async ({ page }) => {
+test("reports missing bundled assets without a download step and retries after repair", async ({ page }) => {
+  await page.route("**/models/en-zh/*.gz", (route) => route.fulfill({ status: 404, body: "Missing bundled asset" }));
   await initialize(page);
-  await page.evaluate(() => {
-    const runtime = (window as unknown as { __TAURI_INTERNALS__: { invoke: (command: string, args: Record<string, unknown>) => Promise<unknown> } }).__TAURI_INTERNALS__;
-    const original = runtime.invoke;
-    const preparation: Record<string, unknown>[] = [];
-    Object.assign(window, { __preparation: preparation });
-    runtime.invoke = async (command, args) => {
-      if (command === "translate_reading_local") {
-        if (args.prepareLanguages) { preparation.push(args); return ""; }
-        if (preparation.length) return "准备完成后的本地翻译。";
-      }
-      return original(command, args);
-    };
-  });
-  await setSource(page, "The missing language models cannot translate this sentence.", "preview");
-  await selectText(page, ".markdown-preview-segment p", "The missing language models cannot translate this sentence.");
+  await setSource(page, "This is an English sentence.", "preview");
+  await selectText(page, ".markdown-preview-segment p", "This is an English sentence.");
   const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
-  await expect(card).toContainText("language packs are missing");
-  expect(await page.evaluate(() => (window as unknown as { __preparation: unknown[] }).__preparation.length)).toBe(0);
-  await card.getByRole("button", { name: "Download language packs…" }).click();
-  await expect(card).toContainText("准备完成后的本地翻译。");
-  expect(await page.evaluate(() => (window as unknown as { __preparation: Record<string, unknown>[] }).__preparation)).toMatchObject([{ text: "Prepare languages", prepareLanguages: true }]);
+  await expect(card.getByRole("alert")).toContainText("bundled translation files are missing");
+  await expect(card.getByRole("button", { name: /Download language/ })).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "US pronunciation" })).toBeEnabled();
+  await page.unroute("**/models/en-zh/*.gz");
+  await card.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(card.locator(".reading-translation")).toContainText(/这是.*句子/, { timeout: 30_000 });
+});
+
+test("rejects corrupt bundled models without losing speech controls", async ({ page }) => {
+  await page.route("**/models/en-zh/*.gz", (route) => route.fulfill({ status: 200, body: "corrupt model" }));
+  await initialize(page);
+  await setSource(page, "This is an English sentence.", "preview");
+  await selectText(page, ".markdown-preview-segment p", "This is an English sentence.");
+  const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
+  await expect(card.getByRole("alert")).toContainText("could not be verified");
+  await expect(card.getByRole("button", { name: "US pronunciation" })).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(card).toHaveCount(0);
 });
 
 test("does not report a disk failure as a favorite and retries the immutable capture", async ({ page }) => {

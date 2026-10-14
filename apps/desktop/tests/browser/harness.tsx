@@ -7,6 +7,7 @@ import { TyporaLiveEditor } from "../../src/features/editor/components/TyporaLiv
 import { MarkdownPreview } from "../../src/features/editor/components/MarkdownPreview";
 import { SettingsDialog } from "../../src/app/layout/SettingsDialog";
 import { useVocabReading } from "../../src/features/vocab/useVocabReading";
+import { translateReadingLocal } from "../../src/features/vocab/translation/offlineTranslation";
 import { applyThemeTokens } from "../../src/features/theme/themeTokens";
 import { buildRichMarkdownClipboardHtml } from "../../src/features/editor/richMarkdownClipboard";
 import { nativeClipboardRuns } from "../../src/features/editor/nativeDocumentClipboard";
@@ -27,7 +28,7 @@ function Harness() {
   useEffect(() => { localStorage.setItem("quality.document", markdown); }, [markdown]);
   useEffect(() => {
     Object.assign(window, { __quality: {
-      setMarkdown, setMode, setTheme: applyThemeTokens, source: () => editor.current?.state.doc.toString() ?? markdown,
+      setMarkdown, setMode, translate: translateReadingLocal, setTheme: applyThemeTokens, source: () => editor.current?.state.doc.toString() ?? markdown,
       select: (from: number, to: number) => editor.current?.dispatch({ selection: { anchor: from, head: to } }),
       undo: () => editor.current && undo(editor.current), redo: () => editor.current && redo(editor.current),
       validate: validateMermaidSource, fixtures: flowchartFixtures, diagramDocument,

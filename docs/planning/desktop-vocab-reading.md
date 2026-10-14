@@ -11,7 +11,9 @@ remains available for keyboard access; no manual Read Selection step is required
 Vocab owns dictionary lookup, dictionary pronunciation data, vocabulary membership and source
 history. Desktop never opens Vocab databases. No article is sent to a remote
 service. Dictionary lookup has no AI dependency or background network lookup;
-passage translation uses installed system language models.
+passage translation uses the same bundled Bergamot engine and English-to-Chinese
+model as Polarbear Vocab. Neither Apple language packs nor a running Vocab app
+are required for sentence translation.
 
 ## Interaction and persistence
 
@@ -32,36 +34,40 @@ membership. For a passage, users can enter a word/phrase to look up and save wit
 the original reading context. Each new capture uses a new request ID; retries of
 the same save retain its ID and payload.
 
-The Desktop native translation adapter uses SwiftUI `translationTask` and
-`LanguageAvailability` for English to Simplified Chinese on macOS 15+, compiled
-with Xcode 16+. The macOS 26-only `TranslationSession(installedSource:)`
-initializer is not required. An AppKit-owned hosting view supplies the session
-for each request. Both before creating the session and before translating, the
-adapter requires installed models for automatic translation. When models are
-missing, the card offers **Download language packs**. Only that explicit action
-calls `prepareTranslation`, allowing Apple's consent UI to request the download.
-Preparation uses a fixed non-document placeholder, not the selection. It has a
-180-second native deadline and survives card dismissal while system consent is
-active. Afterwards, an open card retries translation; otherwise the next selection
-uses the installed models. Cancellation or failed preparation has a separate error
-and a System Settings recovery path. No automatic download or remote translation
-provider is introduced. OS availability, SDK availability,
-missing language packs, unsupported languages, window availability, cancellation,
-timeout and translation failures have distinct error codes. Dictionary lookup
-and installed-voice speech remain usable when translation is unavailable.
+Desktop bundles BrowserMT Bergamot 0.4.9 and Vocab's byte-identical Mozilla
+English-to-Chinese model. The four gzip model assets total 36,745,493 bytes
+(about 35 MiB); the WASM engine adds further installer size. Models and license
+notices live in `public/models/en-zh`; the canonical manifest lives next to the
+translation adapter. Vite verifies compressed and decompressed SHA-256 digests
+before building, packages the classic worker and its adjacent WASM runtime, and
+includes the same resources in the Tauri frontend bundle. There is no first-run
+download, remote registry, Apple consent sheet or cloud fallback.
 
-The Swift bridge is statically linked by the existing Cargo build script. Native
-CI and macOS releases use the `macos-26` runner so the translation API is included.
-The application's minimum deployment target is not raised for unrelated features.
-Requests have a 30-second native timeout and stable request IDs. Dismissal,
-replacement, document changes, window blur and disabling the setting cancel
-pending work. Each native callback completes once; late results cannot replace
-a new selection. Temporary hosting views and timers are released on completion.
+`OfflineTranslation` owns the current window's single active request and worker
+lifecycle. `BergamotWorker` is a small adapter to the pinned upstream worker's
+message protocol, not a second translation algorithm. It transfers verified
+model buffers to the upstream worker. Decompression runs in fflate workers;
+neural inference runs in Bergamot's worker, not on the editor thread. Model load,
+initialization and inference share a 60-second deadline. Replacement or dismissal
+terminates active inference and aborts asset loading. Successful engines may be
+reused and are released after 90 idle seconds or page exit. No selected text or
+translation cache is persisted. Late results cannot replace a newer selection.
 
-[Apple's TranslationSession documentation](https://developer.apple.com/documentation/translation/translationsession)
-states that translation content is processed on-device. Apple may collect system
-API usage metrics, but not the original or translated content. Polarbear adds no
-telemetry and never accesses the Vocab database.
+The translation API no longer crosses Tauri IPC, so Desktop translation has no
+Apple Translation framework, SDK or installed-language-pack dependency. Native
+clipboard and installed-voice speech remain unchanged. Desktop CSP permits
+WebAssembly and local/blob workers without enabling general JavaScript eval.
+Missing packaged assets, failed integrity checks, timeouts and inference errors
+have distinct localized feedback. Reinstall/update is offered only for a damaged
+installation, not as a routine language setup step. Listening and favorites stay
+available independently.
+
+This is English-to-Chinese neural translation, not a replacement for dictionary
+senses or IPA. Acronyms such as OEMS may remain unchanged; specialist terms can
+be mistranslated. Vocab still owns word lookup, pronunciation data and vocabulary
+membership through its existing IPC boundary. No database access is introduced.
+The standalone iOS reader's native translation implementation is outside this
+Desktop change and must not be described as using the bundled engine yet.
 
 ### Vocabulary capture
 
@@ -147,6 +153,43 @@ Run Desktop typecheck/lint/tests and Rust tests, and Vocab typecheck/tests/Clipp
 
 ## Implementation verification
 
+### Bundled offline translation verification
+
+The Desktop translation path now uses real bundled inference in browser tests;
+it is not replaced by a mocked Tauri translation response. Vocab lookup,
+favorites and speech IPC remain mocked in browser UI tests, with separate native
+tests for the actual storage/protocol boundaries.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Desktop typecheck and lint | PASS | No new errors |
+| Unit tests | PASS | 201 tests plus four existing Memory asset checks |
+| Desktop browser regression | PASS | 12 cases, including real sentence and >2,000-character paragraph translation, model missing/corrupt errors, retry, opt-out and favorites |
+| Production offline inference | PASS | Chromium and WebKit, production CSP, packaged WASM/model assets, all external requests blocked |
+| Cancellation and recovery | PASS | Unit tests cover supersession, late factories, deadlines and idle cleanup; both browser engines translate after cancellation |
+| Model integrity | PASS | All four compressed and decoded hashes match Vocab's pinned model |
+| Production frontend bundle | PASS | Includes model files, WASM, worker scripts and license notices |
+| Native compile/tests | PASS | 22 passed; one existing real Memory installation test is opt-in; socket tests need sandbox permission |
+| Rust formatting | PASS | `cargo fmt --all -- --check` |
+| Installed DMG / actual Tauri WebView | NOT_RUN | Production browser tests are not a substitute for installing the release DMG |
+| Older macOS / Windows devices | NOT_RUN | Requires compatible WebAssembly/Web Worker support; Apple Translation API availability is no longer the gate |
+
+The production probe translates `This is an English sentence.` to
+`这是一句英文句子。` and preserves paragraph breaks. It also exposes a quality
+limitation: this model translates the standalone acronym `OEMS` to `制造商`,
+which is not a validated domain-specific definition. Do not present neural output
+as authoritative dictionary data. The original selection remains visible and
+favorite capture preserves that original text.
+
+Manual release acceptance: install the new DMG without Apple translation packs,
+disconnect external networking, select a word absent from the dictionary and a
+full paragraph, copy the translation, reselect quickly, close/reopen the card,
+and verify header favorites still queue while Vocab is unavailable. No language
+download button or system setup sheet should appear. Check the same flow after
+restarting Desktop. The standalone iOS app is unchanged in this release.
+
+### Previous Apple translation implementation (superseded)
+
 The passage UI regression covers a full sentence/paragraph speech request, local
 translation response, missing language packs, word lookup and saving, live locale
 switching, and narrow-screen layout. Native IPC is mocked in that browser test.
@@ -165,7 +208,7 @@ Native outbox tests cover disk reopen, exact acknowledgement, deduplication,
 immutable retry payloads, concurrent claims, retry backoff, receiver-side sense
 resolution, invalid input and queue capacity. Browser tests cover an offline
 favorite, source opt-out, card dismissal, completion, header placement, narrow
-dark layout and explicit model preparation. Browser IPC is mocked. The native
+dark layout and explicit model preparation in v0.9.2. Browser IPC is mocked. The native
 translation probe covers missing resources and cancellation without downloads;
 actual Apple consent/download UI and successful translation after installation
 remain manual acceptance items.
