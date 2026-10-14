@@ -206,7 +206,7 @@ test("supports source and live selections, cancels on blur and distinguishes mis
   }
   await setSource(page, "The missing language models cannot translate this sentence.", "preview");
   await selectText(page, ".markdown-preview-segment p", "The missing language models cannot translate this sentence.");
-  await expect(card.getByRole("alert")).toContainText("language packs");
+  await expect(card.getByRole("status")).toContainText("language packs");
   await expect(card.getByRole("button", { name: "US pronunciation" })).toBeEnabled();
   await page.keyboard.press("Escape");
   const paragraph = "This is an English paragraph with enough detail for local reading. ".repeat(35);
@@ -220,4 +220,108 @@ test("supports source and live selections, cancels on blur and distinguishes mis
   });
   await expect(card).toContainText("这是一个英文句子。");
   expect(await page.evaluate(() => (window as unknown as { __qualityCalls: { command: string; args: { text?: string } }[] }).__qualityCalls.filter((call) => call.command === "translate_reading_local").at(-1)?.args.text?.length)).toBeGreaterThan(2000);
+});
+
+test("favorites an offline unknown word in the header and delivers after the card closes", async ({ page }) => {
+  await initialize(page);
+  await page.evaluate(() => {
+    const runtime = (window as unknown as { __TAURI_INTERNALS__: { invoke: (command: string, args: Record<string, unknown>) => Promise<unknown> } }).__TAURI_INTERNALS__;
+    const original = runtime.invoke;
+    const captures: Record<string, unknown>[] = [];
+    let delivered = false;
+    Object.assign(window, { __favoriteCaptures: captures });
+    runtime.invoke = async (command, args) => {
+      if (command === "vocab_request") throw { code: "unavailable", message: "Vocab offline" };
+      if (command === "translate_reading_local") throw { code: "languagePackMissing", message: "Missing models" };
+      if (command === "enqueue_vocab_capture") {
+        if (!captures.length) {
+          captures.push(structuredClone(args.capture as Record<string, unknown>));
+          setTimeout(() => { delivered = true; }, 700);
+        }
+        return { requestId: captures[0].requestId, state: delivered ? "saved" : "queued", error: null };
+      }
+      if (command === "vocab_capture_status") return { requestId: captures[0].requestId, state: delivered ? "saved" : "queued", error: null };
+      return original(command, args);
+    };
+  });
+  await setSource(page, "OEMS handles execution.", "preview");
+  await selectText(page, ".markdown-preview-segment p", "OEMS");
+  const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
+  await expect(card).toContainText("You can still favorite");
+  const star = card.locator("header").getByRole("button", { name: "Favorite word" });
+  await expect(star).toBeEnabled();
+  await card.getByRole("checkbox").uncheck();
+  await star.click();
+  await expect(card).toContainText("Saved on this device");
+  await expect(card.getByRole("button", { name: "Saved on this device · waiting to sync with Vocab", exact: true })).toBeDisabled();
+  await page.evaluate(() => (window as unknown as { __quality: { setTheme: (theme: string) => void } }).__quality.setTheme("light"));
+  await page.screenshot({ path: "test-results/favorite-offline.png" });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(800);
+  await selectText(page, ".markdown-preview-segment p", "OEMS");
+  await card.getByRole("checkbox").uncheck();
+  await card.getByRole("button", { name: "Favorite word" }).click();
+  await expect(card).toContainText("Saved for later in Vocab");
+  const captures = await page.evaluate(() => (window as unknown as { __favoriteCaptures: Record<string, unknown>[] }).__favoriteCaptures);
+  expect(captures).toHaveLength(1);
+  expect(captures[0]).toMatchObject({ selectedText: "OEMS", senseUid: null, sentence: "", title: "", filePath: null, heading: "", line: null });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => (window as unknown as { __quality: { setTheme: (theme: string) => void } }).__quality.setTheme("dark"));
+  const box = await card.boundingBox();
+  expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: "test-results/favorite-dark-narrow.png" });
+});
+
+test("requests model preparation only on explicit consent and retries translation afterwards", async ({ page }) => {
+  await initialize(page);
+  await page.evaluate(() => {
+    const runtime = (window as unknown as { __TAURI_INTERNALS__: { invoke: (command: string, args: Record<string, unknown>) => Promise<unknown> } }).__TAURI_INTERNALS__;
+    const original = runtime.invoke;
+    const preparation: Record<string, unknown>[] = [];
+    Object.assign(window, { __preparation: preparation });
+    runtime.invoke = async (command, args) => {
+      if (command === "translate_reading_local") {
+        if (args.prepareLanguages) { preparation.push(args); return ""; }
+        if (preparation.length) return "准备完成后的本地翻译。";
+      }
+      return original(command, args);
+    };
+  });
+  await setSource(page, "The missing language models cannot translate this sentence.", "preview");
+  await selectText(page, ".markdown-preview-segment p", "The missing language models cannot translate this sentence.");
+  const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
+  await expect(card).toContainText("language packs are missing");
+  expect(await page.evaluate(() => (window as unknown as { __preparation: unknown[] }).__preparation.length)).toBe(0);
+  await card.getByRole("button", { name: "Download language packs…" }).click();
+  await expect(card).toContainText("准备完成后的本地翻译。");
+  expect(await page.evaluate(() => (window as unknown as { __preparation: Record<string, unknown>[] }).__preparation)).toMatchObject([{ text: "Prepare languages", prepareLanguages: true }]);
+});
+
+test("does not report a disk failure as a favorite and retries the immutable capture", async ({ page }) => {
+  await initialize(page);
+  await page.evaluate(() => {
+    const runtime = (window as unknown as { __TAURI_INTERNALS__: { invoke: (command: string, args: Record<string, unknown>) => Promise<unknown> } }).__TAURI_INTERNALS__;
+    const original = runtime.invoke;
+    const requests: unknown[] = [];
+    Object.assign(window, { __favoriteAttempts: requests });
+    runtime.invoke = async (command, args) => {
+      if (command === "enqueue_vocab_capture") {
+        requests.push(structuredClone(args.capture));
+        if (requests.length === 1) throw { code: "storageFailed", message: "Disk full" };
+        return { requestId: (args.capture as { requestId: string }).requestId, state: "saved", error: null };
+      }
+      return original(command, args);
+    };
+  });
+  await setSource(page, "An attractive opportunity.", "preview");
+  await selectText(page, ".markdown-preview-segment p", "attractive");
+  const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
+  await expect(card).toContainText("有吸引力的");
+  await card.getByRole("button", { name: "Favorite word" }).click();
+  await expect(card.getByRole("alert")).toContainText("disk space");
+  await expect(card.getByRole("button", { name: "Favorite word" })).toHaveAttribute("aria-pressed", "false");
+  await card.getByRole("button", { name: "Favorite word" }).click();
+  await expect(card.locator("header")).toContainText("Saved to Vocab");
+  const requests = await page.evaluate(() => (window as unknown as { __favoriteAttempts: unknown[] }).__favoriteAttempts);
+  expect(requests).toHaveLength(2); expect(requests[0]).toEqual(requests[1]);
 });

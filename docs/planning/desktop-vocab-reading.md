@@ -37,8 +37,15 @@ The Desktop native translation adapter uses SwiftUI `translationTask` and
 with Xcode 16+. The macOS 26-only `TranslationSession(installedSource:)`
 initializer is not required. An AppKit-owned hosting view supplies the session
 for each request. Both before creating the session and before translating, the
-adapter requires installed models. It never calls `prepareTranslation`, selects
-a remote provider, or downloads models. OS availability, SDK availability,
+adapter requires installed models for automatic translation. When models are
+missing, the card offers **Download language packs**. Only that explicit action
+calls `prepareTranslation`, allowing Apple's consent UI to request the download.
+Preparation uses a fixed non-document placeholder, not the selection. It has a
+180-second native deadline and survives card dismissal while system consent is
+active. Afterwards, an open card retries translation; otherwise the next selection
+uses the installed models. Cancellation or failed preparation has a separate error
+and a System Settings recovery path. No automatic download or remote translation
+provider is introduced. OS availability, SDK availability,
 missing language packs, unsupported languages, window availability, cancellation,
 timeout and translation failures have distinct error codes. Dictionary lookup
 and installed-voice speech remain usable when translation is unavailable.
@@ -59,7 +66,9 @@ telemetry and never accesses the Vocab database.
 ### Vocabulary capture
 
 - Exact local dictionary matches precede dictionary-validated inflection hints.
-- Phrases remain intact. Multiple senses require an explicit choice.
+- Phrases remain intact. A chosen sense becomes vocabulary membership; an
+  ambiguous or unknown term can be favorited without inventing a sense and stays
+  pending until explicitly resolved in Vocab.
 - A missing term can be saved explicitly as a pending reading capture. In Vocab,
   the pending list permits another lookup and an explicit sense assignment.
 - Captures include selected text, sentence, document title, optional absolute
@@ -70,6 +79,35 @@ telemetry and never accesses the Vocab database.
   Retries retain the same payload and request ID; duplicate sources are deduplicated.
 - Escape/Close restores focus without requesting scroll. Outside-click dismissal
   does not steal focus back from the newly clicked location. Markdown is untouched.
+
+### Background favorites
+
+The top-right star replaces the bottom save button. Dictionary lookup and
+translation availability never disable it. A click freezes the term, sense and
+source preference and durably enqueues the capture before reporting **Saved on
+this device · waiting to sync with Vocab**. Only an acknowledged Vocab response
+produces a filled star and a delivered state. Unknown terms are explicitly shown
+as saved for later, not falsely reported as dictionary membership.
+
+Desktop owns `vocab-outbox.sqlite3` in its application local-data directory. It is
+a delivery queue, not a second vocabulary database. The native application owns
+one background worker independently of cards and windows. Requests use the
+existing v1 Vocab socket and immutable retry keys. Closing Desktop leaves queued
+work for the next launch. Private file permissions protect saved source context.
+
+The queue accepts at most 1,000 pending captures and keeps at most 200 completed
+receipts. Identical payloads excluding request ID reuse a receipt, including after
+reselecting a word. A 60-second claim prevents concurrent sending; expired claims
+recover on restart. Connection failures retry with 30-second to five-minute
+backoff. Background launch is attempted only on the first delivery; later retries
+do not continually launch Vocab. Invalid protocol or permission errors retain
+the capture and require an explicit retry. Retry never changes the payload.
+Acknowledgements must match the captured content, allowing Vocab's documented
+cross-request deduplication and receiver-owned resolution of pending senses.
+
+The UI polls receipts only while a queued card is mounted. Dismissal stops polling,
+not delivery. A bounded wake signal and an exit flag prevent unbounded worker
+notifications. No Vocab database or Memory Engine storage is accessed directly.
 
 ## Boundary
 
@@ -115,6 +153,28 @@ switching, and narrow-screen layout. Native IPC is mocked in that browser test.
 An actual native translation probe on the development Mac returned
 `languagePackMissing`; successful model inference is therefore not claimed for
 that machine. No language packs were downloaded during verification.
+
+### Background favorite verification
+
+The installed Vocab socket initially returned `ECONNREFUSED`. A normal background
+LaunchServices start recovered a real v1 lookup; `OEMS` returned an empty result,
+confirming dictionary absence rather than a protocol error. No real vocabulary
+was modified during this probe.
+
+Native outbox tests cover disk reopen, exact acknowledgement, deduplication,
+immutable retry payloads, concurrent claims, retry backoff, receiver-side sense
+resolution, invalid input and queue capacity. Browser tests cover an offline
+favorite, source opt-out, card dismissal, completion, header placement, narrow
+dark layout and explicit model preparation. Browser IPC is mocked. The native
+translation probe covers missing resources and cancellation without downloads;
+actual Apple consent/download UI and successful translation after installation
+remain manual acceptance items.
+
+Validation for this change: Desktop typecheck and lint, 192 unit tests, four asset
+checks, 11 browser tests, the production frontend build, Rust formatting and 22
+native tests passed (one existing engine-installation test remains opt-in).
+The native Swift probe compiled and passed cancellation/resource checks; actual
+model inference remains blocked by missing installed language packs.
 
 ### Initial capture release verification
 

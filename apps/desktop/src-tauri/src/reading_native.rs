@@ -143,6 +143,7 @@ pub async fn translate_reading_local(
     app: tauri::AppHandle,
     text: String,
     request_id: String,
+    prepare_languages: Option<bool>,
 ) -> Result<String, ReadingError> {
     if text.trim().is_empty()
         || text.chars().count() > 8000
@@ -154,6 +155,7 @@ pub async fn translate_reading_local(
     }
     #[cfg(target_os = "macos")]
     {
+        let prepare_languages = prepare_languages.unwrap_or(false);
         let text = std::ffi::CString::new(text).map_err(|_| failure("invalidInput"))?;
         let request = std::ffi::CString::new(request_id).map_err(|_| failure("invalidInput"))?;
         let (sender, receiver) = std::sync::mpsc::channel();
@@ -163,6 +165,7 @@ pub async fn translate_reading_local(
                 polarbear_translate_local(
                     request.as_ptr(),
                     text.as_ptr(),
+                    i32::from(prepare_languages),
                     context.cast(),
                     translation_reply,
                 );
@@ -171,7 +174,11 @@ pub async fn translate_reading_local(
         .map_err(|_| failure("translationFailed"))?;
         return tauri::async_runtime::spawn_blocking(move || {
             let reply: String = receiver
-                .recv_timeout(std::time::Duration::from_secs(60))
+                .recv_timeout(std::time::Duration::from_secs(if prepare_languages {
+                    210
+                } else {
+                    60
+                }))
                 .map_err(|_| failure("timeout"))?;
             let result: serde_json::Value =
                 serde_json::from_str(&reply).map_err(|_| failure("translationFailed"))?;
@@ -189,7 +196,7 @@ pub async fn translate_reading_local(
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (app, request_id);
+        let _ = (app, request_id, prepare_languages);
         Err(failure("unsupportedSystem"))
     }
 }
@@ -307,6 +314,7 @@ extern "C" {
     fn polarbear_translate_local(
         identifier: *const std::ffi::c_char,
         text: *const std::ffi::c_char,
+        prepare_languages: i32,
         context: *mut std::ffi::c_void,
         reply: unsafe extern "C" fn(*mut std::ffi::c_void, *const std::ffi::c_char),
     );

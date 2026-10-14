@@ -19,7 +19,7 @@ struct LocalTranslationTests {
         let cancelled = ReplyBox()
         "cancel-test".withCString { identifier in
             "An attractive opportunity.".withCString { input in
-                translateLocal(identifier, input, Unmanaged.passUnretained(cancelled).toOpaque(), receive)
+                translateLocal(identifier, input, 0, Unmanaged.passUnretained(cancelled).toOpaque(), receive)
             }
             cancelLocalTranslation(identifier)
             cancelLocalTranslation(identifier)
@@ -29,6 +29,16 @@ struct LocalTranslationTests {
         precondition(cancelled.replies[0]["error"] == expected)
         print("PASS: native cancellation replies exactly once and the bridge compiles with a macOS 11 deployment target")
 
+        let preparation = ReplyBox()
+        "prepare-cancel-test".withCString { identifier in
+            "Prepare languages".withCString { input in
+                translateLocal(identifier, input, 1, Unmanaged.passUnretained(preparation).toOpaque(), receive)
+            }
+            cancelLocalTranslation(identifier)
+        }
+        precondition(preparation.replies.count == 1 && preparation.replies[0]["error"] == expected)
+        print("PASS: explicit model preparation can be cancelled before displaying consent or downloading")
+
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100), styleMask: [.titled], backing: .buffered, defer: false)
         window.title = "Polarbear translation verification"
         window.orderFront(nil)
@@ -36,7 +46,7 @@ struct LocalTranslationTests {
         let probe = ReplyBox()
         "model-probe".withCString { identifier in
             "This is an English sentence.".withCString { input in
-                translateLocal(identifier, input, Unmanaged.passUnretained(probe).toOpaque(), receive)
+                translateLocal(identifier, input, 0, Unmanaged.passUnretained(probe).toOpaque(), receive)
             }
         }
         let deadline = Date().addingTimeInterval(35)

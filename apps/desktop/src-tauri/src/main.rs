@@ -19,6 +19,7 @@ mod reading_native;
 mod secret_store;
 mod system_open;
 mod vocab_bridge;
+mod vocab_outbox;
 
 type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
 
@@ -3296,6 +3297,7 @@ fn main() -> tauri::Result<()> {
     let app = builder
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            vocab_outbox::start(app.handle())?;
             native_pinch::install_native_pinch(app).map_err(std::io::Error::other)?;
             system_open::enqueue_open_files(
                 app.handle(),
@@ -3353,11 +3355,16 @@ fn main() -> tauri::Result<()> {
             memory_admin::memory_admin_bind_workspace,
             memory_admin::memory_admin_request,
             system_open::take_pending_open_files,
-            vocab_bridge::vocab_request
+            vocab_bridge::vocab_request,
+            vocab_outbox::enqueue_vocab_capture,
+            vocab_outbox::vocab_capture_status
         ])
         .build(tauri::generate_context!())?;
 
     app.run(|app, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            app.state::<vocab_outbox::VocabOutbox>().stop();
+        }
         #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
         if let tauri::RunEvent::Opened { urls } = event {
             system_open::enqueue_open_files(app, system_open::markdown_paths_from_urls(urls));

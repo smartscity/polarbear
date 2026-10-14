@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, Volume2 } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import { TauriCommandError } from "../../shared/tauri/invokeTauri";
 import { normalizeReadingTerm } from "./readingSelection";
-import { speakVocab, stopReadingSpeech, translateReadingLocal } from "./vocabAdapter";
+import { prepareReadingLanguages, speakVocab, stopReadingSpeech, translateReadingLocal } from "./vocabAdapter";
 
 export function PassageReading({ text, onLookup, allowWordLookup, lookupDisabled, autoTranslate }: {
   text: string; onLookup: (term: string) => void; allowWordLookup: boolean; lookupDisabled: boolean; autoTranslate: boolean;
@@ -16,6 +16,9 @@ export function PassageReading({ text, onLookup, allowWordLookup, lookupDisabled
   const [term, setTerm] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     const controller = new AbortController();
     setTranslation(""); setError(""); setBusy(autoTranslate); setCopied(false);
@@ -35,6 +38,15 @@ export function PassageReading({ text, onLookup, allowWordLookup, lookupDisabled
     setSpeechError("");
     try { await speakVocab(text, accent); } catch { setSpeechError("reading.error.speechUnavailable"); }
   };
+  const prepare = async () => {
+    if (preparing) return;
+    setPreparing(true);
+    try {
+      await prepareReadingLanguages();
+      if (mounted.current) setAttempt((value) => value + 1);
+    } catch { if (mounted.current) setError("languagePreparationFailed"); }
+    finally { if (mounted.current) setPreparing(false); }
+  };
   return <section className="reading-passage">
     <div className="reading-actions">
       <button type="button" onClick={() => void speak("en-US")} title={t("reading.playUs")}><Volume2 size={16} /> {t("reading.playUs")}</button>
@@ -46,7 +58,10 @@ export function PassageReading({ text, onLookup, allowWordLookup, lookupDisabled
       <button type="button" onClick={() => {
         void navigator.clipboard.writeText(translation).then(() => setCopied(true), () => setError("translationFailed"));
       }}><Copy size={16} /> {t(copied ? "common.copied" : "reading.copyTranslation")}</button></>}
-    {error && <div role="alert"><p>{t("reading.error." + error)}</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>{t("vocab.retry")}</button></div>}
+    {error && <div role={error === "languagePackMissing" ? "status" : "alert"}><p>{t("reading.error." + error)}</p>
+      <div className="reading-actions">
+      {["languagePackMissing", "languagePreparationFailed"].includes(error) && <button type="button" disabled={preparing} onClick={() => void prepare()}>{t(preparing ? "reading.preparingLanguages" : "reading.prepareLanguages")}</button>}
+      <button type="button" disabled={preparing} onClick={() => setAttempt((value) => value + 1)}>{t("vocab.retry")}</button></div></div>}
     {speechError && <p role="alert">{t(speechError)}</p>}
     {allowWordLookup && <form onSubmit={(event) => { event.preventDefault(); const normalized = normalizeReadingTerm(term); if (normalized) onLookup(normalized); }}>
       <label>{t("reading.word")}<input value={term} disabled={lookupDisabled} onChange={(event) => setTerm(event.target.value)} maxLength={80} autoComplete="off" /></label>

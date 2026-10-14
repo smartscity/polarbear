@@ -16,11 +16,11 @@ pub enum VocabOperation {
 
 #[derive(Debug, Serialize)]
 pub struct VocabError {
-    code: String,
+    pub(crate) code: String,
     message: String,
 }
 
-fn failure(code: &str) -> VocabError {
+pub(crate) fn failure(code: &str) -> VocabError {
     VocabError {
         code: code.into(),
         message: format!("Vocab: {code}"),
@@ -45,13 +45,17 @@ pub async fn vocab_request(
         .map_err(|_| failure("unavailable"))?
         .join("com.polarbear.vocab")
         .join("reading");
-    tauri::async_runtime::spawn_blocking(move || exchange(&directory, &request))
+    tauri::async_runtime::spawn_blocking(move || exchange(&directory, &request, true))
         .await
         .map_err(|_| failure("unavailable"))?
 }
 
 #[cfg(unix)]
-fn exchange(directory: &std::path::Path, request: &[u8]) -> Result<Value, VocabError> {
+pub(crate) fn exchange(
+    directory: &std::path::Path,
+    request: &[u8],
+    allow_launch: bool,
+) -> Result<Value, VocabError> {
     use std::io::{BufRead, BufReader, Read, Write};
     use std::os::unix::net::UnixStream;
     use std::time::{Duration, Instant};
@@ -59,6 +63,9 @@ fn exchange(directory: &std::path::Path, request: &[u8]) -> Result<Value, VocabE
     let mut stream = match UnixStream::connect(&path) {
         Ok(stream) => stream,
         Err(_) => {
+            if !allow_launch {
+                return Err(failure("unavailable"));
+            }
             launch_vocab()?;
             let deadline = Instant::now() + Duration::from_secs(8);
             loop {
@@ -112,7 +119,11 @@ fn validate_socket(directory: &std::path::Path, path: &std::path::Path) -> Resul
 }
 
 #[cfg(not(unix))]
-fn exchange(_directory: &std::path::Path, _request: &[u8]) -> Result<Value, VocabError> {
+pub(crate) fn exchange(
+    _directory: &std::path::Path,
+    _request: &[u8],
+    _allow_launch: bool,
+) -> Result<Value, VocabError> {
     Err(failure("unsupportedPlatform"))
 }
 
@@ -185,7 +196,7 @@ mod tests {
                 .write_all(b"{\"version\":1,\"result\":[]}\n")
                 .unwrap();
         });
-        let result = super::exchange(&directory, b"{\"version\":1}\n");
+        let result = super::exchange(&directory, b"{\"version\":1}\n", false);
         server.join().unwrap();
         assert_eq!(result.unwrap(), serde_json::json!([]));
         std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o755)).unwrap();

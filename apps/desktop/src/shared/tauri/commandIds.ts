@@ -8,6 +8,8 @@ export const TAURI_COMMANDS = {
   beginImageCopy: "begin_image_copy",
   writeClipboardImage: "write_clipboard_image",
   vocabRequest: "vocab_request",
+  enqueueVocabCapture: "enqueue_vocab_capture",
+  vocabCaptureStatus: "vocab_capture_status",
   copyImageAsset: "copy_image_asset",
   createMarkdownFile: "create_markdown_file",
   createWorkspaceDirectory: "create_workspace_directory",

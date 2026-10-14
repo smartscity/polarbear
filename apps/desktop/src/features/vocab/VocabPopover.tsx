@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
-import { lookupVocab, saveVocab, speakVocab, vocabErrorKey, type ReadingCapture, type VocabEntry } from "./vocabAdapter";
+import { lookupVocab, vocabErrorKey, type ReadingCapture, type VocabEntry } from "./vocabAdapter";
+import { VocabFavorite } from "./VocabFavorite";
 import { normalizeReadingTerm } from "./readingSelection";
 import { PassageReading } from "./PassageReading";
 
@@ -11,13 +13,11 @@ const EDGE_GAP = 12;
 export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClose: (restoreFocus: boolean) => void }) {
   const { t } = useI18n();
   const panel = useRef<HTMLDivElement>(null);
-  const attemptedCapture = useRef<ReadingCapture | null>(null);
-  const captureRequestId = useRef(target.capture.requestId);
+  const [captureRequestId, setCaptureRequestId] = useState(target.capture.requestId);
   const [entries, setEntries] = useState<VocabEntry[]>([]);
   const [sense, setSense] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [captureLocked, setCaptureLocked] = useState(false);
   const [includeSource, setIncludeSource] = useState(true);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -66,35 +66,23 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape, true); };
   }, [onClose]);
 
-  const save = async () => {
-    if (saving || saved || (entries.length > 0 && !selected)) return;
-    setSaving(true);
-    setError("");
-    try {
-      const capture = attemptedCapture.current ?? { ...target.capture, requestId: captureRequestId.current, selectedText: lookupText ?? target.capture.selectedText, senseUid: selected?.senseUid ?? null };
-      if (!attemptedCapture.current && !includeSource) Object.assign(capture, { sentence: "", title: "", filePath: null, heading: "", line: null });
-      attemptedCapture.current = capture;
-      const record = await saveVocab(capture);
-      if (!record.id || record.capture.selectedText !== capture.selectedText
-        || record.capture.senseUid !== capture.senseUid) throw new Error("Invalid capture acknowledgement");
-      setSaved(true);
-    } catch (reason) { setError(vocabErrorKey(reason)); }
-    finally { setSaving(false); }
-  };
+  const capture: ReadingCapture = { ...target.capture, requestId: captureRequestId,
+    selectedText: lookupText ?? target.capture.selectedText, senseUid: selected?.senseUid ?? null,
+    ...(!includeSource ? { sentence: "", title: "", filePath: null, heading: "", line: null } : {}) };
 
   return createPortal(<div ref={panel} popover="manual" className="vocab-popover" role="dialog"
     aria-label={t("vocab.lookup")} onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(true); }
     }} onToggle={(event) => { if (event.newState === "closed") onClose(false); }}>
-    <header className={!normalizeReadingTerm(target.capture.selectedText) ? "reading-passage-header" : undefined}><strong lang="en">{target.capture.selectedText}</strong>
-      <button type="button" onClick={() => onClose(true)} aria-label={t("common.close")}>×</button></header>
-    <PassageReading text={target.capture.selectedText} autoTranslate={!normalizeReadingTerm(target.capture.selectedText) || (!loading && !entries.length)} lookupDisabled={saving} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
-      if (saving) return;
-      captureRequestId.current = crypto.randomUUID();
-      attemptedCapture.current = null; setSaved(false); setError(""); setSense(""); setEntries([]); setLookupText(term); setAttempt((value) => value + 1);
+    <header className={!lookupText ? "reading-passage-header" : undefined}><strong lang="en">{lookupText ?? target.capture.selectedText}</strong>
+      {lookupText && <VocabFavorite key={captureRequestId} capture={capture} onLock={() => setCaptureLocked(true)} />}
+      <button type="button" onClick={() => onClose(true)} aria-label={t("common.close")}><X size={18} /></button></header>
+    <PassageReading text={lookupText ?? target.capture.selectedText} autoTranslate={!lookupText || (!loading && !entries.length)} lookupDisabled={false} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
+      setCaptureRequestId(crypto.randomUUID());
+      setCaptureLocked(false); setError(""); setSense(""); setEntries([]); setLoading(true); setLookupText(term); setAttempt((value) => value + 1);
     }} />
     {lookupText && (loading ? <p role="status">{t("vocab.loading")}</p> : <>
-      {entries.length > 0 ? <fieldset disabled={saved || saving || Boolean(attemptedCapture.current)}>
+      {entries.length > 0 ? <fieldset disabled={captureLocked}>
         <legend>{t("vocab.chooseSense")}</legend>
         {entries.map((entry) => <label className="vocab-sense" key={entry.senseUid}>
           <input type="radio" name="vocab-sense" checked={sense === entry.senseUid}
@@ -105,19 +93,12 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
             {entry.inMyVocabulary && <small>{t("vocab.alreadyAdded")}</small>}</span>
         </label>)}
       </fieldset> : !error && <p>{t("vocab.notFound")}</p>}
-      {selected && lookupText !== target.capture.selectedText && <button type="button" onClick={() => {
-        void speakVocab(selected.lemma).catch((reason: unknown) => setError(vocabErrorKey(reason)));
-      }}>{t("vocab.pronounce")}</button>}
       <blockquote lang="en">{target.capture.sentence}</blockquote>
       <p className="vocab-source">{target.capture.title}{target.capture.heading ? ` · ${target.capture.heading}` : ""}</p>
-      <label><input type="checkbox" checked={includeSource} disabled={saving || saved || Boolean(attemptedCapture.current)}
+      <label><input type="checkbox" checked={includeSource} disabled={captureLocked}
         onChange={(event) => setIncludeSource(event.target.checked)} /> {t("vocab.includeSource")}</label>
-      {saved ? <p role="status">{t(selected ? "vocab.saved" : "vocab.pendingSaved")}</p>
-        : <button type="button" className="vocab-save" disabled={saving || (entries.length > 0 && !sense) || Boolean(error && !entries.length)}
-          onClick={() => void save()}>{t(saving ? "vocab.saving" : selected?.inMyVocabulary ? "vocab.addSource" : entries.length ? "vocab.add" : "vocab.savePending")}</button>}
     </>)}
-    {error && <div role="alert"><p>{t(error)}</p><button type="button" onClick={() => {
-      if (attemptedCapture.current) { void save(); return; }
+    {error && <div className="vocab-lookup-notice" role="status"><p>{t(error)} {t("vocab.offlineCapture")}</p><button type="button" onClick={() => {
       setError(""); setLoading(true); setAttempt((value) => value + 1);
     }}>{t("vocab.retry")}</button></div>}
   </div>, document.body);

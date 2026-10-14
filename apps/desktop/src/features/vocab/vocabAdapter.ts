@@ -36,13 +36,19 @@ function isVocabEntry(value: unknown): value is VocabEntry {
     && typeof entry.inMyVocabulary === "boolean";
 }
 
-export const saveVocab = (capture: ReadingCapture) =>
-  invokeTauri<{ id: string; capture: ReadingCapture }>(TAURI_COMMANDS.vocabRequest,
-    { operation: { method: "save", capture } });
+export type VocabReceipt = { requestId: string; state: "queued" | "saved" | "error"; error: string | null };
+export const enqueueVocabCapture = (capture: ReadingCapture) =>
+  invokeTauri<VocabReceipt>(TAURI_COMMANDS.enqueueVocabCapture, { capture });
+export const vocabCaptureStatus = (requestId: string) =>
+  invokeTauri<VocabReceipt>(TAURI_COMMANDS.vocabCaptureStatus, { requestId });
 
 export const speakVocab = (text: string, accent: "en-US" | "en-GB" = "en-US") =>
   invokeTauri(TAURI_COMMANDS.speakReading, { text, accent });
 export const stopReadingSpeech = () => invokeTauri(TAURI_COMMANDS.stopReadingSpeech);
+
+/** User-initiated system consent survives dismissal of the reading card. */
+export const prepareReadingLanguages = () => invokeTauri<string>(TAURI_COMMANDS.translateReadingLocal,
+  { text: "Prepare languages", requestId: crypto.randomUUID(), prepareLanguages: true });
 
 export async function translateReadingLocal(text: string, signal?: AbortSignal): Promise<string> {
   if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
@@ -55,6 +61,6 @@ export async function translateReadingLocal(text: string, signal?: AbortSignal):
 
 export function vocabErrorKey(error: unknown): string {
   const code = error instanceof TauriCommandError ? error.code : "operationFailed";
-  return ["notInstalled", "unavailable", "unsupportedPlatform", "unsupportedVersion", "timeout", "unsafeEndpoint"].includes(code)
+  return ["notInstalled", "unavailable", "unsupportedPlatform", "unsupportedVersion", "timeout", "unsafeEndpoint", "storageFailed", "queueFull"].includes(code)
     ? `vocab.error.${code}` : "vocab.error.operationFailed";
 }
