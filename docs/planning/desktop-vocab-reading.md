@@ -1,10 +1,10 @@
 # Desktop Vocabulary Capture
 
-## Current status: v0.9.3 (2026-10-14)
+## Current status: v0.9.4 notebook integration
 
-This page describes the Desktop reading implementation at `66eec710`, the
-`v0.9.3` release commit. See the [v0.9.3 release record](../releases/v0.9.3.md)
-for current release and verification status, and the
+The notebook integration requires Vocab 0.3.2 and is verified separately in the
+[v0.9.4 release record](../releases/v0.9.4.md). The translation baseline remains
+the `66eec710` release recorded in [v0.9.3](../releases/v0.9.3.md). See the
 [documentation index](../README.md) for related implementation and historical reports.
 
 Bundled Bergamot translation supersedes the earlier Apple language-pack path.
@@ -161,16 +161,16 @@ are bounded to 256 KiB and five seconds; startup is bounded to eight seconds.
 - Return to source opens the existing Markdown file in Desktop, not the exact
   sentence. Renamed/missing sources fail visibly; no arbitrary URI is executed.
 - Source history is local and included in full Vocab backups, not sync packages.
-  The current view shows the latest 100 sources per sense or pending list.
+  The current view shows the latest 100 sources associated with the word.
 - Dictionary coverage and simple suffix candidates are not a full lemmatizer.
 - Existing macOS Services and listening workflows are not replaced in this slice.
 
 ## Acceptance
 
 Select a single word and a phrase in edit/live/preview modes. Verify multiple-sense
-selection, unknown-term pending save, source opt-out, duplicate save, timeout retry,
+selection, unknown-term canonical save, source opt-out, duplicate save, timeout retry,
 Escape, light dismissal, document scroll preservation, light/dark colors and both
-locales. Reopen Vocab and inspect the source, resolve a pending capture, and open
+locales. Reopen Vocab and inspect the source, study an incomplete entry, and open
 the article. Test missing Vocab, a stale/insecure socket and unsupported versions.
 Run Desktop typecheck/lint/tests and Rust tests, and Vocab typecheck/tests/Clippy.
 
