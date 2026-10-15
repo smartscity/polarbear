@@ -221,17 +221,20 @@ test("favorites an offline unknown word in the header and delivers after the car
     const original = runtime.invoke;
     const captures: Record<string, unknown>[] = [];
     let delivered = false;
+    let member = false;
     Object.assign(window, { __favoriteCaptures: captures });
     runtime.invoke = async (command, args) => {
-      if (command === "vocab_request") throw { code: "unavailable", message: "Vocab offline" };
-      if (command === "enqueue_vocab_capture") {
-        if (!captures.length) {
-          captures.push(structuredClone(args.capture as Record<string, unknown>));
-          setTimeout(() => { delivered = true; }, 700);
-        }
-        return { requestId: captures[0].requestId, state: delivered ? "saved" : "queued", error: null };
+      if (command === "vocab_request") {
+        if (!delivered) throw { code: "unavailable", message: "Vocab offline" };
+        if ((args.operation as { method: string }).method === "remove") { member = false; return null; }
+        return [{ senseUid: "local-oems", lemma: "OEMS", ipa: "", partOfSpeech: "", zhGloss: "", inMyVocabulary: member }];
       }
-      if (command === "vocab_capture_status") return { requestId: captures[0].requestId, state: delivered ? "saved" : "queued", error: null };
+      if (command === "enqueue_vocab_capture") {
+        captures.push(structuredClone(args.capture as Record<string, unknown>));
+        setTimeout(() => { delivered = true; member = true; }, 700);
+        return { requestId: captures.at(-1)!.requestId, state: "queued", error: null };
+      }
+      if (command === "vocab_capture_status") return { requestId: captures.at(-1)!.requestId, state: member ? "saved" : "queued", error: null };
       return original(command, args);
     };
   });
@@ -251,10 +254,12 @@ test("favorites an offline unknown word in the header and delivers after the car
   await page.waitForTimeout(800);
   await selectText(page, ".markdown-preview-segment p", "OEMS");
   await card.getByRole("checkbox").uncheck();
+  await card.getByRole("button", { name: "Remove from vocabulary notebook", exact: true }).click();
   await card.getByRole("button", { name: "Favorite word" }).click();
-  await expect(card).toContainText("Saved for later in Vocab");
+  await expect(card.getByRole("button", { name: "Remove from vocabulary notebook", exact: true })).toBeEnabled();
   const captures = await page.evaluate(() => (window as unknown as { __favoriteCaptures: Record<string, unknown>[] }).__favoriteCaptures);
-  expect(captures).toHaveLength(1);
+  expect(captures).toHaveLength(2);
+  expect(captures[0].requestId).not.toBe(captures[1].requestId);
   expect(captures[0]).toMatchObject({ selectedText: "OEMS", senseUid: null, sentence: "", title: "", filePath: null, heading: "", line: null });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => (window as unknown as { __quality: { setTheme: (theme: string) => void } }).__quality.setTheme("dark"));

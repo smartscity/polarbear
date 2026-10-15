@@ -42,6 +42,9 @@ export const enqueueVocabCapture = (capture: ReadingCapture) =>
 export const vocabCaptureStatus = (requestId: string) =>
   invokeTauri<VocabReceipt>(TAURI_COMMANDS.vocabCaptureStatus, { requestId });
 
+export const removeVocabWord = (senseUid: string) =>
+  invokeTauri(TAURI_COMMANDS.vocabRequest, { operation: { method: "remove", senseUid } });
+
 export const speakVocab = (text: string, accent: "en-US" | "en-GB" = "en-US") =>
   invokeTauri(TAURI_COMMANDS.speakReading, { text, accent });
 export const stopReadingSpeech = () => invokeTauri(TAURI_COMMANDS.stopReadingSpeech);

@@ -84,9 +84,10 @@ Full documents and sandbox paths are never included. Export is an explicit user
 action; choosing a third-party share destination is not an implicit upload.
 
 Vocab validates the whole envelope before writing and calls its existing ReadingService.
-Unknown/ambiguous captures remain in Saved for later until the user chooses a sense;
-resolution adds existing My Vocabulary membership. No new dictionary dataset is
-created. Storage failure during a batch can leave earlier records saved; the same
+Captures resolve to existing dictionary senses where possible. Unknown terms receive
+canonical incomplete entries in the live My Vocabulary Notebook dataset and can be
+studied using the existing session engine's self-assessment mode. A missing dictionary
+match does not create a separate pending collection. Storage failure during a batch can leave earlier records saved; the same
 file can safely be retried using existing request/fingerprint idempotency.
 
 ## Validation and remaining acceptance

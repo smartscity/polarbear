@@ -88,11 +88,11 @@ Desktop change and must not be described as using the bundled engine yet.
 ### Vocabulary capture
 
 - Exact local dictionary matches precede dictionary-validated inflection hints.
-- Phrases remain intact. A chosen sense becomes vocabulary membership; an
-  ambiguous or unknown term can be favorited without inventing a sense and stays
-  pending until explicitly resolved in Vocab.
-- A missing term can be saved explicitly as a pending reading capture. In Vocab,
-  the pending list permits another lookup and an explicit sense assignment.
+- Phrases remain intact. Dictionary results select an existing notebook sense or
+  the first stable dictionary match by default; users can choose another meaning.
+- Vocab resolves null sense IDs at its application/storage boundary. Unknown terms
+  become canonical local entries with empty definitions, not a pending-only list.
+  The live notebook participates in normal dataset study and statistics.
 - Captures include selected text, sentence, document title, optional absolute
   Markdown path, and source heading/line when available from the text selection.
   Preview captures use visible paragraph text and omit unreliable line mappings.
@@ -108,8 +108,10 @@ The top-right star replaces the bottom save button. Dictionary lookup and
 translation availability never disable it. A click freezes the term, sense and
 source preference and durably enqueues the capture before reporting **Saved on
 this device · waiting to sync with Vocab**. Only an acknowledged Vocab response
-produces a filled star and a delivered state. Unknown terms are explicitly shown
-as saved for later, not falsely reported as dictionary membership.
+with a non-null canonical sense ID produces a filled star and a delivered state.
+Old Vocab versions acknowledging only a pending capture produce a version error,
+not a false successful membership state. Reopening a card reads membership from
+Vocab; the filled star can remove membership through the same local IPC boundary.
 
 Desktop owns `vocab-outbox.sqlite3` in its application local-data directory. It is
 a delivery queue, not a second vocabulary database. The native application owns
@@ -118,14 +120,19 @@ existing v1 Vocab socket and immutable retry keys. Closing Desktop leaves queued
 work for the next launch. Private file permissions protect saved source context.
 
 The queue accepts at most 1,000 pending captures and keeps at most 200 completed
-receipts. Identical payloads excluding request ID reuse a receipt, including after
-reselecting a word. A 60-second claim prevents concurrent sending; expired claims
+receipts. Identical outstanding payloads reuse a receipt. A new explicit capture
+after successful delivery uses a fresh request ID, allowing re-add after removal.
+A 60-second claim prevents concurrent sending; expired claims
 recover on restart. Connection failures retry with 30-second to five-minute
 backoff. Background launch is attempted only on the first delivery; later retries
 do not continually launch Vocab. Invalid protocol or permission errors retain
 the capture and require an explicit retry. Retry never changes the payload.
 Acknowledgements must match the captured content, allowing Vocab's documented
-cross-request deduplication and receiver-owned resolution of pending senses.
+cross-request source deduplication and receiver-owned sense resolution. Vocab owns
+durable idempotency receipts, so old transport retries cannot undo later removals.
+
+Reading excerpts are rendered as plain text from Markdown without modifying stored
+provenance. Equivalent filenames and article headings are not displayed twice.
 
 The UI polls receipts only while a queued card is mounted. Dismissal stops polling,
 not delivery. A bounded wake signal and an exit flag prevent unbounded worker

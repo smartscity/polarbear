@@ -6,6 +6,7 @@ import { lookupVocab, vocabErrorKey, type ReadingCapture, type VocabEntry } from
 import { VocabFavorite } from "./VocabFavorite";
 import { normalizeReadingTerm } from "./readingSelection";
 import { PassageReading } from "./PassageReading";
+import { readingPlainText, readingSourceTitle } from "./readingPresentation";
 
 export type ReadingTarget = { capture: ReadingCapture; rect: { left: number; top?: number; bottom: number } };
 const EDGE_GAP = 12;
@@ -31,7 +32,7 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
     lookupVocab(lookupText).then((result) => {
       if (!active) return;
       setEntries(result);
-      setSense(result.length === 1 ? result[0].senseUid : "");
+      setSense(result.find((entry) => entry.inMyVocabulary)?.senseUid ?? result[0]?.senseUid ?? "");
       setLoading(false);
     }).catch((reason: unknown) => {
       if (active) { setError(vocabErrorKey(reason)); setLoading(false); }
@@ -75,9 +76,11 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(true); }
     }} onToggle={(event) => { if (event.newState === "closed") onClose(false); }}>
     <header className={!lookupText ? "reading-passage-header" : undefined}><strong lang="en">{lookupText ?? target.capture.selectedText}</strong>
-      {lookupText && <VocabFavorite key={captureRequestId} capture={capture} onLock={() => setCaptureLocked(true)} />}
+      {lookupText && <VocabFavorite key={captureRequestId} capture={capture} existingSenseUid={selected?.inMyVocabulary ? selected.senseUid : null} onLock={() => setCaptureLocked(true)} onRemoved={() => {
+        setCaptureLocked(false); setAttempt((value) => value + 1);
+      }} />}
       <button type="button" onClick={() => onClose(true)} aria-label={t("common.close")}><X size={18} /></button></header>
-    <PassageReading text={lookupText ?? target.capture.selectedText} autoTranslate={!lookupText || (!loading && !entries.length)} lookupDisabled={false} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
+    <PassageReading text={lookupText ?? target.capture.selectedText} autoTranslate={!lookupText || (!loading && !entries.some((entry) => entry.zhGloss.trim()))} lookupDisabled={false} allowWordLookup={!normalizeReadingTerm(target.capture.selectedText)} onLookup={(term) => {
       setCaptureRequestId(crypto.randomUUID());
       setCaptureLocked(false); setError(""); setSense(""); setEntries([]); setLoading(true); setLookupText(term); setAttempt((value) => value + 1);
     }} />
@@ -87,14 +90,14 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
         {entries.map((entry) => <label className="vocab-sense" key={entry.senseUid}>
           <input type="radio" name="vocab-sense" checked={sense === entry.senseUid}
             onChange={() => setSense(entry.senseUid)} />
-          <span><b lang="en">{entry.lemma}</b> <small>{entry.ipa} · {entry.partOfSpeech}</small>
+          <span><b lang="en">{entry.lemma}</b> <small>{[entry.ipa, entry.partOfSpeech].filter(Boolean).join(" · ")}</small>
             {entry.ipaUk && <small>{t("reading.ipaUk")}: {entry.ipaUk}</small>}{entry.ipaUs && <small>{t("reading.ipaUs")}: {entry.ipaUs}</small>}
             <span lang="zh-CN">{entry.zhGloss}</span>
             {entry.inMyVocabulary && <small>{t("vocab.alreadyAdded")}</small>}</span>
         </label>)}
       </fieldset> : !error && <p>{t("vocab.notFound")}</p>}
-      <blockquote lang="en">{target.capture.sentence}</blockquote>
-      <p className="vocab-source">{target.capture.title}{target.capture.heading ? ` · ${target.capture.heading}` : ""}</p>
+      <blockquote lang="en">{readingPlainText(target.capture.sentence)}</blockquote>
+      <p className="vocab-source" title={target.capture.filePath ?? undefined}>{readingSourceTitle(target.capture.title, target.capture.heading)}</p>
       <label><input type="checkbox" checked={includeSource} disabled={captureLocked}
         onChange={(event) => setIncludeSource(event.target.checked)} /> {t("vocab.includeSource")}</label>
     </>)}

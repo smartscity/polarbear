@@ -7,10 +7,16 @@ const MAX_REQUEST_BYTES: usize = 32 * 1024;
 const MAX_RESPONSE_BYTES: u64 = 256 * 1024;
 
 #[derive(Deserialize, Serialize)]
-#[serde(tag = "method", rename_all = "camelCase", deny_unknown_fields)]
+#[serde(
+    tag = "method",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
 pub enum VocabOperation {
     Lookup { query: String },
     Save { capture: Value },
+    Remove { sense_uid: String },
     Speak { text: String },
 }
 

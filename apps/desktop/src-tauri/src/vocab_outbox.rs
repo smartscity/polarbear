@@ -122,7 +122,7 @@ fn enqueue(db: &mut Connection, capture: &ReadingCapture) -> Result<Receipt, Voc
         .map_err(|_| failure("storageFailed"))?;
     let existing: Option<(String, String)> = tx
         .query_row(
-            "SELECT id, payload FROM captures WHERE id = ?1 OR json_remove(payload, '$.requestId') = json_remove(?2, '$.requestId') ORDER BY CASE WHEN id=?1 THEN 0 ELSE 1 END LIMIT 1",
+            "SELECT id, payload FROM captures WHERE id = ?1 OR (state != 'saved' AND json_remove(payload, '$.requestId') = json_remove(?2, '$.requestId')) ORDER BY CASE WHEN id=?1 THEN 0 ELSE 1 END LIMIT 1",
             params![capture.request_id, payload],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
@@ -184,6 +184,13 @@ fn deliver_one(
     let capture: ReadingCapture =
         serde_json::from_str(&payload).map_err(|_| failure("invalidInput"))?;
     let result = send(&capture, attempts == 0).and_then(|value| {
+        if value
+            .pointer("/capture/senseUid")
+            .and_then(|uid| uid.as_str())
+            .is_none_or(str::is_empty)
+        {
+            return Err(failure("unsupportedVersion"));
+        }
         let acknowledged = value
             .get("capture")
             .cloned()
@@ -377,6 +384,9 @@ mod tests {
             "Acknowledged captures must not be sent again"
         ))
         .unwrap());
+        duplicate.request_id = "explicit-recapture".into();
+        assert_eq!(enqueue(&mut db, &duplicate).unwrap().state, "queued");
+        assert_eq!(receipt(&db, "explicit-recapture").unwrap().state, "queued");
         drop(db);
         std::fs::remove_file(path).unwrap();
     }
