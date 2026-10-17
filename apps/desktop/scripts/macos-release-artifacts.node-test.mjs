@@ -59,4 +59,10 @@ test("release workflow retains the app and verifies the mounted DMG before uploa
   assert.ok(workflow.indexOf("Verify caption engine inside DMG") < workflow.indexOf("Upload DMG build artifact"));
   assert.match(workflow, /name: Upload DMG to GitHub Release\s+if: env\.RELEASE_TAG != ''/);
   assert.match(workflow, /branches:\s+- main/);
+  assert.match(workflow, /caption_gate:\s+name: Native caption gate\s+uses: \.\/\.github\/workflows\/caption\.yml/);
+  assert.match(workflow, /build_macos:\s+name: Build macOS DMG\s+needs: caption_gate/);
+  const gate = await readFile(new URL("../../../.github/workflows/caption.yml", import.meta.url), "utf8");
+  assert.match(gate, /runner: \[macos-26, macos-15-intel\]/);
+  assert.match(gate, /test-caption-engine\.mjs.*--realtime/);
+  assert.doesNotMatch(gate, /continue-on-error/);
 });

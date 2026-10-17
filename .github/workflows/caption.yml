@@ -1,6 +1,11 @@
 name: Caption Engine
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
   workflow_dispatch:
   push:
     branches: [main]
@@ -30,6 +35,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
@@ -37,6 +44,11 @@ jobs:
         run: node --test apps/desktop/scripts/caption-engine-fixture.node-test.mjs
       - name: Build host engine from pinned offline sources
         run: node apps/desktop/scripts/build-caption.mjs
+      - name: Compare fixed and CPU-budgeted inference threads
+        run: |
+          set -o pipefail
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          node apps/desktop/scripts/profile-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" 2>&1 | tee caption-profile.log
       - name: Recognize fixed speech and reject invalid input
         run: |
           set -o pipefail
@@ -54,4 +66,5 @@ jobs:
           path: |
             caption-fixture.log
             caption-paced.log
+            caption-profile.log
           if-no-files-found: ignore

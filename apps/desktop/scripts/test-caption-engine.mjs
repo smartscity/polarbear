@@ -12,7 +12,7 @@ if (!fixture) throw new Error("Pass the upstream samples/jfk.wav fixture path");
 const data = pcm16FromWav(await readFile(fixture));
 function recognize(name, pcm, invalid = false) {
   return recognizeFixture(join(assets, "polarbear-caption-engine"),
-    [join(assets, "ggml-base.en-q5_1.bin"), join(assets, "ggml-silero-v6.2.0.bin")], pcm,
+    [join(assets, "ggml-base.en-q5_1.bin"), join(assets, "ggml-silero-v6.2.0.bin"), "--diagnostics"], pcm,
     { name, invalid, realtime: realtime && name === "speech", timeoutMs: realtime ? 180_000 : 120_000,
       onProgress: (progress) => console.log(JSON.stringify(progress)) });
 }
@@ -20,7 +20,7 @@ console.log(JSON.stringify({ platform: process.platform, architecture: process.a
 // Repetition is a scheduling regression, not a meeting/accuracy qualification corpus.
 const repetitions = realtime ? Math.ceil(90_000 / (data.length / 32)) : 1;
 const spoken = await recognize("speech", Buffer.concat(Array.from({ length: repetitions }, () => data)));
-assert.equal(spoken.code, 0);
+assert.equal(spoken.code, 0, `Caption helper failed: ${JSON.stringify(spoken.events.filter(event => event.type === "error"))}`);
 assert.equal(spoken.events.filter((event) => event.type === "error").length, 0);
 const finals = spoken.events.filter((event) => event.type === "final");
 assert.ok(finals.length > 0);

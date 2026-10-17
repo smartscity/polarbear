@@ -92,3 +92,16 @@ test("does not expose arbitrary stderr or recognized content in progress", async
   await run(`${handshake} console.error('private model path');console.log(JSON.stringify({type:'final',english:'private speech'}));process.stdin.resume();`, { onProgress: p=>progress.push(p) });
   assert.doesNotMatch(JSON.stringify(progress), /private/);
 });
+
+test("accepts only numeric diagnostic fields and never forwards private extras", async () => {
+  const progress = [];
+  const result = await run(`${handshake}
+    console.error('caption-metric:' + JSON.stringify({stage:'config',availableCpus:3,threads:2,secret:'private'}));
+    console.error('caption-metric:' + JSON.stringify({stage:'final',audioMs:2000,queueMs:12,computeMs:30,cancelled:false,result:0,english:'private'}));
+    console.error('caption-metric:' + JSON.stringify({stage:'vad',frames:'private',computeMs:10}));
+    console.error('caption-metric:invalid');
+    process.stdin.resume();`, { onProgress: p => progress.push(p) });
+  assert.equal(result.metrics.length, 2);
+  assert.deepEqual(result.metrics[0], { stage: "config", availableCpus: 3, threads: 2 });
+  assert.doesNotMatch(JSON.stringify(progress), /private|secret|english/);
+});

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <mutex>
@@ -12,6 +13,7 @@ struct RecognitionJob {
     std::vector<float> samples;
     uint64_t sequence, start_ms, end_ms;
     bool final;
+    std::chrono::steady_clock::time_point queued_at = std::chrono::steady_clock::now();
 };
 
 // One consumer owns the model. Provisional work is expendable, finalized audio is not.

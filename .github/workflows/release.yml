@@ -25,8 +25,15 @@ permissions:
   contents: write
 
 jobs:
+  caption_gate:
+    name: Native caption gate
+    uses: ./.github/workflows/caption.yml
+    with:
+      ref: ${{ inputs.release_tag || github.ref }}
+
   build_macos:
     name: Build macOS DMG
+    needs: caption_gate
     runs-on: macos-26
     outputs:
       app_version: ${{ steps.release_metadata.outputs.app_version }}

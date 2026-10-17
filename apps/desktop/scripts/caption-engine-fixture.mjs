@@ -27,11 +27,33 @@ export function pcm16FromWav(wav) {
 const MAX_EVENT_BYTES = 65_536;
 const MAX_EVENTS = 1024;
 const PHASES = new Set(["loading-asr-cpu", "loading-vad-cpu", "ready", "recognizing-partial", "recognizing-final", "reading-pcm", "stopped"]);
+const METRIC_FIELDS = {
+  config: ["availableCpus", "threads"],
+  vad: ["frames", "computeMs"],
+  partial: ["audioMs", "queueMs", "computeMs", "result"],
+  final: ["audioMs", "queueMs", "computeMs", "result"],
+};
+
+function safeMetric(line) {
+  if (!line.startsWith("caption-metric:")) return;
+  try {
+    const value = JSON.parse(line.slice("caption-metric:".length));
+    const fields = Object.hasOwn(METRIC_FIELDS, value?.stage) && METRIC_FIELDS[value.stage];
+    if (!fields || !fields.every((key) => Number.isFinite(value[key]) && value[key] >= 0)) return;
+    const metric = Object.fromEntries(fields.map((key) => [key, value[key]]));
+    if (["partial", "final"].includes(value.stage)) {
+      if (typeof value.cancelled !== "boolean") return;
+      metric.cancelled = value.cancelled;
+    }
+    return { stage: value.stage, ...metric };
+  } catch { return; }
+}
 
 // Exercise the same empty-environment, direct-process boundary used by Desktop.
 export function recognizeFixture(executable, args, pcm, { name, invalid = false, realtime = false, timeoutMs = 120_000, onProgress = () => {} } = {}) {
   const child = spawn(executable, args, { shell: false, env: {}, stdio: ["pipe", "pipe", "pipe"] });
   const events = [];
+  const metrics = [];
   const started = performance.now();
   let phase = "starting", buffer = "", diagnostics = "", failure, ready = false, closed = false;
   let feedStarted = 0, maxWriteLagMs = 0;
@@ -78,6 +100,11 @@ export function recognizeFixture(executable, args, pcm, { name, invalid = false,
         const line = diagnostics.slice(0, newline); diagnostics = diagnostics.slice(newline + 1);
         const next = line.startsWith("caption-phase:") ? line.slice("caption-phase:".length) : "";
         if (PHASES.has(next)) { phase = next; onProgress(progress()); }
+        const metric = safeMetric(line);
+        if (metric && metrics.length < 4096) {
+          metrics.push(metric);
+          onProgress({ ...progress(), metric });
+        }
       }
       // Never log arbitrary stderr, model paths, PCM or recognized text.
       if (diagnostics.length > MAX_EVENT_BYTES) diagnostics = "";
@@ -113,7 +140,7 @@ export function recognizeFixture(executable, args, pcm, { name, invalid = false,
       onProgress(result);
       if (failure) { reject(failure); return; }
       if (!ready || buffer.trim() || signal) { reject(new Error(`${name}: incomplete engine session; phase=${phase}; code=${code}; signal=${signal}`)); return; }
-      resolve({ ...result, events, maxWriteLagMs, finalLagMs });
+      resolve({ ...result, events, metrics, maxWriteLagMs, finalLagMs });
     });
   });
 }

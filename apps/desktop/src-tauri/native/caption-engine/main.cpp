@@ -1,6 +1,7 @@
 #include "whisper.h"
 #include "json.hpp"
 #include "recognition_queue.h"
+#include "inference_config.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -10,6 +11,10 @@
 #include <vector>
 
 using json = nlohmann::ordered_json;
+using Clock = std::chrono::steady_clock;
+static double milliseconds(Clock::time_point from) {
+    return std::chrono::duration<double, std::milli>(Clock::now() - from).count();
+}
 constexpr int sample_rate = 16000;
 constexpr int frame_samples = 512;
 constexpr int max_samples = sample_rate * 15;
@@ -19,7 +24,14 @@ static void emit(const json &event) {
     std::lock_guard<std::mutex> lock(output_mutex);
     std::cout << event.dump() << '\n' << std::flush;
 }
-static void phase(const char *name) { std::cerr << "caption-phase:" << name << '\n' << std::flush; }
+static void phase(const char *name) {
+    std::lock_guard<std::mutex> lock(output_mutex);
+    std::cerr << "caption-phase:" << name << '\n' << std::flush;
+}
+static void metric(const json &value) {
+    std::lock_guard<std::mutex> lock(output_mutex);
+    std::cerr << "caption-metric:" << value.dump() << '\n' << std::flush;
+}
 static bool read_exact(char *target, size_t count) {
     std::cin.read(target, static_cast<std::streamsize>(count));
     return static_cast<size_t>(std::cin.gcount()) == count;
@@ -31,10 +43,12 @@ static uint64_t little(const unsigned char *data, size_t count) {
 }
 
 static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
-                    const std::atomic<bool> &inference_failed) {
+                    const std::atomic<bool> &inference_failed, bool diagnostics) {
     std::vector<float> speech, carry, preroll;
     uint64_t start = 0, end = 0, sequence = 1;
     int quiet = 0, last_partial = 0;
+    double vad_ms = 0;
+    uint64_t frames = 0;
     auto finalize = [&]() -> int {
         if (inference_failed.load()) return 6;
         if (speech.size() < size_t(sample_rate / 3)) return 0;
@@ -54,7 +68,10 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
         for (float sample:input) if (!std::isfinite(sample) || std::abs(sample)>2.0f) return 4;
         carry.insert(carry.end(),input.begin(),input.end());
         while (carry.size()>=frame_samples) {
+            const auto vad_started = Clock::now();
             if (!whisper_vad_detect_speech_no_reset(vad,carry.data(),frame_samples)) return 5;
+            vad_ms += milliseconds(vad_started);
+            if (++frames % 100 == 0 && diagnostics) metric({{"stage","vad"},{"frames",frames},{"computeMs",vad_ms}});
             const int n = whisper_vad_n_probs(vad);
             const bool talking = n>0 && whisper_vad_probs(vad)[n-1] >= 0.5f;
             end = timestamp + count*1000/sample_rate;
@@ -86,7 +103,10 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3) return 2;
+    const auto cores = std::thread::hardware_concurrency();
+    const auto config = inference_config(argc, argv, cores);
+    if (!config) return 2;
+    if (config->diagnostics) metric({{"stage","config"},{"availableCpus",cores},{"threads",config->threads}});
     whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);
     auto context_params = whisper_context_default_params();
     // Keep the production and fixture paths identical until Metal is qualified.
@@ -102,7 +122,7 @@ int main(int argc, char **argv) {
         whisper_vad_init_from_file_with_params(argv[2], vad_params), whisper_vad_free);
     if (!context || !vad) { emit({{"type","error"},{"code","modelInvalid"}}); return 3; }
     auto params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    params.n_threads = 4;
+    params.n_threads = config->threads;
     params.language = "en";
     params.translate = false;
     params.no_context = true;
@@ -122,7 +142,12 @@ int main(int argc, char **argv) {
     auto recognize = [&](const RecognitionJob &job) {
         abort_context.final = job.final;
         phase(job.final ? "recognizing-final" : "recognizing-partial");
+        const double queue_ms = milliseconds(job.queued_at);
+        const auto began = Clock::now();
         const int result = whisper_full(context.get(), params, job.samples.data(), static_cast<int>(job.samples.size()));
+        if (config->diagnostics) metric({{"stage",job.final ? "final" : "partial"},
+            {"audioMs",job.samples.size()*1000.0/sample_rate},{"queueMs",queue_ms},
+            {"computeMs",milliseconds(began)},{"cancelled",queue.cancelled(job.final)},{"result",result}});
         if (queue.cancelled(job.final)) return true;
         if (result != 0) return false;
         std::string text;
@@ -149,7 +174,7 @@ int main(int argc, char **argv) {
     });
     phase("ready");
     emit({{"type","ready"},{"protocol",1},{"backend","cpu"}});
-    const int result = read_pcm(vad.get(), queue, inference_failed);
+    const int result = read_pcm(vad.get(), queue, inference_failed, config->diagnostics);
     // On overload, preserve accepted finals; malformed input or inference failure aborts.
     if (result == 0 || result == 7) queue.close();
     else queue.abort();

@@ -276,6 +276,17 @@ Desktop with an empty environment, retain a 120-second ceiling per case, and exp
 bounded phase diagnostics without recording PCM, transcripts or private paths.
 Run host inference checks on both architectures, not just universal compilation.
 
+CPU scheduling correction (2026-10-18, pending native qualification): cap ASR at
+four threads and leave one reported hardware thread for capture/VAD and GUI work,
+with a minimum of one ASR thread when capacity is unknown or constrained. Keep the
+same model, decoding policy and queue budgets. The private helper's diagnostic
+thread override permits a sequential fixed-four comparison on the same machine;
+Desktop never supplies that override. Optional numeric stderr diagnostics report
+CPU capacity, VAD cost, inference time, queue wait and cancellation without audio,
+recognized text or paths. They do not alter the stdout protocol or persistence.
+Release packaging depends on both native caption jobs, including paced PCM replay;
+a successful DMG build must not bypass a failed architecture's inference gate.
+
 Do not advertise fixed performance from upstream model examples. Model revision,
 quantization, VAD artifact, hashes, licenses and hardware profile are implementation
 gates. Ship exactly the validated English profile, not a model-choice UI.
