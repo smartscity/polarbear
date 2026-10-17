@@ -30,6 +30,7 @@ packaging does not establish their completion.
 
 | Document | Scope and status |
 | --- | --- |
+| [Live Caption design](planning/live-caption.md) | IN_REVIEW: offline English captions, saved Chinese translation, copy and local history; implementation not started |
 | [Apple linked editing and iCloud plan](planning/icloud-markdown-sync.md) | Native foundation exists; user-facing linked editing/sync is not feature-complete |
 | [Apple document-store package](../packages/apple-document-store/README.md) | Shared native foundation and validation; not an enabled cross-device editing workflow |
 | [Memory/context design](planning/desktop-memory-context-design.md) | M1 technical slice; rollout constrained by the recorded evaluation |

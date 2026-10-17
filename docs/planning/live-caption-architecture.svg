@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 960" role="img" aria-labelledby="title description">
+  <title id="title">Live Caption proposed architecture</title>
+  <desc id="description">Design revision 1.0, not implemented. User commands enter a native session manager. Native audio is sent to a bundled ASR helper. Final text is committed to local SQLite, translated with the existing bundled Bergamot engine, and presented or copied on explicit request. Raw audio is never persisted.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#46515c"/></marker></defs>
+  <rect width="1080" height="960" fill="#ffffff"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#1f2933">
+    <text x="40" y="44" font-size="26" font-weight="700">Live Caption: local ownership and data flow</text>
+    <text x="40" y="73" font-size="16">Revision 1.0 | IN_REVIEW | Implementation and runtime checks: NOT_STARTED / NOT_RUN</text>
+    <rect x="30" y="100" width="1020" height="155" rx="6" fill="#f4f6f8" stroke="#bac3cb"/>
+    <text x="50" y="126" font-size="17" font-weight="700">Presentation boundary: no raw audio, direct SQL, or network inference</text>
+    <rect x="55" y="145" width="390" height="85" rx="6" fill="#e9f3ef" stroke="#41816b"/>
+    <text x="75" y="172" font-size="18" font-weight="700">CMP-UI: Settings + caption/history</text>
+    <text x="75" y="199" font-size="16">Start / Pause / Stop / Copy / History</text>
+    <rect x="660" y="145" width="350" height="85" rx="6" fill="#edf1fa" stroke="#617baf"/>
+    <text x="680" y="172" font-size="18" font-weight="700">CMP-COPY: transcript formatter</text>
+    <text x="680" y="199" font-size="16">Explicit bilingual clipboard / export</text>
+    <path d="M445 186 H650" fill="none" stroke="#46515c" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="479" y="174" font-size="15">User action</text>
+    <rect x="55" y="310" width="955" height="100" rx="6" fill="#e8f2f6" stroke="#448096"/>
+    <text x="75" y="341" font-size="20" font-weight="700">CMP-SESSION: Rust CaptionSessionManager</text>
+    <text x="75" y="370" font-size="16">One active session; lifecycle, bounded queues, helper supervision and revision checks</text>
+    <text x="75" y="393" font-size="16">Start is explicit. Close, lock, sleep, failure and quit release capture resources.</text>
+    <path d="M245 230 V300" fill="none" stroke="#46515c" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <text x="261" y="281" font-size="15">Commands / status</text>
+    <path d="M835 230 V300" fill="none" stroke="#46515c" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <text x="850" y="281" font-size="15">Snapshot / result</text>
+    <rect x="55" y="480" width="400" height="115" rx="6" fill="#e9f3ef" stroke="#41816b"/>
+    <text x="75" y="510" font-size="19" font-weight="700">CMP-CAPTURE: macOS adapter</text>
+    <text x="75" y="538" font-size="16">System audio + microphone permissions</text>
+    <text x="75" y="563" font-size="16">Timestamped PCM; bounded memory only</text>
+    <rect x="610" y="480" width="400" height="115" rx="6" fill="#fff3df" stroke="#a77c30"/>
+    <text x="630" y="510" font-size="19" font-weight="700">CMP-ASR: bundled helper</text>
+    <text x="630" y="538" font-size="16">Pinned whisper.cpp + English model</text>
+    <text x="630" y="563" font-size="16">VAD / partials / finalized segments</text>
+    <path d="M245 410 V470" fill="none" stroke="#46515c" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="260" y="448" font-size="15">Control</text>
+    <path d="M455 540 H600" fill="none" stroke="#46515c" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="468" y="521" font-size="15">PCM via manager</text>
+    <path d="M835 480 V420" fill="none" stroke="#46515c" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="850" y="448" font-size="15">Text results</text>
+    <rect x="55" y="685" width="400" height="125" rx="6" fill="#f4f6f8" stroke="#71818e"/>
+    <text x="75" y="715" font-size="19" font-weight="700">CMP-STORE: local SQLite history</text>
+    <text x="75" y="744" font-size="16">English + Chinese + timestamps + place</text>
+    <text x="75" y="770" font-size="16">Durable translation jobs and recovery</text>
+    <text x="75" y="795" font-size="16">App data directory; no raw recordings</text>
+    <rect x="610" y="685" width="400" height="125" rx="6" fill="#edf1fa" stroke="#617baf"/>
+    <text x="630" y="715" font-size="19" font-weight="700">CMP-TRANSLATE: local worker host</text>
+    <text x="630" y="744" font-size="16">Existing Bergamot engine + EN-ZH assets</text>
+    <text x="630" y="770" font-size="16">Separate queue from selection translation</text>
+    <text x="630" y="795" font-size="16">No capture, editor, or workspace access</text>
+    <path d="M55 370 H35 V747 H45" fill="none" stroke="#46515c" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="55" y="644" font-size="15">Manager commits finalized text + jobs</text>
+    <path d="M455 742 H600" fill="none" stroke="#46515c" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <text x="478" y="711" font-size="15">Leased jobs /</text>
+    <text x="478" y="730" font-size="15">Chinese results</text>
+    <text x="470" y="778" font-size="14">Via manager IPC</text>
+    <text x="40" y="865" font-size="17" font-weight="700">Release gates</text>
+    <text x="40" y="892" font-size="16">Fresh offline install | Licensed packaged models | Real audio + echo tests | Durable bilingual history</text>
+    <text x="40" y="919" font-size="16">No cloud fallback, model downloads at runtime, automatic listening restart, or Memory/Vocab DB access.</text>
+  </g>
+</svg>
