@@ -214,6 +214,9 @@ fn open_window(app: &tauri::AppHandle, history: bool) -> CaptionResult<()> {
             tauri::WebviewUrl::App("caption.html?surface=caption-translator".into()),
         )
         .title("Live Caption translation")
+        // This queue consumer must remain schedulable while its host is hidden.
+        // WKWebView supports this policy on macOS 14+; older systems remain unqualified.
+        .background_throttling(tauri::utils::config::BackgroundThrottlingPolicy::Disabled)
         .visible(false)
         .build()
         .map_err(|_| CaptionError::new("windowFailed"))?;

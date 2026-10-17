@@ -12,7 +12,7 @@ async function initialize(page: Page, history = false) {
       { id: 2, sessionId: "fixture", startMs: 2300, endMs: 4000, english: "The deadline is Friday.", chinese: null, translationStatus: "pending" },
     ];
     const calls: unknown[] = [];
-    Object.assign(window, { __emptyCaption: () => { rows.length = 0; partial = ""; }, __openCaptionHistory: () => { historyRequested = true; viewRevision += 1; }, __captionCalls: calls, __TAURI_INTERNALS__: {
+    Object.assign(window, { __finalizeCaption: () => { rows.push({ id: 3, sessionId: "fixture", startMs: 44000, endMs: 46000, english: partial, chinese: null, translationStatus: "pending" }); partial = "We need to review"; }, __emptyCaption: () => { rows.length = 0; partial = ""; }, __openCaptionHistory: () => { historyRequested = true; viewRevision += 1; }, __captionCalls: calls, __TAURI_INTERNALS__: {
       invoke: async (command: string, args: { request: { action: string; source?: string } }) => {
         if (command !== "caption_request") throw new Error("Unexpected IPC");
         const request = args.request;
@@ -44,6 +44,21 @@ test("copies finalized bilingual content without partial text and pauses indepen
   await expect(page.locator(".caption-state")).toHaveText("Paused");
   await page.getByRole("button", { name: "Pause / resume captions" }).click();
   await expect(page.locator(".caption-state")).toHaveText("Listening");
+});
+
+test("flows partial and finalized speech continuously while retaining timestamps only in history", async ({ page }) => {
+  await initialize(page);
+  const english = page.locator(".caption-live-english");
+  await expect(english).toHaveText("We should review this tomorrow. The deadline is Friday. An unfinished sentence");
+  await expect(page.locator(".caption-transcript time")).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { __finalizeCaption: () => void }).__finalizeCaption());
+  await expect(english).toHaveText("We should review this tomorrow. The deadline is Friday. An unfinished sentence We need to review");
+  await expect(page.getByText("Translating locally…", { exact: true })).toHaveCount(1);
+  await page.screenshot({ path: "test-results/caption-continuous.png" });
+  await page.getByRole("button", { name: "Caption history", exact: true }).click();
+  await page.getByRole("button", { name: /Fixture meeting/ }).click();
+  await expect(page.locator(".caption-transcript time")).toHaveCount(3);
+  await expect(page.locator(".caption-live-english")).toHaveCount(0);
 });
 
 test("makes the active source explicit and switches to microphone without losing the stop boundary", async ({ page }) => {

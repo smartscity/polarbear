@@ -7,6 +7,7 @@ import { TauriCommandError } from "../../shared/tauri/invokeTauri";
 import { captionRequest, type CaptionSegment, type CaptionSession, type CaptionStatus } from "./captionAdapter";
 import { changeCaptionSource, executeCaptionCommand } from "./captionCommands";
 import { CaptionSourceSelect } from "./CaptionSourceSelect";
+import { LiveTranscript } from "./LiveTranscript";
 import { captionTimestamp } from "./transcript";
 import { applyThemeTokens } from "../theme/themeTokens";
 import "./caption.css";
@@ -154,11 +155,10 @@ export function CaptionPanel() {
           <p>{t(active ? "caption.listening" : "caption.empty")}</p>
           {!history && <p className="caption-source-hint">{t(`caption.sourceHint.${source}`)}</p>}
         </div>}
-        {segments.map((segment) => <article key={segment.id}>
+        {selected ? segments.map((segment) => <article key={segment.id}>
           <time>{captionTimestamp(segment.startMs)}</time><p lang="en">{segment.english}</p>
           {preferences.showChinese && <p lang="zh-CN" className="caption-chinese">{segment.chinese || t(`caption.translation.${segment.translationStatus}`)}</p>}
-        </article>)}
-        {!selected && status?.partial && <p className="caption-partial" lang="en">{status.partial}</p>}
+        </article>) : <LiveTranscript segments={segments} partial={status?.partial ?? ""} showChinese={preferences.showChinese} />}
       </div>
       {selected && <div className="caption-options">
         {after > 0 && <button onClick={() => setAfter(0)}>{t("caption.firstPage")}</button>}

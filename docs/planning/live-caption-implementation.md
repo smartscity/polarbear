@@ -3,7 +3,8 @@
 Date: 2026-10-17. Baseline: `a7894ae`. Owner: [approved design](live-caption.md).
 Delivery status: **PARTIAL / preview**, not a completed D0-D5 or stable release.
 The design still requires Both mode with proven echo cancellation; it is not
-implemented or exposed by this preview. No user audio was captured for testing.
+implemented or exposed by this preview. The initial checks used public fixtures;
+the consented microphone follow-up below is separate from those checks.
 
 ## Implemented ownership
 
@@ -240,6 +241,98 @@ check source visibility, stop/start ordering, source-specific hints and a 360 by
 300 viewport; capture IPC is mocked. The narrow screenshot was visually inspected.
 These checks do not verify microphone permissions, live capture, native translation
 delivery or the installed application. The installed app was not replaced.
+
+## Continuous live presentation and consented microphone follow-up
+
+The user completed an explicitly requested microphone exercise in the installed
+0.10.2 app. Read-only inspection of that session's caption database found seven
+persisted English segments, all seven translations still pending with zero lease
+attempts, and a failed session state. No audio was retained or uploaded. The text
+and source database are not included in repository evidence. This confirms capture
+and English persistence, not acceptable recognition accuracy or bilingual success.
+The stored schema does not retain the failure code, so the exact session-ending
+cause cannot be inferred from the failed flag alone.
+
+`LiveTranscript.tsx` now joins finalized English and the provisional suffix in one
+flowing paragraph, with continuous Chinese below and a single translation status.
+The live view has no per-segment timestamps/cards. History, durable segment IDs,
+timestamped export and whole-session copy retain their existing boundaries. This
+is a presentation change, not a new recognition engine or an accuracy improvement.
+
+Verification: 21 browser tests (including eight caption tests), 215 Vitest tests,
+18 Node tests, desktop typecheck, ESLint, Rust format and the production Vite build
+passed. Native tests passed 29 cases, with one existing opt-in Memory E2E ignored;
+two Unix-socket fixtures first failed in the restricted tool sandbox and passed
+when rerun with local socket access. Browser capture
+IPC remains mocked. The continuous transcript screenshot was inspected; it shows
+three finalized chunks and a partial suffix without injected live time labels.
+History still exposes timestamps, and a narrow dark panel remains covered.
+
+The missing translation claims require native hidden-WebView lifecycle testing.
+`test-caption-hidden-translation.mjs` uses a real AppKit/WKWebView host, the bundled
+Bergamot model, production CSP and an offline sandbox allowing only its loopback
+asset server. It runs the actual `CaptionTranslator` component against fixture-only
+IPC leases, withholding a synthetic job until the view has been hidden for 330
+seconds. It measures claim cadence and the unchanged 90-second production job
+deadline. `--default-policy` preserves WebKit defaults as the diagnostic control;
+the other variant requests inactive scheduling `.none` on macOS 14+. Neither probe
+captures audio or accesses user history. A probe result is not a packaged Tauri
+capture-to-translation pass.
+
+On native Intel macOS 26.5.1, the default-policy control timed out at 390 seconds.
+The disabled-policy variant completed at 383.279 seconds while still hidden, with
+the expected Chinese deadline/architecture translation. This establishes a real
+background scheduling defect and recovery path, not a real-time latency pass:
+the first probe did not separately time timer scheduling and cold inference. An
+instrumented repeat started inference at 330.817 seconds but reached the initial
+390-second host deadline before completion. Those initial probes used the reading
+service's 60-second deadline rather than the caption consumer. They are retained
+as diagnostic observations, not counted as production-queue acceptance; the revised
+fixture exercises the actual consumer and permits its existing 90-second deadline.
+The dedicated production translator now disables background throttling; editor
+and other windows retain their policies. Tauri/Wry support this setting on macOS
+14+, so hidden translation on macOS 13 remains unqualified. No private API or
+fake background audio is used to keep JavaScript alive.
+
+The production-consumer probe claimed its delayed job at 330.120 seconds and
+completed real Chinese inference in 15.701 seconds. Its full-lifetime maximum
+claim interval was 4.661 seconds; the initial probe assertion on that maximum
+failed. The availability regression now gates the delayed job's actual claim
+latency (under three seconds after readiness), retains the full-lifetime maximum
+as a diagnostic, and keeps the unchanged 90-second production inference deadline.
+This is explicitly a background availability test, not acceptance of 15.7-second
+cold translation or the long-session real-time performance gates.
+
+The matching production-consumer control with default WKWebView scheduling never
+claimed the delayed job and timed out at the 430-second host deadline. Unlike the
+initial reading-service probes, this comparison uses the same caption component,
+polling loop, model and synthetic IPC job as the disabled-policy regression.
+
+A subsequent disabled-policy run claimed at 330.540 seconds but completed with
+null Chinese after 1.403 seconds. The consumer's existing error handling converts
+model failures to a failed job; the initial fixture lacked the underlying cause.
+An immediate diagnostic of the same consumer then translated successfully in
+3.856 seconds. These mixed outcomes do **not** establish reliable hidden inference.
+The probe now reports worker, asset and typed translation errors without changing
+the production consumer; `--immediate` is explicitly a diagnostic, not a replacement
+for the 330-second test. Until repeatability is established, this probe remains
+separate from the general editor quality workflow, and caption release acceptance
+remains blocked. No timing threshold of the ASR qualification was changed.
+
+The final diagnostic repeat passed background availability: the job was claimed
+at 330.759 seconds, inference returned the expected Chinese in 16.110 seconds,
+and the full-lifetime maximum claim interval was 4.451 seconds. This repeat did
+not reproduce or explain the earlier null translation. Consequently the result
+is one passing availability run with an unresolved intermittent failure, not a
+stable end-to-end or real-time acceptance. The source fix and diagnostics may be
+committed; engine replacement and a release tag remain unauthorized by these gates.
+
+The local Intel `.app` with this change compiled and bundled successfully without
+replacing or launching `/Applications/Polarbear.app`. Packaging does not establish
+permission behavior or a repeated user microphone-to-Chinese acceptance result.
+The helper inside that `.app` passed speech/silence/malformed-frame fixtures; the
+11-second speech fixture took 18.001 seconds in this run. This is a packaging
+functional check and explicitly not a real-time throughput pass.
 
 ## Native manual acceptance procedure
 

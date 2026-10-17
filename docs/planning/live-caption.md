@@ -109,9 +109,12 @@ Copy (Lucide Copy), Pause/Resume, History, More, Close. Tooltips and accessibili
 names explain icons. At minimum width move secondary options into More; Copy,
 Pause and Close stay directly available. No action depends solely on hover.
 
-Body displays recent English sentences with corresponding Chinese below. A single
-unfinished line is visually differentiated; finalized text does not jump with every
-partial result. Translation has its own pending/error status and never blocks English.
+Body presents the recent English transcript as continuous text, with continuous
+Chinese below. Recognition segment boundaries must not introduce timestamp labels,
+cards or paragraph breaks in the live view. The unfinished suffix is visually
+differentiated; finalized text does not jump with every partial result. Translation
+has one pending/error indicator and never blocks English. Segment timestamps remain
+available in history and optional copy/export output, not between live sentences.
 Text is selectable. Auto-follow only while at the bottom; selecting text or scrolling
 up suspends follow and reveals a Jump to latest action. A bounded visible tail avoids
 rendering hours of text. Copy still includes the whole session, not only that tail.

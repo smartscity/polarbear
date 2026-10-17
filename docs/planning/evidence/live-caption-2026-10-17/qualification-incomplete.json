@@ -1,0 +1,938 @@
+{
+  "runId": 39034261597,
+  "commit": "79a010df6bdf15b8b7e70c8bbac0f7ba33c7e162",
+  "qualification": "INCOMPLETE",
+  "replacement": "NO_REPLACE",
+  "measurements": {
+    "parakeet-arm64": {
+      "status": "INCOMPLETE",
+      "engine": "parakeet",
+      "machine": "arm64",
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "threads": 4,
+      "provider": "cpu",
+      "phase": "all",
+      "corpusSha256": "9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe",
+      "scoring": "Strict orthographic WER; number formatting not normalized; entity recall is supplementary",
+      "replacement": "NOT_AUTHORIZED",
+      "offlineControl": "EPERM: network denied by operating system",
+      "modelSha256": {
+        "parakeet/encoder.int8.onnx": "a32b12d17bbbc309d0686fbbcc2987b5e9b8333a7da83fa6b089f0a2acd651ab",
+        "parakeet/decoder.int8.onnx": "b6bb64963457237b900e496ee9994b59294526439fbcc1fecf705b31a15c6b4e",
+        "parakeet/joiner.int8.onnx": "7946164367946e7f9f29a122407c3252b680dbae9a51343eb2488d057c3c43d2"
+      },
+      "corpusScope": "all",
+      "license": "AMI: CC BY 4.0; Earnings22 transcripts/derived text: CC BY-SA 4.0",
+      "attribution": "AMI Consortium; Rev.com Earnings-22 (Del Rio et al., 2022)",
+      "loadSeconds": 3.026396207999994,
+      "accuracy": {
+        "all": {
+          "segments": 308,
+          "audioSeconds": 5849.3546875,
+          "referenceWords": 15851,
+          "wer": 0.3495678506087944,
+          "rtf": 0.10645586480824934,
+          "terms": {
+            "expected": 98,
+            "matched": 83
+          },
+          "numericEntities": {
+            "expected": 188,
+            "matched": 61
+          }
+        },
+        "category:ami-far-field": {
+          "segments": 117,
+          "audioSeconds": 2249.3546875,
+          "referenceWords": 7092,
+          "wer": 0.35673998871968415,
+          "rtf": 0.10572697484375733,
+          "terms": {
+            "expected": 18,
+            "matched": 17
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "country:mixed/unknown": {
+          "segments": 117,
+          "audioSeconds": 2249.3546875,
+          "referenceWords": 7092,
+          "wer": 0.35673998871968415,
+          "rtf": 0.10572697484375733,
+          "terms": {
+            "expected": 18,
+            "matched": 17
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "source:EN2002a": {
+          "segments": 63,
+          "audioSeconds": 1200.0,
+          "referenceWords": 4439,
+          "wer": 0.3798152737102951,
+          "rtf": 0.10783693906583328,
+          "terms": {
+            "expected": 4,
+            "matched": 4
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "source:ES2004a": {
+          "segments": 54,
+          "audioSeconds": 1049.3546875,
+          "referenceWords": 2653,
+          "wer": 0.31813041839427064,
+          "rtf": 0.10331410425133325,
+          "terms": {
+            "expected": 14,
+            "matched": 13
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "category:earnings22": {
+          "segments": 191,
+          "audioSeconds": 3600.0,
+          "referenceWords": 8759,
+          "wer": 0.3437607032766298,
+          "rtf": 0.10691129037999984,
+          "terms": {
+            "expected": 80,
+            "matched": 66
+          },
+          "numericEntities": {
+            "expected": 188,
+            "matched": 61
+          }
+        },
+        "country:India": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1129,
+          "wer": 0.14968999114260406,
+          "rtf": 0.10574824375499976,
+          "terms": {
+            "expected": 23,
+            "matched": 15
+          },
+          "numericEntities": {
+            "expected": 13,
+            "matched": 2
+          }
+        },
+        "source:4481221": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1129,
+          "wer": 0.14968999114260406,
+          "rtf": 0.10574824375499976,
+          "terms": {
+            "expected": 23,
+            "matched": 15
+          },
+          "numericEntities": {
+            "expected": 13,
+            "matched": 2
+          }
+        },
+        "country:China": {
+          "segments": 31,
+          "audioSeconds": 600.0,
+          "referenceWords": 1268,
+          "wer": 0.7681388012618297,
+          "rtf": 0.1047705097849998,
+          "terms": {
+            "expected": 1,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 8,
+            "matched": 2
+          }
+        },
+        "source:4475486": {
+          "segments": 31,
+          "audioSeconds": 600.0,
+          "referenceWords": 1268,
+          "wer": 0.7681388012618297,
+          "rtf": 0.1047705097849998,
+          "terms": {
+            "expected": 1,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 8,
+            "matched": 2
+          }
+        },
+        "country:United States": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1673,
+          "wer": 0.1972504482964734,
+          "rtf": 0.11147092708499959,
+          "terms": {
+            "expected": 29,
+            "matched": 29
+          },
+          "numericEntities": {
+            "expected": 70,
+            "matched": 28
+          }
+        },
+        "source:4462231": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1673,
+          "wer": 0.1972504482964734,
+          "rtf": 0.11147092708499959,
+          "terms": {
+            "expected": 29,
+            "matched": 29
+          },
+          "numericEntities": {
+            "expected": 70,
+            "matched": 28
+          }
+        },
+        "country:United Kingdom": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1490,
+          "wer": 0.13691275167785236,
+          "rtf": 0.10546956943833323,
+          "terms": {
+            "expected": 0,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 20,
+            "matched": 6
+          }
+        },
+        "source:4470684": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1490,
+          "wer": 0.13691275167785236,
+          "rtf": 0.10546956943833323,
+          "terms": {
+            "expected": 0,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 20,
+            "matched": 6
+          }
+        },
+        "country:Australia": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1638,
+          "wer": 0.5286935286935287,
+          "rtf": 0.10545977881833324,
+          "terms": {
+            "expected": 2,
+            "matched": 2
+          },
+          "numericEntities": {
+            "expected": 27,
+            "matched": 5
+          }
+        },
+        "source:4481952": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1638,
+          "wer": 0.5286935286935287,
+          "rtf": 0.10545977881833324,
+          "terms": {
+            "expected": 2,
+            "matched": 2
+          },
+          "numericEntities": {
+            "expected": 27,
+            "matched": 5
+          }
+        },
+        "country:Ghana": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1561,
+          "wer": 0.29980781550288277,
+          "rtf": 0.10854871339833343,
+          "terms": {
+            "expected": 25,
+            "matched": 20
+          },
+          "numericEntities": {
+            "expected": 50,
+            "matched": 18
+          }
+        },
+        "source:2020-03-0230487MTN-Ghana-2019-Annual-Results-Call": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1561,
+          "wer": 0.29980781550288277,
+          "rtf": 0.10854871339833343,
+          "terms": {
+            "expected": 25,
+            "matched": 20
+          },
+          "numericEntities": {
+            "expected": 50,
+            "matched": 18
+          }
+        }
+      },
+      "error": "Traceback (most recent call last):\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 350, in main\n    report[\"replay\"] = replay(engine, corpus, args.corpus.parent, args.soak_seconds, emit)\n                       ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 280, in replay\n    measurement = {\"elapsedSeconds\": elapsed, \"rssBytes\": tree_rss()}\n                                                          ~~~~~~~~^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 121, in tree_rss\n    rows = subprocess.check_output([\"/bin/ps\", \"-axo\", \"pid=,ppid=,rss=\"], text=True, timeout=5)\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 473, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n               **kwargs).stdout\n               ^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 555, in run\n    with Popen(*popenargs, **kwargs) as process:\n         ~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 1039, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                        pass_fds, cwd, env,\n                        ^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n                        gid, gids, uid, umask,\n                        ^^^^^^^^^^^^^^^^^^^^^^\n                        start_new_session, process_group)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 1990, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nPermissionError: [Errno 1] Operation not permitted: '/bin/ps'\n",
+      "artifactSha256": "067a97ce793d19d9d1ba050ae46f4a1b176c943e4111a1d491cb89bc3f0ea034",
+      "completedAccuracySegments": 308,
+      "referenceIntegrity": {
+        "inferredTimingWords": 1549,
+        "overlappingWords": 1911,
+        "warning": "Do not equate empty timestamp windows with acoustic silence; missing forced-alignment times can misassign reference words. Country is not a speaker accent label."
+      }
+    },
+    "parakeet-x86_64": {
+      "status": "INCOMPLETE",
+      "engine": "parakeet",
+      "machine": "x86_64",
+      "platform": "macOS-15.7.9-x86_64-i386-64bit-Mach-O",
+      "threads": 4,
+      "provider": "cpu",
+      "phase": "all",
+      "corpusSha256": "9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe",
+      "scoring": "Strict orthographic WER; number formatting not normalized; entity recall is supplementary",
+      "replacement": "NOT_AUTHORIZED",
+      "offlineControl": "EPERM: network denied by operating system",
+      "modelSha256": {
+        "parakeet/encoder.int8.onnx": "a32b12d17bbbc309d0686fbbcc2987b5e9b8333a7da83fa6b089f0a2acd651ab",
+        "parakeet/decoder.int8.onnx": "b6bb64963457237b900e496ee9994b59294526439fbcc1fecf705b31a15c6b4e",
+        "parakeet/joiner.int8.onnx": "7946164367946e7f9f29a122407c3252b680dbae9a51343eb2488d057c3c43d2"
+      },
+      "corpusScope": "all",
+      "license": "AMI: CC BY 4.0; Earnings22 transcripts/derived text: CC BY-SA 4.0",
+      "attribution": "AMI Consortium; Rev.com Earnings-22 (Del Rio et al., 2022)",
+      "loadSeconds": 14.62637208000001,
+      "accuracy": {
+        "all": {
+          "segments": 308,
+          "audioSeconds": 5849.3546875,
+          "referenceWords": 15851,
+          "wer": 0.348243013059113,
+          "rtf": 0.12661214579441624,
+          "terms": {
+            "expected": 98,
+            "matched": 83
+          },
+          "numericEntities": {
+            "expected": 188,
+            "matched": 67
+          }
+        },
+        "category:ami-far-field": {
+          "segments": 117,
+          "audioSeconds": 2249.3546875,
+          "referenceWords": 7092,
+          "wer": 0.3564579808234631,
+          "rtf": 0.15792603561371424,
+          "terms": {
+            "expected": 18,
+            "matched": 17
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "country:mixed/unknown": {
+          "segments": 117,
+          "audioSeconds": 2249.3546875,
+          "referenceWords": 7092,
+          "wer": 0.3564579808234631,
+          "rtf": 0.15792603561371424,
+          "terms": {
+            "expected": 18,
+            "matched": 17
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "source:EN2002a": {
+          "segments": 63,
+          "audioSeconds": 1200.0,
+          "referenceWords": 4439,
+          "wer": 0.3802658256364046,
+          "rtf": 0.16968176801833343,
+          "terms": {
+            "expected": 4,
+            "matched": 4
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "source:ES2004a": {
+          "segments": 54,
+          "audioSeconds": 1049.3546875,
+          "referenceWords": 2653,
+          "wer": 0.316622691292876,
+          "rtf": 0.14448265078531897,
+          "terms": {
+            "expected": 14,
+            "matched": 13
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "category:earnings22": {
+          "segments": 191,
+          "audioSeconds": 3600.0,
+          "referenceWords": 8759,
+          "wer": 0.34159150587966663,
+          "rtf": 0.10704657778083389,
+          "terms": {
+            "expected": 80,
+            "matched": 66
+          },
+          "numericEntities": {
+            "expected": 188,
+            "matched": 67
+          }
+        },
+        "country:India": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1129,
+          "wer": 0.1488042515500443,
+          "rtf": 0.11935056621500015,
+          "terms": {
+            "expected": 23,
+            "matched": 15
+          },
+          "numericEntities": {
+            "expected": 13,
+            "matched": 2
+          }
+        },
+        "source:4481221": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1129,
+          "wer": 0.1488042515500443,
+          "rtf": 0.11935056621500015,
+          "terms": {
+            "expected": 23,
+            "matched": 15
+          },
+          "numericEntities": {
+            "expected": 13,
+            "matched": 2
+          }
+        },
+        "country:China": {
+          "segments": 31,
+          "audioSeconds": 600.0,
+          "referenceWords": 1268,
+          "wer": 0.7712933753943217,
+          "rtf": 0.10889038884333407,
+          "terms": {
+            "expected": 1,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 8,
+            "matched": 2
+          }
+        },
+        "source:4475486": {
+          "segments": 31,
+          "audioSeconds": 600.0,
+          "referenceWords": 1268,
+          "wer": 0.7712933753943217,
+          "rtf": 0.10889038884333407,
+          "terms": {
+            "expected": 1,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 8,
+            "matched": 2
+          }
+        },
+        "country:United States": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1673,
+          "wer": 0.18947997609085476,
+          "rtf": 0.10984442108666713,
+          "terms": {
+            "expected": 29,
+            "matched": 29
+          },
+          "numericEntities": {
+            "expected": 70,
+            "matched": 33
+          }
+        },
+        "source:4462231": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1673,
+          "wer": 0.18947997609085476,
+          "rtf": 0.10984442108666713,
+          "terms": {
+            "expected": 29,
+            "matched": 29
+          },
+          "numericEntities": {
+            "expected": 70,
+            "matched": 33
+          }
+        },
+        "country:United Kingdom": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1490,
+          "wer": 0.13758389261744966,
+          "rtf": 0.10087600272666805,
+          "terms": {
+            "expected": 0,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 20,
+            "matched": 6
+          }
+        },
+        "source:4470684": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1490,
+          "wer": 0.13758389261744966,
+          "rtf": 0.10087600272666805,
+          "terms": {
+            "expected": 0,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 20,
+            "matched": 6
+          }
+        },
+        "country:Australia": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1638,
+          "wer": 0.5293040293040293,
+          "rtf": 0.1014219974083331,
+          "terms": {
+            "expected": 2,
+            "matched": 2
+          },
+          "numericEntities": {
+            "expected": 27,
+            "matched": 5
+          }
+        },
+        "source:4481952": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1638,
+          "wer": 0.5293040293040293,
+          "rtf": 0.1014219974083331,
+          "terms": {
+            "expected": 2,
+            "matched": 2
+          },
+          "numericEntities": {
+            "expected": 27,
+            "matched": 5
+          }
+        },
+        "country:Ghana": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1561,
+          "wer": 0.29276105060858426,
+          "rtf": 0.10189609040500083,
+          "terms": {
+            "expected": 25,
+            "matched": 20
+          },
+          "numericEntities": {
+            "expected": 50,
+            "matched": 19
+          }
+        },
+        "source:2020-03-0230487MTN-Ghana-2019-Annual-Results-Call": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1561,
+          "wer": 0.29276105060858426,
+          "rtf": 0.10189609040500083,
+          "terms": {
+            "expected": 25,
+            "matched": 20
+          },
+          "numericEntities": {
+            "expected": 50,
+            "matched": 19
+          }
+        }
+      },
+      "error": "Traceback (most recent call last):\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 350, in main\n    report[\"replay\"] = replay(engine, corpus, args.corpus.parent, args.soak_seconds, emit)\n                       ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 280, in replay\n    measurement = {\"elapsedSeconds\": elapsed, \"rssBytes\": tree_rss()}\n                                                          ~~~~~~~~^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 121, in tree_rss\n    rows = subprocess.check_output([\"/bin/ps\", \"-axo\", \"pid=,ppid=,rss=\"], text=True, timeout=5)\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 473, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n               **kwargs).stdout\n               ^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 555, in run\n    with Popen(*popenargs, **kwargs) as process:\n         ~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 1039, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                        pass_fds, cwd, env,\n                        ^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n                        gid, gids, uid, umask,\n                        ^^^^^^^^^^^^^^^^^^^^^^\n                        start_new_session, process_group)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 1990, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nPermissionError: [Errno 1] Operation not permitted: '/bin/ps'\n",
+      "artifactSha256": "25e0b48ad1288175134a2cea4bb4ebbeb1e1e060c931e230ba49689002b160ea",
+      "completedAccuracySegments": 308,
+      "referenceIntegrity": {
+        "inferredTimingWords": 1549,
+        "overlappingWords": 1911,
+        "warning": "Do not equate empty timestamp windows with acoustic silence; missing forced-alignment times can misassign reference words. Country is not a speaker accent label."
+      }
+    },
+    "whisper-arm64": {
+      "status": "INCOMPLETE",
+      "engine": "whisper",
+      "machine": "arm64",
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "threads": 4,
+      "provider": "cpu",
+      "phase": "all",
+      "corpusSha256": "9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe",
+      "scoring": "Strict orthographic WER; number formatting not normalized; entity recall is supplementary",
+      "replacement": "NOT_AUTHORIZED",
+      "offlineControl": "EPERM: network denied by operating system",
+      "modelSha256": "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f",
+      "adapterSha256": "b646235ce6cdc48f4ed75619c59db32c74c6cf7b2a45631c2265f5b490e70a79",
+      "corpusScope": "all",
+      "license": "AMI: CC BY 4.0; Earnings22 transcripts/derived text: CC BY-SA 4.0",
+      "attribution": "AMI Consortium; Rev.com Earnings-22 (Del Rio et al., 2022)",
+      "loadSeconds": 0.095044375,
+      "error": "Traceback (most recent call last):\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 71, in receive\n    result = self.replies.get(timeout=timeout)\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/queues.py\", line 112, in get\n    raise Empty\n_queue.Empty\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 347, in main\n    report[\"accuracy\"] = accuracy(engine, corpus, args.corpus.parent, emit)\n                         ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 195, in accuracy\n    result = engine.receive(TIMEOUT)\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 76, in receive\n    raise TimeoutError(\"Engine response exceeded timeout\")\nTimeoutError: Engine response exceeded timeout\n",
+      "artifactSha256": "e94e7f6079caa2f649ef823aabaf5ce5af085d329d99eeb470352e9f5086e553",
+      "completedAccuracySegments": 12,
+      "referenceIntegrity": {
+        "inferredTimingWords": 0,
+        "overlappingWords": 128,
+        "warning": "Do not equate empty timestamp windows with acoustic silence; missing forced-alignment times can misassign reference words. Country is not a speaker accent label."
+      }
+    },
+    "whisper-x86_64": {
+      "status": "INCOMPLETE",
+      "engine": "whisper",
+      "machine": "x86_64",
+      "platform": "macOS-15.7.9-x86_64-i386-64bit-Mach-O",
+      "threads": 4,
+      "provider": "cpu",
+      "phase": "all",
+      "corpusSha256": "9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe",
+      "scoring": "Strict orthographic WER; number formatting not normalized; entity recall is supplementary",
+      "replacement": "NOT_AUTHORIZED",
+      "offlineControl": "EPERM: network denied by operating system",
+      "modelSha256": "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f",
+      "adapterSha256": "7f87eca53c237b30a5cde429f86bf49f817fcc5120f3460f2b427799439354ec",
+      "corpusScope": "all",
+      "license": "AMI: CC BY 4.0; Earnings22 transcripts/derived text: CC BY-SA 4.0",
+      "attribution": "AMI Consortium; Rev.com Earnings-22 (Del Rio et al., 2022)",
+      "loadSeconds": 0.132954831,
+      "accuracy": {
+        "all": {
+          "segments": 308,
+          "audioSeconds": 5849.3546875,
+          "referenceWords": 15851,
+          "wer": 0.44009841650369064,
+          "rtf": 0.165963649471205,
+          "terms": {
+            "expected": 98,
+            "matched": 79
+          },
+          "numericEntities": {
+            "expected": 188,
+            "matched": 12
+          }
+        },
+        "category:ami-far-field": {
+          "segments": 117,
+          "audioSeconds": 2249.3546875,
+          "referenceWords": 7092,
+          "wer": 0.49266779469825156,
+          "rtf": 0.193688496092282,
+          "terms": {
+            "expected": 18,
+            "matched": 16
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "country:mixed/unknown": {
+          "segments": 117,
+          "audioSeconds": 2249.3546875,
+          "referenceWords": 7092,
+          "wer": 0.49266779469825156,
+          "rtf": 0.193688496092282,
+          "terms": {
+            "expected": 18,
+            "matched": 16
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "source:EN2002a": {
+          "segments": 63,
+          "audioSeconds": 1200.0,
+          "referenceWords": 4439,
+          "wer": 0.5075467447623339,
+          "rtf": 0.26529491703083335,
+          "terms": {
+            "expected": 4,
+            "matched": 3
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "source:ES2004a": {
+          "segments": 54,
+          "audioSeconds": 1049.3546875,
+          "referenceWords": 2653,
+          "wer": 0.4677723332076894,
+          "rtf": 0.111802260532619,
+          "terms": {
+            "expected": 14,
+            "matched": 13
+          },
+          "numericEntities": {
+            "expected": 0,
+            "matched": 0
+          }
+        },
+        "category:earnings22": {
+          "segments": 191,
+          "audioSeconds": 3600.0,
+          "referenceWords": 8759,
+          "wer": 0.39753396506450506,
+          "rtf": 0.14864059010805555,
+          "terms": {
+            "expected": 80,
+            "matched": 63
+          },
+          "numericEntities": {
+            "expected": 188,
+            "matched": 12
+          }
+        },
+        "country:India": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1129,
+          "wer": 0.18954827280779452,
+          "rtf": 0.13848360832166667,
+          "terms": {
+            "expected": 23,
+            "matched": 14
+          },
+          "numericEntities": {
+            "expected": 13,
+            "matched": 1
+          }
+        },
+        "source:4481221": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1129,
+          "wer": 0.18954827280779452,
+          "rtf": 0.13848360832166667,
+          "terms": {
+            "expected": 23,
+            "matched": 14
+          },
+          "numericEntities": {
+            "expected": 13,
+            "matched": 1
+          }
+        },
+        "country:China": {
+          "segments": 31,
+          "audioSeconds": 600.0,
+          "referenceWords": 1268,
+          "wer": 0.7894321766561514,
+          "rtf": 0.12734234470333333,
+          "terms": {
+            "expected": 1,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 8,
+            "matched": 0
+          }
+        },
+        "source:4475486": {
+          "segments": 31,
+          "audioSeconds": 600.0,
+          "referenceWords": 1268,
+          "wer": 0.7894321766561514,
+          "rtf": 0.12734234470333333,
+          "terms": {
+            "expected": 1,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 8,
+            "matched": 0
+          }
+        },
+        "country:United States": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1673,
+          "wer": 0.2665869695158398,
+          "rtf": 0.15387597666666666,
+          "terms": {
+            "expected": 29,
+            "matched": 28
+          },
+          "numericEntities": {
+            "expected": 70,
+            "matched": 2
+          }
+        },
+        "source:4462231": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1673,
+          "wer": 0.2665869695158398,
+          "rtf": 0.15387597666666666,
+          "terms": {
+            "expected": 29,
+            "matched": 28
+          },
+          "numericEntities": {
+            "expected": 70,
+            "matched": 2
+          }
+        },
+        "country:United Kingdom": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1490,
+          "wer": 0.1825503355704698,
+          "rtf": 0.1782603163933333,
+          "terms": {
+            "expected": 0,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 20,
+            "matched": 2
+          }
+        },
+        "source:4470684": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1490,
+          "wer": 0.1825503355704698,
+          "rtf": 0.1782603163933333,
+          "terms": {
+            "expected": 0,
+            "matched": 0
+          },
+          "numericEntities": {
+            "expected": 20,
+            "matched": 2
+          }
+        },
+        "country:Australia": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1638,
+          "wer": 0.5714285714285714,
+          "rtf": 0.14712729959999998,
+          "terms": {
+            "expected": 2,
+            "matched": 2
+          },
+          "numericEntities": {
+            "expected": 27,
+            "matched": 3
+          }
+        },
+        "source:4481952": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1638,
+          "wer": 0.5714285714285714,
+          "rtf": 0.14712729959999998,
+          "terms": {
+            "expected": 2,
+            "matched": 2
+          },
+          "numericEntities": {
+            "expected": 27,
+            "matched": 3
+          }
+        },
+        "country:Ghana": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1561,
+          "wer": 0.39269698910954515,
+          "rtf": 0.14675399496333333,
+          "terms": {
+            "expected": 25,
+            "matched": 19
+          },
+          "numericEntities": {
+            "expected": 50,
+            "matched": 4
+          }
+        },
+        "source:2020-03-0230487MTN-Ghana-2019-Annual-Results-Call": {
+          "segments": 32,
+          "audioSeconds": 600.0,
+          "referenceWords": 1561,
+          "wer": 0.39269698910954515,
+          "rtf": 0.14675399496333333,
+          "terms": {
+            "expected": 25,
+            "matched": 19
+          },
+          "numericEntities": {
+            "expected": 50,
+            "matched": 4
+          }
+        }
+      },
+      "error": "Traceback (most recent call last):\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 350, in main\n    report[\"replay\"] = replay(engine, corpus, args.corpus.parent, args.soak_seconds, emit)\n                       ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 280, in replay\n    measurement = {\"elapsedSeconds\": elapsed, \"rssBytes\": tree_rss()}\n                                                          ~~~~~~~~^^\n  File \"/Users/runner/work/polarbear/polarbear/apps/desktop/scripts/caption-evaluation/qualify.py\", line 121, in tree_rss\n    rows = subprocess.check_output([\"/bin/ps\", \"-axo\", \"pid=,ppid=,rss=\"], text=True, timeout=5)\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 473, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n               **kwargs).stdout\n               ^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 555, in run\n    with Popen(*popenargs, **kwargs) as process:\n         ~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 1039, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                        pass_fds, cwd, env,\n                        ^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n                        gid, gids, uid, umask,\n                        ^^^^^^^^^^^^^^^^^^^^^^\n                        start_new_session, process_group)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py\", line 1990, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nPermissionError: [Errno 1] Operation not permitted: '/bin/ps'\n",
+      "artifactSha256": "f4140c96402177464eb18d89ec603b9546aeac4a6878d33dd31e46f83f95d9c1",
+      "completedAccuracySegments": 308,
+      "referenceIntegrity": {
+        "inferredTimingWords": 1549,
+        "overlappingWords": 1911,
+        "warning": "Do not equate empty timestamp windows with acoustic silence; missing forced-alignment times can misassign reference words. Country is not a speaker accent label."
+      }
+    }
+  }
+}
