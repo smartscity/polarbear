@@ -5,7 +5,8 @@ import { useUserSettings } from "../../shared/settings/useUserSettings";
 import { updateUserSettings } from "../../shared/settings/userSettings";
 import { TauriCommandError } from "../../shared/tauri/invokeTauri";
 import { captionRequest, type CaptionSegment, type CaptionSession, type CaptionStatus } from "./captionAdapter";
-import { executeCaptionCommand } from "./captionCommands";
+import { changeCaptionSource, executeCaptionCommand } from "./captionCommands";
+import { CaptionSourceSelect } from "./CaptionSourceSelect";
 import { captionTimestamp } from "./transcript";
 import { applyThemeTokens } from "../theme/themeTokens";
 import "./caption.css";
@@ -78,6 +79,7 @@ export function CaptionPanel() {
   const button = (label: string, icon: React.ReactNode, action: () => void, disabled = false) =>
     <button type="button" aria-label={t(label)} title={t(label)} onClick={action} disabled={disabled || busy}>{icon}</button>;
   const preferences = settings.caption;
+  const source = active && (status.source === "system" || status.source === "microphone") ? status.source : preferences.source;
   return <main className="caption-panel">
     <header className="caption-header">
       {selected && button("caption.back", <ArrowLeft size={18} />, () => setSelected(undefined))}
@@ -95,6 +97,13 @@ export function CaptionPanel() {
         <button type="button" popoverTarget="caption-options" aria-label={t("caption.options")} title={t("caption.options")}><MoreHorizontal size={18} /></button>
       </div>
     </header>
+    {!history && <div className="caption-source-bar">
+      <CaptionSourceSelect source={source} disabled={busy} onChange={(next) => perform(async () => {
+        await changeCaptionSource(next);
+        setStatus(await captionRequest<"status">({ action: "status" }));
+        setFollow(true);
+      })} />
+    </div>}
     <div className="caption-options caption-options-popover" id="caption-options" popover="auto">
       {button("caption.pin", <Pin size={18} fill={preferences.pinned ? "currentColor" : "none"} />, () => {
         try { updateUserSettings({ caption: { ...preferences, pinned: !preferences.pinned } }); } catch (reason) { fail(reason); }
@@ -141,7 +150,10 @@ export function CaptionPanel() {
       <div className="caption-transcript" ref={scroll} onScroll={() => {
         const el = scroll.current; if (el) setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < 32);
       }}>
-        {!segments.length && <p className="caption-empty">{t(active ? "caption.listening" : "caption.empty")}</p>}
+        {!segments.length && !status?.partial && <div className="caption-empty">
+          <p>{t(active ? "caption.listening" : "caption.empty")}</p>
+          {!history && <p className="caption-source-hint">{t(`caption.sourceHint.${source}`)}</p>}
+        </div>}
         {segments.map((segment) => <article key={segment.id}>
           <time>{captionTimestamp(segment.startMs)}</time><p lang="en">{segment.english}</p>
           {preferences.showChinese && <p lang="zh-CN" className="caption-chinese">{segment.chinese || t(`caption.translation.${segment.translationStatus}`)}</p>}

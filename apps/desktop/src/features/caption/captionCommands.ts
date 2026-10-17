@@ -1,7 +1,20 @@
 import type { AppCommand } from "../../shared/commands/appCommandTypes";
-import { readUserSettings } from "../../shared/settings/userSettings";
-import { captionRequest } from "./captionAdapter";
+import { readUserSettings, updateUserSettings } from "../../shared/settings/userSettings";
+import { captionRequest, type CaptionSource } from "./captionAdapter";
 import { formatTranscript } from "./transcript";
+
+export async function changeCaptionSource(source: CaptionSource) {
+  const status = await captionRequest<"status">({ action: "status" });
+  const active = ["starting", "capturing", "paused"].includes(status.state);
+  if (active && status.source !== source) {
+    // Finish the old transcript before opening a session with a different source.
+    await captionRequest({ action: "stop" });
+  }
+  updateUserSettings({ caption: { ...readUserSettings().caption, source } });
+  if (active && status.source !== source && status.state !== "paused") {
+    await captionRequest({ action: "start", source, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+  }
+}
 
 export async function executeCaptionCommand(command: AppCommand, sessionId?: string, format: "txt" | "md" | "srt" = "txt") {
   if (command === "caption.history") return captionRequest({ action: "open", history: true });

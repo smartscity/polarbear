@@ -3,6 +3,8 @@ import { test, expect, type Page } from "@playwright/test";
 async function initialize(page: Page, history = false) {
   await page.addInitScript(() => {
     let state = "capturing";
+    let source = "system";
+    let partial = "An unfinished sentence";
     let viewRevision = 0;
     let historyRequested = false;
     const rows = [
@@ -10,18 +12,19 @@ async function initialize(page: Page, history = false) {
       { id: 2, sessionId: "fixture", startMs: 2300, endMs: 4000, english: "The deadline is Friday.", chinese: null, translationStatus: "pending" },
     ];
     const calls: unknown[] = [];
-    Object.assign(window, { __openCaptionHistory: () => { historyRequested = true; viewRevision += 1; }, __captionCalls: calls, __TAURI_INTERNALS__: {
-      invoke: async (command: string, args: { request: { action: string } }) => {
+    Object.assign(window, { __emptyCaption: () => { rows.length = 0; partial = ""; }, __openCaptionHistory: () => { historyRequested = true; viewRevision += 1; }, __captionCalls: calls, __TAURI_INTERNALS__: {
+      invoke: async (command: string, args: { request: { action: string; source?: string } }) => {
         if (command !== "caption_request") throw new Error("Unexpected IPC");
         const request = args.request;
         calls.push(request);
         switch (request.action) {
-          case "status": return { sessionId: "fixture", state, source: "system", partial: "An unfinished sentence", elapsedMs: 5000, error: null, viewRevision, historyRequested };
+          case "status": return { sessionId: "fixture", state, source, partial, elapsedMs: 5000, audioLevel: 0, error: null, viewRevision, historyRequested };
           case "tail": case "segments": case "snapshot": return rows;
           case "list": return [{ id: "fixture", title: "Fixture meeting", place: "Room A", startedAt: 1700000000000, endedAt: null, source: "system", status: state, count: 2 }];
           case "pause": state = "paused"; return;
           case "resume": state = "capturing"; return;
           case "stop": state = "stopped"; return;
+          case "start": source = request.source ?? source; state = "capturing"; return;
           default: return;
         }
       },
@@ -41,6 +44,23 @@ test("copies finalized bilingual content without partial text and pauses indepen
   await expect(page.locator(".caption-state")).toHaveText("Paused");
   await page.getByRole("button", { name: "Pause / resume captions" }).click();
   await expect(page.locator(".caption-state")).toHaveText("Listening");
+});
+
+test("makes the active source explicit and switches to microphone without losing the stop boundary", async ({ page }) => {
+  await initialize(page);
+  await page.evaluate(() => (window as unknown as { __emptyCaption: () => void }).__emptyCaption());
+  const source = page.getByRole("combobox", { name: "Audio source", exact: true });
+  await expect(source).toHaveValue("system");
+  await expect(page.getByText(/Listening to computer playback, not your microphone/)).toBeVisible();
+  await source.selectOption("microphone");
+  await expect(source).toHaveValue("microphone");
+  await expect(page.getByText(/Listening through the microphone/)).toBeVisible();
+  const calls = await page.evaluate(() => (window as unknown as { __captionCalls: { action: string; source?: string }[] }).__captionCalls.filter(call => call.action === "stop" || call.action === "start"));
+  expect(calls.map(call => call.action)).toEqual(["stop", "start"]);
+  expect(calls[1].source).toBe("microphone");
+  await page.setViewportSize({ width: 360, height: 300 });
+  await page.screenshot({ path: "test-results/caption-source-narrow.png" });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("opens history without starting audio and exports through the native boundary", async ({ page }) => {

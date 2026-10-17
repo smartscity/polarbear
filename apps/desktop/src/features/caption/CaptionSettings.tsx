@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { History } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
-import { updateUserSettings } from "../../shared/settings/userSettings";
 import { TauriCommandError } from "../../shared/tauri/invokeTauri";
-import { executeCaptionCommand } from "./captionCommands";
+import { changeCaptionSource, executeCaptionCommand } from "./captionCommands";
+import { CaptionSourceSelect } from "./CaptionSourceSelect";
 import { captionRequest, type CaptionStatus } from "./captionAdapter";
 
 export function CaptionSettings() {
@@ -32,9 +32,10 @@ export function CaptionSettings() {
   return <section className="caption-settings">
     <label className="reading-setting"><span><strong>{t("caption.title")}</strong><small>{t("caption.privacy")}</small></span>
       <input type="checkbox" role="switch" checked={Boolean(active)} disabled={busy} onChange={() => run("caption.toggle")} /></label>
-    <label>{t("caption.source")}<select value={caption.source} disabled={Boolean(active)} onChange={(event) => {
-      try { updateUserSettings({ caption: { ...caption, source: event.target.value === "microphone" ? "microphone" : "system" } }); } catch { setError("caption.operationFailed"); }
-    }}><option value="system">{t("caption.system")}</option><option value="microphone">{t("caption.microphone")}</option></select></label>
+    <CaptionSourceSelect source={caption.source} disabled={Boolean(active) || busy} onChange={(source) => {
+      setBusy(true); setError("");
+      void changeCaptionSource(source).catch((reason: unknown) => setError(reason instanceof TauriCommandError ? reason.code : "caption.operationFailed")).finally(() => setBusy(false));
+    }} />
     <button type="button" onClick={() => run("caption.history")} disabled={busy}><History size={16} /> {t("caption.history")}</button>
     {(error || status?.error) && <p role="alert">{t(error || `caption.${status?.error}`)}</p>}
   </section>;

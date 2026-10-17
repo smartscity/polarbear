@@ -1,6 +1,10 @@
 .caption-panel { --caption-bg: var(--color-editor-background); --caption-fg: var(--color-text-primary); --caption-muted: var(--color-text-secondary); --caption-line: var(--color-border); display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: var(--caption-bg); color: var(--caption-fg); font-size: 14px; }
 .caption-header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--caption-line); }
 .caption-actions { display: flex; gap: 4px; margin-left: auto; }
+.caption-source-bar { padding: 6px 12px; border-bottom: 1px solid var(--caption-line); }
+.caption-source-select { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.caption-source-select select { flex: 1; max-width: 260px; }
+.caption-transcript .caption-source-hint { font-size: 13px; color: var(--caption-muted); max-width: 60ch; }
 .caption-panel button { color: inherit; background: transparent; border: 1px solid var(--caption-line); border-radius: 4px; min-height: 30px; padding: 5px 8px; display: inline-flex; align-items: center; gap: 6px; }
 .caption-panel button:hover { background: color-mix(in srgb, var(--caption-fg) 8%, transparent); }
 .caption-panel button:focus-visible, .caption-panel input:focus-visible, .caption-panel select:focus-visible { outline: 2px solid #448bcd; outline-offset: 1px; }

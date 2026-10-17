@@ -28,7 +28,9 @@ translation fails. No raw audio is written to history or passed to Memory/Vocab.
 Capture stops on explicit pause/stop, panel/main close, quit, reported device loss,
 sleep/session lock and panel heartbeat loss. Native behavior for these transitions
 still requires real OS acceptance. Acquisition is never restarted by saved settings
-or history recovery. Source changes require stopping first in this preview.
+or history recovery. Changing the source in the caption window finalizes the old
+session before starting a new one. Changing a paused session's source stops it
+without implicitly resuming capture.
 
 ## Assets and reproducibility
 
@@ -215,6 +217,30 @@ None of QG-01 through QG-10 is globally declared PASS merely because an individu
 unit, browser or build check passed. Keep this release a preview while any
 mandatory gate remains open. No live audio may be captured covertly for acceptance.
 
+## Audio source visibility follow-up (2026-10-17)
+
+The installed 0.10.2 app showed `Listening` and an empty transcript while the user
+spoke to the computer. Read-only session metadata confirmed `source=system`,
+`status=capturing` and zero committed segments. ScreenCaptureKit system capture
+does not include the AVAudioEngine microphone input. This observation establishes
+a source-selection mismatch, not a translation-engine failure or a microphone
+capture success. No transcript content was inspected and no recording was started
+by the verification tools.
+
+The caption window now displays its actual active audio source and provides the
+same localized selector as Settings. Empty-state hints distinguish computer
+playback from microphone input. Switching an active source waits for stop before
+persisting the preference and starting the next session; paused/inactive sessions
+never resume implicitly. Permission/start failures remain explicit errors rather
+than falling back to another recording source. Simultaneous sources remain absent.
+
+Verification: desktop typecheck, ESLint, 11 caption command/transcript unit tests,
+seven caption browser tests and the Vite production build passed. Browser tests
+check source visibility, stop/start ordering, source-specific hints and a 360 by
+300 viewport; capture IPC is mocked. The narrow screenshot was visually inspected.
+These checks do not verify microphone permissions, live capture, native translation
+delivery or the installed application. The installed app was not replaced.
+
 ## Native manual acceptance procedure
 
 1. Use a consented prerecorded English fixture and a separate test installation.
@@ -230,6 +256,9 @@ mandatory gate remains open. No live audio may be captured covertly for acceptan
 6. Repeat using Microphone with a consented room fixture. Deny/revoke permission,
    unplug the device, lock, sleep, close the panel and quit during recognition.
    Verify acquisition stops and wake/relaunch never resumes it automatically.
+   Switch from System to Microphone in the caption window: verify the old session
+   remains in history, the selected source matches the new session, and English
+   followed by Chinese appears. Repeat while paused and verify no automatic start.
 7. Reopen history after restart; verify both languages, search, rename/place,
    translation retry, delete, and no raw-audio files in the managed data directory.
 8. Run the declared one-hour corpus on both supported hardware profiles; record
