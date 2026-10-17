@@ -1,0 +1,39 @@
+import hashlib
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from prepare import MODEL_SHA256, METADATA_GIT_BLOBS, verify_model
+
+
+class IntegrityTest(unittest.TestCase):
+    def test_pinned_model_digest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "encoder.int8.onnx"
+            path.write_bytes(b"fixture")
+            digest = hashlib.sha256(b"fixture").hexdigest()
+            with patch.dict(MODEL_SHA256, {"parakeet/encoder.int8.onnx": digest}):
+                self.assertEqual(verify_model("parakeet", path), digest)
+
+    def test_corrupt_model_is_rejected_before_inference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "encoder.int8.onnx"
+            path.write_bytes(b"not the published model")
+            with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                verify_model("parakeet", path)
+
+    def test_token_table_uses_publisher_git_blob(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tokens.txt"
+            path.write_bytes(b"fixture")
+            blob = hashlib.sha1(b"blob 7\0fixture").hexdigest()
+            with patch.dict(METADATA_GIT_BLOBS, {"zipformer/tokens.txt": blob}):
+                verify_model("zipformer", path)
+                path.write_bytes(b"changed")
+                with self.assertRaisesRegex(ValueError, "Git blob mismatch"):
+                    verify_model("zipformer", path)
+
+
+if __name__ == "__main__":
+    unittest.main()

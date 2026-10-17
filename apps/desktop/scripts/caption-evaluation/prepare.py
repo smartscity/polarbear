@@ -1,0 +1,122 @@
+"""Explicitly download pinned evaluation assets; never called by the application."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+from urllib.parse import urlencode
+
+
+MODELS = {
+    "parakeet": {
+        "repo": "csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8",
+        "revision": "1ab9323565ddb038682214b292f588070a538ce2",
+        "files": ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt", "README.md"],
+    },
+    "zipformer": {
+        "repo": "csukuangfj/sherpa-onnx-streaming-zipformer-en-2023-06-26",
+        "revision": "672fbf1b30579d6585301139bb363f42a0ad4a24",
+        "files": [f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx" for part in ("encoder", "decoder", "joiner")]
+        + ["tokens.txt", "README.md"],
+    },
+}
+
+MODEL_SHA256 = {
+    "parakeet/encoder.int8.onnx": "a32b12d17bbbc309d0686fbbcc2987b5e9b8333a7da83fa6b089f0a2acd651ab",
+    "parakeet/decoder.int8.onnx": "b6bb64963457237b900e496ee9994b59294526439fbcc1fecf705b31a15c6b4e",
+    "parakeet/joiner.int8.onnx": "7946164367946e7f9f29a122407c3252b680dbae9a51343eb2488d057c3c43d2",
+    "zipformer/encoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx": "563fde436d16cf7607cf408cd6b30909819d03162652ef389c2450ced3f45ac1",
+    "zipformer/decoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx": "98da299f471e38bb4e1a8df579b8cc9122d6039576a77e357b3c60f17dd83b02",
+    "zipformer/joiner-epoch-99-avg-1-chunk-16-left-128.int8.onnx": "d944208d660d67c8d72cd2acaeac971fa5ceb8c80e76c1968148846fedd6e297",
+}
+METADATA_GIT_BLOBS = {
+    "parakeet/tokens.txt": "f0742785f6073e80b911964c455b05f3609bf23b",
+    "parakeet/README.md": "8f4438d2a6e332f6ec5a107421451e422089d33a",
+    "zipformer/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
+    "zipformer/README.md": "cb864962f371aa02e5716610cf4afc480b166a16",
+}
+
+
+def verify_model(name, path):
+    with path.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    expected = MODEL_SHA256.get(f"{name}/{path.name}")
+    if expected and digest != expected:
+        raise ValueError(f"Publisher SHA-256 mismatch: {name}/{path.name}")
+    expected_blob = METADATA_GIT_BLOBS.get(f"{name}/{path.name}")
+    if expected_blob:
+        data = path.read_bytes()
+        blob = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
+        if blob != expected_blob:
+            raise ValueError(f"Publisher Git blob mismatch: {name}/{path.name}")
+    return digest
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("directory", type=Path)
+    parser.add_argument("--model", choices=MODELS)
+    parser.add_argument("--samples", action="store_true")
+    args = parser.parse_args()
+    args.directory.mkdir(parents=True, exist_ok=True)
+    if args.samples:
+        prepare_samples(args.directory)
+        return
+    manifest = args.directory / "assets.json"
+    evidence = json.loads(manifest.read_text()) if manifest.exists() else []
+    for name in ("zipformer", "parakeet"):
+        model = MODELS[name]
+        if args.model and args.model != name:
+            continue
+        directory = args.directory / name
+        directory.mkdir(exist_ok=True)
+        for filename in model["files"]:
+            target = directory / filename
+            url = f"https://huggingface.co/{model['repo']}/resolve/{model['revision']}/{filename}"
+            if not target.exists():
+                print(f"Downloading {name}/{filename}", flush=True)
+                partial = target.with_suffix(target.suffix + ".partial")
+                subprocess.run([
+                    "/usr/bin/curl", "--fail", "--location", "--silent", "--show-error",
+                    "--connect-timeout", "20", "--max-time", "1800", "--retry", "1", "--continue-at", "-",
+                    "--output", str(partial), url,
+                ], check=True, timeout=3650)
+                partial.replace(target)
+            digest = verify_model(name, target)
+            evidence = [entry for entry in evidence if (entry["model"], entry["file"]) != (name, filename)]
+            evidence.append({"model": name, "file": filename, "url": url,
+                             "bytes": target.stat().st_size, "sha256": digest})
+            manifest.write_text(json.dumps(evidence, indent=2) + "\n")
+            print(f"Recorded download digest: {digest}; bytes={target.stat().st_size}", flush=True)
+
+
+def prepare_samples(directory):
+    # Predeclared, evenly spaced corpus indices; no filtering by model output.
+    manifest = directory / "samples.json"
+    samples = json.loads(manifest.read_text()) if manifest.exists() else []
+    for index in range(0, 2620, 131):
+        if any(sample["index"] == index for sample in samples):
+            continue
+        query = urlencode({"dataset": "openslr/librispeech_asr", "config": "clean",
+                           "split": "test", "offset": index, "length": 1})
+        response = subprocess.check_output([
+            "/usr/bin/curl", "--fail", "--location", "--silent", "--show-error",
+            "--max-time", "30", "--retry", "2", f"https://datasets-server.huggingface.co/rows?{query}",
+        ], timeout=100)
+        row = json.loads(response)["rows"][0]["row"]
+        filename = row["id"] + ".flac"
+        target = directory / filename
+        subprocess.run([
+            "/usr/bin/curl", "--fail", "--location", "--silent", "--show-error",
+            "--max-time", "60", "--retry", "2", "--output", str(target), row["audio"][0]["src"],
+        ], check=True, timeout=190)
+        samples.append({"id": row["id"], "index": index, "file": filename,
+                        "speaker": row["speaker_id"], "reference": row["text"],
+                        "sha256": hashlib.sha256(target.read_bytes()).hexdigest()})
+        (directory / "samples.json").write_text(json.dumps(samples, indent=2) + "\n")
+        print(f"Sample {len(samples)}/20: {row['id']}, speaker={row['speaker_id']}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

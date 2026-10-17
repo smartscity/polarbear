@@ -1,0 +1,1057 @@
+{
+  "engine": "zipformer",
+  "machine": "x86_64",
+  "platform": "macOS-26.5.1-x86_64-i386-64bit-Mach-O",
+  "threads": 4,
+  "provider": "cpu",
+  "loadSeconds": 3.9129152899986366,
+  "runtimeVersion": "1.13.8",
+  "scoring": "lowercase, punctuation removed, apostrophes retained; no number expansion",
+  "records": [
+    {
+      "id": "6930-75918-0000",
+      "speaker": 6930,
+      "condition": "clean",
+      "audioSeconds": 3.505,
+      "reference": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS",
+      "text": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENT",
+      "decodeSeconds": 0.3283575510031369,
+      "edits": 1,
+      "referenceWords": 8,
+      "wer": 0.125
+    },
+    {
+      "id": "1320-122612-0011",
+      "speaker": 1320,
+      "condition": "clean",
+      "audioSeconds": 13.695,
+      "reference": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLEW THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECESSARY",
+      "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECESSARY",
+      "decodeSeconds": 1.3465805469968473,
+      "edits": 1,
+      "referenceWords": 43,
+      "wer": 0.023255813953488372
+    },
+    {
+      "id": "7729-102255-0001",
+      "speaker": 7729,
+      "condition": "clean",
+      "audioSeconds": 3.45,
+      "reference": "THIS WAS AT THE MARCH ELECTION EIGHTEEN FIFTY FIVE",
+      "text": "THIS WAS AT THE MARCH ELECTION EIGHTEEN FIFTY FIVE",
+      "decodeSeconds": 0.37225389100058237,
+      "edits": 0,
+      "referenceWords": 9,
+      "wer": 0.0
+    },
+    {
+      "id": "3575-170457-0024",
+      "speaker": 3575,
+      "condition": "clean",
+      "audioSeconds": 12.255,
+      "reference": "I DON'T ALWAYS SUCCEED FOR SOMETIMES WHEN I'M TEACHING OR SEWING I WOULD RATHER BE READING OR WRITING BUT I TRY TO DENY MYSELF AND MY FATHER'S APPROBATION AMPLY REWARDED ME FOR THE PRIVATION",
+      "text": "I DON'T ALWAYS SUCCEED FOR SOMETIMES WHEN I'M TEACHING OR SEWING I WOULD RATHER BE READING A WRITING BUT I TRY TO DENY MYSELF AND MY FATHER'S APPROBATION AMPLY REWARDED ME FOR THE PRIVATION",
+      "decodeSeconds": 1.1684249989993987,
+      "edits": 1,
+      "referenceWords": 34,
+      "wer": 0.029411764705882353
+    },
+    {
+      "id": "2961-961-0004",
+      "speaker": 2961,
+      "condition": "clean",
+      "audioSeconds": 11.48,
+      "reference": "LISTEN THEN SOCRATES TO A TALE OF SOLON'S WHO BEING THE FRIEND OF DROPIDAS MY GREAT GRANDFATHER TOLD IT TO MY GRANDFATHER CRITIAS AND HE TOLD ME",
+      "text": "LISTEN THEN SOCRATES TO A TALE OF SILENCE WHO BEING THE FRIEND OF TROPIDIS MY GREAT GRANDFATHER TOLD IT TO MY GRANDFATHER CRITIUS AND HE TOLD ME",
+      "decodeSeconds": 1.111075072996755,
+      "edits": 3,
+      "referenceWords": 27,
+      "wer": 0.1111111111111111
+    },
+    {
+      "id": "8230-279154-0038",
+      "speaker": 8230,
+      "condition": "clean",
+      "audioSeconds": 22.49,
+      "reference": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF THE WORD",
+      "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF THE WORD",
+      "decodeSeconds": 2.086238489999232,
+      "edits": 0,
+      "referenceWords": 55,
+      "wer": 0.0
+    },
+    {
+      "id": "1995-1837-0009",
+      "speaker": 1995,
+      "condition": "clean",
+      "audioSeconds": 3.76,
+      "reference": "THE LAGOON HAD BEEN LEVEL WITH THE DYKES A WEEK AGO AND NOW",
+      "text": "THE LAGOON HAD BEEN LEVEL WITH THE DIKES A WEEK AGO AND NOW",
+      "decodeSeconds": 0.4023409779983922,
+      "edits": 1,
+      "referenceWords": 13,
+      "wer": 0.07692307692307693
+    },
+    {
+      "id": "5142-33396-0019",
+      "speaker": 5142,
+      "condition": "clean",
+      "audioSeconds": 4.985,
+      "reference": "OH IT IS BETTER TO LIVE ON THE SEA AND LET OTHER MEN RAISE YOUR CROPS AND COOK YOUR MEALS",
+      "text": "OH IT IS BETTER TO LIVE ON THE SEA AND LET OTHER MEN RAISE YOUR CROPS AND COOK YOUR MEALS",
+      "decodeSeconds": 0.6086694810001063,
+      "edits": 0,
+      "referenceWords": 20,
+      "wer": 0.0
+    },
+    {
+      "id": "2830-3980-0005",
+      "speaker": 2830,
+      "condition": "clean",
+      "audioSeconds": 6.45,
+      "reference": "DO YOU SUPPOSE THAT GOD FOR THE SAKE OF A FEW LUTHERAN HERETICS WOULD DISOWN HIS ENTIRE CHURCH",
+      "text": "DO YOU SUPPOSE THAT GOD FOR THE SAKE OF A FEW LUTHERAN HERETICS WOULD DISOWN HIS ENTIRE CHURCH",
+      "decodeSeconds": 0.640192760998616,
+      "edits": 0,
+      "referenceWords": 18,
+      "wer": 0.0
+    },
+    {
+      "id": "4446-2273-0021",
+      "speaker": 4446,
+      "condition": "clean",
+      "audioSeconds": 5.255,
+      "reference": "WHAT SHE WANTED FROM US WAS NEITHER OUR FLOWERS NOR OUR FRANCS BUT JUST OUR YOUTH",
+      "text": "WHAT SHE WANTED FROM US WAS NEITHER OUR FLOWERS NOR OUR FRANKS BUT JUST OUR YOU",
+      "decodeSeconds": 0.465197983001417,
+      "edits": 2,
+      "referenceWords": 16,
+      "wer": 0.125
+    },
+    {
+      "id": "1221-135766-0005",
+      "speaker": 1221,
+      "condition": "clean",
+      "audioSeconds": 16.645,
+      "reference": "HESTER COULD ONLY ACCOUNT FOR THE CHILD'S CHARACTER AND EVEN THEN MOST VAGUELY AND IMPERFECTLY BY RECALLING WHAT SHE HERSELF HAD BEEN DURING THAT MOMENTOUS PERIOD WHILE PEARL WAS IMBIBING HER SOUL FROM THE SPIRITUAL WORLD AND HER BODILY FRAME FROM ITS MATERIAL OF EARTH",
+      "text": "HESTER COULD ONLY ACCOUNT FOR THE CHILD'S CHARACTER AND EVEN THEN MOST VAGUELY AND IMPERFECTLY BY RECALLING WHAT SHE HERSELF HAD BEEN DURING THAT MOMENTOUS PERIOD WHILE PEARL WAS IMBIBING HER SOUL FROM THE SPIRITUAL WORLD AND HER BODILY FRAME FROM ITS MATERIAL OF EARTH",
+      "decodeSeconds": 1.9210276949997933,
+      "edits": 0,
+      "referenceWords": 45,
+      "wer": 0.0
+    },
+    {
+      "id": "8224-274384-0004",
+      "speaker": 8224,
+      "condition": "clean",
+      "audioSeconds": 20.64,
+      "reference": "AND THE MEN OF ISRAEL ANSWERED THE MEN OF JUDAH AND SAID WE HAVE TEN PARTS IN THE KING AND WE HAVE ALSO MORE RIGHT IN DAVID THAN YE WHY THEN DID YE DESPISE US THAT OUR ADVICE SHOULD NOT BE FIRST HAD IN BRINGING BACK OUR KING",
+      "text": "AND THE MEN OF ISRAEL ANSWERED THE MEN OF JUDAH AND SAID WE HAVE TEN PARTS IN THE KING AND WE HAVE ALSO MORE RIGHT IN DAVID THAN YE WHY THEN DID YE DESPISE US THAT OUR ADVICE SHOULD NOT BE FIRST HAD IN BRINGING BACK OUR KING",
+      "decodeSeconds": 1.9664924850003445,
+      "edits": 0,
+      "referenceWords": 48,
+      "wer": 0.0
+    },
+    {
+      "id": "672-122797-0043",
+      "speaker": 672,
+      "condition": "clean",
+      "audioSeconds": 3.78,
+      "reference": "WHAT'S THE MEANING OF THIS THOUGHT THE TREE",
+      "text": "WHAT'S THE MEANING OF THIS THOUGHT THE TREE",
+      "decodeSeconds": 0.35065970299910987,
+      "edits": 0,
+      "referenceWords": 8,
+      "wer": 0.0
+    },
+    {
+      "id": "3729-6852-0043",
+      "speaker": 3729,
+      "condition": "clean",
+      "audioSeconds": 4.205,
+      "reference": "I RESIDE IN THE MARAIS RUE DE DOUZE PORTES",
+      "text": "I RESIGNED IN THE MARAIS GRUA DE DUSPORT",
+      "decodeSeconds": 0.4175105189970054,
+      "edits": 4,
+      "referenceWords": 9,
+      "wer": 0.4444444444444444
+    },
+    {
+      "id": "2300-131720-0018",
+      "speaker": 2300,
+      "condition": "clean",
+      "audioSeconds": 12.54,
+      "reference": "HE SOON FORESAW THAT STILL GREATER ECONOMY WOULD BE NECESSARY FOR COMMERCIAL SUCCESS NOT ALONE FOR THE LARGER TERRITORY OPENING BUT FOR THE COMPACT DISTRICTS OF LARGE CITIES",
+      "text": "HE SOON FORESAW THAT STILL GREATER ECONOMY WOULD BE NECESSARY FOR COMMERCIAL SUCCESS NOT ALONE FOR THE LARGER TERRITORY OPENING BUT FOR THE COMPACT DISTRICT OF LARGE CITIES",
+      "decodeSeconds": 1.183137750998867,
+      "edits": 1,
+      "referenceWords": 28,
+      "wer": 0.03571428571428571
+    },
+    {
+      "id": "1580-141083-0016",
+      "speaker": 1580,
+      "condition": "clean",
+      "audioSeconds": 4.255,
+      "reference": "I WAS IN SUCH A HURRY TO COME TO YOU YOU LEFT YOUR DOOR OPEN",
+      "text": "I WAS IN SUCH A HURRY TO COME TO YOU YOU LEFT YOUR DOOR OPEN",
+      "decodeSeconds": 0.37668619900068734,
+      "edits": 0,
+      "referenceWords": 15,
+      "wer": 0.0
+    },
+    {
+      "id": "4970-29093-0003",
+      "speaker": 4970,
+      "condition": "clean",
+      "audioSeconds": 15.355,
+      "reference": "THE MODEST FELLOW WOULD HAVE LIKED FAME THRUST UPON HIM FOR SOME WORTHY ACHIEVEMENT IT MIGHT BE FOR A BOOK OR FOR THE SKILLFUL MANAGEMENT OF SOME GREAT NEWSPAPER OR FOR SOME DARING EXPEDITION LIKE THAT OF LIEUTENANT STRAIN OR DOCTOR KANE",
+      "text": "THE MODEST FELLOW WOULD HAVE LIKED FAME THRUST UPON HIM FOR SOME WORTHY ACHIEVEMENT IT MIGHT BE FOR A BOOK OR FOR THE SKILFUL MANAGEMENT OF SOME GREAT NEWSPAPER OR FOR SOME DARING EXPEDITION LIKE THAT OF LIEUTENANT STRAIN OR DOCTOR KANE",
+      "decodeSeconds": 1.3902324689988745,
+      "edits": 1,
+      "referenceWords": 42,
+      "wer": 0.023809523809523808
+    },
+    {
+      "id": "61-70968-0048",
+      "speaker": 61,
+      "condition": "clean",
+      "audioSeconds": 3.02,
+      "reference": "AND HENRY MIGHT RETURN TO ENGLAND AT ANY MOMENT",
+      "text": "AND HENRY MIGHT RETURN TO ENGLAND AT ANY MOMENT",
+      "decodeSeconds": 0.26421390999894356,
+      "edits": 0,
+      "referenceWords": 9,
+      "wer": 0.0
+    },
+    {
+      "id": "237-134500-0013",
+      "speaker": 237,
+      "condition": "clean",
+      "audioSeconds": 10.56,
+      "reference": "MARIE PICKED CHERRIES AND SANG SOFTLY TO HERSELF STRIPPING ONE GLITTERING BRANCH AFTER ANOTHER SHIVERING WHEN SHE CAUGHT A SHOWER OF RAINDROPS ON HER NECK AND HAIR",
+      "text": "MARIE PICKED CHERRIES AND SANG SOFTLY TO HERSELF STRIPPING ONE GLITTERING BRANCH AFTER ANOTHER SHIVERING WHEN SHE CAUGHT A SHOWER OF RAINDROPS ON HER NECK AND HAIR",
+      "decodeSeconds": 1.0421894069986593,
+      "edits": 0,
+      "referenceWords": 27,
+      "wer": 0.0
+    },
+    {
+      "id": "5683-32865-0006",
+      "speaker": 5683,
+      "condition": "clean",
+      "audioSeconds": 3.35,
+      "reference": "AT DINNER LAKE WAS EASY AND AMUSING",
+      "text": "AT DINNER LAKE WAS EASY AND AMUS",
+      "decodeSeconds": 0.3276859270008572,
+      "edits": 1,
+      "referenceWords": 7,
+      "wer": 0.14285714285714285
+    },
+    {
+      "id": "6930-75918-0000",
+      "speaker": 6930,
+      "condition": "white-noise-10db",
+      "audioSeconds": 3.505,
+      "reference": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS",
+      "text": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENT",
+      "decodeSeconds": 0.3435675300024741,
+      "edits": 1,
+      "referenceWords": 8,
+      "wer": 0.125
+    },
+    {
+      "id": "1320-122612-0011",
+      "speaker": 1320,
+      "condition": "white-noise-10db",
+      "audioSeconds": 13.695,
+      "reference": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLEW THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECESSARY",
+      "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECESSARY",
+      "decodeSeconds": 1.290749556999799,
+      "edits": 1,
+      "referenceWords": 43,
+      "wer": 0.023255813953488372
+    },
+    {
+      "id": "7729-102255-0001",
+      "speaker": 7729,
+      "condition": "white-noise-10db",
+      "audioSeconds": 3.45,
+      "reference": "THIS WAS AT THE MARCH ELECTION EIGHTEEN FIFTY FIVE",
+      "text": "THIS WAS AT THE MARCH ELECTION EIGHTEEN FIFTY FIVE",
+      "decodeSeconds": 0.3271192610009166,
+      "edits": 0,
+      "referenceWords": 9,
+      "wer": 0.0
+    },
+    {
+      "id": "3575-170457-0024",
+      "speaker": 3575,
+      "condition": "white-noise-10db",
+      "audioSeconds": 12.255,
+      "reference": "I DON'T ALWAYS SUCCEED FOR SOMETIMES WHEN I'M TEACHING OR SEWING I WOULD RATHER BE READING OR WRITING BUT I TRY TO DENY MYSELF AND MY FATHER'S APPROBATION AMPLY REWARDED ME FOR THE PRIVATION",
+      "text": "I DON'T ALWAYS SUCCEED WE'RE SOMETIMES WHEN I'M TEACHING OR SOWING I WOULD RATHER BE READING A WRITING BUT I TRY TO DENY MYSELF AND MY FATHER'S APPROBATION AMPLY REWARDED ME FOR THE PRIVATION",
+      "decodeSeconds": 1.0902396430028602,
+      "edits": 3,
+      "referenceWords": 34,
+      "wer": 0.08823529411764706
+    },
+    {
+      "id": "2961-961-0004",
+      "speaker": 2961,
+      "condition": "white-noise-10db",
+      "audioSeconds": 11.48,
+      "reference": "LISTEN THEN SOCRATES TO A TALE OF SOLON'S WHO BEING THE FRIEND OF DROPIDAS MY GREAT GRANDFATHER TOLD IT TO MY GRANDFATHER CRITIAS AND HE TOLD ME",
+      "text": "LISTEN THEN SOCRATES TO A TALE OF SILENCE HO BEING THE FRIEND OF TROPIDIS MY GREAT GRANDFATHER TOLD IT TO MY GRANDFATHER CRITIUS AND HE TOLD ME",
+      "decodeSeconds": 1.1488455399994564,
+      "edits": 4,
+      "referenceWords": 27,
+      "wer": 0.14814814814814814
+    },
+    {
+      "id": "8230-279154-0038",
+      "speaker": 8230,
+      "condition": "white-noise-10db",
+      "audioSeconds": 22.49,
+      "reference": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF THE WORD",
+      "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMATE THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF THE WORD",
+      "decodeSeconds": 2.2158087550014898,
+      "edits": 1,
+      "referenceWords": 55,
+      "wer": 0.01818181818181818
+    },
+    {
+      "id": "1995-1837-0009",
+      "speaker": 1995,
+      "condition": "white-noise-10db",
+      "audioSeconds": 3.76,
+      "reference": "THE LAGOON HAD BEEN LEVEL WITH THE DYKES A WEEK AGO AND NOW",
+      "text": "THE LAGOON HAD BEEN LEVEL WITH THE DUCKS A WEEK AGO AND NOW",
+      "decodeSeconds": 0.38193067599786445,
+      "edits": 1,
+      "referenceWords": 13,
+      "wer": 0.07692307692307693
+    },
+    {
+      "id": "5142-33396-0019",
+      "speaker": 5142,
+      "condition": "white-noise-10db",
+      "audioSeconds": 4.985,
+      "reference": "OH IT IS BETTER TO LIVE ON THE SEA AND LET OTHER MEN RAISE YOUR CROPS AND COOK YOUR MEALS",
+      "text": "OH IT IS BETTER TO LIVE ON THE SEA AND LET OTHER MEN RAISE YOUR CROPS AND COOK YOUR MEALS",
+      "decodeSeconds": 0.48618295900087105,
+      "edits": 0,
+      "referenceWords": 20,
+      "wer": 0.0
+    },
+    {
+      "id": "2830-3980-0005",
+      "speaker": 2830,
+      "condition": "white-noise-10db",
+      "audioSeconds": 6.45,
+      "reference": "DO YOU SUPPOSE THAT GOD FOR THE SAKE OF A FEW LUTHERAN HERETICS WOULD DISOWN HIS ENTIRE CHURCH",
+      "text": "DO YOU SUPPOSE THAT GOD FOR THE SAKE OF A FEW LUTHERAN HERETICS WOULD DISOWN HIS ENTIRE CHURCH",
+      "decodeSeconds": 0.6330367420014227,
+      "edits": 0,
+      "referenceWords": 18,
+      "wer": 0.0
+    },
+    {
+      "id": "4446-2273-0021",
+      "speaker": 4446,
+      "condition": "white-noise-10db",
+      "audioSeconds": 5.255,
+      "reference": "WHAT SHE WANTED FROM US WAS NEITHER OUR FLOWERS NOR OUR FRANCS BUT JUST OUR YOUTH",
+      "text": "BUT SHE WANTED FROM US WAS NEITHER OUR FLOWERS NOR OUR FRANKS BUT JUST OUR YOUTH",
+      "decodeSeconds": 0.49741873899984057,
+      "edits": 2,
+      "referenceWords": 16,
+      "wer": 0.125
+    },
+    {
+      "id": "1221-135766-0005",
+      "speaker": 1221,
+      "condition": "white-noise-10db",
+      "audioSeconds": 16.645,
+      "reference": "HESTER COULD ONLY ACCOUNT FOR THE CHILD'S CHARACTER AND EVEN THEN MOST VAGUELY AND IMPERFECTLY BY RECALLING WHAT SHE HERSELF HAD BEEN DURING THAT MOMENTOUS PERIOD WHILE PEARL WAS IMBIBING HER SOUL FROM THE SPIRITUAL WORLD AND HER BODILY FRAME FROM ITS MATERIAL OF EARTH",
+      "text": "HESTER COULD ONLY ACCOUNT FOR THE CHILD'S CHARACTER AND EVEN THEN MOST VAGUELY AND IMPERFECTLY BY RECALLING WHAT SHE HERSELF HAD BEEN DURING THAT MOMENTOUS PERIOD WHILE PEARL WAS IMBIBING HER SOUL FROM THE SPIRITUAL WORLD AND HER BODILY FRAME FROM ITS MATERIAL OF EARTH",
+      "decodeSeconds": 1.517577144997631,
+      "edits": 0,
+      "referenceWords": 45,
+      "wer": 0.0
+    },
+    {
+      "id": "8224-274384-0004",
+      "speaker": 8224,
+      "condition": "white-noise-10db",
+      "audioSeconds": 20.64,
+      "reference": "AND THE MEN OF ISRAEL ANSWERED THE MEN OF JUDAH AND SAID WE HAVE TEN PARTS IN THE KING AND WE HAVE ALSO MORE RIGHT IN DAVID THAN YE WHY THEN DID YE DESPISE US THAT OUR ADVICE SHOULD NOT BE FIRST HAD IN BRINGING BACK OUR KING",
+      "text": "AND THE MEN OF ISRAEL ANSWERED THE MEN OF JUDAH AND SAID WE HAVE TEN POTS IN THE KING AND WE HAVE ALSO MORE RIGHT THAN DAVID THAN YOU WHY THEN BID YE DESPISE US THAT OUR ADVICE SHOULD NOT BE FIRST HAD IN BRINGING BACK OUR KING",
+      "decodeSeconds": 1.8710436620021937,
+      "edits": 4,
+      "referenceWords": 48,
+      "wer": 0.08333333333333333
+    },
+    {
+      "id": "672-122797-0043",
+      "speaker": 672,
+      "condition": "white-noise-10db",
+      "audioSeconds": 3.78,
+      "reference": "WHAT'S THE MEANING OF THIS THOUGHT THE TREE",
+      "text": "WHAT'S THE MEANING OF THIS THOUGHT THE TREE",
+      "decodeSeconds": 0.36169338199761114,
+      "edits": 0,
+      "referenceWords": 8,
+      "wer": 0.0
+    },
+    {
+      "id": "3729-6852-0043",
+      "speaker": 3729,
+      "condition": "white-noise-10db",
+      "audioSeconds": 4.205,
+      "reference": "I RESIDE IN THE MARAIS RUE DE DOUZE PORTES",
+      "text": "I RESIDE IN THE MARVE RUS DE DUSPORT",
+      "decodeSeconds": 0.3979503919981653,
+      "edits": 4,
+      "referenceWords": 9,
+      "wer": 0.4444444444444444
+    },
+    {
+      "id": "2300-131720-0018",
+      "speaker": 2300,
+      "condition": "white-noise-10db",
+      "audioSeconds": 12.54,
+      "reference": "HE SOON FORESAW THAT STILL GREATER ECONOMY WOULD BE NECESSARY FOR COMMERCIAL SUCCESS NOT ALONE FOR THE LARGER TERRITORY OPENING BUT FOR THE COMPACT DISTRICTS OF LARGE CITIES",
+      "text": "HE SOON FORESAW THAT STILL GREATER ECONOMY WOULD BE NECESSARY FOR COMMERCIAL SUCCESS NOT ALONE FOR THE LARGER TERRITORY OPENING BUT FOR THE COMPACT DISTRICT OF LARGE CITIES",
+      "decodeSeconds": 1.163568199997826,
+      "edits": 1,
+      "referenceWords": 28,
+      "wer": 0.03571428571428571
+    },
+    {
+      "id": "1580-141083-0016",
+      "speaker": 1580,
+      "condition": "white-noise-10db",
+      "audioSeconds": 4.255,
+      "reference": "I WAS IN SUCH A HURRY TO COME TO YOU YOU LEFT YOUR DOOR OPEN",
+      "text": "I WAS IN SUCH A HURRY TO COME TO YOU YOU LEFT YOUR DOOR OPEN",
+      "decodeSeconds": 0.3940199209973798,
+      "edits": 0,
+      "referenceWords": 15,
+      "wer": 0.0
+    },
+    {
+      "id": "4970-29093-0003",
+      "speaker": 4970,
+      "condition": "white-noise-10db",
+      "audioSeconds": 15.355,
+      "reference": "THE MODEST FELLOW WOULD HAVE LIKED FAME THRUST UPON HIM FOR SOME WORTHY ACHIEVEMENT IT MIGHT BE FOR A BOOK OR FOR THE SKILLFUL MANAGEMENT OF SOME GREAT NEWSPAPER OR FOR SOME DARING EXPEDITION LIKE THAT OF LIEUTENANT STRAIN OR DOCTOR KANE",
+      "text": "THE MODEST FELLOW WOULD HAVE LIKED FAME THRUST UPON HIM FOR SOME WORTHY ACHIEVEMENT IT MIGHT BE FOR A BOOK OR FOR THE SKILFUL MANAGEMENT OF SOME GREAT NEWSPAPER OR FOR SOME DARING EXPEDITION LIKE THAT OF WICKED STRAIN OR DOCTOR KANE",
+      "decodeSeconds": 1.5115910139975313,
+      "edits": 2,
+      "referenceWords": 42,
+      "wer": 0.047619047619047616
+    },
+    {
+      "id": "61-70968-0048",
+      "speaker": 61,
+      "condition": "white-noise-10db",
+      "audioSeconds": 3.02,
+      "reference": "AND HENRY MIGHT RETURN TO ENGLAND AT ANY MOMENT",
+      "text": "AND HENRY MIGHT RETURN TO ENGLAND IF ANY MOMENT",
+      "decodeSeconds": 0.3705343509973318,
+      "edits": 1,
+      "referenceWords": 9,
+      "wer": 0.1111111111111111
+    },
+    {
+      "id": "237-134500-0013",
+      "speaker": 237,
+      "condition": "white-noise-10db",
+      "audioSeconds": 10.56,
+      "reference": "MARIE PICKED CHERRIES AND SANG SOFTLY TO HERSELF STRIPPING ONE GLITTERING BRANCH AFTER ANOTHER SHIVERING WHEN SHE CAUGHT A SHOWER OF RAINDROPS ON HER NECK AND HAIR",
+      "text": "MARIE PICKED JERRY AND SANG SOFTLY TO HERSELF STRIPPING ONE GLITTERING BRANCH AFTER ANOTHER SHIVERING WHEN SHE THOUGHT A SHOWER OF RAINDROPS ON HER NECK AND HAIR",
+      "decodeSeconds": 0.9672482040004979,
+      "edits": 2,
+      "referenceWords": 27,
+      "wer": 0.07407407407407407
+    },
+    {
+      "id": "5683-32865-0006",
+      "speaker": 5683,
+      "condition": "white-noise-10db",
+      "audioSeconds": 3.35,
+      "reference": "AT DINNER LAKE WAS EASY AND AMUSING",
+      "text": "AT DINNER LAKE WAS EASIER THAN AMUS",
+      "decodeSeconds": 0.3013171250022424,
+      "edits": 3,
+      "referenceWords": 7,
+      "wer": 0.42857142857142855
+    }
+  ],
+  "silence": {
+    "text": "",
+    "decodeSeconds": 0.42686461600169423
+  },
+  "pacedProbes": [
+    {
+      "id": "6930-75918-0000",
+      "audioSeconds": 3.505,
+      "wallSeconds": 3.5380549170004088,
+      "finalizationAfterEofSeconds": 0.03305491700040886,
+      "text": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENT",
+      "updates": [
+        {
+          "audioSeconds": 1.44,
+          "wallSeconds": 1.472782498000015,
+          "text": "CONCOR"
+        },
+        {
+          "audioSeconds": 1.76,
+          "wallSeconds": 1.7903699919988867,
+          "text": "CONCORD"
+        },
+        {
+          "audioSeconds": 2.08,
+          "wallSeconds": 2.110095996999007,
+          "text": "CONCORD RETURNED"
+        },
+        {
+          "audioSeconds": 2.4,
+          "wallSeconds": 2.4312811509989842,
+          "text": "CONCORD RETURNED TO ITS"
+        },
+        {
+          "audioSeconds": 2.72,
+          "wallSeconds": 2.755491173000337,
+          "text": "CONCORD RETURNED TO ITS PLACE"
+        },
+        {
+          "audioSeconds": 3.04,
+          "wallSeconds": 3.074066744000447,
+          "text": "CONCORD RETURNED TO ITS PLACE AMID"
+        },
+        {
+          "audioSeconds": 3.36,
+          "wallSeconds": 3.385513811997953,
+          "text": "CONCORD RETURNED TO ITS PLACE AMIDST THE"
+        }
+      ]
+    },
+    {
+      "id": "1320-122612-0011",
+      "audioSeconds": 13.695,
+      "wallSeconds": 13.72191365499748,
+      "finalizationAfterEofSeconds": 0.026913654997478886,
+      "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECESSARY",
+      "updates": [
+        {
+          "audioSeconds": 0.8,
+          "wallSeconds": 0.8235668629968131,
+          "text": "IF"
+        },
+        {
+          "audioSeconds": 1.12,
+          "wallSeconds": 1.1558377549990837,
+          "text": "IF A"
+        },
+        {
+          "audioSeconds": 1.44,
+          "wallSeconds": 1.4693895879972843,
+          "text": "IF A ROCK"
+        },
+        {
+          "audioSeconds": 1.76,
+          "wallSeconds": 1.7899931789979746,
+          "text": "IF A ROCK OR"
+        },
+        {
+          "audioSeconds": 2.08,
+          "wallSeconds": 2.114615458998742,
+          "text": "IF A ROCK OR A RIV"
+        },
+        {
+          "audioSeconds": 2.4,
+          "wallSeconds": 2.430405452996638,
+          "text": "IF A ROCK OR A RIVULET"
+        },
+        {
+          "audioSeconds": 2.72,
+          "wallSeconds": 2.752734022997174,
+          "text": "IF A ROCK OR A RIVULET OR A"
+        },
+        {
+          "audioSeconds": 3.04,
+          "wallSeconds": 3.072069459998602,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF E"
+        },
+        {
+          "audioSeconds": 3.36,
+          "wallSeconds": 3.3904218999996374,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HAR"
+        },
+        {
+          "audioSeconds": 3.68,
+          "wallSeconds": 3.7127194899985625,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN"
+        },
+        {
+          "audioSeconds": 4.0,
+          "wallSeconds": 4.0283962129979045,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COM"
+        },
+        {
+          "audioSeconds": 4.32,
+          "wallSeconds": 4.34983363399806,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON"
+        },
+        {
+          "audioSeconds": 4.96,
+          "wallSeconds": 4.987801467999816,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVER"
+        },
+        {
+          "audioSeconds": 5.28,
+          "wallSeconds": 5.3116627279996464,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LI"
+        },
+        {
+          "audioSeconds": 5.6,
+          "wallSeconds": 5.634806178997678,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS"
+        },
+        {
+          "audioSeconds": 5.92,
+          "wallSeconds": 5.9550956599996425,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE"
+        },
+        {
+          "audioSeconds": 6.24,
+          "wallSeconds": 6.273639242997888,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE"
+        },
+        {
+          "audioSeconds": 6.56,
+          "wallSeconds": 6.592377835997468,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOW"
+        },
+        {
+          "audioSeconds": 6.88,
+          "wallSeconds": 6.9114048139999795,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED"
+        },
+        {
+          "audioSeconds": 7.52,
+          "wallSeconds": 7.550548280996736,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE"
+        },
+        {
+          "audioSeconds": 7.84,
+          "wallSeconds": 7.870234617999813,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE"
+        },
+        {
+          "audioSeconds": 8.16,
+          "wallSeconds": 8.191101757998695,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF"
+        },
+        {
+          "audioSeconds": 8.48,
+          "wallSeconds": 8.511172298996826,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCO"
+        },
+        {
+          "audioSeconds": 8.8,
+          "wallSeconds": 8.829515987999912,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RE"
+        },
+        {
+          "audioSeconds": 9.12,
+          "wallSeconds": 9.152442298000096,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED"
+        },
+        {
+          "audioSeconds": 9.44,
+          "wallSeconds": 9.47118359399974,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM"
+        },
+        {
+          "audioSeconds": 9.76,
+          "wallSeconds": 9.79251051599931,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A"
+        },
+        {
+          "audioSeconds": 10.08,
+          "wallSeconds": 10.118143502997555,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE"
+        },
+        {
+          "audioSeconds": 10.72,
+          "wallSeconds": 10.75484638999842,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND"
+        },
+        {
+          "audioSeconds": 11.04,
+          "wallSeconds": 11.068607915996836,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM"
+        },
+        {
+          "audioSeconds": 11.36,
+          "wallSeconds": 11.3991235029971,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDER"
+        },
+        {
+          "audioSeconds": 11.68,
+          "wallSeconds": 11.709141686998919,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE"
+        },
+        {
+          "audioSeconds": 12.0,
+          "wallSeconds": 12.030398255999899,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY"
+        },
+        {
+          "audioSeconds": 12.32,
+          "wallSeconds": 12.352063090998854,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A"
+        },
+        {
+          "audioSeconds": 12.64,
+          "wallSeconds": 12.67179595199923,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE"
+        },
+        {
+          "audioSeconds": 12.96,
+          "wallSeconds": 12.995935993996682,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT"
+        },
+        {
+          "audioSeconds": 13.28,
+          "wallSeconds": 13.310960475999309,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECE"
+        },
+        {
+          "audioSeconds": 13.6,
+          "wallSeconds": 13.625745492998249,
+          "text": "IF A ROCK OR A RIVULET OR A BIT OF EARTH HARDER THAN COMMON SEVERED THE LINKS OF THE CLUE THEY FOLLOWED THE TRUE EYE OF THE SCOUT RECOVERED THEM AT A DISTANCE AND SELDOM RENDERED THE DELAY OF A SINGLE MOMENT NECESS"
+        }
+      ]
+    },
+    {
+      "id": "8230-279154-0038",
+      "audioSeconds": 22.49,
+      "wallSeconds": 22.511366730999725,
+      "finalizationAfterEofSeconds": 0.02136673099972697,
+      "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF THE WORD",
+      "updates": [
+        {
+          "audioSeconds": 1.12,
+          "wallSeconds": 1.1523553900005936,
+          "text": "WE"
+        },
+        {
+          "audioSeconds": 1.44,
+          "wallSeconds": 1.4730068940007186,
+          "text": "WE ARE OF"
+        },
+        {
+          "audioSeconds": 1.76,
+          "wallSeconds": 1.7922041410020029,
+          "text": "WE ARE OF COURSE"
+        },
+        {
+          "audioSeconds": 2.4,
+          "wallSeconds": 2.431659997000679,
+          "text": "WE ARE OF COURSE IN FAC"
+        },
+        {
+          "audioSeconds": 2.72,
+          "wallSeconds": 2.7448230240006524,
+          "text": "WE ARE OF COURSE IN FACT"
+        },
+        {
+          "audioSeconds": 3.04,
+          "wallSeconds": 3.0699896660007653,
+          "text": "WE ARE OF COURSE IN FACT ABLE"
+        },
+        {
+          "audioSeconds": 3.36,
+          "wallSeconds": 3.3921931000004406,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO"
+        },
+        {
+          "audioSeconds": 3.68,
+          "wallSeconds": 3.706324905000656,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUD"
+        },
+        {
+          "audioSeconds": 4.0,
+          "wallSeconds": 4.033823510999355,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN"
+        },
+        {
+          "audioSeconds": 4.32,
+          "wallSeconds": 4.352459298999747,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE"
+        },
+        {
+          "audioSeconds": 4.64,
+          "wallSeconds": 4.668873886999791,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECO"
+        },
+        {
+          "audioSeconds": 4.96,
+          "wallSeconds": 4.987811741000769,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE"
+        },
+        {
+          "audioSeconds": 5.28,
+          "wallSeconds": 5.3276268240006175,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN"
+        },
+        {
+          "audioSeconds": 5.6,
+          "wallSeconds": 5.629516797998804,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJE"
+        },
+        {
+          "audioSeconds": 5.92,
+          "wallSeconds": 5.954212370001187,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT"
+        },
+        {
+          "audioSeconds": 6.24,
+          "wallSeconds": 6.271824512001331,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE"
+        },
+        {
+          "audioSeconds": 6.56,
+          "wallSeconds": 6.586679448999348,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE"
+        },
+        {
+          "audioSeconds": 6.88,
+          "wallSeconds": 6.917103374002181,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT"
+        },
+        {
+          "audioSeconds": 7.2,
+          "wallSeconds": 7.231136696002068,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE"
+        },
+        {
+          "audioSeconds": 7.84,
+          "wallSeconds": 7.872341197999049,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT"
+        },
+        {
+          "audioSeconds": 8.16,
+          "wallSeconds": 8.193116652000754,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS"
+        },
+        {
+          "audioSeconds": 8.48,
+          "wallSeconds": 8.52145381399896,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUD"
+        },
+        {
+          "audioSeconds": 8.8,
+          "wallSeconds": 8.83432816700224,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT"
+        },
+        {
+          "audioSeconds": 9.12,
+          "wallSeconds": 9.151452727001015,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING"
+        },
+        {
+          "audioSeconds": 9.76,
+          "wallSeconds": 9.794898906002345,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER"
+        },
+        {
+          "audioSeconds": 10.08,
+          "wallSeconds": 10.111982886999613,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND"
+        },
+        {
+          "audioSeconds": 10.4,
+          "wallSeconds": 10.432399393001106,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE"
+        },
+        {
+          "audioSeconds": 10.72,
+          "wallSeconds": 10.753311371001473,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RE"
+        },
+        {
+          "audioSeconds": 11.04,
+          "wallSeconds": 11.073257990999991,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOG"
+        },
+        {
+          "audioSeconds": 11.36,
+          "wallSeconds": 11.387207239000418,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION"
+        },
+        {
+          "audioSeconds": 12.0,
+          "wallSeconds": 12.035748654001509,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS"
+        },
+        {
+          "audioSeconds": 12.64,
+          "wallSeconds": 12.6721070900021,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST"
+        },
+        {
+          "audioSeconds": 13.28,
+          "wallSeconds": 13.319251715001883,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE"
+        },
+        {
+          "audioSeconds": 13.6,
+          "wallSeconds": 13.636398388000089,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND"
+        },
+        {
+          "audioSeconds": 13.92,
+          "wallSeconds": 13.952574327999173,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY"
+        },
+        {
+          "audioSeconds": 14.24,
+          "wallSeconds": 14.27248831399993,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY"
+        },
+        {
+          "audioSeconds": 14.56,
+          "wallSeconds": 14.58802674799881,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROB"
+        },
+        {
+          "audioSeconds": 14.88,
+          "wallSeconds": 14.910312699001224,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY"
+        },
+        {
+          "audioSeconds": 15.2,
+          "wallSeconds": 15.232432470998901,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE"
+        },
+        {
+          "audioSeconds": 15.52,
+          "wallSeconds": 15.545879506000347,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPO"
+        },
+        {
+          "audioSeconds": 15.84,
+          "wallSeconds": 15.870345415001793,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE"
+        },
+        {
+          "audioSeconds": 16.16,
+          "wallSeconds": 16.192082843001117,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO AN"
+        },
+        {
+          "audioSeconds": 16.48,
+          "wallSeconds": 16.510863749001146,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS"
+        },
+        {
+          "audioSeconds": 16.8,
+          "wallSeconds": 16.83614534500157,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT"
+        },
+        {
+          "audioSeconds": 17.12,
+          "wallSeconds": 17.147725931001332,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVER"
+        },
+        {
+          "audioSeconds": 17.44,
+          "wallSeconds": 17.471865889001492,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS"
+        },
+        {
+          "audioSeconds": 18.08,
+          "wallSeconds": 18.11261429500155,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE"
+        },
+        {
+          "audioSeconds": 18.4,
+          "wallSeconds": 18.43251872900146,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EX"
+        },
+        {
+          "audioSeconds": 18.72,
+          "wallSeconds": 18.752094899999065,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE"
+        },
+        {
+          "audioSeconds": 19.04,
+          "wallSeconds": 19.072679076001805,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF"
+        },
+        {
+          "audioSeconds": 19.36,
+          "wallSeconds": 19.38596149300065,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECO"
+        },
+        {
+          "audioSeconds": 19.68,
+          "wallSeconds": 19.711556288999418,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION"
+        },
+        {
+          "audioSeconds": 20.64,
+          "wallSeconds": 20.668353485001717,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS"
+        },
+        {
+          "audioSeconds": 21.28,
+          "wallSeconds": 21.31518891700034,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST"
+        },
+        {
+          "audioSeconds": 21.6,
+          "wallSeconds": 21.63136115599991,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SE"
+        },
+        {
+          "audioSeconds": 21.92,
+          "wallSeconds": 21.951785598001152,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF"
+        },
+        {
+          "audioSeconds": 22.24,
+          "wallSeconds": 22.270829846998822,
+          "text": "WE ARE OF COURSE IN FACT ABLE TO JUDGE WHEN WE RECOGNIZE AN OBJECT THAT WE HAVE SEEN IT BEFORE BUT THIS JUDGMENT IS SOMETHING OVER AND ABOVE RECOGNITION IN THIS FIRST SENSE AND MAY VERY PROBABLY BE IMPOSSIBLE TO ANIMALS THAT NEVERTHELESS HAVE THE EXPERIENCE OF RECOGNITION IN THIS FIRST SENSE OF THE"
+        }
+      ]
+    }
+  ],
+  "peakRssBytes": 209920000,
+  "rssScope": "Python plus native runtime",
+  "summary": {
+    "clean": {
+      "clips": 20,
+      "speakers": 20,
+      "audioSeconds": 181.675,
+      "decodeSeconds": 17.769167818987626,
+      "rtf": 0.09780744636844708,
+      "referenceWords": 481,
+      "wer": 0.033264033264033266
+    },
+    "white-noise-10db": {
+      "clips": 20,
+      "speakers": 20,
+      "audioSeconds": 181.675,
+      "decodeSeconds": 17.271442797995405,
+      "rtf": 0.09506780128248468,
+      "referenceWords": 481,
+      "wer": 0.062370062370062374
+    }
+  }
+}
