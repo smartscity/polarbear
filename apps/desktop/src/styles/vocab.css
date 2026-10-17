@@ -1,6 +1,10 @@
 .vocab-popover {
+  --vocab-edge-gap: 12px;
+  --vocab-panel-width: min(360px, calc(100vw - var(--vocab-edge-gap) - var(--vocab-edge-gap)));
   position: fixed; margin: 0; inset: auto;
-  width: min(360px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+  /* Keep viewport containment synchronous with layout, before resize callbacks. */
+  left: clamp(var(--vocab-edge-gap), var(--vocab-anchor-left, 12px), max(var(--vocab-edge-gap), calc(100vw - var(--vocab-panel-width) - var(--vocab-edge-gap))));
+  width: var(--vocab-panel-width); max-height: calc(100dvh - var(--vocab-edge-gap) - var(--vocab-edge-gap));
   overflow-y: auto; box-sizing: border-box; padding: var(--space-md, 12px);
   border: 1px solid var(--color-border); border-radius: var(--radius-medium, 8px);
   background: var(--color-editor-background); color: var(--color-text-primary);

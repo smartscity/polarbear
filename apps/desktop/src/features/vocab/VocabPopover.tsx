@@ -43,9 +43,10 @@ export function VocabPopover({ target, onClose }: { target: ReadingTarget; onClo
   useLayoutEffect(() => {
     const element = panel.current;
     if (!element) return;
+    element.style.setProperty("--vocab-edge-gap", `${EDGE_GAP}px`);
+    element.style.setProperty("--vocab-anchor-left", `${target.rect.left}px`);
     const place = () => {
       const bounds = element.getBoundingClientRect();
-      element.style.left = `${Math.max(EDGE_GAP, Math.min(target.rect.left, window.innerWidth - bounds.width - EDGE_GAP))}px`;
       const below = target.rect.bottom + EDGE_GAP;
       const above = (target.rect.top ?? target.rect.bottom) - bounds.height - EDGE_GAP;
       const top = below + bounds.height <= window.innerHeight - EDGE_GAP ? below : above >= EDGE_GAP ? above : window.innerHeight - bounds.height - EDGE_GAP;

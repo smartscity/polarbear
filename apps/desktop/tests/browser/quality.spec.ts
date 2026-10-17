@@ -268,6 +268,38 @@ test("favorites an offline unknown word in the header and delivers after the car
   await page.screenshot({ path: "test-results/favorite-dark-narrow.png" });
 });
 
+test("keeps the vocabulary card inside the viewport before resize handlers reposition it", async ({ page }) => {
+  await page.addInitScript(() => {
+    const positions: { left: number; right: number; viewport: number }[] = [];
+    Object.assign(window, { __vocabResizePositions: positions });
+    window.addEventListener("resize", () => {
+      const card = document.querySelector(".vocab-popover:popover-open");
+      if (!card) return;
+      const box = card.getBoundingClientRect();
+      positions.push({ left: box.left, right: box.right, viewport: innerWidth });
+    }, { capture: true });
+  });
+  await initialize(page);
+  await setSource(page, "An attractive proposal.", "preview");
+  await selectText(page, ".markdown-preview-segment p", "attractive");
+  const card = page.getByRole("dialog", { name: "Look up / Add to Vocab" });
+  await expect(card).toContainText("有吸引力的");
+  for (const width of [390, 320, 280, 800, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect.poll(() => page.evaluate(() =>
+      (window as unknown as { __vocabResizePositions: { viewport: number }[] }).__vocabResizePositions.at(-1)?.viewport,
+    )).toBe(width);
+    const positions = await page.evaluate(() =>
+      (window as unknown as { __vocabResizePositions: { left: number; right: number; viewport: number }[] }).__vocabResizePositions,
+    );
+    for (const position of positions) {
+      expect(position.left).toBeGreaterThanOrEqual(12);
+      expect(position.right).toBeLessThanOrEqual(position.viewport - 12);
+    }
+    await expect(card.locator("header").getByRole("button", { name: "Close", exact: true })).toBeInViewport();
+  }
+});
+
 test("reports missing bundled assets without a download step and retries after repair", async ({ page }) => {
   await page.route("**/models/en-zh/*.gz", (route) => route.fulfill({ status: 404, body: "Missing bundled asset" }));
   await initialize(page);
