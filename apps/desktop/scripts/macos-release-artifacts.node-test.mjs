@@ -60,7 +60,8 @@ test("release workflow retains the app and verifies the mounted DMG before uploa
   assert.match(workflow, /name: Upload DMG to GitHub Release\s+if: env\.RELEASE_TAG != ''/);
   assert.match(workflow, /branches:\s+- main/);
   assert.match(workflow, /caption_gate:\s+name: Native caption gate\s+uses: \.\/\.github\/workflows\/caption\.yml/);
-  assert.match(workflow, /build_macos:\s+name: Build macOS DMG\s+needs: caption_gate/);
+  assert.match(workflow, /build_macos:\s+name: Build macOS DMG\s+needs: \[caption_gate, caption_soak\]/);
+  assert.match(workflow, /caption_soak:[\s\S]*uses: \.\/\.github\/workflows\/caption-qualification\.yml[\s\S]*production_only: true/);
   const gate = await readFile(new URL("../../../.github/workflows/caption.yml", import.meta.url), "utf8");
   assert.match(gate, /runner: \[macos-26, macos-15-intel\]/);
   assert.match(gate, /test-caption-engine\.mjs.*--realtime/);

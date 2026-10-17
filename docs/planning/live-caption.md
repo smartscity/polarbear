@@ -276,7 +276,7 @@ Desktop with an empty environment, retain a 120-second ceiling per case, and exp
 bounded phase diagnostics without recording PCM, transcripts or private paths.
 Run host inference checks on both architectures, not just universal compilation.
 
-CPU scheduling correction (2026-10-18, pending native qualification): cap ASR at
+CPU scheduling correction (2026-10-18, sustained qualification pending): cap ASR at
 four threads and leave one reported hardware thread for capture/VAD and GUI work,
 with a minimum of one ASR thread when capacity is unknown or constrained. Keep the
 same model, decoding policy and queue budgets. The private helper's diagnostic
@@ -284,8 +284,21 @@ thread override permits a sequential fixed-four comparison on the same machine;
 Desktop never supplies that override. Optional numeric stderr diagnostics report
 CPU capacity, VAD cost, inference time, queue wait and cancellation without audio,
 recognized text or paths. They do not alter the stdout protocol or persistence.
-Release packaging depends on both native caption jobs, including paced PCM replay;
-a successful DMG build must not bypass a failed architecture's inference gate.
+Release packaging depends on both native caption jobs and the one-hour production
+PCM soak on both architectures; a successful DMG build must not bypass a failed
+architecture's inference gate. All gates and packaging use the same commit SHA
+(or explicit release tag), not a moving branch checkout.
+
+Native run [39073625630](https://github.com/smartscity/polarbear/actions/runs/39073625630)
+on commit `b5f66c4` passed the 99-second paced replay on ARM and Intel. Its ARM host
+reported three available CPUs: the same JFK fixture took 26,855 ms with four ASR
+threads and 6,844 ms with the two-thread budget. This isolates oversubscription as
+a throughput contributor, not proof of complete product performance. A local
+15-second public meeting replay through the new production supervisor produced
+three finals without overflow, but first-text p95 was 3.87 seconds, above the
+three-second target. Sustained latency, real microphone/GUI behavior and Chinese
+translation remain separate acceptance requirements; do not release on short
+fixture results alone.
 
 Do not advertise fixed performance from upstream model examples. Model revision,
 quantization, VAD artifact, hashes, licenses and hardware profile are implementation

@@ -1,6 +1,14 @@
 name: Caption Qualification
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+      production_only:
+        type: boolean
+        default: false
   workflow_dispatch:
   push:
     branches: [main]
@@ -26,6 +34,8 @@ jobs:
         source: [ami, earnings]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
@@ -55,6 +65,7 @@ jobs:
   measure:
     name: Native ${{ matrix.arch }} / ${{ matrix.engine }}
     needs: corpus
+    if: ${{ !inputs.production_only }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -67,6 +78,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
@@ -124,5 +137,55 @@ jobs:
           path: |
             evidence/
             ${{ runner.temp }}/caption-corpus/corpus-all.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  production:
+    name: Production PCM hour (${{ matrix.arch }})
+    needs: corpus
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-26, arch: arm64 }
+          - { runner: macos-15-intel, arch: x86_64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - run: python -m pip install -r apps/desktop/scripts/caption-evaluation/requirements.txt
+      - name: Verify production replay supervisor under network denial
+        run: |
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$(command -v python)" -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_native_replay.py'
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: corpus-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/caption-corpus
+      - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
+      - run: node apps/desktop/scripts/build-caption.mjs
+      - name: Replay one hour through production VAD and inference queues
+        run: |
+          set -o pipefail
+          mkdir -p evidence
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$(command -v python)" apps/desktop/scripts/caption-evaluation/native_replay.py \
+            "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/production-${{ matrix.arch }}.json" \
+            --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
+            2>&1 | tee evidence/production.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: production-soak-${{ matrix.arch }}
+          path: evidence/
           retention-days: 30
           if-no-files-found: warn

@@ -87,6 +87,34 @@ A failed gate leads to NO_REPLACE, not a relaxed threshold. Infrastructure or
 missing-evidence failures lead to INCOMPLETE/BLOCKED, not an engine accuracy claim.
 The small initial LibriSpeech screen is excluded from the new qualification score.
 
+## Production PCM soak
+
+The native production helper has a separate one-hour gate (`native_replay.py`).
+It reuses the frozen, nonrepeating source-balanced montage above, but feeds 512
+float32 samples at the real sample clock into the bundled helper. The helper owns
+actual VAD, partial scheduling, final FIFO and the unchanged PCM budgets. Reference
+segment boundaries select the montage only; they do not trigger inference. No
+microphone or private recording is used. Sources retain their original attribution.
+
+The supervisor verifies the empty-environment CPU handshake, ordered final IDs,
+bounded pipe lag, stop acknowledgement, exit code and complete sample count. It
+samples the supervisor/child process-tree RSS through the existing libproc adapter.
+Failure, timeout or cancellation kills and reaps the child and keeps evidence.
+It does not collect the native protocol in an unbounded in-memory event list.
+
+Predeclared acceptance: exactly 3,600 seconds; no helper overflow/timeout; at least
+one final; first-text p95 <= 3 seconds from VAD start; final p95 <= 4.4 seconds from
+VAD end (reserving the existing 0.6-second endpoint silence within the product's
+5-second target); sampled peak <= 2 GiB; warmed median RSS growth <= 100 MiB.
+These replay clocks are not ground-truth acoustic endpoints. A pass does not prove
+microphone-to-UI latency, accuracy, Chinese translation or mixed-source capture.
+Missing measurements cannot pass. No acceptance threshold is loosened after a run.
+
+The release workflow calls the native short gate and this production soak on both
+architectures before packaging. The independent Parakeet accuracy/replay matrix
+is not run as part of a release of the unchanged Whisper model. It remains required
+before any engine replacement, with its original frozen comparison policy.
+
 ## Measurement infrastructure correction
 
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass

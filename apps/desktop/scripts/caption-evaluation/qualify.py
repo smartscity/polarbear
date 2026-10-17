@@ -288,6 +288,15 @@ def replay(engine, corpus, directory, seconds, emit):
             "memoryScope": "Supervisor plus all descendants, sampled every 5 seconds; not an OS high-water mark"}
 
 
+def validate_native_arch(expected):
+    if platform.machine() != expected:
+        raise ValueError("Not running on the declared native architecture")
+    if platform.machine() == "x86_64":
+        translated = subprocess.run(["/usr/sbin/sysctl", "-n", "sysctl.proc_translated"], capture_output=True, text=True)
+        if translated.stdout.strip() == "1":
+            raise ValueError("Rosetta is not native Intel evidence")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("engine", choices=("whisper", "parakeet"))
@@ -300,12 +309,7 @@ def main():
     parser.add_argument("--soak-seconds", type=int, default=3600)
     parser.add_argument("--phase", choices=("all", "accuracy", "replay"), default="all")
     args = parser.parse_args()
-    if platform.machine() != args.expect_arch:
-        raise ValueError("Not running on the declared native architecture")
-    if platform.machine() == "x86_64":
-        translated = subprocess.run(["/usr/sbin/sysctl", "-n", "sysctl.proc_translated"], capture_output=True, text=True)
-        if translated.stdout.strip() == "1":
-            raise ValueError("Rosetta is not native Intel evidence")
+    validate_native_arch(args.expect_arch)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     report = {"status": "INCOMPLETE", "engine": args.engine, "machine": platform.machine(),
               "platform": platform.platform(), "threads": 4, "provider": "cpu",

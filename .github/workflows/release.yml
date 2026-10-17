@@ -29,11 +29,19 @@ jobs:
     name: Native caption gate
     uses: ./.github/workflows/caption.yml
     with:
-      ref: ${{ inputs.release_tag || github.ref }}
+      ref: ${{ inputs.release_tag || github.sha }}
+
+  caption_soak:
+    name: Production caption soak
+    needs: caption_gate
+    uses: ./.github/workflows/caption-qualification.yml
+    with:
+      ref: ${{ inputs.release_tag || github.sha }}
+      production_only: true
 
   build_macos:
     name: Build macOS DMG
-    needs: caption_gate
+    needs: [caption_gate, caption_soak]
     runs-on: macos-26
     outputs:
       app_version: ${{ steps.release_metadata.outputs.app_version }}
@@ -43,7 +51,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag || github.ref }}
+          ref: ${{ inputs.release_tag || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
