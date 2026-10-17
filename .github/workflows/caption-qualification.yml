@@ -1,0 +1,122 @@
+name: Caption Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/desktop/scripts/caption-evaluation/qualification_corpus.py"
+      - "apps/desktop/scripts/caption-evaluation/qualify.py"
+      - "apps/desktop/scripts/caption-evaluation/test_qualification.py"
+      - ".github/workflows/caption-qualification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  corpus:
+    name: Prepare public corpus (${{ matrix.source }})
+    runs-on: macos-15-intel
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [ami, earnings]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -r apps/desktop/scripts/caption-evaluation/requirements.txt
+      - run: python -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_*.py'
+      - uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/caption-corpus/sources
+          key: caption-corpus-v1-${{ matrix.source }}-c05ab6fd8b4b627d123c922a22a39e993dd37635
+      - name: Prepare canonical audio once for both architectures
+        run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --source "${{ matrix.source }}"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: corpus-${{ matrix.source }}
+          path: |
+            ${{ runner.temp }}/caption-corpus/*.wav
+            ${{ runner.temp }}/caption-corpus/corpus-*.json
+          retention-days: 7
+          compression-level: 0
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: preparation-${{ matrix.source }}
+          path: ${{ runner.temp }}/caption-corpus/preparation-progress.json
+          if-no-files-found: ignore
+
+  measure:
+    name: Native ${{ matrix.arch }} / ${{ matrix.engine }}
+    needs: corpus
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-26, arch: arm64, engine: parakeet }
+          - { runner: macos-26, arch: arm64, engine: whisper }
+          - { runner: macos-15-intel, arch: x86_64, engine: parakeet }
+          - { runner: macos-15-intel, arch: x86_64, engine: whisper }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - run: python -m pip install -r apps/desktop/scripts/caption-evaluation/requirements.txt
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: corpus-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/caption-corpus
+      - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
+      - name: Download and verify the pinned candidate
+        if: matrix.engine == 'parakeet'
+        run: |
+          mkdir -p "$RUNNER_TEMP/models/parakeet"
+          curl -fLsS --connect-timeout 20 --max-time 1800 -o "$RUNNER_TEMP/parakeet.tar.bz2" https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2
+          tar -xjf "$RUNNER_TEMP/parakeet.tar.bz2" --strip-components=1 -C "$RUNNER_TEMP/models/parakeet"
+          python apps/desktop/scripts/caption-evaluation/prepare.py "$RUNNER_TEMP/models" --model parakeet
+      - name: Build pinned production baseline adapter
+        if: matrix.engine == 'whisper'
+        run: |
+          node apps/desktop/scripts/build-caption.mjs
+          BASE=apps/desktop/src-tauri/target/caption-native
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          SOURCE="$BASE/whisper.cpp-$COMMIT"
+          LIB="$BASE/${{ matrix.arch }}/whisper-build"
+          c++ -std=c++17 -O3 -DNDEBUG -arch "${{ matrix.arch }}" -mmacosx-version-min=13.0 \
+            -I "$SOURCE/include" -I "$SOURCE/ggml/include" -I "$SOURCE/examples" \
+            apps/desktop/scripts/caption-evaluation/whisper-baseline.cpp \
+            "$LIB/src/libwhisper.a" "$LIB/ggml/src/libggml.a" \
+            "$LIB/ggml/src/libggml-cpu.a" "$LIB/ggml/src/libggml-base.a" \
+            -framework Accelerate -o "$RUNNER_TEMP/whisper-baseline"
+      - name: Full accuracy corpus and one-hour offline replay
+        run: |
+          set -o pipefail
+          mkdir -p evidence
+          system_profiler SPHardwareDataType > evidence/hardware.txt
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$(command -v python)" apps/desktop/scripts/caption-evaluation/qualify.py \
+            "${{ matrix.engine }}" "$RUNNER_TEMP/caption-corpus/corpus-all.json" \
+            "evidence/${{ matrix.engine }}-${{ matrix.arch }}.json" \
+            --models "$RUNNER_TEMP/models" --baseline "$RUNNER_TEMP/whisper-baseline" \
+            --whisper-model "$PWD/apps/desktop/src-tauri/resources/caption/ggml-base.en-q5_1.bin" \
+            --expect-arch "${{ matrix.arch }}" 2>&1 | tee evidence/run.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: qualification-${{ matrix.engine }}-${{ matrix.arch }}
+          path: |
+            evidence/
+            ${{ runner.temp }}/caption-corpus/corpus-all.json
+          retention-days: 30
+          if-no-files-found: warn

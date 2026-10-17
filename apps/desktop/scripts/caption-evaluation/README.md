@@ -101,6 +101,37 @@ not be compared directly.
 python3 -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_*.py'
 ```
 
+## Extended meeting qualification
+
+`qualification_corpus.py` prepares the frozen AMI/Earnings-22 corpus described in
+`docs/planning/live-caption-parakeet-qualification.md`. It is network-enabled
+research tooling, not application code. `qualify.py` reuses the same engine
+adapters behind a supervised process and performs full-corpus accuracy plus a
+one-hour real-time, source-balanced prefix-replay montage without repeated audio.
+The worker has a two-request bound and a 60-second response timeout. It fails on
+overload instead of silently skipping audio. Partial JSONL evidence survives a
+failure; only `status: MEASURED` means the requested measurement completed, and
+even that does **not** authorize production replacement.
+
+The `Caption Qualification` workflow prepares identical canonical WAV fixtures
+once, then runs four independent native macOS jobs (Intel/ARM x Whisper/Parakeet).
+Its artifact retention is bounded; copy reviewed measurements into the evidence
+directory before expiry. The workflow never releases or changes the application.
+
+```sh
+python qualification_corpus.py /tmp/caption-corpus --source all
+sandbox-exec -p '(version 1)(allow default)(deny network*)' python qualify.py \
+  parakeet /tmp/caption-corpus/corpus-all.json /tmp/parakeet-qualification.json \
+  --models /tmp/polarbear-asr-evaluation/models --expect-arch x86_64
+```
+
+Use `--phase accuracy` or `--phase replay` for a bounded diagnostic, but neither
+alone completes qualification. `--soak-seconds` is for harness tests only; runs
+shorter than 3600 seconds cannot pass the one-hour stability gate. Do not compare
+parent-only memory with the new sampled process-tree memory or equate oracle
+window latency with real VAD/capture/GUI latency. These corpora contain public
+conversation; country groups are not verified per-speaker accent annotations.
+
 ## Attribution
 
 Recordings and reference transcripts: [LibriSpeech ASR corpus](https://www.openslr.org/12),
