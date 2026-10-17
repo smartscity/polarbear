@@ -86,3 +86,19 @@ requests; overload/timeout preserves partial results and fails the run.
 A failed gate leads to NO_REPLACE, not a relaxed threshold. Infrastructure or
 missing-evidence failures lead to INCOMPLETE/BLOCKED, not an engine accuracy claim.
 The small initial LibriSpeech screen is excluded from the new qualification score.
+
+## Measurement infrastructure correction
+
+Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
+before failing at the first replay RSS sample. Its raw job log identifies
+`PermissionError: Operation not permitted: /bin/ps`, not an inference exception.
+That run is INCOMPLETE and cannot pass the sustained-session gate.
+
+Memory sampling now uses the macOS libproc API directly, including all descendant
+processes. The supervisor owns the sampler; no production capture/runtime code is
+changed. Measurement failures still fail the run rather than returning zero.
+The network-denying sandbox and frozen thresholds remain unchanged. A preflight
+runs the harness regression suite inside that exact sandbox before loading models;
+the real child-process test checks allocation accounting and release. All 18
+regressions passed locally under network denial on Intel macOS. This is harness
+evidence only; a new complete native matrix is required.

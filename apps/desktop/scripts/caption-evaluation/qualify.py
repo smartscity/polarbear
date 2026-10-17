@@ -23,6 +23,7 @@ from evaluate import SherpaCandidate, WhisperBaseline
 from metrics import score, words as normalize
 from qualification_corpus import CALLS, MEETINGS, digest
 from prepare import MODEL_SHA256
+from process_memory import ProcessMemory
 
 TIMEOUT = 60
 QUEUE_LIMIT = 2
@@ -115,18 +116,6 @@ def offline_control():
         except OSError as error:
             raise RuntimeError("Offline control requires EPERM, not a network outage") from error
     raise RuntimeError("Network is available; launch under the documented deny-network sandbox")
-
-
-def tree_rss():
-    rows = subprocess.check_output(["/bin/ps", "-axo", "pid=,ppid=,rss="], text=True, timeout=5)
-    processes = [tuple(map(int, line.split())) for line in rows.splitlines() if line.strip()]
-    included = {os.getpid()}
-    while True:
-        added = {pid for pid, parent, _ in processes if parent in included}
-        if added <= included:
-            break
-        included |= added
-    return sum(rss * 1024 for pid, _, rss in processes if pid in included)
 
 
 def occurrences(text, phrase):
@@ -235,6 +224,7 @@ def replay_events(corpus, directory, duration):
 
 
 def replay(engine, corpus, directory, seconds, emit):
+    process_memory = ProcessMemory()
     events = iter(replay_events(corpus, directory, seconds))
     upcoming = next(events, None)
     pending, first, last = {}, {}, {}
@@ -277,7 +267,7 @@ def replay(engine, corpus, directory, seconds, emit):
         if any(elapsed - event["due"] > TIMEOUT for event in pending.values()):
             raise TimeoutError("Replay inference response timeout")
         if elapsed >= next_memory:
-            measurement = {"elapsedSeconds": elapsed, "rssBytes": tree_rss()}
+            measurement = {"elapsedSeconds": elapsed, "rssBytes": process_memory.sample()}
             memory.append(measurement)
             emit({"type": "memory", **measurement})
             next_memory = elapsed + 5
@@ -329,6 +319,7 @@ def main():
             stream.flush()
         try:
             report["offlineControl"] = offline_control()
+            report["memoryPreflightBytes"] = ProcessMemory().sample()
             corpus = validate_corpus(args.corpus)
             if args.engine == "whisper":
                 model_hash = digest(args.whisper_model)
