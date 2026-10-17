@@ -13,6 +13,7 @@ constexpr int frame_samples = 512;
 constexpr int max_samples = sample_rate * 15;
 
 static void emit(const json &event) { std::cout << event.dump() << '\n' << std::flush; }
+static void phase(const char *name) { std::cerr << "caption-phase:" << name << '\n' << std::flush; }
 static bool read_exact(char *target, size_t count) {
     std::cin.read(target, static_cast<std::streamsize>(count));
     return static_cast<size_t>(std::cin.gcount()) == count;
@@ -27,18 +28,15 @@ int main(int argc, char **argv) {
     if (argc != 3) return 2;
     whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);
     auto context_params = whisper_context_default_params();
-#if defined(__x86_64__)
+    // Keep the production and fixture paths identical until Metal is qualified.
     context_params.use_gpu = false;
-#endif
+    phase("loading-asr-cpu");
     auto context = std::unique_ptr<whisper_context, decltype(&whisper_free)>(
         whisper_init_from_file_with_params(argv[1], context_params), whisper_free);
-    if (!context && context_params.use_gpu) {
-        context_params.use_gpu = false;
-        context.reset(whisper_init_from_file_with_params(argv[1], context_params));
-    }
     auto vad_params = whisper_vad_default_context_params();
     vad_params.use_gpu = false;
     vad_params.n_threads = 1;
+    phase("loading-vad-cpu");
     auto vad = std::unique_ptr<whisper_vad_context, decltype(&whisper_vad_free)>(
         whisper_vad_init_from_file_with_params(argv[2], vad_params), whisper_vad_free);
     if (!context || !vad) { emit({{"type","error"},{"code","modelInvalid"}}); return 3; }
@@ -55,7 +53,9 @@ int main(int argc, char **argv) {
     int quiet = 0, last_partial = 0;
     auto recognize = [&](bool final) {
         if (speech.size() < size_t(sample_rate / 3)) return true;
+        phase(final ? "recognizing-final" : "recognizing-partial");
         if (whisper_full(context.get(), params, speech.data(), static_cast<int>(speech.size())) != 0) return false;
+        phase("reading-pcm");
         std::string text;
         for (int i=0; i<whisper_full_n_segments(context.get()); ++i) {
             if (whisper_full_get_segment_no_speech_prob(context.get(), i) < 0.6f)
@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
               {"startMs",start}, {"endMs",end}, {"english",text}});
         return true;
     };
-    emit({{"type","ready"},{"protocol",1}});
+    phase("ready");
+    emit({{"type","ready"},{"protocol",1},{"backend","cpu"}});
     unsigned char header[12];
     while (read_exact(reinterpret_cast<char *>(header), sizeof(header))) {
         const auto timestamp = little(header,8);
@@ -105,6 +106,7 @@ int main(int argc, char **argv) {
     }
     if (!std::cin.eof() || std::cin.gcount() != 0) return 4;
     if (!recognize(true)) return 6;
+    phase("stopped");
     emit({{"type","stopped"}});
     return 0;
 }

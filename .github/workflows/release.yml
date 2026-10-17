@@ -137,9 +137,19 @@ jobs:
 
       - name: Verify bundled caption engine with offline audio
         run: |
+          set -o pipefail
           COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
-          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav"
-          lipo -verify_arch arm64 x86_64 apps/desktop/src-tauri/resources/caption/polarbear-caption-engine
+          ASSETS="target/universal-apple-darwin/release/bundle/macos/Polarbear.app/Contents/Resources/resources/caption"
+          lipo "$ASSETS/polarbear-caption-engine" -verify_arch arm64 x86_64
+          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" "$ASSETS" 2>&1 | tee caption-fixture.log
+
+      - name: Upload caption verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: caption-release-diagnostics
+          path: caption-fixture.log
+          if-no-files-found: ignore
 
       - name: Locate and rename DMG
         run: |

@@ -1,0 +1,50 @@
+name: Caption Engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/desktop/src-tauri/native/caption-engine/**"
+      - "apps/desktop/src-tauri/resources/caption/**"
+      - "apps/desktop/scripts/*caption*.mjs"
+      - ".github/workflows/caption.yml"
+  pull_request:
+    paths:
+      - "apps/desktop/src-tauri/native/caption-engine/**"
+      - "apps/desktop/src-tauri/resources/caption/**"
+      - "apps/desktop/scripts/*caption*.mjs"
+      - ".github/workflows/caption.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline_fixture:
+    name: Offline ASR (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Test process supervision
+        run: node --test apps/desktop/scripts/caption-engine-fixture.node-test.mjs
+      - name: Build host engine from pinned offline sources
+        run: node apps/desktop/scripts/build-caption.mjs
+      - name: Recognize fixed speech and reject invalid input
+        run: |
+          set -o pipefail
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" 2>&1 | tee caption-fixture.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: caption-fixture-${{ matrix.runner }}
+          path: caption-fixture.log
+          if-no-files-found: ignore

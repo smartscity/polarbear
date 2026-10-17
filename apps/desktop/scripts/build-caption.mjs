@@ -32,7 +32,7 @@ if (process.platform === "darwin") {
     const build = join(cache, architecture);
     run("cmake", ["-S", source, "-B", build, `-DWHISPER_SOURCE=${whisper}`, "-DCMAKE_BUILD_TYPE=Release",
       `-DCMAKE_OSX_ARCHITECTURES=${architecture}`, "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
-      "-DGGML_BLAS=OFF", `-DGGML_METAL=${architecture === "arm64" ? "ON" : "OFF"}`]);
+      "-DGGML_BLAS=OFF", "-DGGML_METAL=OFF"]);
     run("cmake", ["--build", build, "--config", "Release", "-j", "4"]);
     binaries.push(join(build, "polarbear-caption-engine"));
   }

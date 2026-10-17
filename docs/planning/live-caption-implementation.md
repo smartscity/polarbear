@@ -104,6 +104,35 @@ Packaging success does not establish Gatekeeper acceptance or a signed release.
 
 ## Remaining gates and limitations
 
+### Release timeout follow-up (2026-10-17)
+
+The `v0.10.0-alpha.1` release reached the offline fixture gate after building the
+DMG, then exceeded 120 seconds. The old harness discarded stderr and did not print
+case progress, so the historical log does not establish whether model loading,
+inference or process shutdown stalled. It is not evidence of a Node version bug.
+The same baseline fixture passed locally on Intel in 13.8 seconds. The release
+runner (`macos-26`) is ARM; the previous helper automatically enabled Metal on ARM
+but disabled it on Intel. Its CPU fallback only handled a returned initialization
+failure, not a hanging call. This is an unqualified backend difference, not a
+proven exact stack trace for the historical timeout.
+
+The preview now builds and selects CPU on both architectures, including production;
+there is no CI-only recognition bypass. Metal remains disabled until separately
+qualified. The fixed 120-second deadline and speech/silence/malformed-input
+assertions remain. The harness logs sanitized phases and ten-second heartbeats,
+kills and reaps stalled children, rejects malformed/bounded protocol output, and
+reports exit/signal details. Eight process-supervision regressions exercise these
+paths. A separate workflow runs actual fixed-audio inference on ARM and Intel before
+waiting for a full DMG build. The release gate checks the helper inside the packaged
+`.app`, verifies both architecture slices, and retains its diagnostic log as an artifact.
+The previous `lipo -verify_arch arm64 x86_64 <file>` invocation also failed locally:
+Apple's lipo treated the trailing filename as another architecture. The release
+check now puts the input file before `-verify_arch`, preventing that next failure.
+
+This is a conservative compatibility mitigation plus diagnostic correction.
+CPU real-time performance and the historical timeout's exact native stack remain
+unqualified; passing a fixture is not full Live Caption acceptance.
+
 - **NOT IMPLEMENTED:** simultaneous System + Microphone, echo cancellation and
   dual-source timestamp alignment. Do not advertise meeting Both mode as ready.
 - **NOT IMPLEMENTED:** microphone picker, saved monitor-safe window geometry,

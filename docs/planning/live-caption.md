@@ -255,6 +255,14 @@ Rust owns handshake, timeout, pipe backpressure, EOF, termination and process re
 Reject malformed/oversize output and stop input if the child fails. Never auto-restart
 recording after a helper crash. Kill hung native inference with the helper, not the GUI.
 
+Preview backend policy (2026-10-17): bundle the CPU backend on both Intel and Apple
+Silicon. Do not select Metal solely from the CPU architecture. GPU initialization,
+fallback and sustained inference require separate hardware qualification before
+enabling acceleration. The fixed-audio CI gate must execute the same backend as
+Desktop with an empty environment, retain a 120-second ceiling per case, and expose
+bounded phase diagnostics without recording PCM, transcripts or private paths.
+Run host inference checks on both architectures, not just universal compilation.
+
 Do not advertise fixed performance from upstream model examples. Model revision,
 quantization, VAD artifact, hashes, licenses and hardware profile are implementation
 gates. Ship exactly the validated English profile, not a model-choice UI.
