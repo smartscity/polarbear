@@ -16,12 +16,19 @@ export async function changeCaptionSource(source: CaptionSource) {
   }
 }
 
+function startCaption() {
+  // Native Start serializes activation and reveals an existing session without
+  // stopping or resuming it, including repeated menu/shortcut activation.
+  return captionRequest({ action: "start", source: readUserSettings().caption.source, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+}
+
 export async function executeCaptionCommand(command: AppCommand, sessionId?: string, format: "txt" | "md" | "srt" = "txt") {
   if (command === "caption.history") return captionRequest({ action: "open", history: true });
+  if (command === "caption.start") return startCaption();
   const status = await captionRequest<"status">({ action: "status" });
   if (command === "caption.toggle") {
     return ["starting", "capturing", "paused"].includes(status.state)
-      ? captionRequest({ action: "stop" }) : captionRequest({ action: "start", source: readUserSettings().caption.source, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      ? captionRequest({ action: "stop" }) : startCaption();
   }
   if (command === "caption.pauseResume") return captionRequest({ action: status.state === "paused" ? "resume" : "pause" });
   if (command === "caption.stop") return captionRequest({ action: "stop" });

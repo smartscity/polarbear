@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   codeMirrorKeysForCommand,
   effectiveAcceleratorForCommand,
@@ -10,6 +10,34 @@ import {
   type KeybindingContext,
 } from "./keybindingResolver";
 import { isApplePlatform } from "../shared/platform/keyboard";
+
+describe("Live Caption activation binding", () => {
+  it.each(["MacIntel", "Win32", "Linux x86_64"])("resolves the primary modifier on %s without consuming plain typing", (platform) => {
+    vi.stubGlobal("navigator", { platform });
+    try {
+      const shortcuts = resolveShortcutDefinitions({});
+      const event = primaryModifierEvent({ code: "KeyL", key: "l", altKey: true });
+      for (const context of [editorContext, fileTreeContext, { ...fileTreeContext, fileTreeFocused: false }]) {
+        expect(resolveShortcutForKeyboardEvent(event, shortcuts, context)).toMatchObject({ kind: "match", shortcut: { command: "caption.start" } });
+      }
+      expect(resolveShortcutForKeyboardEvent(keydownEvent({ code: "KeyL", key: "l" }), shortcuts, editorContext)).toEqual({ kind: "none" });
+      expect(resolveShortcutForKeyboardEvent({ ...event, isComposing: true } as KeyboardEvent, shortcuts, editorContext)).toEqual({ kind: "none" });
+      expect(findKeybindingConflicts(shortcuts)).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("shares native accelerators and honors remapping and disabling", () => {
+    expect(effectiveAcceleratorForCommand("caption.start", {})).toBe("CmdOrCtrl+Alt+L");
+    const overrides = { "caption.start": "Mod+Shift+J" };
+    expect(effectiveAcceleratorForCommand("caption.start", overrides)).toBe("Shift+CmdOrCtrl+J");
+    expect(resolveShortcutForKeyboardEvent(primaryModifierEvent({ code: "KeyJ", key: "j", shiftKey: true }), resolveShortcutDefinitions(overrides), editorContext)).toMatchObject({ kind: "match", shortcut: { command: "caption.start" } });
+    expect(resolveShortcutDefinitions({ "caption.start": null }).some(({ command }) => command === "caption.start")).toBe(false);
+    expect(effectiveAcceleratorForCommand("caption.start", { "caption.start": null })).toBeUndefined();
+    expect(findKeybindingConflicts(resolveShortcutDefinitions({ "caption.start": "Mod+S" }))).not.toEqual([]);
+  });
+});
 
 const editorContext: KeybindingContext = {
   editorFocused: true,

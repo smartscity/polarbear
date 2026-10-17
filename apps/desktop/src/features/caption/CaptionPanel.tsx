@@ -93,7 +93,7 @@ export function CaptionPanel() {
         }), !segments.length)}
         {!history && active && button("caption.pauseResume", status?.state === "paused" ? <Play size={18} /> : <Pause size={18} />, () => perform(() => executeCaptionCommand("caption.pauseResume")))}
         {!history && active && button("caption.stop", <Square size={18} />, () => perform(() => executeCaptionCommand("caption.stop")))}
-        {!active && !history && button("caption.start", <Play size={18} />, () => perform(() => executeCaptionCommand("caption.toggle")))}
+        {!active && !history && button("caption.start", <Play size={18} />, () => perform(() => executeCaptionCommand("caption.start")))}
         {button("caption.history", <History size={18} />, () => { setHistory(!history); setSelected(undefined); })}
         <button type="button" popoverTarget="caption-options" aria-label={t("caption.options")} title={t("caption.options")}><MoreHorizontal size={18} /></button>
       </div>

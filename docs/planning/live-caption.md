@@ -1,6 +1,6 @@
 # Live Caption: offline English transcription and bilingual history
 
-Revision: 1.1, 2026-10-17 (Asia/Singapore).
+Revision: 1.2, 2026-10-18 (Asia/Singapore).
 Code baseline inspected: `4d437f3`.
 Design: APPROVED by the user. Implementation: PARTIAL preview. Runtime verification:
 PARTIAL (offline helper fixtures and browser tests, not real capture acceptance).
@@ -72,6 +72,16 @@ current test result establishes live recognition, mixed-audio handling, or laten
 ## 3. User interaction
 
 ### Settings and activation
+
+`caption.start` activates or reveals Live Caption via Command+Option+L on macOS
+(Control+Alt+L on Windows/Linux keyboard mappings). The View menu and Settings
+shortcut hint derive from the existing Command Registry and honor user keybinding
+overrides, including disabling the binding. This is an application shortcut, not
+an OS-wide shortcut while another app is focused. It uses the saved audio source
+and the existing native Start request, whose control lock prevents duplicate
+sessions. Repeated activation reveals an active or paused session; it never stops
+capture or implicitly resumes a paused session. Stop and pause/resume remain
+explicit controls. The mapping does not imply native capture support on other OSes.
 
 Add a Live Caption section to the existing Settings dialog:
 

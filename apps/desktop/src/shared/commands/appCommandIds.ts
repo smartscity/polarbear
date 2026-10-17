@@ -1,4 +1,5 @@
 export const APP_COMMANDS = {
+  captionStart: "caption.start",
   captionToggle: "caption.toggle",
   captionPauseResume: "caption.pauseResume",
   captionStop: "caption.stop",

@@ -30,6 +30,10 @@ type CommandDefinition = {
 };
 
 export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
+  "caption.start": {
+    titleKey: "caption.title",
+    shortcut: { key: "l", altKey: true, command: "caption.start" },
+  },
   "caption.toggle": { titleKey: "caption.title" },
   "caption.pauseResume": { titleKey: "caption.pauseResume" },
   "caption.stop": { titleKey: "caption.stop" },

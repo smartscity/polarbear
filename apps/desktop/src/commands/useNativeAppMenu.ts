@@ -349,6 +349,13 @@ export function useNativeAppMenu(
                 { item: "Separator" },
                 sidebarItem,
                 {
+                  id: "caption.start",
+                  text: commandTitle("caption.start"),
+                  accelerator: accelerator("caption.start"),
+                  enabled: commandState("caption.start").enabled,
+                  action: () => executeCommand("caption.start", { commandSource: "menu" }),
+                },
+                {
                   text: commandTitle("view.fileTree"),
                   action: () => executeCommand("view.fileTree")
                 },

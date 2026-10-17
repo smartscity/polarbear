@@ -15,6 +15,8 @@ import { markdownClipboardText } from "../../src/features/editor/markdownClipboa
 import { validateMermaidSource } from "../../src/features/diagram/mermaidRenderer";
 import { renderMermaidSvg } from "../../src/features/diagram/mermaidRenderer";
 import { svgContentAsPngDataUrl } from "../../src/features/diagram/diagramExport";
+import { useAppShortcuts } from "../../src/commands/useAppShortcuts";
+import { executeCaptionCommand } from "../../src/features/caption/captionCommands";
 import { diagramDocument, flowchartFixtures } from "./mermaidFixtures";
 import "../../src/styles.css";
 
@@ -23,6 +25,13 @@ function Harness() {
   const [mode, setMode] = useState<"source" | "live" | "preview">("live");
   const [settings, setSettings] = useState(false);
   const [status, setStatus] = useState("");
+  useAppShortcuts((command) => {
+    if (command.startsWith("caption.")) void executeCaptionCommand(command).catch((error: unknown) => setStatus(String(error)));
+  }, {
+    activeDocumentId: "Quality.md", activeViewMode: mode === "source" ? "edit" : mode,
+    repositoryConnected: false, repositoryLinked: false, repositoryBusy: false,
+    selectedTreeItemId: "", sidebarOpen: false, theme: "light", workspaceOpen: false,
+  });
   const editor = useRef<MarkdownEditorView | null>(null);
   const reading = useVocabReading({ editor, markdown, title: "Quality.md", filePath: null, preview: mode === "preview", onStatus: setStatus });
   useEffect(() => { localStorage.setItem("quality.document", markdown); }, [markdown]);
