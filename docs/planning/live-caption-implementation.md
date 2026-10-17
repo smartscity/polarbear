@@ -187,6 +187,15 @@ was not replaced. All 207 Vitest and 18 Node tests passed. Universal packaging a
 GitHub artifact upload still require the main-branch packaging run; local Intel
 packaging is not substituted for that evidence.
 
+Remote evidence for fix `bc59c7e`:
+[pre-tag universal packaging run 39022762731](https://github.com/smartscity/polarbear/actions/runs/39022762731)
+successfully built both bundles, located their packaged resources, checked universal
+architectures, executed the app and mounted-DMG fixture suites, detached the image,
+and uploaded the macOS DMG artifact. The GitHub Release upload step was correctly
+skipped on main. [Quality run 39022762704](https://github.com/smartscity/polarbear/actions/runs/39022762704)
+also passed. This closes the packaging lifecycle regression; it does not close
+the remaining native capture, signing/notarization or real-time performance gates.
+
 - **NOT IMPLEMENTED:** simultaneous System + Microphone, echo cancellation and
   dual-source timestamp alignment. Do not advertise meeting Both mode as ready.
 - **NOT IMPLEMENTED:** microphone picker, saved monitor-safe window geometry,
