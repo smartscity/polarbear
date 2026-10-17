@@ -1,11 +1,23 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { recognizeFixture } from "./caption-engine-fixture.mjs";
+import { pcm16FromWav, recognizeFixture } from "./caption-engine-fixture.mjs";
 
 const handshake = `console.log(JSON.stringify({type:'ready',protocol:1,backend:'cpu'}));`;
 function run(source, options = {}, pcm = Buffer.alloc(32000)) {
   return recognizeFixture(process.execPath, ["-e", source], pcm, { name: "fixture", timeoutMs: 3000, ...options });
 }
+
+test("validates fixture format and rejects truncated WAV chunks", () => {
+  const wav = Buffer.alloc(48);
+  wav.write("RIFF"); wav.writeUInt32LE(40, 4); wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(16000, 24); wav.writeUInt16LE(16, 34);
+  wav.write("data", 36); wav.writeUInt32LE(4, 40);
+  assert.equal(pcm16FromWav(wav).length, 4);
+  assert.throws(() => pcm16FromWav(wav.subarray(0, 47)), /Truncated WAV/);
+  wav.writeUInt32LE(48000, 24);
+  assert.throws(() => pcm16FromWav(wav));
+});
 
 test("feeds timestamped PCM with an empty environment and waits for EOF", async () => {
   const result = await run(`
@@ -52,6 +64,27 @@ test("requires the same CPU handshake used in production", async () => {
 test("preserves the malformed frame exit code", async () => {
   const result = await run(`${handshake} process.stdin.once('data',b=>process.exit(b.readUInt32LE(8)===5000?4:9));`, { invalid: true });
   assert.equal(result.code, 4);
+});
+
+test("paces PCM against the sample clock and measures final latency", async () => {
+  const result = await run(`${handshake}
+    const started=performance.now(); let bytes=0;
+    process.stdin.on('data',b=>bytes+=b.length);
+    process.stdin.on('end',()=>{
+      if(performance.now()-started<900 || bytes===0) process.exit(9);
+      console.log(JSON.stringify({type:'final',endMs:1000,english:'fixture'}));
+      console.log(JSON.stringify({type:'stopped'}));
+    });`, { realtime: true });
+  assert.equal(result.code, 0);
+  assert.ok(result.maxWriteLagMs < 1000);
+  assert.equal(result.finalLagMs.length, 1);
+  assert.ok(Number.isFinite(result.finalLagMs[0]));
+});
+
+test("stops paced feeding when the helper exits early", async () => {
+  const result = await run(`${handshake} process.stdin.once('data',()=>process.exit(7));`, { realtime: true });
+  assert.equal(result.code, 7);
+  assert.ok(result.elapsedMs < 2000);
 });
 
 test("does not expose arbitrary stderr or recognized content in progress", async () => {

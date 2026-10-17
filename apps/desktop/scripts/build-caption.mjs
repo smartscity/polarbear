@@ -34,6 +34,8 @@ if (process.platform === "darwin") {
       `-DCMAKE_OSX_ARCHITECTURES=${architecture}`, "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
       "-DGGML_BLAS=OFF", "-DGGML_METAL=OFF"]);
     run("cmake", ["--build", build, "--config", "Release", "-j", "4"]);
+    const hostArchitecture = process.arch === "arm64" ? "arm64" : "x86_64";
+    if (architecture === hostArchitecture) run("ctest", ["--test-dir", build, "--output-on-failure"]);
     binaries.push(join(build, "polarbear-caption-engine"));
   }
   const binary = join(assets, "polarbear-caption-engine");

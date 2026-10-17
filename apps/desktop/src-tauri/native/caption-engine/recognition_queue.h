@@ -1,0 +1,96 @@
+#pragma once
+
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
+#include <mutex>
+#include <optional>
+#include <vector>
+
+struct RecognitionJob {
+    std::vector<float> samples;
+    uint64_t sequence, start_ms, end_ms;
+    bool final;
+};
+
+// One consumer owns the model. Provisional work is expendable, finalized audio is not.
+class RecognitionQueue {
+public:
+    explicit RecognitionQueue(size_t sample_budget) : budget_(sample_budget) {}
+
+    bool offer_partial(const std::vector<float> &samples, uint64_t sequence,
+                       uint64_t start_ms, uint64_t end_ms) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (closed_ || busy_ || partial_ || !finals_.empty() || samples.size() > budget_) return false;
+        partial_ = RecognitionJob{samples, sequence, start_ms, end_ms, false};
+        ready_.notify_one();
+        return true;
+    }
+
+    bool submit_final(RecognitionJob job) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (closed_ || !job.final || job.samples.empty() || job.samples.size() > budget_ - queued_samples_) return false;
+        partial_.reset();
+        cancel_partial_.store(true);
+        queued_samples_ += job.samples.size();
+        finals_.push_back(std::move(job));
+        ready_.notify_one();
+        return true;
+    }
+
+    std::optional<RecognitionJob> take() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        ready_.wait(lock, [&] { return closed_ || partial_ || !finals_.empty(); });
+        if (finals_.empty() && !partial_) return std::nullopt;
+        RecognitionJob job;
+        if (!finals_.empty()) {
+            job = std::move(finals_.front());
+            finals_.pop_front();
+            queued_samples_ -= job.samples.size();
+        } else {
+            job = std::move(*partial_);
+            partial_.reset();
+        }
+        busy_ = true;
+        cancel_partial_.store(false);
+        return job;
+    }
+
+    void complete() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        busy_ = false;
+    }
+
+    bool cancelled(bool final) const {
+        return aborted_.load() || (!final && cancel_partial_.load());
+    }
+
+    void close() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        closed_ = true;
+        partial_.reset();
+        cancel_partial_.store(true);
+        ready_.notify_one();
+    }
+
+    void abort() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        closed_ = true;
+        aborted_.store(true);
+        partial_.reset();
+        finals_.clear();
+        queued_samples_ = 0;
+        ready_.notify_one();
+    }
+
+private:
+    const size_t budget_;
+    std::mutex mutex_;
+    std::condition_variable ready_;
+    std::deque<RecognitionJob> finals_;
+    std::optional<RecognitionJob> partial_;
+    size_t queued_samples_ = 0;
+    bool busy_ = false, closed_ = false;
+    std::atomic<bool> cancel_partial_{false}, aborted_{false};
+};

@@ -334,6 +334,83 @@ The helper inside that `.app` passed speech/silence/malformed-frame fixtures; th
 11-second speech fixture took 18.001 seconds in this run. This is a packaging
 functional check and explicitly not a real-time throughput pass.
 
+## Recognition backlog investigation (2026-10-17)
+
+The reported `audioBacklog` message had two possible sources. The capture callback
+treated both `TrySendError::Full` and `Disconnected` as backlog, so a broken helper
+pipe could impersonate a throughput failure. It now distinguishes a full bounded
+queue from `engineFailed`; shutdown errors preserve the first recorded cause.
+Explicit helper error events are decoded through an allowlist instead of being
+misclassified as protocol failures. This does not retroactively identify the cause
+of an old session whose failure code was not persisted.
+
+There was also a concrete scheduling defect: the helper synchronously decoded the
+entire growing speech prefix every two seconds on the same thread that consumed
+PCM. The capture queue could not drain during inference. `RecognitionQueue` now
+owns bounded cross-thread work, final priority, provisional cancellation and drain
+semantics. The capture/VAD path owns segment assembly; one inference thread owns
+Whisper. Busy inference accepts no extra partial snapshots. A finalized segment
+supersedes pending/in-flight provisional work, but accepted finals retain order
+and content. Models, CPU backend, VAD thresholds, capture queue capacity and durable
+record format are unchanged. Saturation remains an explicit error, not a silent
+audio drop or an unbounded buffer.
+
+| Concern | Decision | Ownership |
+| --- | --- | --- |
+| PCM reception blocked by inference | Adopt a bounded producer/consumer handoff | Capture owns VAD/assembly; `RecognitionQueue` owns admission/order/cancellation; one decoder owns the model |
+| Competing partial and final results | Use typed jobs with final priority | Only provisional work is replaceable; final PCM is never coalesced |
+| Engine replacement | Do not introduce a second strategy/runtime here | Keep the pinned helper/model and existing Rust process boundary until qualification succeeds |
+
+The native queue tests cover overload, final preservation, cancellation, FIFO,
+EOF drain, abort and concurrent wakeup. Host builds run them through CTest. The
+fixture supervisor adds sample-clock-paced PCM and input/final latency diagnostics;
+both native CI architectures run a 99-second repeated JFK scheduling regression.
+The separate consented-WAV replay tool does not repeat audio or output transcripts.
+Neither path replaces the frozen one-hour accuracy/latency qualification.
+
+On the local Intel host, the initial 99-second paced comparison returned 21 final
+segments on both helpers. Old-helper maximum write lag was 1307 ms; the initial
+candidate measured 106 ms. Both completed without overload. The old helper also
+completed the five-minute public Earnings-22 `4462231` first-window replay: 45
+finals, 2690 ms maximum write lag, 3713 ms p95 final lag, 4623 ms maximum final lag.
+These runs do not reproduce the exact reported failure on this idle test host.
+They identify an unsafe blocking path and a misleading error classification, not
+proof that all overloads or engine failures are solved. Real microphone input,
+simultaneous translation load and native ARM acceptance remain separate gates.
+
+The scheduling candidate completed the same five-minute recording with 45 finals,
+95 ms maximum write lag, 2946 ms p95 final lag and 3295 ms maximum final lag. Both
+runs used the same model hash
+`4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f`
+and audio hash
+`ffd7cbdf9b5d54a422278fb56aa186557769391752a2e959bc5c3b3567165d43`.
+The old helper hash was
+`5431d91e41b50f665be13977ae3bf7fc69a8ea595bbafc4405613d4e961ffa66`.
+The timed candidate helper hash was
+`0c943a2e42e44e2e9020a87ed3eb4d1f4191ac08442ad178c334a3f05c9b5fcc`.
+These are single sequential diagnostics, not a statistical speedup or accuracy
+claim. Equal segment counts do not prove equal transcripts. A subsequent guard
+prevents an inference failure during final admission from being relabeled as
+backlog; that error-only change is outside this candidate timing measurement.
+Write lag measures the delay in feeding each sample-clock frame to stdin. Final
+lag is measured from the helper's `endMs` (including VAD trailing silence) to its
+JSON result, not from speech onset and not through the GUI or Chinese translation.
+
+Local checks passed: nine caption Rust tests (including actual full/disconnected
+channels), eleven Node fixture/supervision tests, native CTest, AddressSanitizer /
+UndefinedBehaviorSanitizer queue tests, desktop typecheck and lint. No new UI was
+introduced. The installed app was not replaced, no microphone was activated, no
+private recording was read or uploaded, and no formal release tag is justified
+by this diagnostic. The previously documented translation and qualification
+failures remain open.
+
+The final guarded source built successfully for both x86_64 and arm64 in a
+universal helper. Native Intel execution of that final helper passed the
+99-second paced regression (21 finals, maximum write lag 92 ms), silence and
+malformed-frame checks. ARM cross-compilation is not ARM execution; native CI
+must still run. Rust formatting also passed. No updated application/DMG was
+installed or released as part of this investigation.
+
 ## Native manual acceptance procedure
 
 1. Use a consented prerecorded English fixture and a separate test installation.
@@ -358,5 +435,6 @@ functional check and explicitly not a real-time throughput pass.
    WER, latency, RSS, queue limits and typing responsiveness. Only then decide
    whether the bundled model/profile meets the approved product requirements.
 
-Next implementation priority remains proven AEC/Both capture, followed by device
-selection and native acceptance. Do not replace these requirements with more UI.
+The next priority is production capture/ASR/translation reliability and native
+acceptance. AEC/Both and device selection remain deferred; do not replace the
+reliability requirements with additional UI or unrelated capture modes.

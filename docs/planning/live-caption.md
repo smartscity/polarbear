@@ -297,6 +297,16 @@ gates. Ship exactly the validated English profile, not a model-choice UI.
   gap and performance error. Never accumulate hours of audio or silently omit speech.
   Translation uses a durable queue and one in-flight job; at 60 pending segments
   pause capture with a backlog message until the user resumes. Keep all committed text.
+- The helper separates PCM ingestion/VAD from its single model-owning inference
+  thread. A partial snapshot is accepted only when inference is idle; it is never
+  queued behind previous inference. Finalized audio supersedes queued partials and
+  cancels in-flight provisional decoding through the engine abort callback. Finals
+  retain FIFO order and are never coalesced. The handoff budget is one maximum
+  utterance (15 s plus at most one 512-sample frame), plus one in-flight job and the
+  currently assembled utterance. The existing 312-frame capture queue is unchanged.
+  Exhaustion reports `audioBacklog`; EOF drains accepted finals, whereas malformed
+  input aborts. This bounds retained PCM without treating a larger queue as a
+  throughput fix. It does not establish real-time engine qualification.
 
 ## 5. Persistence and failure semantics
 

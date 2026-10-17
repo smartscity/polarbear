@@ -42,9 +42,16 @@ jobs:
           set -o pipefail
           COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
           node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" 2>&1 | tee caption-fixture.log
+      - name: Replay paced PCM without accumulating partial inference
+        run: |
+          set -o pipefail
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" --realtime 2>&1 | tee caption-paced.log
       - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: caption-fixture-${{ matrix.runner }}
-          path: caption-fixture.log
+          path: |
+            caption-fixture.log
+            caption-paced.log
           if-no-files-found: ignore

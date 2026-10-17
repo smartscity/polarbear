@@ -132,6 +132,22 @@ parent-only memory with the new sampled process-tree memory or equate oracle
 window latency with real VAD/capture/GUI latency. These corpora contain public
 conversation; country groups are not verified per-speaker accent annotations.
 
+## Production scheduling regression
+
+The production helper now accepts PCM/VAD independently of inference and drops
+only superseded provisional work, never accepted final audio. The frozen
+qualification adapter still measures its originally declared prefix schedule;
+its failed runs remain failed and cannot be reclassified using this change.
+
+`../test-caption-engine.mjs <upstream-jfk.wav> [assets] --realtime` repeats the
+11-second packaging fixture for 99 seconds at the sample clock. Both native CI
+architectures run it. This is a queue/ordering regression, not accuracy or long
+meeting qualification. `../replay-caption-audio.mjs <wav> <assets>` reuses the
+same supervisor for a consented 16 kHz mono PCM16 recording of up to ten minutes,
+without repetition. It reports hashes, write lag and final latency, not speech
+content. Run old/new helpers sequentially on the same host and model, retain
+failures, and distinguish these diagnostics from a one-hour acceptance run.
+
 ## Attribution
 
 Recordings and reference transcripts: [LibriSpeech ASR corpus](https://www.openslr.org/12),

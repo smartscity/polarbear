@@ -14,6 +14,8 @@ use std::{
 use tauri::{Emitter, Manager};
 
 const AUDIO_QUEUE_FRAMES: usize = 312;
+const AUDIO_QUEUE_FULL: i32 = 9;
+const ENGINE_PIPE_CLOSED: i32 = 10;
 const MAX_EVENT_BYTES: usize = 65536;
 static AUDIO: OnceLock<Mutex<Option<mpsc::SyncSender<Frame>>>> = OnceLock::new();
 static CAPTURE_FAILED: AtomicBool = AtomicBool::new(false);
@@ -24,6 +26,13 @@ static AUDIO_LEVEL: AtomicU32 = AtomicU32::new(0);
 struct Frame {
     at: u64,
     samples: Vec<f32>,
+}
+
+fn enqueue_frame(sender: &mpsc::SyncSender<Frame>, frame: Frame) -> Result<(), i32> {
+    sender.try_send(frame).map_err(|error| match error {
+        mpsc::TrySendError::Full(_) => AUDIO_QUEUE_FULL,
+        mpsc::TrySendError::Disconnected(_) => ENGINE_PIPE_CLOSED,
+    })
 }
 
 struct EngineProcess(Child);
@@ -79,6 +88,50 @@ struct EngineEvent {
     #[serde(default)]
     english: String,
     protocol: Option<u32>,
+    code: Option<String>,
+}
+
+fn engine_failure_code(code: Option<&str>) -> &'static str {
+    match code {
+        Some("audioBacklog") => "audioBacklog",
+        Some("modelInvalid") => "assetsInvalid",
+        Some("engineFailed") => "engineFailed",
+        _ => "engineProtocol",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn distinguishes_a_full_capture_queue_from_a_disconnected_engine() {
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let frame = || Frame {
+            at: 0,
+            samples: vec![0.0; 512],
+        };
+        assert_eq!(enqueue_frame(&sender, frame()), Ok(()));
+        assert_eq!(enqueue_frame(&sender, frame()), Err(AUDIO_QUEUE_FULL));
+        receiver.recv().unwrap();
+        assert_eq!(enqueue_frame(&sender, frame()), Ok(()));
+        drop(receiver);
+        assert_eq!(enqueue_frame(&sender, frame()), Err(ENGINE_PIPE_CLOSED));
+    }
+
+    #[test]
+    fn engine_errors_preserve_overload_without_accepting_unknown_codes() {
+        let event: EngineEvent =
+            serde_json::from_str(r#"{"type":"error","code":"audioBacklog"}"#).unwrap();
+        assert_eq!(engine_failure_code(event.code.as_deref()), "audioBacklog");
+        assert_eq!(engine_failure_code(Some("modelInvalid")), "assetsInvalid");
+        assert_eq!(engine_failure_code(Some("engineFailed")), "engineFailed");
+        assert_eq!(
+            engine_failure_code(Some("untrusted error")),
+            "engineProtocol"
+        );
+        assert_eq!(engine_failure_code(None), "engineProtocol");
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -115,8 +168,8 @@ extern "C" fn on_audio(samples: *const f32, count: i32, at: u64) {
             / frame.samples.len() as f32)
             .sqrt();
         AUDIO_LEVEL.store((rms * 1000.0).clamp(0.0, 100.0) as u32, Ordering::Relaxed);
-        if sender.try_send(frame).is_err() {
-            CAPTURE_ERROR.store(9, Ordering::Release);
+        if let Err(code) = enqueue_frame(sender, frame) {
+            CAPTURE_ERROR.store(code, Ordering::Release);
             CAPTURE_FAILED.store(true, Ordering::Release);
         }
     }
@@ -267,6 +320,7 @@ pub fn launch(
                 input.flush()
             })();
             if result.is_err() {
+                CAPTURE_ERROR.store(ENGINE_PIPE_CLOSED, Ordering::Release);
                 CAPTURE_FAILED.store(true, Ordering::Release);
                 break;
             }
@@ -310,23 +364,24 @@ pub fn launch(
                         .load(Ordering::Acquire)
                     > 10_000
             {
-                failure = Some("panelUnavailable");
+                failure.get_or_insert("panelUnavailable");
                 worker_cancel.store(true, Ordering::Release);
             }
             if CAPTURE_FAILED.load(Ordering::Acquire) {
-                failure = Some(match CAPTURE_ERROR.load(Ordering::Acquire) {
+                failure.get_or_insert(match CAPTURE_ERROR.load(Ordering::Acquire) {
                     3 => "microphoneDenied",
                     4 => "deviceLost",
                     6 => "unsupportedPlatform",
                     7 => "systemSuspended",
                     8 => "systemAudioDenied",
-                    9 => "audioBacklog",
+                    AUDIO_QUEUE_FULL => "audioBacklog",
+                    ENGINE_PIPE_CLOSED => "engineFailed",
                     _ => "captureFailed",
                 });
                 worker_cancel.store(true, Ordering::Release);
             }
             if !ready && started.elapsed() > Duration::from_secs(60) {
-                failure = Some("engineTimeout");
+                failure.get_or_insert("engineTimeout");
                 worker_cancel.store(true, Ordering::Release);
             }
             if worker_cancel.load(Ordering::Acquire) && stopping.is_none() {
@@ -407,6 +462,10 @@ pub fn launch(
                         }
                         break;
                     }
+                    "error" => {
+                        failure = Some(engine_failure_code(event.code.as_deref()));
+                        worker_cancel.store(true, Ordering::Release);
+                    }
                     _ => {
                         failure = Some("engineProtocol");
                         worker_cancel.store(true, Ordering::Release);
@@ -443,7 +502,7 @@ pub fn launch(
             }
             if let Ok(Some(exit)) = child.try_wait() {
                 if !exit.success() {
-                    failure = Some("engineFailed");
+                    failure.get_or_insert("engineFailed");
                     worker_cancel.store(true, Ordering::Release);
                 }
                 // Drain final events already written to stdout before processing EOF.
