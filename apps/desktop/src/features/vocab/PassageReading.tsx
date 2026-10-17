@@ -4,7 +4,7 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 import { normalizeReadingTerm } from "./readingSelection";
 import { speakVocab, stopReadingSpeech } from "./vocabAdapter";
 import { translateReadingLocal } from "./translation/offlineTranslation";
-import { TranslationError } from "./translation/translationError";
+import { TranslationError } from "../../shared/translation/translationError";
 
 export function PassageReading({ text, onLookup, allowWordLookup, lookupDisabled, autoTranslate }: {
   text: string; onLookup: (term: string) => void; allowWordLookup: boolean; lookupDisabled: boolean; autoTranslate: boolean;

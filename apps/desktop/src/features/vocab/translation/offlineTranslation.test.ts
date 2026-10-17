@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OfflineTranslation } from "./offlineTranslation";
-import { TranslationError } from "./translationError";
+import { TranslationError } from "../../../shared/translation/translationError";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

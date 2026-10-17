@@ -13,6 +13,7 @@ use tauri::{Emitter, Manager};
 mod app_zoom;
 mod cloud_sync_store;
 mod ipc_contracts;
+mod live_caption;
 mod memory_admin;
 mod native_pinch;
 mod reading_native;
@@ -3287,6 +3288,7 @@ fn main() -> tauri::Result<()> {
     let builder = tauri::Builder::default()
         .manage(app_zoom::AppZoomState::default())
         .manage(memory_admin::MemoryAdminState::default())
+        .manage(live_caption::CaptionService::default())
         .manage(system_open::PendingOpenFiles::default());
 
     #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
@@ -3307,59 +3309,102 @@ fn main() -> tauri::Result<()> {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "caption-translator" {
+                    return;
+                }
+                window
+                    .app_handle()
+                    .state::<live_caption::CaptionService>()
+                    .halt();
+                let app = window.app_handle().clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let _ = app
+                        .state::<live_caption::CaptionService>()
+                        .stop_serialized();
+                });
+                if window.label() == "live-caption" {
+                    return;
+                }
                 api.prevent_close();
                 let _ = window.emit("polarbear-window-close-requested", ());
             }
         })
-        .invoke_handler(tauri::generate_handler![
-            reading_native::begin_document_copy,
-            reading_native::begin_image_copy,
-            reading_native::write_clipboard_image,
-            reading_native::write_document_copy,
-            reading_native::speak_reading,
-            reading_native::stop_reading_speech,
-            app_zoom::set_app_zoom,
-            list_workspace_files,
-            load_markdown_file,
-            get_markdown_file_revision,
-            save_markdown_file,
-            write_markdown_file,
-            create_markdown_file,
-            create_workspace_directory,
-            delete_workspace_entry,
-            duplicate_workspace_entry,
-            rename_entry,
-            open_markdown_file,
-            reveal_in_file_manager,
-            open_external_url,
-            open_new_app_window,
-            quit_app,
-            move_entry,
-            copy_image_asset,
-            save_image_asset,
-            export_png_file,
-            export_svg_file,
-            resolve_markdown_asset,
-            repository_connect_provider,
-            repository_disconnect_provider,
-            repository_get_account,
-            repository_list_repositories,
-            repository_link_workspace,
-            repository_get_workspace_binding,
-            repository_get_sync_status,
-            repository_push_workspace,
-            repository_pull_workspace,
-            repository_sync_now,
-            memory_admin::memory_admin_bind_workspace,
-            memory_admin::memory_admin_request,
-            system_open::take_pending_open_files,
-            vocab_bridge::vocab_request,
-            vocab_outbox::enqueue_vocab_capture,
-            vocab_outbox::vocab_capture_status
-        ])
+        .invoke_handler(|invoke| {
+            if matches!(
+                invoke.message.webview_ref().label(),
+                "live-caption" | "caption-translator"
+            ) && invoke.message.command() != "caption_request"
+            {
+                invoke
+                    .resolver
+                    .reject("Command is not available to the caption surface");
+                return true;
+            }
+            let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
+                live_caption::caption_request,
+                reading_native::begin_document_copy,
+                reading_native::begin_image_copy,
+                reading_native::write_clipboard_image,
+                reading_native::write_document_copy,
+                reading_native::speak_reading,
+                reading_native::stop_reading_speech,
+                app_zoom::set_app_zoom,
+                list_workspace_files,
+                load_markdown_file,
+                get_markdown_file_revision,
+                save_markdown_file,
+                write_markdown_file,
+                create_markdown_file,
+                create_workspace_directory,
+                delete_workspace_entry,
+                duplicate_workspace_entry,
+                rename_entry,
+                open_markdown_file,
+                reveal_in_file_manager,
+                open_external_url,
+                open_new_app_window,
+                quit_app,
+                move_entry,
+                copy_image_asset,
+                save_image_asset,
+                export_png_file,
+                export_svg_file,
+                resolve_markdown_asset,
+                repository_connect_provider,
+                repository_disconnect_provider,
+                repository_get_account,
+                repository_list_repositories,
+                repository_link_workspace,
+                repository_get_workspace_binding,
+                repository_get_sync_status,
+                repository_push_workspace,
+                repository_pull_workspace,
+                repository_sync_now,
+                memory_admin::memory_admin_bind_workspace,
+                memory_admin::memory_admin_request,
+                system_open::take_pending_open_files,
+                vocab_bridge::vocab_request,
+                vocab_outbox::enqueue_vocab_capture,
+                vocab_outbox::vocab_capture_status
+            ];
+            handler(invoke)
+        })
         .build(tauri::generate_context!())?;
 
     app.run(|app, event| {
+        if let tauri::RunEvent::ExitRequested { api, .. } = &event {
+            if app.state::<live_caption::CaptionService>().begin_exit() {
+                api.prevent_exit();
+                app.state::<live_caption::CaptionService>().halt();
+                let app = app.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let _ = app
+                        .state::<live_caption::CaptionService>()
+                        .stop_serialized();
+                    app.exit(0);
+                });
+            }
+        }
         if matches!(event, tauri::RunEvent::Exit) {
             app.state::<vocab_outbox::VocabOutbox>().stop();
         }

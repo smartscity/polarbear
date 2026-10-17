@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "vite build",
+    "caption:build": "node scripts/build-caption.mjs",
     "typecheck": "tsc --noEmit",
     "test:native-clipboard": "node scripts/test-native-clipboard.mjs",
     "test:translation-assets": "node --input-type=module -e \"import('./scripts/bundled-translation-assets.mjs').then(m => m.verifyTranslationAssets())\"",

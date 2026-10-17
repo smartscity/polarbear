@@ -1,0 +1,6 @@
+{
+  "identifier": "caption",
+  "description": "Caption windows cannot invoke editor, workspace, Memory or Vocab commands.",
+  "windows": ["live-caption", "caption-translator"],
+  "permissions": []
+}

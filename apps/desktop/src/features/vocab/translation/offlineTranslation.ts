@@ -1,5 +1,5 @@
 import { MAX_SENTENCE_LENGTH } from "../readingSelection";
-import { TranslationError } from "./translationError";
+import { TranslationError } from "../../../shared/translation/translationError";
 
 interface TranslationEngine {
   translate(text: string): Promise<string>;
@@ -63,7 +63,7 @@ export class OfflineTranslation {
 }
 
 const readingTranslator = new OfflineTranslation(async () => {
-  const { BergamotWorker } = await import("./bergamotWorker");
+  const { BergamotWorker } = await import("../../../shared/translation/bergamotWorker");
   return new BergamotWorker();
 });
 

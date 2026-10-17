@@ -129,9 +129,17 @@ jobs:
           grep -n '"version"' package.json || true
 
       - name: Build macOS DMG
+        env:
+          TAURI_ENV_TARGET_TRIPLE: universal-apple-darwin
         run: |
           cd apps/desktop
           npx tauri build --target universal-apple-darwin --bundles dmg
+
+      - name: Verify bundled caption engine with offline audio
+        run: |
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav"
+          lipo -verify_arch arm64 x86_64 apps/desktop/src-tauri/resources/caption/polarbear-caption-engine
 
       - name: Locate and rename DMG
         run: |
@@ -181,6 +189,10 @@ jobs:
               --title "Polarbear ${APP_VERSION}" \
               --notes "Polarbear macOS DMG release." \
               --draft
+
+          if [[ "$APP_VERSION" == *-* ]]; then
+            gh release edit "$TAG" --prerelease
+          fi
 
           gh release upload "$TAG" "$DMG_FILE" --clobber
 

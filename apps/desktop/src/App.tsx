@@ -3734,6 +3734,11 @@ export function App() {
         if (activeSurface === "workspace") vocab.open();
         return;
       }
+      if (command.startsWith("caption.")) {
+        void import("./features/caption/captionCommands").then(({ executeCaptionCommand }) => executeCaptionCommand(command))
+          .catch(() => setStatusMessage(t("caption.operationFailed")));
+        return;
+      }
       if (command === "app.settings") { setIsSettingsDialogOpen(true); return; }
       if (command === "edit.copyMarkdown") {
         const range = editorViewRef.current?.state.selection.main;

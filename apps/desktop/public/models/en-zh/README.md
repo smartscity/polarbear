@@ -16,7 +16,7 @@ Vocab. No runtime model download or Apple language pack is required.
 The models are unmodified except for gzip packaging. The packaged `manifest.json` records
 compressed and decompressed SHA-256 digests. Production builds verify both;
 the runtime verifies decompressed assets before loading them into the engine.
-Its source is `src/features/vocab/translation/modelManifest.json`.
+Its source is `src/shared/translation/modelManifest.json`.
 The MPL license is included as `LICENSE-MPL-2.0.txt`. Engine notices accompany
 the runtime under `/translation-runtime/`. This is neural translation, not a
 dictionary: acronyms, specialist terms and context-dependent prose can be

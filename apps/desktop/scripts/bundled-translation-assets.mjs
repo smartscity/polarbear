@@ -8,7 +8,7 @@ import { gunzipSync } from "node:zlib";
 const require = createRequire(import.meta.url);
 const engine = dirname(require.resolve("@browsermt/bergamot-translator/translator.js"));
 const modelRoot = fileURLToPath(new URL("../public/models/en-zh/", import.meta.url));
-const manifestPath = fileURLToPath(new URL("../src/features/vocab/translation/modelManifest.json", import.meta.url));
+const manifestPath = fileURLToPath(new URL("../src/shared/translation/modelManifest.json", import.meta.url));
 const runtimeFiles = ["translator-worker.js", "bergamot-translator-worker.js", "bergamot-translator-worker.wasm"];
 
 export function verifyTranslationAssets() {

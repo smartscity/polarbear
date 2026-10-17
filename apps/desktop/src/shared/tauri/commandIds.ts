@@ -1,4 +1,5 @@
 export const TAURI_COMMANDS = {
+  captionRequest: "caption_request",
   beginDocumentCopy: "begin_document_copy",
   writeDocumentCopy: "write_document_copy",
   speakReading: "speak_reading",

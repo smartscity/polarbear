@@ -15,6 +15,7 @@ describe("parseUserSettings", () => {
         "view.zoomIn": null
       }
     })).toEqual({
+      caption: DEFAULT_USER_SETTINGS.caption,
       selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "system",
@@ -33,6 +34,7 @@ describe("parseUserSettings", () => {
       theme: "dark",
       keybindings: {},
     })).toEqual({
+      caption: DEFAULT_USER_SETTINGS.caption,
       selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "zh-CN",
@@ -46,6 +48,7 @@ describe("parseUserSettings", () => {
       version: 1,
       keybindings: { "file.save": "Mod+S" },
     })).toEqual({
+      caption: DEFAULT_USER_SETTINGS.caption,
       selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "system",
@@ -63,5 +66,11 @@ describe("parseUserSettings", () => {
     expect(parseUserSettings({ version: 2 }).selectionTranslation).toBe(true);
     expect(parseUserSettings({ version: 2, selectionTranslation: false }).selectionTranslation).toBe(false);
     expect(parseUserSettings({ version: 2, selectionTranslation: "false" }).selectionTranslation).toBe(true);
+  });
+  it("migrates caption preferences without persisting recording state", () => {
+    expect(parseUserSettings({ version: 2 }).caption).toEqual(DEFAULT_USER_SETTINGS.caption);
+    const settings = parseUserSettings({ version: 3, caption: { source: "microphone", language: "chinese", timestamps: true, active: true } });
+    expect(settings.caption).toEqual({ source: "microphone", language: "chinese", timestamps: true, showChinese: true, pinned: true });
+    expect(parseUserSettings({ version: 3, caption: { source: "remote", language: "invalid" } }).caption).toEqual(DEFAULT_USER_SETTINGS.caption);
   });
 });

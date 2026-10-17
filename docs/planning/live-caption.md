@@ -1,15 +1,19 @@
 # Live Caption: offline English transcription and bilingual history
 
-Revision: 1.0 draft, 2026-10-17 (Asia/Singapore).
+Revision: 1.1, 2026-10-17 (Asia/Singapore).
 Code baseline inspected: `4d437f3`.
-Design: IN_REVIEW. Implementation: NOT_STARTED. Runtime verification: NOT_RUN.
+Design: APPROVED by the user. Implementation: PARTIAL preview. Runtime verification:
+PARTIAL (offline helper fixtures and browser tests, not real capture acceptance).
 This document is the feature owner; the diagram is its architectural view.
+See [implementation evidence and remaining gates](live-caption-implementation.md).
 
 ## 1. Confirmed scope and product outcome
 
 The user confirmed English-only speech recognition, offline Chinese translation,
 preservation of both languages, models included in the installer, and a copy button.
-The user authorized functional design first, not feature implementation.
+The user subsequently authorized implementation, tests, commit, tag and push.
+The approved Both-mode and native acceptance gates below remain mandatory for a
+complete release; the first implementation is not a substitute for those gates.
 
 OBJ-01: Understand English audio without leaving the current application, and retain
 a useful, private, searchable bilingual record without installing extra software.

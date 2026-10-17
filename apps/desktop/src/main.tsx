@@ -1,9 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { I18nProvider } from "./shared/i18n/I18nProvider";
 import "./styles.css";
+const App = React.lazy(() => import("./App").then((module) => ({ default: module.App })));
+const CaptionPanel = React.lazy(() => import("./features/caption/CaptionPanel").then((module) => ({ default: module.CaptionPanel })));
+const CaptionTranslator = React.lazy(() => import("./features/caption/CaptionTranslator").then((module) => ({ default: module.CaptionTranslator })));
 
 console.info("Polarbear frontend booting...");
 
@@ -17,7 +19,10 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <I18nProvider>
-        <App />
+        <React.Suspense fallback={null}>
+        {new URLSearchParams(location.search).get("surface") === "caption-translator" ? <CaptionTranslator />
+          : new URLSearchParams(location.search).get("surface") === "caption" ? <CaptionPanel /> : <App />}
+        </React.Suspense>
       </I18nProvider>
     </ErrorBoundary>
   </React.StrictMode>

@@ -3,7 +3,16 @@ import type { AppCommand } from "../commands/appCommandTypes";
 import { STORAGE_KEYS } from "../constants/storageKeys";
 import { APP_EVENTS } from "../events/appEvents";
 
-export const USER_SETTINGS_VERSION = 2;
+export const USER_SETTINGS_VERSION = 3;
+
+export type CaptionPreferences = {
+  source: "system" | "microphone";
+  language: "bilingual" | "english" | "chinese";
+  timestamps: boolean;
+  showChinese: boolean;
+  pinned: boolean;
+};
+const DEFAULT_CAPTION: CaptionPreferences = { source: "system", language: "bilingual", timestamps: false, showChinese: true, pinned: true };
 
 export type KeybindingOverrides = Partial<Record<AppCommand, string | null>>;
 export type LanguagePreference = string;
@@ -14,6 +23,7 @@ export type UserSettings = {
   language: LanguagePreference;
   theme: ThemePreference;
   selectionTranslation: boolean;
+  caption: CaptionPreferences;
   keybindings: KeybindingOverrides;
 };
 
@@ -22,6 +32,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   language: "system",
   theme: "system",
   selectionTranslation: true,
+  caption: DEFAULT_CAPTION,
   keybindings: {}
 };
 
@@ -48,7 +59,7 @@ export function writeUserSettings(settings: UserSettings): void {
 }
 
 export function updateUserSettings(
-  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme" | "selectionTranslation">>,
+  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme" | "selectionTranslation" | "caption">>,
 ): UserSettings {
   const nextSettings = parseUserSettings({
     ...readUserSettings(),
@@ -60,7 +71,7 @@ export function updateUserSettings(
 }
 
 export function parseUserSettings(value: unknown): UserSettings {
-  if (!isRecord(value) || (value.version !== 1 && value.version !== USER_SETTINGS_VERSION)) {
+  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== USER_SETTINGS_VERSION)) {
     return DEFAULT_USER_SETTINGS;
   }
 
@@ -81,7 +92,19 @@ export function parseUserSettings(value: unknown): UserSettings {
     language: isLanguagePreference(value.language) ? value.language : "system",
     theme: isThemePreference(value.theme) ? value.theme : "system",
     selectionTranslation: typeof value.selectionTranslation === "boolean" ? value.selectionTranslation : true,
+    caption: parseCaption(value.caption),
     keybindings
+  };
+}
+
+function parseCaption(value: unknown): CaptionPreferences {
+  if (!isRecord(value)) return DEFAULT_CAPTION;
+  return {
+    source: value.source === "microphone" ? "microphone" : "system",
+    language: value.language === "english" || value.language === "chinese" ? value.language : "bilingual",
+    timestamps: value.timestamps === true,
+    showChinese: value.showChinese !== false,
+    pinned: value.pinned !== false,
   };
 }
 

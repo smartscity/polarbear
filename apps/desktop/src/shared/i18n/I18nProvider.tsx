@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from "react";
 import { updateUserSettings } from "../settings/userSettings";
+import { APP_EVENTS } from "../events/appEvents";
 import {
   initialLanguage,
   languageDirection,
@@ -36,6 +37,16 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>(initialLanguage);
+
+  useEffect(() => {
+    const refreshLanguage = () => setLanguageState(initialLanguage());
+    window.addEventListener(APP_EVENTS.settingsChanged, refreshLanguage);
+    window.addEventListener("storage", refreshLanguage);
+    return () => {
+      window.removeEventListener(APP_EVENTS.settingsChanged, refreshLanguage);
+      window.removeEventListener("storage", refreshLanguage);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;

@@ -1,4 +1,10 @@
 export const APP_COMMANDS = {
+  captionToggle: "caption.toggle",
+  captionPauseResume: "caption.pauseResume",
+  captionStop: "caption.stop",
+  captionCopy: "caption.copy",
+  captionHistory: "caption.history",
+  captionExport: "caption.export",
   vocabLookup: "vocab.lookup",
   appAbout: "app.about",
   appSettings: "app.settings",

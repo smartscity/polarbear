@@ -82,6 +82,7 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
     let mut files = vec![
         "native/DocumentClipboard.swift",
         "native/ReadingSpeech.swift",
+        "native/LiveCaptionCapture.swift",
     ]
     .into_iter()
     .map(PathBuf::from)
@@ -117,6 +118,12 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
     };
     let output = PathBuf::from(env::var("OUT_DIR")?);
     let status = std::process::Command::new(&compiler)
+        .args([
+            "-Xfrontend",
+            "-disable-autolink-framework",
+            "-Xfrontend",
+            "ScreenCaptureKit",
+        ])
         .arg("-module-cache-path")
         .arg(output.join("swift-module-cache"))
         .args([
@@ -141,11 +148,12 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
         return Err(io::Error::other("Swift reading bridge compilation failed").into());
     }
     println!("cargo:rustc-link-search=native={}", output.display());
+    println!("cargo:rustc-link-arg=-Wl,-weak_framework,ScreenCaptureKit");
     println!(
         "cargo:rustc-link-search=native={}",
         compiler
             .parent()
-            .unwrap()
+            .ok_or_else(|| io::Error::other("Swift compiler directory is unavailable"))?
             .join("../lib/swift/macosx")
             .display()
     );
