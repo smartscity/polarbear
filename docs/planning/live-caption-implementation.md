@@ -150,6 +150,43 @@ Verification for implementation commit `cdb131b`:
 
 ## Remaining gates and limitations
 
+### Packaging lifecycle regression in v0.10.1
+
+The v0.10.1 release failed after DMG creation, before inference: the workflow used
+`tauri build --bundles dmg`, then tried to execute a helper in the intermediate
+`.app`. Tauri intentionally removes that app when the app bundle was not requested.
+This is not a missing model or a caption timeout. The previous local verification
+used `--bundles app`, so it did not reproduce the release packaging lifecycle.
+Native fixture tests and universal compilation were insufficient release evidence.
+
+The original behavior was reproduced locally using `tauri bundle --bundles dmg
+--ci`: packaging succeeded and logged `Cleaning .../Polarbear.app`. The new artifact
+check then correctly failed with the explicit dmg-only cleanup diagnosis.
+
+The corrected workflow requests `--bundles app,dmg`. Artifact discovery uses Cargo
+metadata, the build target and configured product name, requires both the packaged
+helper and exactly one DMG, and never falls back to source-tree resources or picks
+an arbitrary stale image. Six regression checks cover native/universal layouts,
+spaces/custom target directories, the deleted intermediate app, missing packaged
+resources, missing/ambiguous DMGs, and the workflow bundle/verification ordering.
+
+Relevant main-branch changes now run the same universal macOS build and verification
+job before a tag is created. Branch runs upload a test artifact but cannot publish
+a GitHub Release or start the Windows release job. Tag runs retain release behavior.
+The release gate checks both retained `.app` and a read-only mounted DMG, executing
+the fixed speech/silence/malformed-input tests against the resources actually in
+each artifact. The DMG is detached on success or failure. Artifact upload follows
+these checks; neither static workflow guards nor unit tests replace actual packaging.
+
+Local verification on Intel macOS 26.5.1: the original dmg-only cleanup was
+reproduced; `tauri build --bundles app,dmg --ci` then completed with both outputs
+retained. Artifact discovery passed. Both the retained app and the read-only
+mounted DMG passed actual speech, silence and malformed-frame checks (speech cases
+10.1 and 11.4 seconds). The image detached successfully; the installed application
+was not replaced. All 207 Vitest and 18 Node tests passed. Universal packaging and
+GitHub artifact upload still require the main-branch packaging run; local Intel
+packaging is not substituted for that evidence.
+
 - **NOT IMPLEMENTED:** simultaneous System + Microphone, echo cancellation and
   dual-source timestamp alignment. Do not advertise meeting Both mode as ready.
 - **NOT IMPLEMENTED:** microphone picker, saved monitor-safe window geometry,

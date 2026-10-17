@@ -8,8 +8,18 @@ on:
         required: true
         type: string
   push:
+    branches:
+      - main
     tags:
       - "v*"
+    paths:
+      - ".github/workflows/release.yml"
+      - "apps/desktop/src-tauri/**"
+      - "apps/desktop/scripts/**"
+      - "apps/desktop/package.json"
+      - "package-lock.json"
+      - "Cargo.toml"
+      - "Cargo.lock"
 
 permissions:
   contents: write
@@ -69,13 +79,16 @@ jobs:
         env:
           INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          TAG="${INPUT_RELEASE_TAG:-$GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid tag: $TAG"
-            echo "Expected tag format: v0.1.7"
-            exit 1
+          TAG=""
+          VERSION=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          if [[ -n "$INPUT_RELEASE_TAG" || "$GITHUB_REF_TYPE" == "tag" ]]; then
+            TAG="${INPUT_RELEASE_TAG:-$GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo "Invalid tag: $TAG"
+              echo "Expected tag format: v0.1.7"
+              exit 1
+            fi
           fi
 
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
@@ -133,38 +146,47 @@ jobs:
           TAURI_ENV_TARGET_TRIPLE: universal-apple-darwin
         run: |
           cd apps/desktop
-          npx tauri build --target universal-apple-darwin --bundles dmg
+          npx tauri build --target universal-apple-darwin --bundles app,dmg
+
+      - name: Locate required release artifacts
+        run: node apps/desktop/scripts/macos-release-artifacts.mjs --target universal-apple-darwin --github-env
 
       - name: Verify bundled caption engine with offline audio
         run: |
           set -o pipefail
           COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
-          ASSETS="target/universal-apple-darwin/release/bundle/macos/Polarbear.app/Contents/Resources/resources/caption"
+          lipo "$APP_BUNDLE/Contents/MacOS/polarbear-desktop" -verify_arch arm64 x86_64
+          lipo "$CAPTION_ASSETS/polarbear-caption-engine" -verify_arch arm64 x86_64
+          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" "$CAPTION_ASSETS" 2>&1 | tee caption-fixture.log
+
+      - name: Verify caption engine inside DMG
+        run: |
+          set -o pipefail
+          MOUNT=$(mktemp -d)
+          trap 'hdiutil detach "$MOUNT"; rmdir "$MOUNT"' EXIT
+          hdiutil attach "$DMG_SOURCE" -mountpoint "$MOUNT" -readonly -nobrowse
+          PRODUCT=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').productName")
+          ASSETS="$MOUNT/$PRODUCT.app/Contents/Resources/resources/caption"
           lipo "$ASSETS/polarbear-caption-engine" -verify_arch arm64 x86_64
-          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" "$ASSETS" 2>&1 | tee caption-fixture.log
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          node apps/desktop/scripts/test-caption-engine.mjs "apps/desktop/src-tauri/target/caption-native/whisper.cpp-${COMMIT}/samples/jfk.wav" "$ASSETS" 2>&1 | tee caption-dmg-fixture.log
 
       - name: Upload caption verification diagnostics
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: caption-release-diagnostics
-          path: caption-fixture.log
+          path: |
+            caption-fixture.log
+            caption-dmg-fixture.log
           if-no-files-found: ignore
 
       - name: Locate and rename DMG
         run: |
-          DMG_FILE=$(find . -type f -path "*/bundle/dmg/*.dmg" | head -n 1)
-
-          if [ -z "$DMG_FILE" ]; then
-            echo "No DMG file found"
-            find . -type f -name "*.dmg" -print
-            exit 1
-          fi
-
-          echo "Original DMG: $DMG_FILE"
+          echo "Original DMG: $DMG_SOURCE"
 
           RENAMED_DMG="Polarbear_${APP_VERSION}.dmg"
-          cp "$DMG_FILE" "$RENAMED_DMG"
+          cp "$DMG_SOURCE" "$RENAMED_DMG"
 
           echo "DMG_FILE=$RENAMED_DMG" >> "$GITHUB_ENV"
 
@@ -187,6 +209,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload DMG to GitHub Release
+        if: env.RELEASE_TAG != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -209,6 +232,7 @@ jobs:
   build_windows:
     name: Build Windows installers
     needs: build_macos
+    if: needs.build_macos.outputs.release_tag != ''
     runs-on: windows-latest
     env:
       APP_VERSION: ${{ needs.build_macos.outputs.app_version }}
