@@ -102,9 +102,7 @@ The local `.app` is not distribution-signed/notarized (`codesign --verify --deep
 reports the application is unsigned); the generated helper itself is ad-hoc signed.
 Packaging success does not establish Gatekeeper acceptance or a signed release.
 
-## Remaining gates and limitations
-
-### Release timeout follow-up (2026-10-17)
+## Release timeout follow-up (2026-10-17)
 
 The `v0.10.0-alpha.1` release reached the offline fixture gate after building the
 DMG, then exceeded 120 seconds. The old harness discarded stderr and did not print
@@ -133,14 +131,33 @@ This is a conservative compatibility mitigation plus diagnostic correction.
 CPU real-time performance and the historical timeout's exact native stack remain
 unqualified; passing a fixture is not full Live Caption acceptance.
 
+Verification for implementation commit `cdb131b`:
+
+- [Caption Engine CI run 39021113083](https://github.com/smartscity/polarbear/actions/runs/39021113083)
+  passed on `macos-26` ARM and `macos-15-intel`. Both actually executed the speech,
+  silence and malformed-frame cases. The complete fixture steps took 56 seconds
+  and 23 seconds respectively; these include repeated model loads and are not
+  end-to-end live caption latency measurements.
+- [Quality run 39021113153](https://github.com/smartscity/polarbear/actions/runs/39021113153)
+  passed all four jobs: frontend quality, Rust format, native tests, and desktop
+  editor/clipboard browser tests.
+- Locally, 207 Vitest tests and 12 Node tests passed; typecheck/lint passed.
+  The universal helper compiled and passed the corrected lipo check. The Intel
+  production `.app` built, and its packaged helper passed all three fixed-audio
+  cases with an empty environment (11.4 seconds for the speech case).
+- No live microphone/system audio was captured. No local ARM execution or
+  real-time performance claim is implied by cross-compilation or CI success.
+
+## Remaining gates and limitations
+
 - **NOT IMPLEMENTED:** simultaneous System + Microphone, echo cancellation and
   dual-source timestamp alignment. Do not advertise meeting Both mode as ready.
 - **NOT IMPLEMENTED:** microphone picker, saved monitor-safe window geometry,
   caption font preference, Show data folder, dedicated date-range filter.
 - **NOT RUN:** real browser/WeChat audio capture, microphone permission deny/revoke,
   lock/sleep/wake, device disconnect, hidden WKWebView scheduling and quit races.
-- **NOT RUN:** clean installed app with networking blocked, actual Apple Silicon
-  inference, older macOS launch, multi-monitor/full-screen/VoiceOver acceptance.
+- **NOT RUN:** clean installed app with networking blocked, real Apple Silicon
+  capture sessions, older macOS launch, multi-monitor/full-screen/VoiceOver acceptance.
 - **NOT RUN:** annotated accent/name/number WER corpus, music/non-English
   hallucination corpus, one-hour memory/latency/editor-responsiveness measurement.
 - **PARTIAL:** persistence failures are tested with query-only mode, not actual
