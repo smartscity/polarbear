@@ -196,6 +196,38 @@ zero overflow/timeout, and 231,501,824 bytes peak RSS. Its helper SHA-256 was
 All four native CTests passed after this adjustment. These sequential samples
 do not isolate host-load variance; the eliminated scheduler delay is deterministic.
 
+Native CI run `39130349464` rejected the immediate-retry commit `3d02a4d`:
+Intel first/final p95 were 5.068/3.676 seconds. All 5,505 frames and 22 finals
+completed without overflow or timeout, but the first-text gate failed. ARM passed.
+This failure supersedes the local pass as release evidence; no release tag was
+created. Several short finals occupied the single model owner while later
+utterances waited. Scheduling changes alone have not established sufficient margin.
+
+### CPU worker lifecycle candidate
+
+The pinned CPU backend leaves its thread pool unset, causing GGML to create and
+destroy workers for every graph. The checksum-pinned `whisper-cpu-threadpool.patch`
+gives each CPU backend an RAII-owned pool, reuses it while its thread count is
+unchanged, and puts idle workers to sleep instead of spinning alongside BLAS.
+External pools remain caller-owned. Cached plans rebind at execution so they
+cannot retain a freed pool after a thread-count change. The existing single
+model consumer, model weights, audio context and final decoding remain unchanged.
+No global executor or additional inference owner is introduced.
+
+The local native Intel 176-second regression with three threads passed at
+2.191/1.296 seconds first/final p95, with 22 finals identical to the original
+bundled baseline, 5,505 frames, zero overflow/timeout, 261,611,520 bytes peak RSS,
+and 111 ms maximum feed lag. Network access was denied by the OS. Measured helper
+SHA-256: `de6cd8a3a38edacfafa1d10d5d99109c5f68bb22e6c35cd02113a2138435a829`.
+This is a local candidate result, not native CI acceptance or a word-accuracy score.
+The new CPU lifecycle test covers repeated graphs, thread-count replacement,
+cached plans, external-pool attachment/detachment and resource destruction.
+Native Intel and ARM gates and the actual packaged helper must pass before release.
+The canonical archive-and-patch build passed all five CTests. The rebuilt bundled
+helper passed the public JFK, silence and malformed-frame integration checks;
+all 16 native replay/latency supervisor tests passed. These checks do not claim
+microphone-to-translation or new full-corpus accuracy acceptance.
+
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies
 `PermissionError: Operation not permitted: /bin/ps`, not an inference exception.

@@ -33,4 +33,8 @@ add_test(NAME caption-cancellation COMMAND caption-cancellation-test
   "${CMAKE_CURRENT_SOURCE_DIR}/../../resources/caption/ggml-base.en-q5_1.bin")
 set_tests_properties(caption-cancellation PROPERTIES TIMEOUT 60)
 set_tests_properties(caption-queue PROPERTIES TIMEOUT 10)
+add_executable(caption-cpu-threadpool-test cpu_threadpool_test.cpp)
+target_link_libraries(caption-cpu-threadpool-test PRIVATE ggml)
+add_test(NAME caption-cpu-threadpool COMMAND caption-cpu-threadpool-test)
+set_tests_properties(caption-cpu-threadpool PROPERTIES TIMEOUT 10)
 install(TARGETS polarbear-caption-engine RUNTIME DESTINATION .)
