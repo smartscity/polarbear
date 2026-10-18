@@ -31,9 +31,9 @@ int main() {
     schedule.reset();
     schedule.attempted(16000, true);
     schedule.retry_empty(28000);
-    check(!schedule.due(29999));
-    check(schedule.due(30000));
+    check(!schedule.due(27999));
+    check(schedule.due(28000));
     // Late feedback must not delay an already-due preview.
     schedule.retry_empty(50000);
-    check(schedule.due(30000));
+    check(schedule.due(28000));
 }

@@ -159,8 +159,9 @@ owner of admission, cancellation and completion state, with one model consumer;
 there is no second inference pool or unbounded pending work. A completed empty
 preview does not count as visible text. Tests cover these transitions and final
 draining. An empty preview reports completion back to capture, which schedules a
-retry after 125 milliseconds instead of waiting for the regular two-second
-refresh. This feedback is consumed once and scoped to the current sequence;
+retry on the next capture frame instead of waiting for the regular two-second
+refresh. Only rejected busy admission retains its 125-millisecond backoff.
+This feedback is consumed once and scoped to the current sequence;
 empty results after visible text do not increase refresh frequency. Queue
 admission still rejects work while inference is busy. This candidate is not a qualified release until native measurement
 passes; the rejected Intel result below is not overridden by unit tests.
@@ -181,6 +182,19 @@ SHA-256 was `20e293fa94351eadc6fb1d8ef882b44b3dcca9b8ee720cb23dee9888d06f172c`.
 This is one paired local regression, not a claim about all Intel hardware or
 word accuracy. Final latency increased while remaining below 4.4 seconds. Native
 CI and actual packaged artifact checks must still pass before tagging a release.
+
+Native CI run `39128861762` passed the short profile on commit `2ce0d65`:
+Intel first/final p95 were 2.989/1.702 seconds; ARM were 2.442/1.123 seconds.
+Both delivered all 5,505 frames and 22 finals without overflow or timeout. The
+Intel first-text margin was only 11 milliseconds, so completion-triggered empty
+retries now remove the additional 125-millisecond wait. This is not a relaxed
+threshold: busy rejection still backs off, and a fresh native result is required.
+The immediate-retry candidate then passed the same local 176-second profile:
+first/final p95 2.619/1.353 seconds, 22 identical final transcripts, 5,505 frames,
+zero overflow/timeout, and 231,501,824 bytes peak RSS. Its helper SHA-256 was
+`76756e27e7c738082c3dbe475f1a748a311fe69bddd403cc07f506c43d36ea86`.
+All four native CTests passed after this adjustment. These sequential samples
+do not isolate host-load variance; the eliminated scheduler delay is deterministic.
 
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies

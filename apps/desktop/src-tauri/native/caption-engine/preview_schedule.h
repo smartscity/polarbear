@@ -11,7 +11,8 @@ public:
         next_ = samples + (accepted ? rate_ * 2 : rate_ / 8);
     }
     void reset() { next_ = rate_; }
-    void retry_empty(size_t samples) { next_ = std::min(next_, samples + rate_ / 8); }
+    // Completion feedback means inference is idle; only rejected admission backs off.
+    void retry_empty(size_t samples) { next_ = std::min(next_, samples); }
 private:
     const size_t rate_;
     size_t next_;
