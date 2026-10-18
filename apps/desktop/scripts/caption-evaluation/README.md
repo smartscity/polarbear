@@ -73,6 +73,7 @@ c++ -std=c++17 -O3 -DNDEBUG -arch x86_64 -mmacosx-version-min=13.0 \
   -I "$SOURCE/include" -I "$SOURCE/ggml/include" -I "$SOURCE/examples" \
   apps/desktop/scripts/caption-evaluation/whisper-baseline.cpp \
   "$LIB/src/libwhisper.a" "$LIB/ggml/src/libggml.a" \
+  "$LIB/ggml/src/ggml-blas/libggml-blas.a" \
   "$LIB/ggml/src/libggml-cpu.a" "$LIB/ggml/src/libggml-base.a" \
   -framework Accelerate -o /tmp/polarbear-asr-evaluation/whisper-baseline
 ```
@@ -105,6 +106,13 @@ screening measurements, not controlled multi-run performance claims. Load time
 is separate; compute/audio ratio is not first-caption or end-to-end latency.
 RSS fields have different scopes for subprocess and in-process engines and must
 not be compared directly.
+
+The macOS production build now links the system Accelerate BLAS backend while
+keeping GPU inference disabled. The evaluation adapter must link that same static
+BLAS wrapper, as shown above. The selected GGML thread budget is not a guarantee
+about the system library's internal worker pool. Record the build snapshot when
+comparing measurements; do not merge pre-BLAS and BLAS timings. The wrapper uses
+the legacy Accelerate ABI to retain the helper's macOS 13.0 deployment target.
 
 ```sh
 python3 -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_*.py'

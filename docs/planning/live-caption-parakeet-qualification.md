@@ -150,3 +150,111 @@ runtime compatibility, not full accuracy, sustained latency or replacement appro
 The frozen corpus, prefix schedule, queue limits, model hashes, WER and latency
 thresholds are unchanged. A complete native comparison on both architectures is
 still required before proposing an engine replacement.
+
+## Production follow-up: 2026-10-18
+
+Release run [39108056378](https://github.com/smartscity/polarbear/actions/runs/39108056378)
+tested commit `6ccdc251228c613f5d8cb2ce01c403f52d8c0ffc`. Both native helpers
+consumed all 3,600 seconds with zero queue overflows/timeouts. This fixes the
+observed early queue failure in that replay, but **does not pass release acceptance**:
+
+| Native host | First-text p95 | Final-after-VAD p95 | Warmed tree RSS growth | Overall |
+| --- | ---: | ---: | ---: | --- |
+| ARM | 4.275 s | 2.006 s | 162,283,520 bytes | FAIL: first text, memory growth |
+| Intel | 8.752 s | 4.609 s | 97,406,976 bytes | FAIL: first text, final text |
+
+No microphone-to-UI, Chinese translation, or recognition accuracy claim follows
+from this replay. Raw evidence is in the run's `production-soak-*` artifacts.
+No release tag is authorized by these results.
+
+### Rejected local scheduling experiments
+
+The following sequential Intel experiments used the same public EN2002a recording,
+pinned model and OS network denial. They are diagnostics, not replacement gates.
+
+- Reducing only the provisional audio context was faster but substantially worse:
+  on 84 common completed prefix windows (1,467 reference words), strict prefix WER
+  rose from 49.15% to 70.48%. A shared decoder state also changed six of 23 final
+  outputs in a 120-second trial. Isolating preview state removed the observed final
+  drift but not the accuracy loss. The experiment was removed.
+- Starting previews at one second and retrying empty results after 125 ms preserved
+  all 188 final events in a full 1,200-second replay, but first-text p95 worsened
+  from 4.372 to 5.648 seconds; final p95 worsened from 2.202 to 3.057 seconds. A
+  separate 120-second run had a retained 11.185-second inference outlier. The
+  feedback experiment was removed; it is not part of the production scheduler.
+
+### Bounded corpus reading
+
+The source-balanced montage previously kept each source's full float32 recording
+alive while yielding small windows. A local sampler-only pass rose from roughly
+306 MB after the first source cycle to 402 MB after later recordings, without
+an inference engine. This contaminated process-tree growth measurements; it does
+not establish that every observed native growth was a harness artifact.
+
+`audio_segments` now seeks and reads only the requested canonical window. All
+308 frozen windows were compared byte-for-byte with the previous full-file slices
+and were identical. In the same sampler-only pass, sampled RSS remained around
+64-72 MB. Thirty-five harness regressions passed under OS network denial. These
+are bounded-ownership checks, not a one-hour inference result. The original failed
+reports remain failed; the memory sampler, complete sample count, source order,
+model checksums and release thresholds are unchanged. A fresh native soak is still
+required to evaluate the corrected measurement path.
+
+### Reference-alignment limitation found during result inspection
+
+The matched-budget run `39108755820` completed all 308 accuracy windows for Intel
+Parakeet and both Whisper hosts before those prototype replays hit the unchanged
+two-outstanding-request bound. Intel Parakeet's aggregate strict WER was 34.82%
+versus 44.46% for Intel Whisper; AMI-only values were 35.65% versus 50.13%.
+These numbers are recorded measurements, **not accepted product accuracy**.
+
+Inspection found severe timing disagreement in some forced-aligned Earnings-22
+references, beyond number-formatting differences. For example, `4475486-0:3`
+assigns only the word `third` to source seconds 180-200 while the hypothesis
+contains multiple sentences. The preceding windows also show a progressive
+reference lag. `4481952-0:1` and `:2` have empty references while the hypotheses
+contain continuous speech; a later window concentrates 141 inferred-timing words.
+The corpus records preserve these original annotations and uncertainty flags.
+
+Do not describe these windows as verified silence/hallucination tests or use their
+scores to decide the replacement. Do not repair references with candidate output,
+delete difficult windows, or silently reinterpret earlier scores. A separately
+versioned, manually checked timing/reference set is required for reliable subgroup
+accuracy claims. The existing frozen run remains available, AMI's absolute
+replacement gate is still unmet, and the candidate remains NO_REPLACE. Native
+production-queue replay uses the same audio samples irrespective of reference text;
+its latency/overflow results are separate from this accuracy limitation.
+
+### CPU acceleration candidate and capture transport
+
+The macOS helper now builds the pinned library's CPU Accelerate BLAS backend.
+Metal remains disabled; model files, VAD thresholds, decoder parameters, preview
+schedule and queue budgets are unchanged. The BLAS wrapper explicitly uses the
+legacy Accelerate ABI, avoiding an accidental macOS 13.3 requirement in a helper
+targeting 13.0. Evaluation builds link the same wrapper. System BLAS may use its
+own worker pool, so the GGML thread setting is not a total process-thread limit.
+
+A complete 1,200-second EN2002a real-time replay on local Intel produced 189 final
+events, zero overflows/timeouts, 2.899-second first-text p95 and 1.342-second final
+p95 (previous CPU path: 4.372/2.202 seconds). Max pipe lag was 0.203 seconds. The
+comparison retained all audio and used OS network denial. Final transcripts are
+not byte-identical: 153 of the 188 prior final events were identical, and one
+additional utterance produced text. Whole-record strict WER against all 4,439 AMI
+reference words was 47.89% before and 48.03% after; four predeclared term occurrences
+had three matches in both. This is not an accuracy improvement claim. Inspection
+of two changed negations found that the reference supports the accelerated output,
+but this does not substitute for complete accuracy and native release gates.
+
+Desktop capture additionally encoded each float as a separate pipe write. It now
+encodes the unchanged timestamp/count/float32 frame into one bounded stack buffer
+and calls `write_all` once. Tests check byte identity, one ordinary write, partial
+writes, invalid lengths and broken-pipe propagation. All 11 caption Rust tests
+passed, including durable bilingual history and storage failure behavior. The
+Python PCM replay was already frame-batched and therefore cannot prove a measured
+end-to-end speedup from this Rust transport change.
+
+The rebuilt Intel helper passed all four native CTests, including cancellation
+inside a real model graph followed by successful reuse. Typecheck, formatting and
+the bounded-corpus tests are separate checks. The 20-minute candidate result does
+not waive the one-hour Intel/ARM release gates, actual microphone/UI acceptance,
+or the independent Parakeet replacement decision. No release is claimed here.

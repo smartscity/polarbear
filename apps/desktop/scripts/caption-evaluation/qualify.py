@@ -169,12 +169,20 @@ def validate_corpus(path):
 
 def audio_segments(corpus, directory):
     for record in corpus["records"]:
-        samples, rate = sf.read(directory / record["file"], dtype="float32")
-        if rate != 16000 or samples.ndim != 1:
-            raise ValueError("Expected mono 16 kHz corpus")
-        for index, segment in enumerate(record["segments"]):
-            audio = samples[round(segment["start"] * rate):round(segment["end"] * rate)]
-            yield record, segment, f"{record['id']}:{index}", audio
+        # Keep one bounded window per source, not every full recording in the montage.
+        with sf.SoundFile(directory / record["file"]) as source:
+            rate = source.samplerate
+            if rate != 16000 or source.channels != 1:
+                raise ValueError("Expected mono 16 kHz corpus")
+            for index, segment in enumerate(record["segments"]):
+                start, end = round(segment["start"] * rate), round(segment["end"] * rate)
+                if not 0 <= start <= end <= source.frames:
+                    raise ValueError("Segment extends beyond canonical audio")
+                source.seek(start)
+                audio = source.read(end - start, dtype="float32")
+                if len(audio) != end - start:
+                    raise ValueError("Incomplete canonical audio window")
+                yield record, segment, f"{record['id']}:{index}", audio
 
 
 def accuracy(engine, corpus, directory, emit):

@@ -14,6 +14,7 @@ use std::{
 use tauri::{Emitter, Manager};
 
 const AUDIO_QUEUE_FRAMES: usize = 312;
+const MAX_FRAME_SAMPLES: usize = 512;
 const AUDIO_QUEUE_FULL: i32 = 9;
 const ENGINE_PIPE_CLOSED: i32 = 10;
 const MAX_EVENT_BYTES: usize = 65536;
@@ -26,6 +27,24 @@ static AUDIO_LEVEL: AtomicU32 = AtomicU32::new(0);
 struct Frame {
     at: u64,
     samples: Vec<f32>,
+}
+
+fn write_frame(output: &mut impl Write, frame: &Frame) -> std::io::Result<()> {
+    if frame.samples.is_empty() || frame.samples.len() > MAX_FRAME_SAMPLES {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid caption PCM frame size",
+        ));
+    }
+    // Encode once so an ordinary frame needs one pipe write, not one per sample.
+    let mut bytes = [0u8; 12 + MAX_FRAME_SAMPLES * 4];
+    bytes[..8].copy_from_slice(&frame.at.to_le_bytes());
+    bytes[8..12].copy_from_slice(&(frame.samples.len() as u32).to_le_bytes());
+    for (index, sample) in frame.samples.iter().enumerate() {
+        bytes[12 + index * 4..16 + index * 4].copy_from_slice(&sample.to_le_bytes());
+    }
+    output.write_all(&bytes[..12 + frame.samples.len() * 4])?;
+    output.flush()
 }
 
 fn enqueue_frame(sender: &mpsc::SyncSender<Frame>, frame: Frame) -> Result<(), i32> {
@@ -104,6 +123,96 @@ fn engine_failure_code(code: Option<&str>) -> &'static str {
 mod tests {
     use super::*;
 
+    #[derive(Default)]
+    struct FrameWriter {
+        bytes: Vec<u8>,
+        writes: usize,
+        flushed: bool,
+        short_write: bool,
+        broken_after: Option<usize>,
+    }
+
+    impl Write for FrameWriter {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            if self.broken_after.is_some_and(|limit| self.writes >= limit) {
+                return Err(std::io::ErrorKind::BrokenPipe.into());
+            }
+            self.writes += 1;
+            let count = if self.short_write {
+                bytes.len().min(7)
+            } else {
+                bytes.len()
+            };
+            self.bytes.extend_from_slice(&bytes[..count]);
+            Ok(count)
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.flushed = true;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn batches_pcm_without_changing_protocol_bytes_or_sample_order() {
+        for count in [1, 317, MAX_FRAME_SAMPLES] {
+            let frame = Frame {
+                at: 0x0102030405060708,
+                samples: (0..count).map(|i| (i as f32 - 256.0) / 256.0).collect(),
+            };
+            let mut expected = frame.at.to_le_bytes().to_vec();
+            expected.extend_from_slice(&(count as u32).to_le_bytes());
+            for sample in &frame.samples {
+                expected.extend_from_slice(&sample.to_le_bytes());
+            }
+            for short_write in [false, true] {
+                let mut output = FrameWriter {
+                    short_write,
+                    ..Default::default()
+                };
+                write_frame(&mut output, &frame).unwrap();
+                assert_eq!(output.bytes, expected);
+                assert!(output.flushed);
+                if !short_write {
+                    assert_eq!(output.writes, 1);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_frames_and_reports_partial_pipe_failure() {
+        let mut output = FrameWriter::default();
+        for count in [0, MAX_FRAME_SAMPLES + 1] {
+            let error = write_frame(
+                &mut output,
+                &Frame {
+                    at: 0,
+                    samples: vec![0.0; count],
+                },
+            )
+            .unwrap_err();
+            assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+        }
+        assert_eq!(output.writes, 0);
+        let mut broken = FrameWriter {
+            short_write: true,
+            broken_after: Some(1),
+            ..Default::default()
+        };
+        let error = write_frame(
+            &mut broken,
+            &Frame {
+                at: 0,
+                samples: vec![0.0; MAX_FRAME_SAMPLES],
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+        assert!(!broken.flushed);
+        assert_eq!(broken.bytes.len(), 7);
+    }
+
     #[test]
     fn distinguishes_a_full_capture_queue_from_a_disconnected_engine() {
         let (sender, receiver) = mpsc::sync_channel(1);
@@ -146,7 +255,7 @@ extern "C" {
 }
 
 extern "C" fn on_audio(samples: *const f32, count: i32, at: u64) {
-    if samples.is_null() || !(1..=512).contains(&count) {
+    if samples.is_null() || !(1..=MAX_FRAME_SAMPLES as i32).contains(&count) {
         CAPTURE_FAILED.store(true, Ordering::Release);
         return;
     }
@@ -311,14 +420,7 @@ pub fn launch(
             if writer_cancel.load(Ordering::Acquire) {
                 break;
             }
-            let result = (|| -> std::io::Result<()> {
-                input.write_all(&frame.at.to_le_bytes())?;
-                input.write_all(&(frame.samples.len() as u32).to_le_bytes())?;
-                for sample in frame.samples {
-                    input.write_all(&sample.to_le_bytes())?;
-                }
-                input.flush()
-            })();
+            let result = write_frame(&mut input, &frame);
             if result.is_err() {
                 CAPTURE_ERROR.store(ENGINE_PIPE_CLOSED, Ordering::Release);
                 CAPTURE_FAILED.store(true, Ordering::Release);

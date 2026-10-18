@@ -3,16 +3,38 @@
 import io
 from pathlib import Path
 from types import SimpleNamespace
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 import zipfile
 
+import numpy as np
+import soundfile as sf
+
 from evaluate import inference_threads, SherpaCandidate, WhisperBaseline
 from qualification_corpus import earnings_words, ami_words, segments
-from qualify import recall_counts, replay_events
+from qualify import audio_segments, recall_counts, replay_events
 
 
 class QualificationTests(unittest.TestCase):
+    def test_streamed_windows_preserve_samples_without_retaining_the_recording(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            samples = np.arange(16000 * 10, dtype="float32") / (16000 * 10)
+            sf.write(path / "fixture.wav", samples, 16000, subtype="FLOAT")
+            windows = [{"start": .032, "end": 1.125}, {"start": 4.25, "end": 5.7}]
+            corpus = {"records": [{"id": "fixture", "file": "fixture.wav", "segments": windows}]}
+            stream = audio_segments(corpus, path)
+            with patch("qualify.sf.read", side_effect=AssertionError("Full-file read")):
+                for index, (_, segment, identity, audio) in enumerate(stream):
+                    np.testing.assert_array_equal(audio, samples[round(segment["start"] * 16000):round(segment["end"] * 16000)])
+                    self.assertEqual(identity, f"fixture:{index}")
+                    self.assertTrue(audio.flags.owndata)
+                    self.assertIsNone(audio.base)
+            corpus["records"][0]["segments"] = [{"start": 9, "end": 11}]
+            with self.assertRaisesRegex(ValueError, "beyond"):
+                list(audio_segments(corpus, path))
+
     def test_budget_matches_production_and_never_oversubscribes_small_hosts(self):
         for cpus, expected in ((0, 1), (1, 1), (2, 1), (3, 2), (4, 3), (8, 4)):
             self.assertEqual(inference_threads(cpus), expected)

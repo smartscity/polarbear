@@ -116,6 +116,7 @@ jobs:
             -I "$SOURCE/include" -I "$SOURCE/ggml/include" -I "$SOURCE/examples" \
             apps/desktop/scripts/caption-evaluation/whisper-baseline.cpp \
             "$LIB/src/libwhisper.a" "$LIB/ggml/src/libggml.a" \
+            "$LIB/ggml/src/ggml-blas/libggml-blas.a" \
             "$LIB/ggml/src/libggml-cpu.a" "$LIB/ggml/src/libggml-base.a" \
             -framework Accelerate -o "$RUNNER_TEMP/whisper-baseline"
       - name: Full accuracy corpus and one-hour offline replay
