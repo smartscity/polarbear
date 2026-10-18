@@ -34,7 +34,10 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         if (closed_ || !job.final || job.samples.empty() || job.samples.size() > budget_ - queued_samples_) return false;
         partial_.reset();
-        cancel_partial_.store(true);
+        // Do not throw away the first in-flight preview of this utterance on a
+        // silence boundary. Later previews are expendable once text is visible.
+        cancel_partial_.store(!active_ || active_->final ||
+                              active_->sequence != job.sequence || visible_sequence_ == job.sequence);
         queued_samples_ += job.samples.size();
         finals_.push_back(std::move(job));
         ready_.notify_one();
@@ -55,13 +58,24 @@ public:
             partial_.reset();
         }
         busy_ = true;
+        active_ = ActiveJob{job.sequence, job.final};
         cancel_partial_.store(false);
         return job;
     }
 
-    void complete() {
+    void complete(bool text_emitted = false) {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (text_emitted && active_) visible_sequence_ = active_->sequence;
+        else if (active_ && !active_->final && !cancelled(false)) empty_preview_ = active_->sequence;
+        active_.reset();
         busy_ = false;
+    }
+
+    bool consume_empty_preview(uint64_t sequence) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        const bool retry = empty_preview_ && *empty_preview_ == sequence && visible_sequence_ != sequence;
+        empty_preview_.reset();
+        return retry;
     }
 
     bool cancelled(bool final) const {
@@ -87,11 +101,15 @@ public:
     }
 
 private:
+    struct ActiveJob { uint64_t sequence; bool final; };
     const size_t budget_;
     std::mutex mutex_;
     std::condition_variable ready_;
     std::deque<RecognitionJob> finals_;
     std::optional<RecognitionJob> partial_;
+    std::optional<ActiveJob> active_;
+    std::optional<uint64_t> empty_preview_;
+    uint64_t visible_sequence_ = 0;
     size_t queued_samples_ = 0;
     bool busy_ = false, closed_ = false;
     std::atomic<bool> cancel_partial_{false}, aborted_{false};

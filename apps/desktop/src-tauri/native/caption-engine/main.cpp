@@ -86,6 +86,7 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
             if (!speech.empty() || talking) {
                 speech.insert(speech.end(),carry.begin(),carry.begin()+frame_samples);
                 quiet = talking ? 0 : quiet+frame_samples;
+                if (queue.consume_empty_preview(sequence)) previews.retry_empty(speech.size());
                 bool final = quiet>=sample_rate*3/5 || speech.size()>=max_samples;
                 if (final) {
                     if (const int result = finalize()) return result;
@@ -141,7 +142,7 @@ int main(int argc, char **argv) {
         return state.queue.cancelled(state.final);
     };
     params.abort_callback_user_data = &abort_context;
-    auto recognize = [&](const RecognitionJob &job) {
+    auto recognize = [&](const RecognitionJob &job, bool &text_emitted) {
         abort_context.final = job.final;
         phase(job.final ? "recognizing-final" : "recognizing-partial");
         const double queue_ms = milliseconds(job.queued_at);
@@ -161,17 +162,19 @@ int main(int argc, char **argv) {
         if (text.size()>16384) return false;
         emit({{"type",job.final ? "final" : "partial"}, {"sequence",job.sequence},
               {"startMs",job.start_ms}, {"endMs",job.end_ms}, {"english",text}});
+        text_emitted = true;
         return true;
     };
     std::thread decoder([&] {
         while (auto job = queue.take()) {
-            if (!recognize(*job)) {
+            bool text_emitted = false;
+            if (!recognize(*job, text_emitted)) {
                 inference_failed.store(true);
                 emit({{"type","error"},{"code","engineFailed"}});
                 queue.abort();
                 return;
             }
-            queue.complete();
+            queue.complete(text_emitted);
         }
     });
     phase("ready");

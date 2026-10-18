@@ -33,7 +33,7 @@ jobs:
       ref: ${{ inputs.release_tag || github.sha }}
 
   caption_soak:
-    name: Production caption validation (15 minutes)
+    name: Production caption first-text validation
     needs: caption_gate
     uses: ./.github/workflows/caption-qualification.yml
     with:

@@ -89,7 +89,9 @@ The small initial LibriSpeech screen is excluded from the new qualification scor
 
 ## Production PCM soak
 
-The native production helper has a separate 15-minute release gate (`native_replay.py`).
+The native production helper has a separate production replay gate. The original
+15-minute profile remains available in `native_replay.py`; the current targeted
+release profile is described under "First-text scheduling regression" below.
 It reuses the frozen, nonrepeating source-balanced montage above, but feeds 512
 float32 samples at the real sample clock into the bundled helper. The helper owns
 actual VAD, partial scheduling, final FIFO and the unchanged PCM budgets. Reference
@@ -110,7 +112,7 @@ These replay clocks are not ground-truth acoustic endpoints. A pass does not pro
 microphone-to-UI latency, accuracy, Chinese translation or mixed-source capture.
 Missing measurements cannot pass. Latency, memory and correctness thresholds remain unchanged.
 
-The release workflow calls the native short gate and this production soak on both
+The release workflow calls the native short gate and the production replay on both
 architectures before packaging. The independent Parakeet accuracy/replay matrix
 is not run as part of a release of the unchanged Whisper model. It remains required
 before any engine replacement, with its original frozen comparison policy.
@@ -118,7 +120,7 @@ before any engine replacement, with its original frozen comparison policy.
 ### Duration policy revision (2026-10-18)
 
 The user explicitly requested that routine validation no longer take more than
-30 minutes. The release profile is now `release-15-minute-v1`: a source-balanced
+30 minutes. That revision selected `release-15-minute-v1`: a source-balanced
 900-second replay, with a 30-minute production CI job cap including setup/build.
 This is a shorter-duration release check, not proof of hour-long stability.
 Earlier failed hour results below remain failures; no historical report is relabeled.
@@ -134,6 +136,51 @@ a replacement engine. Packaging and mounted-DMG checks remain required, and thei
 duration is separate from the 15-minute paced audio measurement.
 
 ## Measurement infrastructure correction
+
+### First-text scheduling regression (in progress)
+
+The latest user instruction replaces repeated long runs during this repair with
+targeted first-text checks. `native_latency_regression.py` reuses the production
+PCM supervisor and the frozen corpus. Its 176 seconds retain the failed run's
+0-60, 140-180 and 350-420 second windows, including preceding-final contention,
+with one second of silence on both sides of each window. The first-text limit
+remains three seconds and the final-text limit remains 4.4 seconds. This profile
+does not claim sustained memory-growth coverage or microphone/UI acceptance.
+Release now runs this targeted profile on native Intel and ARM, publishing
+`production-latency-*` artifacts. The 900-second replay remains explicitly runnable
+but is no longer a routine release dependency. Package and mounted-DMG tests are
+unchanged.
+
+The scheduling candidate preserves the first in-flight preview when the same
+utterance reaches a silence boundary. Once text has been emitted, final work can
+preempt subsequent previews as before. A newer utterance's final, explicit stop,
+or abort still cancels the obsolete preview. The existing queue remains the sole
+owner of admission, cancellation and completion state, with one model consumer;
+there is no second inference pool or unbounded pending work. A completed empty
+preview does not count as visible text. Tests cover these transitions and final
+draining. An empty preview reports completion back to capture, which schedules a
+retry after 125 milliseconds instead of waiting for the regular two-second
+refresh. This feedback is consumed once and scoped to the current sequence;
+empty results after visible text do not increase refresh frequency. Queue
+admission still rejects work while inference is busy. This candidate is not a qualified release until native measurement
+passes; the rejected Intel result below is not overridden by unit tests.
+
+Local native Intel results (three inference threads, network denied, identical
+frozen audio and Q5_1 model) were:
+
+| Candidate | First-text p95 | Final-text p95 | Finals | Result |
+| --- | ---: | ---: | ---: | --- |
+| Existing bundled helper | 3.690 s | 1.007 s | 22 | FAIL: first text |
+| Preserve first preview only | 3.632 s | 1.276 s | 22 | FAIL: first text |
+| Preserve first preview and retry empty preview | 2.793 s | 1.921 s | 22 | PASS: short local profile |
+
+All 22 final strings were identical between baseline and the final candidate.
+The candidate delivered all 5,505 frames, had no overload/timeout, reached
+261,709,824 bytes peak process-tree RSS and 147 ms maximum feed lag. Its helper
+SHA-256 was `20e293fa94351eadc6fb1d8ef882b44b3dcca9b8ee720cb23dee9888d06f172c`.
+This is one paired local regression, not a claim about all Intel hardware or
+word accuracy. Final latency increased while remaining below 4.4 seconds. Native
+CI and actual packaged artifact checks must still pass before tagging a release.
 
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies

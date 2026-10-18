@@ -138,7 +138,7 @@ jobs:
           if-no-files-found: warn
 
   production:
-    name: Production PCM 15 minutes (${{ matrix.arch }})
+    name: Production first-text regression (${{ matrix.arch }})
     needs: corpus
     timeout-minutes: 30
     strategy:
@@ -162,7 +162,7 @@ jobs:
       - name: Verify production replay supervisor under network denial
         run: |
           /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
-            "$(command -v python)" -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_native_replay.py'
+            "$(command -v python)" -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_native*.py'
       - uses: actions/download-artifact@v7
         with:
           pattern: corpus-*
@@ -170,19 +170,20 @@ jobs:
           path: ${{ runner.temp }}/caption-corpus
       - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
       - run: node apps/desktop/scripts/build-caption.mjs
-      - name: Replay 15 minutes through production VAD and inference queues
+      - name: Replay first-text failures through production VAD and inference queues
         run: |
           set -o pipefail
           mkdir -p evidence
           /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
-            "$(command -v python)" apps/desktop/scripts/caption-evaluation/native_replay.py \
+            "$(command -v python)" apps/desktop/scripts/caption-evaluation/native_latency_regression.py \
             "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/production-${{ matrix.arch }}.json" \
+            --helper "$PWD/apps/desktop/src-tauri/resources/caption/polarbear-caption-engine" \
             --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
             2>&1 | tee evidence/production.log
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: production-soak-${{ matrix.arch }}
+          name: production-latency-${{ matrix.arch }}
           path: evidence/
           retention-days: 30
           if-no-files-found: warn

@@ -17,7 +17,7 @@ int main() {
         check(job && !job->final);
         check(!queue.offer_partial({1, 2, 3, 4}, 1, 0, 4));
         check(queue.submit_final(final_job(1, 5)));
-        check(queue.cancelled(false));
+        check(!queue.cancelled(false));
         check(!queue.cancelled(true));
         queue.complete();
         job = queue.take();
@@ -70,7 +70,7 @@ int main() {
             check(job && !job->final);
             entered.set_value();
             released.wait();
-            check(queue.cancelled(job->final));
+            check(!queue.cancelled(job->final));
             queue.complete();
         });
         entered.get_future().wait();
@@ -82,6 +82,64 @@ int main() {
         check(queue.take()->final);
         queue.complete();
         check(!queue.take());
+    }
+    {
+        RecognitionQueue queue(20);
+        check(queue.offer_partial({1, 2}, 1, 0, 2));
+        check(queue.take()->sequence == 1);
+        queue.complete(true);
+        check(queue.offer_partial({1, 2, 3}, 1, 0, 3));
+        check(!queue.take()->final);
+        check(queue.submit_final(final_job(1, 5)));
+        check(queue.cancelled(false));
+        queue.complete();
+        check(queue.take()->final);
+        queue.complete(true);
+        check(queue.offer_partial({1, 2}, 2, 0, 2));
+        check(!queue.take()->final);
+        check(queue.submit_final(final_job(2, 5)));
+        check(!queue.cancelled(false));
+        // Stop must still cancel even the first preview and drain accepted finals.
+        queue.close();
+        check(queue.cancelled(false));
+        queue.complete();
+        check(queue.take()->sequence == 2);
+        queue.complete();
+        check(!queue.take());
+    }
+    {
+        RecognitionQueue queue(20);
+        check(queue.offer_partial({1, 2}, 1, 0, 2));
+        queue.take();
+        queue.complete(false);
+        check(queue.consume_empty_preview(1));
+        check(!queue.consume_empty_preview(1));
+        check(queue.offer_partial({1, 2, 3}, 1, 0, 3));
+        queue.take();
+        check(queue.submit_final(final_job(1, 5)));
+        check(!queue.cancelled(false));
+        // A newer final cannot be delayed indefinitely by an obsolete preview.
+        check(queue.submit_final(final_job(2, 5)));
+        check(queue.cancelled(false));
+        queue.abort();
+        check(queue.cancelled(true));
+    }
+    {
+        RecognitionQueue queue(20);
+        check(queue.offer_partial({1, 2}, 1, 0, 2));
+        queue.take();
+        queue.complete(false);
+        check(!queue.consume_empty_preview(2));
+        check(!queue.consume_empty_preview(1));
+        check(queue.offer_partial({1, 2}, 2, 0, 2));
+        queue.take();
+        queue.complete(true);
+        check(!queue.consume_empty_preview(2));
+        check(queue.offer_partial({1, 2, 3}, 2, 0, 3));
+        queue.take();
+        queue.complete(false);
+        check(!queue.consume_empty_preview(2));
+        queue.close();
     }
     {
         RecognitionQueue queue(10);

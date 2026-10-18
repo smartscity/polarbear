@@ -28,4 +28,12 @@ int main() {
     for (size_t samples = 512; samples < 16000 * 15; samples += 512)
         if (schedule.due(samples)) { schedule.attempted(samples, true); ++attempts; }
     check(attempts == 7);
+    schedule.reset();
+    schedule.attempted(16000, true);
+    schedule.retry_empty(28000);
+    check(!schedule.due(29999));
+    check(schedule.due(30000));
+    // Late feedback must not delay an already-due preview.
+    schedule.retry_empty(50000);
+    check(schedule.due(30000));
 }
