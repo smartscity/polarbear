@@ -312,10 +312,14 @@ CTest proves cancellation does not complete the encoder and that a subsequent
 uncancelled call on the same context succeeds; the test fails without the patch.
 The patch is applied only to a freshly extracted, hash-verified source archive.
 
-`PreviewSchedule` owns sample-clock preview cadence: the first attempt at 1.5
-seconds, subsequent attempts every two seconds, resetting at an utterance boundary.
-An experimental one-second prefix returned empty hypotheses for several genuine
-AMI utterances and delayed their first useful text; it is not the shipped cadence.
+`PreviewSchedule` owns sample-clock preview cadence. After CPU Accelerate was
+enabled, the current candidate advances only the first attempt from 1.5 to one
+second; subsequent attempts remain two seconds apart, resetting at each utterance
+boundary. Earlier aggressive retry and one-second recurring experiments were
+rejected; their results remain in the qualification record. A 600-second diagnostic
+of this isolated change preserved all 73 finalized texts while lowering measured
+first-text p95 from 3.375 to 2.745 seconds. It is not release acceptance: full
+native Intel and ARM hours must pass before this candidate may be released.
 Busy inference still rejects provisional work. A rejected attempt checks for idle
 capacity after another 125 ms of audio, rather than losing a whole two-second
 interval; it never retries on every PCM frame or queues rejected snapshots. Final

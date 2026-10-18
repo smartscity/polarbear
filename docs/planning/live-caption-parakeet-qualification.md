@@ -258,3 +258,100 @@ inside a real model graph followed by successful reuse. Typecheck, formatting an
 the bounded-corpus tests are separate checks. The 20-minute candidate result does
 not waive the one-hour Intel/ARM release gates, actual microphone/UI acceptance,
 or the independent Parakeet replacement decision. No release is claimed here.
+
+### Completed CPU-accelerated native hours
+
+Commit `4eeaef9fd21168aa76072cb4d80b9030e81493e5` completed the frozen
+production replay on both architectures. The independent release job also
+completed an Intel hour. None of these runs recorded a microphone or exercised
+the app's capture, translation or GUI boundary.
+
+| Run / native host | Audio seconds | First-text p95 | Final-after-VAD p95 | Warmed RSS growth | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| [39114531964](https://github.com/smartscity/polarbear/actions/runs/39114531964), ARM | 3,600 | 2.307 s | 0.856 s | 27,582,464 bytes | PASS |
+| Same run, Intel | 3,600 | 4.192 s | 2.358 s | 13,914,112 bytes | FAIL: first text |
+| [39114531968](https://github.com/smartscity/polarbear/actions/runs/39114531968), Intel | 3,600 | 3.250 s | 1.544 s | 13,907,968 bytes | FAIL: first text |
+
+All three had zero helper overflows/timeouts and sampled process-tree peaks below
+253 MB. The two Intel measurements both fail the unchanged three-second threshold;
+the faster result is not rounded down or selected to authorize a release.
+Artifacts are named `production-soak-arm64` and `production-soak-x86_64` in the
+corresponding runs. No new tag or DMG is authorized by this evidence.
+
+### Full local accuracy comparison
+
+Sequential Intel evaluations used all 308 frozen windows (5,849.355 audio seconds),
+the same four-thread budget, pinned weights, and OS-level network denial. These
+are whole-utterance adapter measurements, not live-caption latency.
+
+| Group | Previous CPU WER | Accelerated CPU WER |
+| --- | ---: | ---: |
+| Aggregate | 44.010% | 44.521% |
+| AMI | 49.267% | 50.056% |
+| AMI EN2002a | 50.755% | 50.822% |
+| AMI ES2004a | 46.777% | 48.775% |
+| Earnings-22 | 39.753% | 40.039% |
+
+Aggregate compute/audio ratio decreased from 0.1147 to 0.0703. Technical-term
+recall remained 79/98 and numeric-entity recall changed from 12/188 to 14/188.
+No aggregate accuracy improvement is claimed. In particular, ES2004a regressed by
+approximately two absolute WER points; do not hide this source-level regression
+behind the broader AMI category. The reference-alignment limitations above remain.
+
+### Parakeet decision after complete ARM replay
+
+Matched-budget run `39108755820` completed Parakeet's ARM accuracy pass and an
+actual one-hour prototype replay: first-text p95 4.282 s, final p95 1.628 s,
+zero dropped requests/overflows/timeouts, and one spoken window without text.
+Intel completed accuracy but overflowed the unchanged two-request prototype
+bound. ARM aggregate/AMI WER were 34.957%/35.674%; Intel 34.824%/35.646%.
+
+The independent ARM repeat in run `39114531964` again completed all 308 windows
+and 3,600 replay seconds: first p95 4.315 s, final p95 1.688 s, peak sampled
+process-tree RSS 1,333,526,528 bytes, warmed growth 18,038,784 bytes, and zero
+overflows/drops/timeouts. Its aggregate technical/numeric recall was 83/98 and
+61/188. These are measured results, not product qualification. Intel again failed
+the prototype outstanding-request bound. The candidate remains **NO_REPLACE**:
+the first-text and absolute meeting-accuracy gates are unmet, Intel sustained
+replay did not finish, and native candidate capture/packaging is not implemented.
+
+### Further local diagnostics and translation coverage
+
+A one-second initial **and recurring** preview experiment on the first 600 seconds
+of the frozen source-balanced montage produced first/final p95 4.987/2.683 s.
+A sequential repeat of the unchanged 1.5-second initial/two-second recurring
+baseline produced 3.375/1.259 s. Both used three threads and produced 73 finals.
+An earlier baseline attempt failed with audio backlog before completing 600
+seconds and remains failed. Local variability prevents a controlled speedup claim;
+the more frequent preview experiment did not establish improvement and was removed.
+
+The subsequent isolated candidate changes only the initial preview from 1.5 to
+one second; the two-second repeat interval, 125 ms busy retry, final priority,
+model and decoder parameters are unchanged. On the same 600-second montage and
+three-thread profile it produced first/final p95 2.745/1.244 s, zero overflows or
+timeouts, and 73 finals. All 73 final texts exactly matched the sequential baseline
+repeat. This bounded diagnostic supports running the candidate's full native
+matrix, not declaring qualification or creating a release tag. The original
+baseline failure remains part of the evidence rather than being erased by repeats.
+
+A separate public JFK CPU-kernel diagnostic compared Flash Attention on/off/on
+sequentially with three threads. Encoder work dominated the measured calls;
+disabling Flash Attention did not establish a consistent improvement. The
+diagnostic adapter changes were removed, and production kernel selection remains
+unchanged. No short diagnostic substitutes for a native one-hour gate.
+
+The hidden native WKWebView translation probe now checks three consecutive leased
+jobs, preserves their separate timings, and verifies translated content and order.
+It still waits 330 seconds while hidden before offering the first job. The retained
+loader uses native gzip streaming where supported, keeps the existing worker
+fallback, verifies both compressed and decoded hashes, and propagates cancellation.
+No model, remote service, download, or durable-history schema changes were made.
+
+The retained path completed that hidden-window run at 2.592 s for the first job
+and 0.060/0.064 s for the following jobs. Earlier diagnostics varied considerably:
+the prior loader's first jobs took 27-58 s, and an immediate diagnostic of the new
+path took 15 s. These are availability/correctness measurements with uncontrolled
+OS caches and host load, not a reproducible cold-start SLA or a claimed speedup
+factor. Chromium and WebKit real bundled inference/CSP/cancellation tests passed,
+as did nine caption browser tests, including actual leased offline translation.
+None of these tests establishes new microphone-to-Chinese acceptance.

@@ -40,12 +40,27 @@ test("feeds timestamped PCM with an empty environment and waits for EOF", async 
   assert.equal(result.events.at(-1).type, "stopped");
 });
 
-test("kills and reaps a helper stalled during model loading with phase diagnostics", async () => {
-  await assert.rejects(run(`console.error('caption-phase:loading-asr-cpu'); setInterval(()=>{},100);`, { timeoutMs: 1000 }), /Caption engine timeout; phase=loading-asr-cpu/);
+async function expectPhaseTimeout(t, source, phase) {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let reached = false;
+  const result = run(source, { timeoutMs: 1000, onProgress: progress => {
+    if (!reached && progress.phase === phase) {
+      reached = true;
+      t.mock.timers.tick(1000);
+    }
+  } });
+  // Even a failed readiness assertion must reap the real child before restoring timers.
+  t.after(async () => { t.mock.timers.tick(1000); await result.catch(() => {}); });
+  await assert.rejects(result, new RegExp(`Caption engine timeout; phase=${phase}`));
+  assert.ok(reached);
+}
+
+test("kills and reaps a helper stalled during model loading with phase diagnostics", { timeout: 15000 }, async t => {
+  await expectPhaseTimeout(t, `console.error('caption-phase:loading-asr-cpu'); setInterval(()=>{},100);`, "loading-asr-cpu");
 });
 
-test("distinguishes an inference stall from a startup stall", async () => {
-  await assert.rejects(run(`${handshake} process.stdin.resume(); process.stdin.on('end',()=>console.error('caption-phase:recognizing-final')); setInterval(()=>{},100);`, { timeoutMs: 1000 }), /Caption engine timeout; phase=recognizing-final/);
+test("distinguishes an inference stall from a startup stall", { timeout: 15000 }, async t => {
+  await expectPhaseTimeout(t, `${handshake} process.stdin.resume(); process.stdin.on('end',()=>console.error('caption-phase:recognizing-final')); setInterval(()=>{},100);`, "recognizing-final");
 });
 
 test("rejects an early engine exit instead of waiting for the timeout", async () => {

@@ -29,8 +29,12 @@ async function verify(buffer: ArrayBuffer, expected: string) {
   if (hash !== expected) throw new TranslationError("bundledModelInvalid");
 }
 
-function decompress(bytes: Uint8Array, signal: AbortSignal): Promise<Uint8Array> {
+async function decompress(bytes: Uint8Array<ArrayBuffer>, signal: AbortSignal): Promise<Uint8Array> {
   signal.throwIfAborted();
+  if (typeof DecompressionStream !== "undefined") {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"), { signal });
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
   return new Promise((resolve, reject) => {
     const abort = () => { stop(); reject(signal.reason); };
     const stop = gunzip(bytes, (error, result) => {

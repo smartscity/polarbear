@@ -5,24 +5,24 @@ static void check(bool value) { if (!value) std::abort(); }
 
 int main() {
     PreviewSchedule schedule(16000);
-    check(!schedule.due(23999));
-    check(schedule.due(24000));
-    schedule.attempted(24000, false);
+    check(!schedule.due(15999));
+    check(schedule.due(16000));
+    schedule.attempted(16000, false);
     // Busy inference neither triggers a per-frame retry nor loses a full interval.
-    check(!schedule.due(24512));
-    check(!schedule.due(25999));
-    check(schedule.due(26000));
-    schedule.attempted(26000, true);
-    check(!schedule.due(57999));
-    check(schedule.due(58000));
-    schedule.attempted(58000, true);
-    check(!schedule.due(58001));
+    check(!schedule.due(16512));
+    check(!schedule.due(17999));
+    check(schedule.due(18000));
+    schedule.attempted(18000, true);
+    check(!schedule.due(49999));
+    check(schedule.due(50000));
+    schedule.attempted(50000, true);
+    check(!schedule.due(50001));
     schedule.reset();
     check(!schedule.due(512));
-    check(schedule.due(24064));
-    schedule.attempted(24064, true);
-    check(!schedule.due(56000));
-    check(schedule.due(56064));
+    check(schedule.due(16384));
+    schedule.attempted(16384, true);
+    check(!schedule.due(48383));
+    check(schedule.due(48384));
     schedule.reset();
     int attempts = 0;
     for (size_t samples = 512; samples < 16000 * 15; samples += 512)
