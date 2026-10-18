@@ -374,3 +374,49 @@ OS caches and host load, not a reproducible cold-start SLA or a claimed speedup
 factor. Chromium and WebKit real bundled inference/CSP/cancellation tests passed,
 as did nine caption browser tests, including actual leased offline translation.
 None of these tests establishes new microphone-to-Chinese acceptance.
+
+### Bounded release result: 90a0ceb (2026-10-18)
+
+[Release run 39124619651](https://github.com/smartscity/polarbear/actions/runs/39124619651)
+completed the new 900-second profile on both native architectures. Both reports
+retain corpus SHA-256 `9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe`
+and verified OS network denial. This candidate is **NOT ACCEPTED** for release.
+
+| Host | First-text p95 | Final-after-VAD p95 | Warmed RSS growth | Finals | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| ARM | 1.759 s | 0.538 s | 9,363,456 bytes | 124 | PASS |
+| Intel | 6.649 s | 3.529 s | 10,579,968 bytes | 124 | FAIL: first text |
+
+Both completed all 28,139 PCM frames without helper overflow or timeout. Peak
+process-tree RSS was 264,765,440 bytes on ARM and 253,579,264 bytes on Intel.
+Artifacts `production-soak-arm64` (12136466096) and `production-soak-x86_64`
+(12135697996) contain the original JSON and event/diagnostic evidence. The earlier
+local 600-second result is not sufficient to override this native Intel failure.
+
+Intel diagnostics include long final inference occupying the single model owner
+while subsequent utterances arrive, and provisional inference canceled when its
+final arrives. For example, sequence 20 waited approximately 4.04 s before a
+1.61 s final inference. This identifies queue ownership and compute as contributors;
+it does not prove a universal hardware or scheduler root cause.
+
+Bounded local diagnostic follow-ups were not promoted to production:
+
+- One-to-four inference-thread screening on public JFK did not establish a reason
+  to reduce the current CPU budget. This local host is not the CI machine.
+- LLAMAFILE kernels with Accelerate showed no consistent improvement in a short
+  sequential baseline/candidate/baseline screen. LLAMAFILE without the BLAS backend
+  was slower (roughly 1.68-1.93 s versus 0.99-1.38 s in that screen).
+- Fourteen short/full windows from seven observed sequences each invoked the
+  encoder exactly once. Single-segment decoding preserved their text but offered
+  no consistent speedup. The diagnostic adapter edits were reverted.
+- A pinned unquantized-model download hit its 180-second network deadline before
+  completion. The partial file was not a valid model and supplies no comparison
+  evidence. Neither the bundled model nor its manifest was changed.
+
+Desktop browser regressions passed locally (22/22). CI Quality's initial Mermaid
+reset assertion failed; three local repeats passed, and the rerun of that CI job
+passed without source changes. Treat this as residual test timing instability,
+not a product correction. No new microphone acceptance, tag, or DMG release is
+claimed. Further work must improve measured inference/scheduling or explicitly
+qualify a different streaming approach, rather than relax the latency threshold,
+drop audio, or repeatedly rerun the same candidate until a favorable host passes.
