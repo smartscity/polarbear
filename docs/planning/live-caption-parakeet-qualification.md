@@ -130,3 +130,23 @@ runs the harness regression suite inside that exact sandbox before loading model
 the real child-process test checks allocation accounting and release. All 18
 regressions passed locally under network denial on Intel macOS. This is harness
 evidence only; a new complete native matrix is required.
+
+## Matched CPU-budget profile
+
+The production helper's CPU budget correction exposed a comparison mismatch:
+both research adapters still forced four ASR threads, even on three-CPU ARM hosts.
+The corrected comparison gives both engines the same explicit budget, capped at
+four and reserving one reported CPU (minimum one ASR thread). Reports include the
+host CPU count and selected budget; the persistent baseline acknowledges its
+budget at startup and rejects invalid arguments. `--threads 4` retains the old
+profile for sequential diagnostic comparisons. Historical failures remain failed;
+new results must be identified as CPU-budgeted, not merged with fixed-four timing.
+
+On local Intel, the rebuilt baseline acknowledged two threads and rejected speech
+on a two-second silence fixture; the pinned Parakeet candidate recognized the public
+JFK fixture with the same two-thread setting. All 34 evaluation regressions passed
+under OS-level network denial. These checks establish argument propagation and
+runtime compatibility, not full accuracy, sustained latency or replacement approval.
+The frozen corpus, prefix schedule, queue limits, model hashes, WER and latency
+thresholds are unchanged. A complete native comparison on both architectures is
+still required before proposing an engine replacement.

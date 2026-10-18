@@ -19,7 +19,7 @@ import traceback
 import numpy as np
 import soundfile as sf
 
-from evaluate import SherpaCandidate, WhisperBaseline
+from evaluate import SherpaCandidate, WhisperBaseline, inference_threads
 from metrics import score, words as normalize
 from qualification_corpus import CALLS, MEETINGS, digest
 from prepare import MODEL_SHA256
@@ -33,10 +33,10 @@ def worker(config, requests, replies):
     os.setsid()
     engine = None
     try:
-        engine = (WhisperBaseline(config["baseline"], config["whisper_model"])
+        engine = (WhisperBaseline(config["baseline"], config["whisper_model"], config["threads"])
                   if config["engine"] == "whisper" else
-                  SherpaCandidate("parakeet", Path(config["models"]) / "parakeet"))
-        replies.put({"ready": True, "loadSeconds": engine.load_seconds})
+                  SherpaCandidate("parakeet", Path(config["models"]) / "parakeet", config["threads"]))
+        replies.put({"ready": True, "loadSeconds": engine.load_seconds, "threads": engine.threads})
         while True:
             job = requests.get()
             if job is None:
@@ -308,11 +308,12 @@ def main():
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     parser.add_argument("--soak-seconds", type=int, default=3600)
     parser.add_argument("--phase", choices=("all", "accuracy", "replay"), default="all")
+    parser.add_argument("--threads", type=int, choices=range(1, 17), default=inference_threads())
     args = parser.parse_args()
     validate_native_arch(args.expect_arch)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     report = {"status": "INCOMPLETE", "engine": args.engine, "machine": platform.machine(),
-              "platform": platform.platform(), "threads": 4, "provider": "cpu",
+              "platform": platform.platform(), "threads": args.threads, "availableCpus": os.cpu_count(), "provider": "cpu",
               "phase": args.phase, "corpusSha256": digest(args.corpus),
               "scoring": "Strict orthographic WER; number formatting not normalized; entity recall is supplementary",
               "replacement": "NOT_AUTHORIZED"}
@@ -337,6 +338,8 @@ def main():
             report["license"] = corpus["license"]
             report["attribution"] = corpus["attribution"]
             engine = EngineWorker(vars(args))
+            if engine.ready.get("threads") != args.threads:
+                raise ValueError("Worker thread budget mismatch")
             report["loadSeconds"] = engine.ready["loadSeconds"]
             if args.phase != "replay":
                 report["accuracy"] = accuracy(engine, corpus, args.corpus.parent, emit)

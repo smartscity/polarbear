@@ -2,9 +2,11 @@
 #include "whisper.h"
 #include "json.hpp"
 #include <chrono>
+#include <charconv>
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 using Clock = std::chrono::steady_clock;
@@ -15,7 +17,11 @@ static double elapsed(Clock::time_point start) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) return 2;
+    if (argc != 3) return 2;
+    const std::string_view argument(argv[2]);
+    int threads = 0;
+    const auto parsed = std::from_chars(argument.data(), argument.data() + argument.size(), threads);
+    if (parsed.ec != std::errc{} || parsed.ptr != argument.data() + argument.size() || threads < 1 || threads > 16) return 2;
     whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);
     auto config = whisper_context_default_params();
     config.use_gpu = false;
@@ -23,9 +29,9 @@ int main(int argc, char **argv) {
     auto context = std::unique_ptr<whisper_context, decltype(&whisper_free)>(
         whisper_init_from_file_with_params(argv[1], config), whisper_free);
     if (!context) return 3;
-    std::cout << json({{"loadSeconds", elapsed(start)}}).dump() << std::endl;
+    std::cout << json({{"loadSeconds", elapsed(start)}, {"threads", threads}}).dump() << std::endl;
     auto params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    params.n_threads = 4;
+    params.n_threads = threads;
     params.language = "en";
     params.translate = false;
     params.no_context = true;

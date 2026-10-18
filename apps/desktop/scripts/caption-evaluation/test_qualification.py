@@ -1,14 +1,51 @@
 """Regression checks for corpus integrity and qualification accounting."""
 
 import io
+from pathlib import Path
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 import zipfile
 
+from evaluate import inference_threads, SherpaCandidate, WhisperBaseline
 from qualification_corpus import earnings_words, ami_words, segments
 from qualify import recall_counts, replay_events
 
 
 class QualificationTests(unittest.TestCase):
+    def test_budget_matches_production_and_never_oversubscribes_small_hosts(self):
+        for cpus, expected in ((0, 1), (1, 1), (2, 1), (3, 2), (4, 3), (8, 4)):
+            self.assertEqual(inference_threads(cpus), expected)
+        with patch("evaluate.os.cpu_count", return_value=None):
+            self.assertEqual(inference_threads(), 1)
+
+    def test_candidate_adapters_receive_the_same_explicit_budget(self):
+        offline, online = Mock(), Mock()
+        module = SimpleNamespace(__version__="fixture", OfflineRecognizer=offline, OnlineRecognizer=online)
+        with patch.dict("sys.modules", {"sherpa_onnx": module}), patch("evaluate.verify_model"):
+            for kind in ("parakeet", "zipformer"):
+                candidate = SherpaCandidate(kind, Path("/fixture"), 2)
+                self.assertEqual(candidate.threads, 2)
+        self.assertEqual(offline.from_transducer.call_args.kwargs["num_threads"], 2)
+        self.assertEqual(online.from_transducer.call_args.kwargs["num_threads"], 2)
+
+    def test_baseline_acknowledges_the_requested_budget_and_reaps_mismatch(self):
+        for acknowledged in (2, 4):
+            process = Mock(stdin=io.BytesIO(), stdout=io.BytesIO(
+                ('{"threads":%d,"loadSeconds":0.1}\n' % acknowledged).encode()))
+            with patch("evaluate.subprocess.Popen", return_value=process) as launch:
+                if acknowledged == 2:
+                    engine = WhisperBaseline("/fixture/helper", "/fixture/model", 2)
+                    self.assertEqual(engine.threads, 2)
+                    engine.close()
+                else:
+                    with self.assertRaisesRegex(ValueError, "thread budget"):
+                        WhisperBaseline("/fixture/helper", "/fixture/model", 2)
+                self.assertEqual(launch.call_args.args[0], ["/fixture/helper", "/fixture/model", "2"])
+                self.assertEqual(launch.call_args.kwargs["env"], {})
+                self.assertTrue(process.stdin.closed)
+                process.wait.assert_called_once()
+
     def test_missing_timestamps_fail_instead_of_dropping_words(self):
         with self.assertRaises(ValueError):
             earnings_words("token|speaker|ts|endTs\nhello|0||1\n")

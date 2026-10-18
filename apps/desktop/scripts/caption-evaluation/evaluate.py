@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import platform
 import resource
@@ -16,11 +17,25 @@ from metrics import score
 from prepare import MODELS, verify_model
 
 
+def inference_threads(available=None):
+    # Match the production helper's budget; keep historic fixed-four evidence separate.
+    available = os.cpu_count() if available is None else available
+    return min(4, max(1, (available or 1) - 1))
+
+
 class WhisperBaseline:
-    def __init__(self, executable, model):
-        self.process = subprocess.Popen([str(executable), str(model)], env={},
+    def __init__(self, executable, model, threads):
+        self.threads = threads
+        self.process = subprocess.Popen([str(executable), str(model), str(threads)], env={},
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        self.load_seconds = json.loads(self.process.stdout.readline())["loadSeconds"]
+        try:
+            ready = json.loads(self.process.stdout.readline())
+            if ready.get("threads") != threads:
+                raise ValueError("Baseline thread budget mismatch")
+            self.load_seconds = ready["loadSeconds"]
+        except BaseException:
+            self.close()
+            raise
 
     def transcribe(self, samples):
         self.process.stdin.write(struct.pack("<I", len(samples)) + samples.astype("<f4").tobytes())
@@ -38,11 +53,12 @@ class WhisperBaseline:
 
 
 class SherpaCandidate:
-    def __init__(self, kind, directory):
+    def __init__(self, kind, directory, threads):
         import sherpa_onnx
         for filename in MODELS[kind]["files"]:
             verify_model(kind, directory / filename)
         self.kind = kind
+        self.threads = threads
         self.version = sherpa_onnx.__version__
         start = time.perf_counter()
         if kind == "parakeet":
@@ -50,12 +66,12 @@ class SherpaCandidate:
                 encoder=str(directory / "encoder.int8.onnx"),
                 decoder=str(directory / "decoder.int8.onnx"),
                 joiner=str(directory / "joiner.int8.onnx"), tokens=str(directory / "tokens.txt"),
-                num_threads=4, feature_dim=128, model_type="nemo_transducer", provider="cpu")
+                num_threads=threads, feature_dim=128, model_type="nemo_transducer", provider="cpu")
         else:
             self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
                 **{part: str(directory / f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx")
                    for part in ("encoder", "decoder", "joiner")},
-                tokens=str(directory / "tokens.txt"), num_threads=4,
+                tokens=str(directory / "tokens.txt"), num_threads=threads,
                 enable_endpoint_detection=False, provider="cpu")
         self.load_seconds = time.perf_counter() - start
 
@@ -114,16 +130,17 @@ def main():
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--whisper-model", type=Path)
     parser.add_argument("--paced", action="store_true")
+    parser.add_argument("--threads", type=int, choices=range(1, 17), default=inference_threads())
     args = parser.parse_args()
     if args.paced and args.engine != "zipformer":
         parser.error("--paced requires a native streaming candidate (zipformer)")
     cases = json.loads((args.directory / "samples/samples.json").read_text())
     if len(cases) != 20:
         raise ValueError("The predeclared 20-sample corpus must be complete")
-    engine = (WhisperBaseline(args.baseline, args.whisper_model) if args.engine == "whisper"
-              else SherpaCandidate(args.engine, args.directory / "models" / args.engine))
+    engine = (WhisperBaseline(args.baseline, args.whisper_model, args.threads) if args.engine == "whisper"
+              else SherpaCandidate(args.engine, args.directory / "models" / args.engine, args.threads))
     report = {"engine": args.engine, "machine": platform.machine(), "platform": platform.platform(),
-              "threads": 4, "provider": "cpu", "loadSeconds": engine.load_seconds,
+              "threads": engine.threads, "availableCpus": os.cpu_count(), "provider": "cpu", "loadSeconds": engine.load_seconds,
               "runtimeVersion": getattr(engine, "version", "pinned whisper.cpp v1.9.5"),
               "scoring": "lowercase, punctuation removed, apostrophes retained; no number expansion",
               "records": []}

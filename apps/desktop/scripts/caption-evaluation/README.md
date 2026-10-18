@@ -11,7 +11,7 @@ need a separately qualified native runtime for both macOS architectures.
   revisions and public LibriSpeech test recordings. Model ONNX hashes are checked
   against publisher LFS SHA-256 metadata.
 - `evaluate.py` accepts local assets only. It verifies recordings, runs each
-  engine with four CPU threads, records every hypothesis and computes aggregate
+  engine with the same CPU budget, records every hypothesis and computes aggregate
   word error rate (WER). Do not run multiple inference jobs concurrently.
 - `whisper-baseline.cpp` exposes the existing pinned Whisper implementation as a
   persistent whole-utterance process. It intentionally excludes production VAD
@@ -27,6 +27,15 @@ The corpus is 20 predeclared indices (`range(0, 2620, 131)`) from LibriSpeech
 plus deterministic white noise at 10 dB SNR. This small read-speech corpus is not
 a meeting/conversation benchmark. Zipformer was trained on LibriSpeech, making
 this an in-domain screening test, not evidence of general superiority.
+
+The default budget matches production: at most four ASR threads, reserving one
+reported CPU for ingestion and other work (minimum one ASR thread). Both adapters
+receive the same explicit budget; reports record it and the host CPU count.
+`--threads 4` reproduces the historical fixed-four profile for controlled sequential
+comparisons. Historical results are not overwritten or reclassified. The baseline
+helper acknowledges its thread budget, so an older binary cannot silently run a
+different configuration. Thread budgeting changes neither the frozen corpus nor
+accuracy and latency acceptance thresholds.
 
 ## Preparation
 
