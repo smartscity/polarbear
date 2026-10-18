@@ -196,37 +196,87 @@ zero overflow/timeout, and 231,501,824 bytes peak RSS. Its helper SHA-256 was
 All four native CTests passed after this adjustment. These sequential samples
 do not isolate host-load variance; the eliminated scheduler delay is deterministic.
 
-Native CI run `39130349464` rejected the immediate-retry commit `3d02a4d`:
-Intel first/final p95 were 5.068/3.676 seconds. All 5,505 frames and 22 finals
-completed without overflow or timeout, but the first-text gate failed. ARM passed.
-This failure supersedes the local pass as release evidence; no release tag was
-created. Several short finals occupied the single model owner while later
-utterances waited. Scheduling changes alone have not established sufficient margin.
+### Rejected CPU worker reuse experiment (2026-10-18)
 
-### CPU worker lifecycle candidate
+Native run `39130349464` rejected commit `3d02a4d`: Intel first/final p95 were
+5.068/3.676 seconds. The local pass did not establish native CI acceptance.
 
-The pinned CPU backend leaves its thread pool unset, causing GGML to create and
-destroy workers for every graph. The checksum-pinned `whisper-cpu-threadpool.patch`
-gives each CPU backend an RAII-owned pool, reuses it while its thread count is
-unchanged, and puts idle workers to sleep instead of spinning alongside BLAS.
-External pools remain caller-owned. Cached plans rebind at execution so they
-cannot retain a freed pool after a thread-count change. The existing single
-model consumer, model weights, audio context and final decoding remain unchanged.
-No global executor or additional inference owner is introduced.
+Commit `a31fa05` tested backend-owned persistent CPU pools with zero idle polling.
+The local three-thread 176-second replay passed at 2.191/1.296 seconds, with all
+22 final strings unchanged. Five native CTests, 16 supervisor tests and the
+bundled JFK/silence/malformed-frame checks passed. However, native release run
+`39132859854` rejected this candidate:
 
-The local native Intel 176-second regression with three threads passed at
-2.191/1.296 seconds first/final p95, with 22 finals identical to the original
-bundled baseline, 5,505 frames, zero overflow/timeout, 261,611,520 bytes peak RSS,
-and 111 ms maximum feed lag. Network access was denied by the OS. Measured helper
-SHA-256: `de6cd8a3a38edacfafa1d10d5d99109c5f68bb22e6c35cd02113a2138435a829`.
-This is a local candidate result, not native CI acceptance or a word-accuracy score.
-The new CPU lifecycle test covers repeated graphs, thread-count replacement,
-cached plans, external-pool attachment/detachment and resource destruction.
-Native Intel and ARM gates and the actual packaged helper must pass before release.
-The canonical archive-and-patch build passed all five CTests. The rebuilt bundled
-helper passed the public JFK, silence and malformed-frame integration checks;
-all 16 native replay/latency supervisor tests passed. These checks do not claim
-microphone-to-translation or new full-corpus accuracy acceptance.
+| Native host | First-text p95 | Final-text p95 | Finals | Result |
+| --- | ---: | ---: | ---: | --- |
+| ARM | 1.790 s | 0.829 s | 22 | PASS |
+| Intel | 6.723 s | 5.116 s | 22 | FAIL: first and final text |
+
+Both delivered 5,505 frames without overload or timeout. Intel peak RSS was
+268,025,856 bytes. Its partial/final compute medians were approximately
+1.669/2.033 seconds, with final queue waits up to 3.315 seconds. This does not
+isolate runner variance from worker-policy cost, and it is not evidence that
+reusing workers fixed the bottleneck. The production patch, manifest entry and
+patch-specific test were withdrawn; no tag or DMG was released. Raw evidence is
+retained in artifacts `production-latency-arm64` (12139600049) and
+`production-latency-x86_64` (12139047256). The first/final thresholds remain
+3.0/4.4 seconds. Further candidates need measured compute attribution or a
+qualified streaming engine; repeating this candidate until it passes is excluded.
+
+The withdrawal exposed a separate incremental-build integrity issue: extracting
+the pinned archive restores old source timestamps, so objects from a removed
+patch can remain newer than their sources. `build-caption.mjs` now uses
+`cmake --build --clean-first` after extraction/patching. A clean native rebuild
+recompiled the CPU backend and passed all four retained CTests. This fixes
+source-to-binary consistency; it does not explain or resolve the Intel latency
+failure on fresh CI hosts. All 38 Python evaluation tests also passed.
+
+The evaluation-only Whisper adapter now records process CPU time and upstream
+per-operation timing means. A local public JFK probe with three threads reported
+1.006 seconds wall time, 3.898 CPU seconds and a 781.186 ms encoder mean. The means
+must not be added together as phase totals. This single clip is not evidence of
+meeting accuracy, production queue behavior or native CI acceptance.
+
+### Bounded streaming alternative screen (2026-10-18)
+
+The already-pinned Zipformer `2023-06-26` candidate was screened on the first
+complete annotated segment from the first record of each of the eight frozen
+AMI/Earnings22 sources. Selection was fixed before inference. This included
+157.67 seconds, 361 reference words, two far-field meetings and six earnings-call sources.
+The local native Intel run used three threads, verified existing model/audio
+digests, and denied networking at OS level. Zipformer consumed 80 ms chunks at
+wall-clock pace; the clean rebuilt Whisper adapter decoded the same complete
+clips separately for an accuracy comparison, not a competing latency measurement.
+
+| Measure | Zipformer | Whisper base.en Q5_1 |
+| --- | ---: | ---: |
+| Aggregate word error rate | 73.13% | 43.21% |
+| Empty completed clips | 3 of 8 | 0 of 8 |
+| Technical terms matched | 1 of 2 | 1 of 2 |
+
+The five nonempty Zipformer clips had first-text-from-clip-start p95 of 2.689
+seconds. Excluding the three empty clips cannot establish success, and clip-start
+timing is not comparable to the production VAD-based gate. An initial diagnostic
+incorrectly mixed source-relative annotation timestamps with clip-relative audio;
+those annotation-relative latency fields were discarded, not used for acceptance.
+Only the existing raw wall-clock event times support the clip-start statistic.
+
+A separate offline check used the publisher's documented mixed-precision
+configuration (int8 encoder/joiner and fp32 decoder). The fp32 decoder at the same
+pinned revision has SHA-256
+`7bf787f90b194b307e5a4ad6a34fadb4e748304c35f78a8d66358a05b13ee6ef`.
+It also produced three empty clips and 73.13% aggregate WER. Six final hypotheses
+matched exactly; two differed. This follow-up used full-clip feeding rather than
+paced chunks, so it does not isolate decoder precision as the cause of individual
+text changes. The documented configuration did not resolve these omissions. See the upstream
+[model recipe](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/zipformer-transducer-models.html#csukuangfj-sherpa-onnx-streaming-zipformer-en-2023-06-26-english).
+
+This is a rejection screen, not an overall model ranking: the sample is small,
+includes overlapping speech, and has only two technical-term occurrences. It
+does not justify replacing the production recognizer. No candidate was packaged,
+no ARM candidate run was claimed, and no microphone/translation/DMG acceptance
+was performed. A future streaming candidate must preserve useful meeting
+recognition as well as reduce latency; first-text speed alone is insufficient.
 
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies

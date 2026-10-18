@@ -4,6 +4,7 @@
 #include <chrono>
 #include <charconv>
 #include <cstdint>
+#include <ctime>
 #include <iostream>
 #include <memory>
 #include <string_view>
@@ -45,14 +46,24 @@ int main(int argc, char **argv) {
         if (!count || count > 16000 * 60) return 4;
         std::vector<float> samples(count);
         if (!std::cin.read(reinterpret_cast<char *>(samples.data()), count * sizeof(float))) return 4;
+        whisper_reset_timings(context.get());
+        const auto cpu_began = std::clock();
         const auto began = Clock::now();
         if (whisper_full(context.get(), params, samples.data(), count) != 0) return 5;
+        const double wall_seconds = elapsed(began);
+        const double cpu_seconds = static_cast<double>(std::clock() - cpu_began) / CLOCKS_PER_SEC;
+        auto timings = std::unique_ptr<whisper_timings>(whisper_get_timings(context.get()));
+        if (!timings) return 6;
         std::string text;
         for (int i = 0; i < whisper_full_n_segments(context.get()); ++i) {
             if (whisper_full_get_segment_no_speech_prob(context.get(), i) < 0.6f)
                 text += whisper_full_get_segment_text(context.get(), i);
         }
-        std::cout << json({{"text", text}, {"decodeSeconds", elapsed(began)}}).dump() << std::endl;
+        // Upstream reports per-operation means, not additive phase totals.
+        std::cout << json({{"text", text}, {"decodeSeconds", wall_seconds},
+            {"processCpuSeconds", cpu_seconds}, {"encodeMeanMs", timings->encode_ms},
+            {"decodeMeanMs", timings->decode_ms}, {"promptMeanMs", timings->prompt_ms},
+            {"batchDecodeMeanMs", timings->batchd_ms}, {"sampleMeanMs", timings->sample_ms}}).dump() << std::endl;
     }
     return std::cin.eof() && std::cin.gcount() == 0 ? 0 : 4;
 }

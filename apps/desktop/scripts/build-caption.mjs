@@ -38,7 +38,8 @@ if (process.platform === "darwin") {
     run("cmake", ["-S", source, "-B", build, `-DWHISPER_SOURCE=${whisper}`, "-DCMAKE_BUILD_TYPE=Release",
       `-DCMAKE_OSX_ARCHITECTURES=${architecture}`, "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
       "-DGGML_BLAS=ON", "-DGGML_BLAS_VENDOR=Apple", "-DGGML_METAL=OFF"]);
-    run("cmake", ["--build", build, "--config", "Release", "-j", "4"]);
+    // Restoring the pinned archive can make removed patches older than cached objects.
+    run("cmake", ["--build", build, "--clean-first", "--config", "Release", "-j", "4"]);
     const hostArchitecture = process.arch === "arm64" ? "arm64" : "x86_64";
     if (architecture === hostArchitecture) run("ctest", ["--test-dir", build, "--output-on-failure"]);
     binaries.push(join(build, "polarbear-caption-engine"));

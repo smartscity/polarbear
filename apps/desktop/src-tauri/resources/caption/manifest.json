@@ -11,11 +11,6 @@
         "file": "whisper-cpu-cancellation.patch",
         "sha256": "b845491b98abf11682b8e445baebb2ed86d42fe1a38fd86bd4b8d22f9186b8bb",
         "purpose": "Propagate cancellation into CPU graph nodes without changing finalized decoding"
-      },
-      {
-        "file": "whisper-cpu-threadpool.patch",
-        "sha256": "c4d7a6c5da3bcd7cb7456d7817554514314613b69855faa49deb763491b92066",
-        "purpose": "Reuse backend-owned CPU workers with idle sleeping and preserve external pool ownership"
       }
     ]
   },
