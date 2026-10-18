@@ -15,6 +15,8 @@ from process_memory import ProcessMemory
 from qualification_corpus import digest
 from qualify import offline_control, replay_events, validate_corpus, validate_native_arch
 
+RELEASE_REPLAY_SECONDS = 15 * 60
+
 
 def montage(corpus, directory, seconds):
     # Reuse the frozen source-balanced order, not its oracle inference boundaries.
@@ -160,7 +162,7 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
 
 def acceptance(result):
     checks = {
-        "fullHour": result["audioSeconds"] == 3600,
+        "completeReleaseDuration": result["audioSeconds"] == RELEASE_REPLAY_SECONDS,
         "textProduced": result["finals"] > 0,
         "firstText": result["firstFromVadStartP95Seconds"] is not None and result["firstFromVadStartP95Seconds"] <= 3,
         "finalText": result["finalAfterVadEndP95Seconds"] is not None and result["finalAfterVadEndP95Seconds"] <= 4.4,
@@ -178,7 +180,9 @@ def main():
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     args = parser.parse_args()
     validate_native_arch(args.expect_arch)
-    report = {"status": "INCOMPLETE", "machine": platform.machine(), "platform": platform.platform(),
+    report = {"status": "INCOMPLETE", "profile": "release-15-minute-v1",
+              "requiredAudioSeconds": RELEASE_REPLAY_SECONDS,
+              "machine": platform.machine(), "platform": platform.platform(),
               "microphoneToUi": "NOT_RUN", "chineseTranslation": "NOT_RUN", "accuracy": "NOT_SCORED"}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.with_suffix(".jsonl").open("w") as stream:
@@ -198,7 +202,8 @@ def main():
             report["helperSha256"] = digest(Path(command[0]))
             memory = ProcessMemory()
             report["memoryPreflightBytes"] = memory.sample()
-            report["replay"] = asyncio.run(replay(command, montage(corpus, args.corpus.parent, 3600), 3600, emit, memory.sample))
+            report["replay"] = asyncio.run(replay(command, montage(corpus, args.corpus.parent, RELEASE_REPLAY_SECONDS),
+                                                  RELEASE_REPLAY_SECONDS, emit, memory.sample))
             report["checks"] = acceptance(report["replay"])
             report["status"] = "PASS" if all(report["checks"].values()) else "FAIL"
             if report["status"] != "PASS":

@@ -284,7 +284,7 @@ thread override permits a sequential fixed-four comparison on the same machine;
 Desktop never supplies that override. Optional numeric stderr diagnostics report
 CPU capacity, VAD cost, inference time, queue wait and cancellation without audio,
 recognized text or paths. They do not alter the stdout protocol or persistence.
-Release packaging depends on both native caption jobs and the one-hour production
+Release packaging depends on both native caption jobs and the 15-minute production
 PCM soak on both architectures; a successful DMG build must not bypass a failed
 architecture's inference gate. All gates and packaging use the same commit SHA
 (or explicit release tag), not a moving branch checkout.
@@ -318,15 +318,21 @@ second; subsequent attempts remain two seconds apart, resetting at each utteranc
 boundary. Earlier aggressive retry and one-second recurring experiments were
 rejected; their results remain in the qualification record. A 600-second diagnostic
 of this isolated change preserved all 73 finalized texts while lowering measured
-first-text p95 from 3.375 to 2.745 seconds. It is not release acceptance: full
-native Intel and ARM hours must pass before this candidate may be released.
+first-text p95 from 3.375 to 2.745 seconds. It is not release acceptance: the
+15-minute native Intel and ARM release checks must pass before packaging.
 Busy inference still rejects provisional work. A rejected attempt checks for idle
 capacity after another 125 ms of audio, rather than losing a whole two-second
 interval; it never retries on every PCM frame or queues rejected snapshots. Final
 VAD boundaries, 15-second utterance limit, queue capacity and persistence are
 unchanged. Qualification collects whitelisted numeric diagnostics on a separately
 drained stderr stream; private stderr is never forwarded. This correction requires
-a new full native soak on both architectures before it can be declared accepted.
+a new bounded native replay on both architectures before it can be declared accepted.
+
+On 2026-10-18 the user replaced the routine hour-long release requirement with
+bounded validation. The owning qualification document defines the 15-minute
+profile and 30-minute production job cap. Existing hour-long failures remain
+recorded; long comparison runs require explicit renewed authorization. Shortened
+release checks do not establish hour-long stability or qualify Parakeet.
 
 Local Intel regression on the first 120 seconds of the public `EN2002a` meeting
 produced 23 finals without overload. The original two-second preview and deferred
@@ -540,7 +546,7 @@ dependency-ordered work packages, not separate claims that the feature is finish
 | QG-05 / LC-03,06,10 | Fault injection for disk-full, transaction failure, crash, helper kill, leases, deletion and schema migration; committed text survives | NOT_RUN |
 | QG-06 / LC-05,07 | Copy during updates, pending Chinese, selected-text copy, empty/long history, clipboard denial, timestamped exports and segment order | NOT_RUN |
 | QG-07 / LC-04,08 | 360px width, light/dark, EN/ZH, VoiceOver, reduced motion, multiple monitors, zoom, full-screen apps and focus; no editor key hijack | NOT_RUN |
-| QG-08 / LC-02,03 | One-hour authorized fixture session on declared Apple Silicon/Intel profiles; bounded memory/queues, latency and responsive typing | NOT_RUN |
+| QG-08 / LC-02,03 | 15-minute authorized release replay on declared Apple Silicon/Intel profiles; bounded memory/queues and latency; GUI responsiveness checked separately | NOT_RUN |
 | QG-09 / LC-09,10 | Model hashes/licenses, helper architectures, privacy descriptions, scoped commands, no content in logs/network; package inspection | NOT_RUN |
 | QG-10 / regression | Desktop typecheck/lint/unit/build/Rust checks; selection translation, Vocab, editor save/undo and native clipboard regressions | NOT_RUN |
 

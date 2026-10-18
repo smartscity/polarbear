@@ -14,6 +14,7 @@ on:
       - "v*"
     paths:
       - ".github/workflows/release.yml"
+      - ".github/workflows/caption-qualification.yml"
       - "apps/desktop/src-tauri/**"
       - "apps/desktop/scripts/**"
       - "apps/desktop/package.json"
@@ -32,7 +33,7 @@ jobs:
       ref: ${{ inputs.release_tag || github.sha }}
 
   caption_soak:
-    name: Production caption soak
+    name: Production caption validation (15 minutes)
     needs: caption_gate
     uses: ./.github/workflows/caption-qualification.yml
     with:

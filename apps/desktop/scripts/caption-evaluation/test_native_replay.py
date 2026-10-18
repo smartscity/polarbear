@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from native_replay import acceptance, replay, validate_native_arch
+from native_replay import RELEASE_REPLAY_SECONDS, acceptance, replay, validate_native_arch
 
 
 READY = "print(json.dumps({'type':'ready','protocol':1,'backend':'cpu'}),flush=True)"
@@ -42,7 +42,7 @@ print(json.dumps({'type':'stopped'}),flush=True)
         self.assertEqual(result["frames"], 4)
         self.assertEqual(result["finals"], 1)
         self.assertTrue(any(event["type"] == "caption" for event in events))
-        self.assertFalse(acceptance(result)["fullHour"])
+        self.assertFalse(acceptance(result)["completeReleaseDuration"])
 
     async def test_rejects_missing_and_wrong_handshakes(self):
         with self.assertRaisesRegex(RuntimeError, "completing"):
@@ -120,6 +120,22 @@ print(json.dumps({'type':'stopped'}),flush=True)
         self.assertFalse(all(checks.values()))
         self.assertFalse(checks["firstText"])
         self.assertFalse(checks["memoryPeak"])
+
+    def test_release_profile_requires_complete_fifteen_minutes_and_original_limits(self):
+        self.assertEqual(RELEASE_REPLAY_SECONDS, 900)
+        result = {"audioSeconds": 900, "finals": 1, "firstFromVadStartP95Seconds": 3,
+                  "finalAfterVadEndP95Seconds": 4.4, "sampledPeakProcessTreeRssBytes": 2 * 1024**3,
+                  "warmedMedianRssGrowthBytes": 100 * 1024**2}
+        self.assertTrue(all(acceptance(result).values()))
+        for seconds in (600, 899, 3600):
+            self.assertFalse(acceptance({**result, "audioSeconds": seconds})["completeReleaseDuration"])
+        for field, value, check in (
+            ("firstFromVadStartP95Seconds", 3.01, "firstText"),
+            ("finalAfterVadEndP95Seconds", 4.41, "finalText"),
+            ("sampledPeakProcessTreeRssBytes", 2 * 1024**3 + 1, "memoryPeak"),
+            ("warmedMedianRssGrowthBytes", 100 * 1024**2 + 1, "memoryGrowth"),
+        ):
+            self.assertFalse(acceptance({**result, field: value})[check])
 
 
 if __name__ == "__main__":

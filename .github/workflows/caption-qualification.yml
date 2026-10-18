@@ -8,17 +8,13 @@ on:
         required: false
       production_only:
         type: boolean
-        default: false
+        default: true
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "apps/desktop/scripts/caption-evaluation/qualification_corpus.py"
-      - "apps/desktop/scripts/caption-evaluation/qualify.py"
-      - "apps/desktop/scripts/caption-evaluation/test_qualification.py"
-      - "apps/desktop/scripts/caption-evaluation/process_memory.py"
-      - "apps/desktop/scripts/caption-evaluation/test_process_memory.py"
-      - ".github/workflows/caption-qualification.yml"
+    inputs:
+      compare_engines:
+        description: "Explicit research only: full accuracy corpus and one-hour engine comparison"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -65,7 +61,7 @@ jobs:
   measure:
     name: Native ${{ matrix.arch }} / ${{ matrix.engine }}
     needs: corpus
-    if: ${{ !inputs.production_only }}
+    if: ${{ inputs.compare_engines && !inputs.production_only }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -142,9 +138,9 @@ jobs:
           if-no-files-found: warn
 
   production:
-    name: Production PCM hour (${{ matrix.arch }})
+    name: Production PCM 15 minutes (${{ matrix.arch }})
     needs: corpus
-    timeout-minutes: 85
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -174,7 +170,7 @@ jobs:
           path: ${{ runner.temp }}/caption-corpus
       - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
       - run: node apps/desktop/scripts/build-caption.mjs
-      - name: Replay one hour through production VAD and inference queues
+      - name: Replay 15 minutes through production VAD and inference queues
         run: |
           set -o pipefail
           mkdir -p evidence

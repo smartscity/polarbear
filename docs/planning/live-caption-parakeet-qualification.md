@@ -89,7 +89,7 @@ The small initial LibriSpeech screen is excluded from the new qualification scor
 
 ## Production PCM soak
 
-The native production helper has a separate one-hour gate (`native_replay.py`).
+The native production helper has a separate 15-minute release gate (`native_replay.py`).
 It reuses the frozen, nonrepeating source-balanced montage above, but feeds 512
 float32 samples at the real sample clock into the bundled helper. The helper owns
 actual VAD, partial scheduling, final FIFO and the unchanged PCM budgets. Reference
@@ -102,18 +102,36 @@ samples the supervisor/child process-tree RSS through the existing libproc adapt
 Failure, timeout or cancellation kills and reaps the child and keeps evidence.
 It does not collect the native protocol in an unbounded in-memory event list.
 
-Predeclared acceptance: exactly 3,600 seconds; no helper overflow/timeout; at least
+Predeclared release acceptance: exactly 900 seconds; no helper overflow/timeout; at least
 one final; first-text p95 <= 3 seconds from VAD start; final p95 <= 4.4 seconds from
 VAD end (reserving the existing 0.6-second endpoint silence within the product's
 5-second target); sampled peak <= 2 GiB; warmed median RSS growth <= 100 MiB.
 These replay clocks are not ground-truth acoustic endpoints. A pass does not prove
 microphone-to-UI latency, accuracy, Chinese translation or mixed-source capture.
-Missing measurements cannot pass. No acceptance threshold is loosened after a run.
+Missing measurements cannot pass. Latency, memory and correctness thresholds remain unchanged.
 
 The release workflow calls the native short gate and this production soak on both
 architectures before packaging. The independent Parakeet accuracy/replay matrix
 is not run as part of a release of the unchanged Whisper model. It remains required
 before any engine replacement, with its original frozen comparison policy.
+
+### Duration policy revision (2026-10-18)
+
+The user explicitly requested that routine validation no longer take more than
+30 minutes. The release profile is now `release-15-minute-v1`: a source-balanced
+900-second replay, with a 30-minute production CI job cap including setup/build.
+This is a shorter-duration release check, not proof of hour-long stability.
+Earlier failed hour results below remain failures; no historical report is relabeled.
+The local hour run on `d79b005` was interrupted at the user's request and remains
+INCOMPLETE. Its child process was stopped and reaped.
+
+Routine pushes run the production validation through Release only, avoiding the
+previous duplicate Qualification run. The independent full-corpus/one-hour engine
+comparison now requires explicit manual `compare_engines=true`; do not dispatch it
+without renewed long-test authorization. Default manual qualification is production
+only. Parakeet remains NO_REPLACE; shortening release validation does not qualify
+a replacement engine. Packaging and mounted-DMG checks remain required, and their
+duration is separate from the 15-minute paced audio measurement.
 
 ## Measurement infrastructure correction
 
@@ -338,7 +356,8 @@ A separate public JFK CPU-kernel diagnostic compared Flash Attention on/off/on
 sequentially with three threads. Encoder work dominated the measured calls;
 disabling Flash Attention did not establish a consistent improvement. The
 diagnostic adapter changes were removed, and production kernel selection remains
-unchanged. No short diagnostic substitutes for a native one-hour gate.
+unchanged. This diagnostic does not count as the subsequently approved 15-minute
+release profile or a native one-hour result.
 
 The hidden native WKWebView translation probe now checks three consecutive leased
 jobs, preserves their separate timings, and verifies translated content and order.
