@@ -2,6 +2,7 @@
 #include "json.hpp"
 #include "recognition_queue.h"
 #include "inference_config.h"
+#include "preview_schedule.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -46,7 +47,8 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
                     const std::atomic<bool> &inference_failed, bool diagnostics) {
     std::vector<float> speech, carry, preroll;
     uint64_t start = 0, end = 0, sequence = 1;
-    int quiet = 0, last_partial = 0;
+    int quiet = 0;
+    PreviewSchedule previews(sample_rate);
     double vad_ms = 0;
     uint64_t frames = 0;
     auto finalize = [&]() -> int {
@@ -78,7 +80,8 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
             if (talking && speech.empty()) {
                 start = timestamp > preroll.size()*1000/sample_rate ? timestamp-preroll.size()*1000/sample_rate : 0;
                 speech = preroll;
-                quiet = last_partial = 0;
+                quiet = 0;
+                previews.reset();
             }
             if (!speech.empty() || talking) {
                 speech.insert(speech.end(),carry.begin(),carry.begin()+frame_samples);
@@ -86,11 +89,10 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
                 bool final = quiet>=sample_rate*3/5 || speech.size()>=max_samples;
                 if (final) {
                     if (const int result = finalize()) return result;
-                } else if (int(speech.size())-last_partial>=sample_rate*2) {
-                    queue.offer_partial(speech, sequence, start, end);
-                    last_partial = static_cast<int>(speech.size());
+                } else if (previews.due(speech.size())) {
+                    previews.attempted(speech.size(), queue.offer_partial(speech, sequence, start, end));
                 }
-                if (final) { speech.clear(); quiet=last_partial=0; preroll.clear(); }
+                if (final) { speech.clear(); quiet=0; previews.reset(); preroll.clear(); }
             } else {
                 preroll.insert(preroll.end(),carry.begin(),carry.begin()+frame_samples);
                 if (preroll.size()>sample_rate/5) preroll.erase(preroll.begin(),preroll.end()-sample_rate/5);

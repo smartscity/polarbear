@@ -98,10 +98,12 @@ test("accepts only numeric diagnostic fields and never forwards private extras",
   const result = await run(`${handshake}
     console.error('caption-metric:' + JSON.stringify({stage:'config',availableCpus:3,threads:2,secret:'private'}));
     console.error('caption-metric:' + JSON.stringify({stage:'final',audioMs:2000,queueMs:12,computeMs:30,cancelled:false,result:0,english:'private'}));
+    console.error('caption-metric:' + JSON.stringify({stage:'partial',audioMs:1000,queueMs:0,computeMs:12,cancelled:true,result:-6}));
     console.error('caption-metric:' + JSON.stringify({stage:'vad',frames:'private',computeMs:10}));
     console.error('caption-metric:invalid');
     process.stdin.resume();`, { onProgress: p => progress.push(p) });
-  assert.equal(result.metrics.length, 2);
+  assert.equal(result.metrics.length, 3);
+  assert.equal(result.metrics[2].result, -6);
   assert.deepEqual(result.metrics[0], { stage: "config", availableCpus: 3, threads: 2 });
   assert.doesNotMatch(JSON.stringify(progress), /private|secret|english/);
 });

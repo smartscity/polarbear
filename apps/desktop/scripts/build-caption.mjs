@@ -24,6 +24,11 @@ if (process.platform === "darwin") {
   await mkdir(cache, { recursive: true });
   run("/usr/bin/tar", ["-xzf", archive, "-C", cache]);
   const whisper = join(cache, `whisper.cpp-${manifest.engine.commit}`);
+  for (const patch of manifest.engine.patches ?? []) {
+    const file = join(source, patch.file);
+    await verify(file, patch.sha256);
+    run("/usr/bin/patch", ["--batch", "--forward", "-F0", "-p1", "-d", whisper, "-i", file]);
+  }
   const requested = process.env.TAURI_ENV_TARGET_TRIPLE;
   const architectures = requested === "universal-apple-darwin" || process.argv.includes("--universal")
     ? ["arm64", "x86_64"] : [requested?.startsWith("aarch64") || (!requested && process.arch === "arm64") ? "arm64" : "x86_64"];

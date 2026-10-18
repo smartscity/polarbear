@@ -300,6 +300,38 @@ three-second target. Sustained latency, real microphone/GUI behavior and Chinese
 translation remain separate acceptance requirements; do not release on short
 fixture results alone.
 
+Sustained run `39074451082` rejected that snapshot on both architectures with
+`audioBacklog` (ARM at approximately 375 seconds, Intel at 53 seconds). CPU
+budgeting alone is therefore not an accepted repair. Inspection also found that
+the pinned whisper.cpp scheduler checked the abort callback after a complete
+encoder graph, despite finalized work superseding provisional work. The local,
+SHA-256-pinned `whisper-cpu-cancellation.patch` forwards that existing callback to
+CPU graph nodes and clears it when the following inference supplies no callback.
+It changes neither model weights nor successful finalized decoding. A real-model
+CTest proves cancellation does not complete the encoder and that a subsequent
+uncancelled call on the same context succeeds; the test fails without the patch.
+The patch is applied only to a freshly extracted, hash-verified source archive.
+
+`PreviewSchedule` owns sample-clock preview cadence: the first attempt at 1.5
+seconds, subsequent attempts every two seconds, resetting at an utterance boundary.
+An experimental one-second prefix returned empty hypotheses for several genuine
+AMI utterances and delayed their first useful text; it is not the shipped cadence.
+Busy inference still rejects provisional work. A rejected attempt checks for idle
+capacity after another 125 ms of audio, rather than losing a whole two-second
+interval; it never retries on every PCM frame or queues rejected snapshots. Final
+VAD boundaries, 15-second utterance limit, queue capacity and persistence are
+unchanged. Qualification collects whitelisted numeric diagnostics on a separately
+drained stderr stream; private stderr is never forwarded. This correction requires
+a new full native soak on both architectures before it can be declared accepted.
+
+Local Intel regression on the first 120 seconds of the public `EN2002a` meeting
+produced 23 finals without overload. The original two-second preview and deferred
+cancellation measured 4.17 s first-text p95 and 1.84 s finalized-text p95. With graph
+cancellation, 1.5-second initial preview and idle retry, the same audio measured
+2.82 s and 1.29 s respectively, with 0.096 s maximum PCM feed lag. This is a short
+regression result, not the full-corpus, one-hour, ARM, microphone or translation
+acceptance. No release tag is justified by this measurement alone.
+
 Do not advertise fixed performance from upstream model examples. Model revision,
 quantization, VAD artifact, hashes, licenses and hardware profile are implementation
 gates. Ship exactly the validated English profile, not a model-choice UI.

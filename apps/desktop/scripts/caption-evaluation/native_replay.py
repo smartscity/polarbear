@@ -26,7 +26,7 @@ def montage(corpus, directory, seconds):
 async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=60, drain_timeout=60):
     process = await asyncio.create_subprocess_exec(
         *command, env={}, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL, limit=65536)
+        stderr=asyncio.subprocess.PIPE, limit=65536)
     ready = asyncio.Event()
     feed_started = None
     frames = samples_sent = finals = 0
@@ -36,6 +36,19 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
     first_sequence = 0
     first_delays, final_delays, memory = [], [], []
     partials = 0
+
+    async def diagnostics():
+        allowed = {"stage", "availableCpus", "threads", "frames", "computeMs", "audioMs", "queueMs", "cancelled", "result"}
+        while line := await process.stderr.readline():
+            if not line.startswith(b"caption-metric:"):
+                continue
+            metric = json.loads(line[len(b"caption-metric:"):])
+            if not isinstance(metric, dict) or metric.get("stage") not in ("config", "vad", "partial", "final"):
+                raise ValueError("Invalid native diagnostic")
+            if any(key not in allowed or (key != "stage" and not isinstance(value, (int, float)))
+                   for key, value in metric.items()):
+                raise ValueError("Unexpected native diagnostic field")
+            emit({"type": "diagnostic", **metric})
 
     async def read():
         nonlocal stopped, finals, previous_sequence, first_sequence, partials
@@ -115,12 +128,13 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
                     next_report += 60
             await asyncio.sleep(5)
 
-    tasks = [asyncio.create_task(read()), asyncio.create_task(feed()), asyncio.create_task(sample_memory())]
+    tasks = [asyncio.create_task(read()), asyncio.create_task(feed()), asyncio.create_task(diagnostics()),
+             asyncio.create_task(sample_memory())]
     try:
         async with asyncio.timeout(startup_timeout + seconds + drain_timeout):
-            pending = set(tasks[:2])
+            pending = set(tasks[:3])
             while pending:
-                done, _ = await asyncio.wait(pending | {tasks[2]}, return_when=asyncio.FIRST_COMPLETED)
+                done, _ = await asyncio.wait(pending | {tasks[3]}, return_when=asyncio.FIRST_COMPLETED)
                 for task in done:
                     task.result()
                     pending.discard(task)
@@ -180,6 +194,7 @@ def main():
                 if digest(args.assets / model["file"]) != model["sha256"]:
                     raise ValueError("Bundled model checksum mismatch")
             command = [str(args.assets / name) for name in ("polarbear-caption-engine", "ggml-base.en-q5_1.bin", "ggml-silero-v6.2.0.bin")]
+            command.append("--diagnostics")
             report["helperSha256"] = digest(Path(command[0]))
             memory = ProcessMemory()
             report["memoryPreflightBytes"] = memory.sample()

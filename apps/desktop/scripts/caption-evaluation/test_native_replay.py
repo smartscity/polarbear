@@ -1,6 +1,7 @@
 """Process-boundary regressions for production caption qualification."""
 
 import asyncio
+import json
 import sys
 import unittest
 from unittest.mock import patch
@@ -80,6 +81,20 @@ print(json.dumps({'type':'stopped'}),flush=True)
     async def test_rejects_oversized_output(self):
         with self.assertRaises(ValueError):
             await self.run_helper("print('x'*70000,flush=True)\ntime.sleep(30)")
+
+    async def test_preserves_numeric_diagnostics_without_forwarding_arbitrary_stderr(self):
+        _, events = await self.run_helper(READY + """
+print('private path or text',file=sys.stderr,flush=True)
+print('caption-metric:'+json.dumps({'stage':'final','computeMs':12,'cancelled':False}),file=sys.stderr,flush=True)
+sys.stdin.buffer.read()
+print(json.dumps({'type':'stopped'}),flush=True)
+""")
+        self.assertIn({'type': 'diagnostic', 'stage': 'final', 'computeMs': 12, 'cancelled': False}, events)
+        self.assertNotIn('private path', json.dumps(events))
+
+    async def test_rejects_unexpected_diagnostic_fields(self):
+        with self.assertRaisesRegex(ValueError, "diagnostic field"):
+            await self.run_helper(READY + "\nprint('caption-metric:'+json.dumps({'stage':'final','english':'private'}),file=sys.stderr,flush=True)\ntime.sleep(30)")
 
     async def test_measurement_failure_cancels_replay(self):
         def unavailable():

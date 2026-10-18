@@ -39,7 +39,7 @@ function safeMetric(line) {
   try {
     const value = JSON.parse(line.slice("caption-metric:".length));
     const fields = Object.hasOwn(METRIC_FIELDS, value?.stage) && METRIC_FIELDS[value.stage];
-    if (!fields || !fields.every((key) => Number.isFinite(value[key]) && value[key] >= 0)) return;
+    if (!fields || !fields.every((key) => Number.isFinite(value[key]) && (key === "result" || value[key] >= 0))) return;
     const metric = Object.fromEntries(fields.map((key) => [key, value[key]]));
     if (["partial", "final"].includes(value.stage)) {
       if (typeof value.cancelled !== "boolean") return;
