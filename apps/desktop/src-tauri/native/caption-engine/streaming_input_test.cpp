@@ -1,8 +1,10 @@
 #include "streaming_input.h"
+#include "pcm_frames.h"
 #include <cstdlib>
 #include <future>
 #include <iostream>
 #include <map>
+#include <sstream>
 
 static void check(bool value) { if (!value) std::abort(); }
 
@@ -47,7 +49,7 @@ int main() {
             std::vector<float> input(count);
             for (size_t i = 0; i < count; ++i) input[i] = float(offset + i);
             expected.insert(expected.end(), input.begin(), input.end());
-            check(segmenter.accept(input.data(), count, offset * 1000 / 16000, true));
+            check(segmenter.accept(input.data(), count, {0, offset}, true));
             offset += count;
         }
         check(segmenter.finish());
@@ -73,11 +75,11 @@ int main() {
         std::vector<float> silence(512, 0), speech(512, 1);
         uint64_t time = 0;
         for (int i = 0; i < 20; ++i, time += 32)
-            check(segmenter.accept(silence.data(), 512, time, false));
+            check(segmenter.accept(silence.data(), 512, {0, time * 16}, false));
         for (int i = 0; i < 10; ++i, time += 32)
-            check(segmenter.accept(speech.data(), 512, time, true));
+            check(segmenter.accept(speech.data(), 512, {0, time * 16}, true));
         for (int i = 0; i < 19; ++i, time += 32)
-            check(segmenter.accept(silence.data(), 512, time, false));
+            check(segmenter.accept(silence.data(), 512, {0, time * 16}, false));
         check(segmenter.finish());
         check(jobs.front().start_ms == 440);
         check(jobs.back().final);
@@ -94,19 +96,49 @@ int main() {
         size_t calls = 0;
         StreamingSegmenter segmenter([&](auto) { ++calls; return false; });
         std::vector<float> speech(512, 1);
-        for (size_t i = 0; i < 10; ++i) check(segmenter.accept(speech.data(), 512, i * 32, true));
-        check(!segmenter.accept(speech.data(), 512, 320, true));
+        for (size_t i = 0; i < 10; ++i) check(segmenter.accept(speech.data(), 512, {0, i * 512}, true));
+        check(!segmenter.accept(speech.data(), 512, {0, 5120}, true));
         check(!segmenter.finish());
-        check(!segmenter.accept(speech.data(), 512, 352, true));
+        check(!segmenter.accept(speech.data(), 512, {0, 5632}, true));
         check(calls == 1);
     }
     {
         size_t calls = 0;
         StreamingSegmenter segmenter([&](auto) { ++calls; return true; });
         std::vector<float> speech(511, 1);
-        check(segmenter.accept(speech.data(), speech.size(), 0, true));
+        check(segmenter.accept(speech.data(), speech.size(), {}, true));
         check(segmenter.finish());
         check(calls == 0);
+    }
+    {
+        // Regression: rounding packet starts used to produce ends 352, 351, 351.
+        std::string wire;
+        size_t total = 0;
+        auto append = [&](uint64_t value, size_t bytes) {
+            for (size_t i = 0; i < bytes; ++i) wire.push_back(char(value >> (8 * i)));
+        };
+        for (size_t count : {512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 100, 413}) {
+            append(total / 16, 8);
+            append(count, 4);
+            for (size_t i = 0; i < count; ++i) append(0x3f000000, 4);
+            total += count;
+        }
+        std::vector<RecognitionJob> jobs;
+        StreamingSegmenter segmenter([&](auto job) { jobs.push_back(std::move(job)); return true; });
+        std::istringstream input(wire);
+        check(read_pcm_frames(input, [&](auto data, auto count, auto position) {
+            return segmenter.accept(data, count, position, true);
+        }));
+        check(segmenter.finish());
+        uint64_t previous = 0;
+        size_t processed = 0;
+        for (const auto &job : jobs) {
+            check(job.end_ms >= previous);
+            processed += job.samples.size();
+            check(job.end_ms == processed / 16);
+            previous = job.end_ms;
+        }
+        check(processed == 5633 && jobs.back().final);
     }
     std::cout << "Streaming input: exact-once deltas, bounds, drain, abort, VAD boundaries and tails PASS\n";
 }

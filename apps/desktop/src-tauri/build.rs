@@ -82,6 +82,7 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
     let mut files = vec![
         "native/DocumentClipboard.swift",
         "native/ReadingSpeech.swift",
+        "native/CaptionAudioClock.swift",
         "native/LiveCaptionCapture.swift",
     ]
     .into_iter()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "recognition_queue.h"
+#include "pcm_position.h"
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
@@ -67,7 +68,7 @@ public:
 
     explicit StreamingSegmenter(Submit submit) : submit_(std::move(submit)) {}
 
-    bool accept(const float *samples, size_t count, uint64_t timestamp_ms, bool talking) {
+    bool accept(const float *samples, size_t count, PcmPosition position, bool talking) {
         if (failed_) return false;
         if (count == 0 || count > 512 || !samples) throw std::invalid_argument("Invalid VAD frame");
         size_t offset = 0;
@@ -83,16 +84,14 @@ public:
                 pending_ = std::move(preroll_);
                 preroll_.clear();
                 accepted_ = pending_.size();
-                const auto time = timestamp_ms + offset * 1000 / sample_rate;
-                const auto preroll_ms = accepted_ * 1000 / sample_rate;
-                start_ = time > preroll_ms ? time - preroll_ms : 0;
+                start_ = position.advanced(offset).preceding(accepted_).milliseconds();
             }
             const size_t length = std::min(count - offset, max_samples - accepted_);
             pending_.insert(pending_.end(), samples + offset, samples + offset + length);
             offset += length;
             accepted_ += length;
             quiet_ = talking ? 0 : quiet_ + length;
-            end_ = timestamp_ms + offset * 1000 / sample_rate;
+            end_ = position.advanced(offset).milliseconds();
             if (accepted_ >= min_samples && !flush(false)) return false;
             if (accepted_ == max_samples || quiet_ >= silence_samples) {
                 if (!finish()) return false;

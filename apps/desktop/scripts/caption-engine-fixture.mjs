@@ -44,13 +44,27 @@ function safeMetric(line) {
     if (["partial", "final"].includes(value.stage)) {
       if (typeof value.cancelled !== "boolean") return;
       metric.cancelled = value.cancelled;
+      for (const key of ["sequence", "startMs", "endMs"]) {
+        if (Object.hasOwn(value, key)) {
+          if (!Number.isSafeInteger(value[key]) || value[key] < 0) return;
+          metric[key] = value[key];
+        }
+      }
+      if (Object.hasOwn(value, "textEmitted")) {
+        if (typeof value.textEmitted !== "boolean") return;
+        metric.textEmitted = value.textEmitted;
+      }
     }
     return { stage: value.stage, ...metric };
   } catch { return; }
 }
 
 // Exercise the same empty-environment, direct-process boundary used by Desktop.
-export function recognizeFixture(executable, args, pcm, { name, invalid = false, realtime = false, timeoutMs = 120_000, onProgress = () => {} } = {}) {
+export function recognizeFixture(executable, args, pcm, {
+  name, invalid = false, realtime = false, timeoutMs = 120_000,
+  packetSamples = [512], onProgress = () => {},
+} = {}) {
+  assert.ok(packetSamples.length > 0 && packetSamples.every((count) => Number.isInteger(count) && count > 0 && count <= 4096));
   const child = spawn(executable, args, { shell: false, env: {}, stdio: ["pipe", "pipe", "pipe"] });
   const events = [];
   const metrics = [];
@@ -70,12 +84,13 @@ export function recognizeFixture(executable, args, pcm, { name, invalid = false,
     const cleanup = () => { clearTimeout(timeout); clearInterval(heartbeat); };
     const feed = async () => {
       feedStarted = performance.now();
-      for (let offset = 0; offset < pcm.length / 2; offset += 512) {
+      let packet = 0;
+      for (let offset = 0; offset < pcm.length / 2;) {
         if (failure || closed) return;
         const due = feedStarted + offset * 1000 / 16000;
         if (realtime && due > performance.now()) await new Promise((resolve) => setTimeout(resolve, due - performance.now()));
         if (failure || closed) return;
-        const count = Math.min(512, pcm.length / 2 - offset);
+        const count = Math.min(packetSamples[packet++ % packetSamples.length], pcm.length / 2 - offset);
         const frame = Buffer.alloc(12 + count * 4);
         frame.writeBigUInt64LE(BigInt(Math.floor(offset * 1000 / 16000)));
         frame.writeUInt32LE(count, 8);
@@ -85,6 +100,7 @@ export function recognizeFixture(executable, args, pcm, { name, invalid = false,
           maxWriteLagMs = Math.max(maxWriteLagMs, performance.now() - due);
           if (maxWriteLagMs > 10_000) { fail("Capture backlog exceeded ten seconds"); return; }
         }
+        offset += count;
       }
       child.stdin.end();
     };

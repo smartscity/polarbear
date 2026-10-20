@@ -17,12 +17,16 @@ const AUDIO_QUEUE_FRAMES: usize = 312;
 const MAX_FRAME_SAMPLES: usize = 512;
 const AUDIO_QUEUE_FULL: i32 = 9;
 const ENGINE_PIPE_CLOSED: i32 = 10;
+const AUDIO_DISCONTINUITY: i32 = 11;
 const MAX_EVENT_BYTES: usize = 65536;
-static AUDIO: OnceLock<Mutex<Option<mpsc::SyncSender<Frame>>>> = OnceLock::new();
-static CAPTURE_FAILED: AtomicBool = AtomicBool::new(false);
+static AUDIO: OnceLock<Mutex<Option<CaptureIngress>>> = OnceLock::new();
 static CAPTURE_READY: AtomicBool = AtomicBool::new(false);
 static CAPTURE_ERROR: AtomicI32 = AtomicI32::new(0);
 static AUDIO_LEVEL: AtomicU32 = AtomicU32::new(0);
+
+fn record_capture_failure(state: &AtomicI32, code: i32) {
+    let _ = state.compare_exchange(0, code.max(2), Ordering::AcqRel, Ordering::Acquire);
+}
 
 struct Frame {
     at: u64,
@@ -47,11 +51,46 @@ fn write_frame(output: &mut impl Write, frame: &Frame) -> std::io::Result<()> {
     output.flush()
 }
 
-fn enqueue_frame(sender: &mpsc::SyncSender<Frame>, frame: Frame) -> Result<(), i32> {
-    sender.try_send(frame).map_err(|error| match error {
-        mpsc::TrySendError::Full(_) => AUDIO_QUEUE_FULL,
-        mpsc::TrySendError::Disconnected(_) => ENGINE_PIPE_CLOSED,
-    })
+struct CaptureIngress {
+    sender: Option<mpsc::SyncSender<Frame>>,
+    failure: Option<i32>,
+}
+
+impl CaptureIngress {
+    fn new(sender: mpsc::SyncSender<Frame>) -> Self {
+        Self {
+            sender: Some(sender),
+            failure: None,
+        }
+    }
+
+    fn enqueue(&mut self, frame: Frame) -> Result<(), i32> {
+        if let Some(code) = self.failure {
+            return Err(code);
+        }
+        let result = self
+            .sender
+            .as_ref()
+            .ok_or(ENGINE_PIPE_CLOSED)?
+            .try_send(frame);
+        result.map_err(|error| {
+            let code = match error {
+                mpsc::TrySendError::Full(_) => AUDIO_QUEUE_FULL,
+                mpsc::TrySendError::Disconnected(_) => ENGINE_PIPE_CLOSED,
+            };
+            // Seal this epoch at the first missing frame; drain only its accepted prefix.
+            self.failure = Some(code);
+            self.sender = None;
+            code
+        })
+    }
+}
+
+fn drain_capture(receiver: mpsc::Receiver<Frame>, output: &mut impl Write) -> std::io::Result<()> {
+    for frame in receiver {
+        write_frame(output, &frame)?;
+    }
+    Ok(())
 }
 
 struct EngineProcess(Child);
@@ -214,18 +253,54 @@ mod tests {
     }
 
     #[test]
-    fn distinguishes_a_full_capture_queue_from_a_disconnected_engine() {
+    fn seals_admission_after_overflow_and_drains_the_accepted_prefix() {
         let (sender, receiver) = mpsc::sync_channel(1);
+        let mut ingress = CaptureIngress::new(sender);
         let frame = || Frame {
             at: 0,
             samples: vec![0.0; 512],
         };
-        assert_eq!(enqueue_frame(&sender, frame()), Ok(()));
-        assert_eq!(enqueue_frame(&sender, frame()), Err(AUDIO_QUEUE_FULL));
+        assert_eq!(ingress.enqueue(frame()), Ok(()));
+        assert_eq!(ingress.enqueue(frame()), Err(AUDIO_QUEUE_FULL));
         receiver.recv().unwrap();
-        assert_eq!(enqueue_frame(&sender, frame()), Ok(()));
+        assert_eq!(ingress.enqueue(frame()), Err(AUDIO_QUEUE_FULL));
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(mpsc::TryRecvError::Disconnected)
+        ));
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let mut ingress = CaptureIngress::new(sender);
         drop(receiver);
-        assert_eq!(enqueue_frame(&sender, frame()), Err(ENGINE_PIPE_CLOSED));
+        assert_eq!(ingress.enqueue(frame()), Err(ENGINE_PIPE_CLOSED));
+        assert_eq!(ingress.enqueue(frame()), Err(ENGINE_PIPE_CLOSED));
+    }
+
+    #[test]
+    fn stop_drains_accepted_frames_before_closing_the_engine_input() {
+        let (sender, receiver) = mpsc::sync_channel(3);
+        let mut ingress = CaptureIngress::new(sender);
+        let mut expected = FrameWriter::default();
+        for index in 0..3 {
+            let frame = Frame {
+                at: index * 32,
+                samples: vec![0.25; MAX_FRAME_SAMPLES],
+            };
+            write_frame(&mut expected, &frame).unwrap();
+            ingress.enqueue(frame).unwrap();
+        }
+        drop(ingress);
+        let mut actual = FrameWriter::default();
+        drain_capture(receiver, &mut actual).unwrap();
+        assert_eq!(actual.bytes, expected.bytes);
+        assert_eq!(actual.writes, 3);
+    }
+
+    #[test]
+    fn later_pipe_failure_cannot_replace_the_original_capture_error() {
+        let failure = AtomicI32::new(0);
+        record_capture_failure(&failure, AUDIO_QUEUE_FULL);
+        record_capture_failure(&failure, ENGINE_PIPE_CLOSED);
+        assert_eq!(failure.load(Ordering::Acquire), AUDIO_QUEUE_FULL);
     }
 
     #[test]
@@ -255,15 +330,21 @@ extern "C" {
 }
 
 extern "C" fn on_audio(samples: *const f32, count: i32, at: u64) {
-    if samples.is_null() || !(1..=MAX_FRAME_SAMPLES as i32).contains(&count) {
-        CAPTURE_FAILED.store(true, Ordering::Release);
+    if CAPTURE_ERROR.load(Ordering::Acquire) != 0 {
         return;
     }
-    let Ok(sender) = AUDIO.get_or_init(|| Mutex::new(None)).try_lock() else {
-        CAPTURE_FAILED.store(true, Ordering::Release);
+    if samples.is_null() || !(1..=MAX_FRAME_SAMPLES as i32).contains(&count) {
+        record_capture_failure(&CAPTURE_ERROR, 2);
+        return;
+    }
+    let Ok(mut sender) = AUDIO.get_or_init(|| Mutex::new(None)).try_lock() else {
+        record_capture_failure(&CAPTURE_ERROR, 2);
         return;
     };
-    if let Some(sender) = sender.as_ref() {
+    if CAPTURE_ERROR.load(Ordering::Acquire) != 0 {
+        return;
+    }
+    if let Some(sender) = sender.as_mut() {
         // The Swift buffer is valid only during this callback; copy into a bounded queue.
         let frame = Frame {
             at,
@@ -277,9 +358,8 @@ extern "C" fn on_audio(samples: *const f32, count: i32, at: u64) {
             / frame.samples.len() as f32)
             .sqrt();
         AUDIO_LEVEL.store((rms * 1000.0).clamp(0.0, 100.0) as u32, Ordering::Relaxed);
-        if let Err(code) = enqueue_frame(sender, frame) {
-            CAPTURE_ERROR.store(code, Ordering::Release);
-            CAPTURE_FAILED.store(true, Ordering::Release);
+        if let Err(code) = sender.enqueue(frame) {
+            record_capture_failure(&CAPTURE_ERROR, code);
         }
     }
 }
@@ -288,8 +368,7 @@ extern "C" fn on_status(status: i32) {
     if status == 1 {
         CAPTURE_READY.store(true, Ordering::Release);
     } else {
-        CAPTURE_ERROR.store(status, Ordering::Release);
-        CAPTURE_FAILED.store(true, Ordering::Release);
+        record_capture_failure(&CAPTURE_ERROR, status);
     }
 }
 
@@ -400,32 +479,18 @@ pub fn launch(
         .take()
         .ok_or_else(|| CaptionError::new("engineSpawn"))?;
     let cancel = Arc::new(AtomicBool::new(false));
-    let writer_cancel = cancel.clone();
     let (sender, receiver) = mpsc::sync_channel::<Frame>(AUDIO_QUEUE_FRAMES);
     let (event_sender, events) = mpsc::sync_channel::<Result<EngineEvent, ()>>(8);
     let (done_sender, done) = mpsc::channel();
-    CAPTURE_FAILED.store(false, Ordering::Release);
     CAPTURE_READY.store(false, Ordering::Release);
     CAPTURE_ERROR.store(0, Ordering::Release);
     if let Ok(mut slot) = AUDIO.get_or_init(|| Mutex::new(None)).lock() {
-        *slot = Some(sender);
+        *slot = Some(CaptureIngress::new(sender));
     }
     let writer = std::thread::spawn(move || {
-        while !writer_cancel.load(Ordering::Acquire) {
-            let frame = match receiver.recv_timeout(Duration::from_millis(100)) {
-                Ok(frame) => frame,
-                Err(mpsc::RecvTimeoutError::Timeout) => continue,
-                Err(_) => break,
-            };
-            if writer_cancel.load(Ordering::Acquire) {
-                break;
-            }
-            let result = write_frame(&mut input, &frame);
-            if result.is_err() {
-                CAPTURE_ERROR.store(ENGINE_PIPE_CLOSED, Ordering::Release);
-                CAPTURE_FAILED.store(true, Ordering::Release);
-                break;
-            }
+        // Stop closes the sender. Finish the admitted prefix before closing stdin.
+        if drain_capture(receiver, &mut input).is_err() {
+            record_capture_failure(&CAPTURE_ERROR, ENGINE_PIPE_CLOSED);
         }
     });
     let reader = std::thread::spawn(move || {
@@ -469,7 +534,7 @@ pub fn launch(
                 failure.get_or_insert("panelUnavailable");
                 worker_cancel.store(true, Ordering::Release);
             }
-            if CAPTURE_FAILED.load(Ordering::Acquire) {
+            if CAPTURE_ERROR.load(Ordering::Acquire) != 0 {
                 failure.get_or_insert(match CAPTURE_ERROR.load(Ordering::Acquire) {
                     3 => "microphoneDenied",
                     4 => "deviceLost",
@@ -478,6 +543,7 @@ pub fn launch(
                     8 => "systemAudioDenied",
                     AUDIO_QUEUE_FULL => "audioBacklog",
                     ENGINE_PIPE_CLOSED => "engineFailed",
+                    AUDIO_DISCONTINUITY => "captureDiscontinuity",
                     _ => "captureFailed",
                 });
                 worker_cancel.store(true, Ordering::Release);

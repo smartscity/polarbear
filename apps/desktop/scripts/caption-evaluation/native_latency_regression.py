@@ -9,6 +9,7 @@ import platform
 import numpy as np
 
 from native_replay import montage, replay
+from native_latency_policy import latency_policy
 from process_memory import ProcessMemory
 from qualification_corpus import digest
 from qualify import offline_control, validate_corpus, validate_native_arch
@@ -29,14 +30,15 @@ def regression_audio(corpus, directory):
         yield silence
 
 
-def acceptance(result):
+def acceptance(result, candidate=False):
+    policy = latency_policy(candidate)
     return {
         "completeRegression": result["audioSeconds"] == SECONDS,
         "textProduced": result["finals"] > 0,
         "firstText": result["firstFromVadStartP95Seconds"] is not None
-        and result["firstFromVadStartP95Seconds"] <= 3,
+        and result["firstFromVadStartP95Seconds"] <= policy["firstTextP95Seconds"],
         "finalText": result["finalAfterVadEndP95Seconds"] is not None
-        and result["finalAfterVadEndP95Seconds"] <= 4.4,
+        and result["finalAfterVadEndP95Seconds"] <= policy["finalAfterVadEndP95Seconds"],
         "memoryPeak": result["sampledPeakProcessTreeRssBytes"] is not None
         and result["sampledPeakProcessTreeRssBytes"] <= 2 * 1024**3,
     }
@@ -78,7 +80,8 @@ def main():
     if args.streaming_models:
         candidate_pins = {filename: verify_model(args.streaming_candidate, args.streaming_models / filename)
                           for filename in MODELS[args.streaming_candidate]["files"]}
-    report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v1",
+    report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v2",
+              "latencyPolicy": latency_policy(candidate=bool(args.streaming_models)),
               "windows": WINDOWS, "requiredAudioSeconds": SECONDS,
               "machine": platform.machine(), "platform": platform.platform(),
               "corpusSha256": digest(args.corpus), "helperSha256": digest(args.helper),
@@ -101,7 +104,7 @@ def main():
             report["replay"] = asyncio.run(replay(command, regression_audio(corpus, args.corpus.parent),
                                                   SECONDS, emit, memory.sample,
                                                   drain_timeout=8 if args.streaming_models else 60))
-            report["checks"] = acceptance(report["replay"])
+            report["checks"] = acceptance(report["replay"], candidate=bool(args.streaming_models))
             report["status"] = "PASS" if all(report["checks"].values()) else "FAIL"
             if report["status"] != "PASS":
                 raise RuntimeError(f"First-text regression failed: {report['checks']}")

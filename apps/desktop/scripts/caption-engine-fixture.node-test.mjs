@@ -40,6 +40,38 @@ test("feeds timestamped PCM with an empty environment and waits for EOF", async 
   assert.equal(result.events.at(-1).type, "stopped");
 });
 
+test("preserves every sample and timestamp across irregular packet boundaries", async () => {
+  const pcm = Buffer.alloc(5633 * 2);
+  for (let index = 0; index < 5633; index++) pcm.writeInt16LE(index, index * 2);
+  const result = await run(`
+    ${handshake}
+    const chunks=[];
+    process.stdin.on('data', chunk=>chunks.push(chunk));
+    process.stdin.on('end',()=>{
+      const data=Buffer.concat(chunks); let offset=0,samples=0,packet=0;
+      const sizes=[100,413,4096];
+      while(offset<data.length){
+        const count=data.readUInt32LE(offset+8);
+        if(count!==Math.min(sizes[packet++%sizes.length],5633-samples)) process.exit(9);
+        if(data.readBigUInt64LE(offset)!==BigInt(Math.floor(samples/16))) process.exit(10);
+        for(let index=0;index<count;index++){
+          if(data.readFloatLE(offset+12+index*4)!==(samples+index)/32768) process.exit(11);
+        }
+        samples+=count; offset+=12+count*4;
+      }
+      if(samples!==5633 || offset!==data.length) process.exit(12);
+      console.log(JSON.stringify({type:'stopped'}));
+    });
+  `, { packetSamples: [100, 413, 4096] }, pcm);
+  assert.equal(result.code, 0);
+});
+
+test("rejects invalid packet patterns before spawning a helper", () => {
+  for (const packetSamples of [[], [0], [-1], [4097], [1.5]]) {
+    assert.throws(() => run("process.exit(0)", { packetSamples }));
+  }
+});
+
 async function expectPhaseTimeout(t, source, phase) {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   let reached = false;
@@ -112,13 +144,15 @@ test("accepts only numeric diagnostic fields and never forwards private extras",
   const progress = [];
   const result = await run(`${handshake}
     console.error('caption-metric:' + JSON.stringify({stage:'config',availableCpus:3,threads:2,secret:'private'}));
-    console.error('caption-metric:' + JSON.stringify({stage:'final',audioMs:2000,queueMs:12,computeMs:30,cancelled:false,result:0,english:'private'}));
+    console.error('caption-metric:' + JSON.stringify({stage:'final',audioMs:2000,queueMs:12,computeMs:30,cancelled:false,result:0,sequence:2,startMs:100,endMs:2100,textEmitted:true,english:'private'}));
     console.error('caption-metric:' + JSON.stringify({stage:'partial',audioMs:1000,queueMs:0,computeMs:12,cancelled:true,result:-6}));
     console.error('caption-metric:' + JSON.stringify({stage:'vad',frames:'private',computeMs:10}));
     console.error('caption-metric:invalid');
     process.stdin.resume();`, { onProgress: p => progress.push(p) });
   assert.equal(result.metrics.length, 3);
   assert.equal(result.metrics[2].result, -6);
+  assert.equal(result.metrics[1].sequence, 2);
+  assert.equal(result.metrics[1].textEmitted, true);
   assert.deepEqual(result.metrics[0], { stage: "config", availableCpus: 3, threads: 2 });
   assert.doesNotMatch(JSON.stringify(progress), /private|secret|english/);
 });

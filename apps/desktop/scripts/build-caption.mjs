@@ -22,6 +22,11 @@ if (process.platform === "darwin") {
   await verify(archive, manifest.engine.archiveSha256);
   const cache = join(root, "target/caption-native");
   await mkdir(cache, { recursive: true });
+  const clockTest = join(cache, "caption-audio-clock-test");
+  run("/usr/bin/xcrun", ["swiftc", "-parse-as-library", "-module-cache-path", join(cache, "clock-modules"),
+    join(root, "native/CaptionAudioClock.swift"), join(root, "../scripts/caption-audio-clock-test.swift"),
+    "-o", clockTest]);
+  run(clockTest, []);
   run("/usr/bin/tar", ["-xzf", archive, "-C", cache]);
   const whisper = join(cache, `whisper.cpp-${manifest.engine.commit}`);
   for (const patch of manifest.engine.patches ?? []) {

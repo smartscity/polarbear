@@ -3,6 +3,7 @@
 #include "pcm_frames.h"
 #include "streaming_input.h"
 #include "streaming_recognizer.h"
+#include "streaming_decoder.h"
 #include "whisper.h"
 #include <iostream>
 #include <thread>
@@ -32,69 +33,59 @@ int run_streaming(const StreamingRecognizerConfig &model, const char *vad_file, 
         return 3;
     }
     StreamingInputQueue queue(StreamingSegmenter::max_samples + 512);
-    std::atomic<bool> failed{false};
+    std::atomic<bool> decoder_failed{false};
     std::thread decoder([&] {
-        uint64_t sequence = 0, closed_sequence = 0, start = 0, end = 0;
+        StreamingDecoder state(*recognizer, [](auto sequence, auto start, auto end, bool final, const auto &text) {
+            emit({{"type", final ? "final" : "partial"}, {"sequence", sequence},
+                  {"startMs", start}, {"endMs", end}, {"english", text}});
+        });
         try {
             while (auto job = queue.take()) {
-                if (sequence == 0) {
-                    if (job->sequence <= closed_sequence) throw std::logic_error("Replayed streaming sequence");
-                    recognizer->begin();
-                    sequence = job->sequence;
-                    start = job->start_ms;
-                    end = start;
-                }
-                if (job->sequence != sequence || job->start_ms != start || job->end_ms < end)
-                    throw std::logic_error("Out-of-order streaming audio");
-                end = job->end_ms;
                 const double queue_ms = elapsed(job->queued_at);
                 const auto began = Clock::now();
-                auto text = recognizer->accept(job->samples.data(), job->samples.size());
-                if (job->final) text = recognizer->finish();
+                state.consume(*job);
                 if (config.diagnostics) metric({
                     {"stage", job->final ? "final" : "partial"}, {"queueMs", queue_ms},
                     {"computeMs", elapsed(began)}, {"audioMs", job->samples.size() * 1000.0 / 16000},
                     {"cancelled", false}, {"result", 0}});
-                if (!failed.load() && text && text->find_first_not_of(" \t\r\n") != std::string::npos)
-                    emit({{"type", job->final ? "final" : "partial"}, {"sequence", sequence},
-                          {"startMs", start}, {"endMs", end}, {"english", *text}});
-                if (job->final) { closed_sequence = sequence; sequence = 0; }
             }
-            recognizer->abort();
+            state.close();
         } catch (const std::exception &) {
-            if (!failed.exchange(true)) emit({{"type", "error"}, {"code", "engineFailed"}});
+            decoder_failed.store(true);
             queue.abort();
-            recognizer->abort();
+            state.close();
+            emit({{"type", "error"}, {"code", "engineFailed"}});
         }
     });
-    StreamingSegmenter segmenter([&](RecognitionJob job) { return !failed.load() && queue.submit(std::move(job)); });
+    StreamingSegmenter segmenter([&](RecognitionJob job) { return !decoder_failed.load() && queue.submit(std::move(job)); });
     int result = 0;
     phase("ready");
     emit({{"type", "ready"}, {"protocol", 1}, {"backend", "cpu"}});
     try {
-        const bool complete = read_pcm_frames(std::cin, [&](const float *frame, size_t count, uint64_t timestamp) {
-            if (failed.load()) return false;
+        const bool complete = read_pcm_frames(std::cin, [&](const float *frame, size_t count, PcmPosition position) {
+            if (decoder_failed.load()) return false;
             if (!whisper_vad_detect_speech_no_reset(vad.get(), frame, 512))
                 throw std::runtime_error("VAD inference failed");
             const auto n = whisper_vad_n_probs(vad.get());
             const bool talking = n > 0 && whisper_vad_probs(vad.get())[n - 1] >= 0.5f;
-            return segmenter.accept(frame, count, timestamp, talking);
+            return segmenter.accept(frame, count, position, talking);
         });
         if (!complete || !segmenter.finish()) {
-            result = 7;
-            if (!failed.exchange(true)) emit({{"type", "error"}, {"code", "audioBacklog"}});
+            result = decoder_failed.load() ? 6 : 7;
+            if (result == 7) emit({{"type", "error"}, {"code", "audioBacklog"}});
         }
     } catch (const std::invalid_argument &) {
         result = 4;
-        failed.store(true);
     } catch (const std::exception &) {
         result = 5;
-        if (!failed.exchange(true)) emit({{"type", "error"}, {"code", "engineFailed"}});
+        emit({{"type", "error"}, {"code", "engineFailed"}});
     }
-    if (result == 0 && !failed.load()) queue.close();
+    // Admission failure must not suppress already accepted completed utterances.
+    if ((result == 0 || result == 7) && !decoder_failed.load()) queue.close();
     else queue.abort();
     decoder.join();
-    if (failed.load()) return result ? result : 6;
+    if (decoder_failed.load()) return 6;
+    if (result != 0) return result;
     phase("stopped");
     emit({{"type", "stopped"}});
     return 0;
