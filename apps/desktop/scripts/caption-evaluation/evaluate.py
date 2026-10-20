@@ -74,6 +74,8 @@ class SherpaCandidate:
                 "decoder": "decoder-epoch-99-avg-1.onnx",
                 "joiner": "joiner-epoch-99-avg-1.int8.onnx",
             })
+            if kind == "zipformer-gigaspeech-fp32":
+                components = {part: f"{part}-epoch-99-avg-1.onnx" for part in ("encoder", "decoder", "joiner")}
             self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
                 **{part: str(directory / filename) for part, filename in components.items()},
                 tokens=str(directory / "tokens.txt"), num_threads=threads,
@@ -88,7 +90,12 @@ class SherpaCandidate:
             self.recognizer.decode_stream(stream)
             text = stream.result.text
         else:
-            stream.accept_waveform(16000, np.concatenate((samples, np.zeros(4800, dtype=np.float32))))
+            for offset in range(0, len(samples), 1280):
+                stream.accept_waveform(16000, samples[offset:offset + 1280])
+                while self.recognizer.is_ready(stream):
+                    self.recognizer.decode_stream(stream)
+            # Match the pinned publisher's online-decode-files.py EOF lookahead.
+            stream.accept_waveform(16000, np.zeros(10560, dtype=np.float32))
             stream.input_finished()
             while self.recognizer.is_ready(stream):
                 self.recognizer.decode_stream(stream)
@@ -118,7 +125,7 @@ class SherpaCandidate:
                 events.append({"audioSeconds": arrival, "wallSeconds": time.perf_counter() - started,
                                "text": text})
                 previous = text
-        stream.accept_waveform(16000, np.zeros(4800, dtype=np.float32))
+        stream.accept_waveform(16000, np.zeros(10560, dtype=np.float32))
         stream.input_finished()
         while self.recognizer.is_ready(stream):
             self.recognizer.decode_stream(stream)
@@ -137,7 +144,7 @@ def main():
     parser.add_argument("--paced", action="store_true")
     parser.add_argument("--threads", type=int, choices=range(1, 17), default=inference_threads())
     args = parser.parse_args()
-    if args.paced and args.engine not in ("zipformer", "zipformer-gigaspeech"):
+    if args.paced and args.engine not in ("zipformer", "zipformer-gigaspeech", "zipformer-gigaspeech-fp32"):
         parser.error("--paced requires a native streaming candidate")
     cases = json.loads((args.directory / "samples/samples.json").read_text())
     if len(cases) != 20:

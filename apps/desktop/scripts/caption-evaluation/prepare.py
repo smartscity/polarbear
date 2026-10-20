@@ -26,6 +26,12 @@ MODELS = {
         "files": ["encoder-epoch-99-avg-1.int8.onnx", "decoder-epoch-99-avg-1.onnx",
                   "joiner-epoch-99-avg-1.int8.onnx", "tokens.txt", "README.md"],
     },
+    "zipformer-gigaspeech-fp32": {
+        "repo": "csukuangfj/sherpa-onnx-streaming-zipformer-en-2023-06-21",
+        "revision": "9a65b6ea94c311ca770c2bf895b30f456a22d703",
+        "files": [f"{part}-epoch-99-avg-1.onnx" for part in ("encoder", "decoder", "joiner")]
+        + ["tokens.txt", "README.md"],
+    },
 }
 
 MODEL_SHA256 = {
@@ -38,6 +44,9 @@ MODEL_SHA256 = {
     "zipformer-gigaspeech/encoder-epoch-99-avg-1.int8.onnx": "32c98281c7bd8b63e3e142d007251b37f120572e8fdea9a4f5a79ce22b10ec4f",
     "zipformer-gigaspeech/decoder-epoch-99-avg-1.onnx": "9da02b77cb08826756ec6a88635f35a40374e4164e7c6359121a9145958a6ceb",
     "zipformer-gigaspeech/joiner-epoch-99-avg-1.int8.onnx": "831477d390e59a61f1b6a6f763b9903e6c6366ff6034f1ddba613be82637122f",
+    "zipformer-gigaspeech-fp32/encoder-epoch-99-avg-1.onnx": "b584884daad8cd4e60a5258e6da11876460089f1c4d3b5a92e19f0f104edb77a",
+    "zipformer-gigaspeech-fp32/decoder-epoch-99-avg-1.onnx": "9da02b77cb08826756ec6a88635f35a40374e4164e7c6359121a9145958a6ceb",
+    "zipformer-gigaspeech-fp32/joiner-epoch-99-avg-1.onnx": "bd5c26ad6a41cbd90c2cfa239c0b55b145af878ce1d79b4739d90f8be93359ba",
 }
 METADATA_GIT_BLOBS = {
     "parakeet/tokens.txt": "f0742785f6073e80b911964c455b05f3609bf23b",
@@ -46,6 +55,8 @@ METADATA_GIT_BLOBS = {
     "zipformer/README.md": "cb864962f371aa02e5716610cf4afc480b166a16",
     "zipformer-gigaspeech/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
     "zipformer-gigaspeech/README.md": "86afdd83874fab34d83100550b208e7c0ceceb54",
+    "zipformer-gigaspeech-fp32/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
+    "zipformer-gigaspeech-fp32/README.md": "86afdd83874fab34d83100550b208e7c0ceceb54",
 }
 
 

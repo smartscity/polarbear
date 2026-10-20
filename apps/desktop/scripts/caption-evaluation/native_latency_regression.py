@@ -12,6 +12,7 @@ from native_replay import montage, replay
 from process_memory import ProcessMemory
 from qualification_corpus import digest
 from qualify import offline_control, validate_corpus, validate_native_arch
+from prepare import MODELS, verify_model
 
 # Include the preceding final, not just isolated utterances: queue contention is
 # part of the regression. These offsets are frozen from the failed production run.
@@ -49,6 +50,8 @@ def main():
     parser.add_argument("--helper", type=Path, required=True)
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     parser.add_argument("--threads", type=int, choices=range(1, 17))
+    parser.add_argument("--streaming-models", type=Path,
+                        help="Explicit FP32 candidate directory; never selected by release builds")
     args = parser.parse_args()
     validate_native_arch(args.expect_arch)
     corpus = validate_corpus(args.corpus)
@@ -56,6 +59,10 @@ def main():
     for model in manifest["models"]:
         if digest(args.assets / model["file"]) != model["sha256"]:
             raise ValueError("Bundled model checksum mismatch")
+    candidate_pins = None
+    if args.streaming_models:
+        candidate_pins = {filename: verify_model("zipformer-gigaspeech-fp32", args.streaming_models / filename)
+                          for filename in MODELS["zipformer-gigaspeech-fp32"]["files"]}
     report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v1",
               "windows": WINDOWS, "requiredAudioSeconds": SECONDS,
               "machine": platform.machine(), "platform": platform.platform(),
@@ -63,6 +70,9 @@ def main():
               "license": corpus["license"], "attribution": corpus["attribution"],
               "offlineControl": offline_control(), "memoryGrowth": "NOT_MEASURED_SHORT_PROFILE",
               "microphoneToUi": "NOT_RUN", "chineseTranslation": "NOT_RUN", "accuracy": "NOT_SCORED"}
+    if candidate_pins:
+        report.update({"engine": "streaming-candidate", "candidatePins": candidate_pins,
+                       "replacement": "NOT_AUTHORIZED"})
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:
         with args.output.with_suffix(".jsonl").open("w") as stream:
@@ -70,13 +80,14 @@ def main():
                 stream.write(json.dumps(event) + "\n")
                 stream.flush()
             command = [str(args.helper.resolve()),
-                       str((args.assets / "ggml-base.en-q5_1.bin").resolve()),
+                       str((args.streaming_models or args.assets / "ggml-base.en-q5_1.bin").resolve()),
                        str((args.assets / "ggml-silero-v6.2.0.bin").resolve()), "--diagnostics"]
             if args.threads is not None:
                 command.append(f"--threads={args.threads}")
             memory = ProcessMemory()
             report["replay"] = asyncio.run(replay(command, regression_audio(corpus, args.corpus.parent),
-                                                  SECONDS, emit, memory.sample))
+                                                  SECONDS, emit, memory.sample,
+                                                  drain_timeout=8 if args.streaming_models else 60))
             report["checks"] = acceptance(report["replay"])
             report["status"] = "PASS" if all(report["checks"].values()) else "FAIL"
             if report["status"] != "PASS":

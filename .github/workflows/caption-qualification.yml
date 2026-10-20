@@ -148,7 +148,7 @@ jobs:
           if-no-files-found: warn
 
   streaming:
-    name: Short streaming screen (${{ matrix.arch }})
+    name: Short streaming screen (${{ matrix.arch }}, ${{ matrix.candidate }})
     needs: corpus
     if: ${{ inputs.streaming_candidate || github.ref == 'refs/heads/codex/caption-streaming' }}
     timeout-minutes: 20
@@ -156,8 +156,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runner: macos-26, arch: arm64 }
-          - { runner: macos-15-intel, arch: x86_64 }
+          - { runner: macos-26, arch: arm64, candidate: zipformer-gigaspeech }
+          - { runner: macos-15-intel, arch: x86_64, candidate: zipformer-gigaspeech }
+          - { runner: macos-26, arch: arm64, candidate: zipformer-gigaspeech-fp32 }
+          - { runner: macos-15-intel, arch: x86_64, candidate: zipformer-gigaspeech-fp32 }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -179,11 +181,11 @@ jobs:
       - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
       - uses: actions/cache@v5
         with:
-          path: ${{ runner.temp }}/models/zipformer-gigaspeech
-          key: caption-streaming-giga-v1-9a65b6ea94c311ca770c2bf895b30f456a22d703
+          path: ${{ runner.temp }}/models/${{ matrix.candidate }}
+          key: caption-${{ matrix.candidate }}-v1-9a65b6ea94c311ca770c2bf895b30f456a22d703
       - name: Fetch and verify pinned streaming evaluation assets
         timeout-minutes: 5
-        run: python apps/desktop/scripts/caption-evaluation/prepare.py "$RUNNER_TEMP/models" --model zipformer-gigaspeech
+        run: python apps/desktop/scripts/caption-evaluation/prepare.py "$RUNNER_TEMP/models" --model "${{ matrix.candidate }}"
       - name: Build baseline from clean pinned production sources
         run: |
           node apps/desktop/scripts/build-caption.mjs
@@ -198,7 +200,12 @@ jobs:
             "$LIB/ggml/src/ggml-blas/libggml-blas.a" \
             "$LIB/ggml/src/libggml-cpu.a" "$LIB/ggml/src/libggml-base.a" \
             -framework Accelerate -o "$RUNNER_TEMP/whisper-baseline"
+      - name: Build opt-in native streaming helper
+        id: native
+        if: matrix.candidate == 'zipformer-gigaspeech-fp32'
+        run: python apps/desktop/scripts/caption-evaluation/build_streaming_candidate.py "$RUNNER_TEMP/streaming-native"
       - name: Reject accuracy regressions and missing first text on short meetings
+        id: screen
         run: |
           set -o pipefail
           mkdir -p evidence
@@ -206,16 +213,28 @@ jobs:
           /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
             "$(command -v python)" apps/desktop/scripts/caption-evaluation/streaming_screen.py \
             "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/streaming-${{ matrix.arch }}.json" \
-            --candidate zipformer-gigaspeech --models "$RUNNER_TEMP/models" \
+            --candidate "${{ matrix.candidate }}" --models "$RUNNER_TEMP/models" \
             --baseline "$RUNNER_TEMP/whisper-baseline" --baseline-sha256 "$BASELINE_SHA" \
             --whisper-model "$PWD/apps/desktop/src-tauri/resources/caption/ggml-base.en-q5_1.bin" \
             --corpus-sha256 9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe \
             --expect-arch "${{ matrix.arch }}" --paced --deadline-seconds 300 \
             2>&1 | tee evidence/streaming.log
+      - name: Measure the unchanged native first-text gate
+        if: ${{ !cancelled() && steps.native.outcome == 'success' && steps.screen.outcome != 'skipped' }}
+        run: |
+          set -o pipefail
+          cp "$RUNNER_TEMP/streaming-native/streaming-native-provenance.json" evidence/
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$(command -v python)" apps/desktop/scripts/caption-evaluation/native_latency_regression.py \
+            "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/native-streaming-${{ matrix.arch }}.json" \
+            --helper "$RUNNER_TEMP/streaming-native/polarbear-caption-streaming-candidate" \
+            --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
+            --streaming-models "$RUNNER_TEMP/models/${{ matrix.candidate }}" \
+            2>&1 | tee evidence/native-streaming.log
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: streaming-screen-${{ matrix.arch }}
+          name: streaming-screen-${{ matrix.arch }}-${{ matrix.candidate }}
           path: evidence/
           retention-days: 30
           if-no-files-found: warn

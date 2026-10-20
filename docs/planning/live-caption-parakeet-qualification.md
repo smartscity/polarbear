@@ -315,6 +315,48 @@ from being treated as a release pass. Local model transfers hit bounded download
 limits; partial archives were not treated as valid models. Native CI measurements
 and subsequent production integration remain required before a release tag.
 
+#### Measured candidate rejection and native adapter (2026-10-20)
+
+Run [39426069719](https://github.com/smartscity/polarbear/actions/runs/39426069719)
+at `450d94f` completed the same 24-clip screen on native Intel and ARM with
+OS-enforced network denial. Each engine received 371.995 seconds of fixed audio;
+eight paced probes added 157.67 seconds, not an hour-long replay.
+
+| Measurement | Intel | ARM |
+| --- | ---: | ---: |
+| Whisper strict WER | 49.46% | 49.22% |
+| GigaSpeech int8 strict WER | 50.90% | 50.90% |
+| Whisper / candidate empty clips | 0 / 2 | 0 / 2 |
+| Candidate first partial P95 from clip start | 8.876 s | 8.817 s |
+| Replacement decision | NO_REPLACE | NO_REPLACE |
+
+The candidate improves aggregate far-field WER but worsens earnings-call WER.
+Do not claim a general accuracy improvement. The raw clip-start latency includes
+initial nonlexical speech/silence and is not the production VAD-based metric.
+Source references contain overlapping speech and inferred timings; these strict
+scores are a paired diagnostic, not a consumer accuracy percentage.
+
+The next controlled run uses the publisher's 660 ms EOF lookahead instead of the
+prototype's 300 ms and feeds accelerated accuracy clips in the same 80 ms chunks
+as paced inference. A full-precision model from the same pinned revision is added
+to distinguish quantization loss; neither change is presumed to improve results.
+
+The opt-in native candidate now has an executable input path, not just a Python
+wrapper: protocol-1 PCM -> validated frames -> existing Silero VAD -> bounded
+incremental FIFO -> one C API stream -> existing partial/final events. It retains
+short EOF tails, exact-once samples across the 15-second boundary, bounded queue
+admission, explicit failure/abort and stream-before-model destruction. The
+unchanged GUI, translation and history consume the same protocol. The candidate
+is not selected by the application or copied into release resources.
+
+`build_streaming_candidate.py` verifies the pinned C header and builds against the
+evaluation runtime's native libraries. This is an evaluation link, not the final
+redistributable SDK/bundle. Production packaging still requires pinned native
+library provenance, licenses, signing and architecture verification. Native
+176-second PCM/VAD regression uses the unchanged 3.0/4.4-second latency gates and
+an eight-second drain deadline. Accuracy rejection still blocks a release even
+if the native latency gate passes.
+
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies
 `PermissionError: Operation not permitted: /bin/ps`, not an inference exception.

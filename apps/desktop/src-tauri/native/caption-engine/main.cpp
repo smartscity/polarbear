@@ -1,8 +1,11 @@
 #include "whisper.h"
-#include "json.hpp"
+#include "caption_output.h"
 #include "recognition_queue.h"
 #include "inference_config.h"
 #include "preview_schedule.h"
+#ifdef POLARBEAR_STREAMING_CANDIDATE
+#include "streaming_runtime.h"
+#endif
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -12,6 +15,7 @@
 #include <vector>
 
 using json = nlohmann::ordered_json;
+#ifndef POLARBEAR_STREAMING_CANDIDATE
 using Clock = std::chrono::steady_clock;
 static double milliseconds(Clock::time_point from) {
     return std::chrono::duration<double, std::milli>(Clock::now() - from).count();
@@ -19,20 +23,22 @@ static double milliseconds(Clock::time_point from) {
 constexpr int sample_rate = 16000;
 constexpr int frame_samples = 512;
 constexpr int max_samples = sample_rate * 15;
+#endif
 
 static std::mutex output_mutex;
-static void emit(const json &event) {
+void emit(const json &event) {
     std::lock_guard<std::mutex> lock(output_mutex);
     std::cout << event.dump() << '\n' << std::flush;
 }
-static void phase(const char *name) {
+void phase(const char *name) {
     std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "caption-phase:" << name << '\n' << std::flush;
 }
-static void metric(const json &value) {
+void metric(const json &value) {
     std::lock_guard<std::mutex> lock(output_mutex);
     std::cerr << "caption-metric:" << value.dump() << '\n' << std::flush;
 }
+#ifndef POLARBEAR_STREAMING_CANDIDATE
 static bool read_exact(char *target, size_t count) {
     std::cin.read(target, static_cast<std::streamsize>(count));
     return static_cast<size_t>(std::cin.gcount()) == count;
@@ -104,12 +110,16 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
     if (!std::cin.eof() || std::cin.gcount() != 0) return 4;
     return finalize();
 }
+#endif
 
 int main(int argc, char **argv) {
     const auto cores = std::thread::hardware_concurrency();
     const auto config = inference_config(argc, argv, cores);
     if (!config) return 2;
     if (config->diagnostics) metric({{"stage","config"},{"availableCpus",cores},{"threads",config->threads}});
+#ifdef POLARBEAR_STREAMING_CANDIDATE
+    return run_streaming(argv[1], argv[2], *config);
+#else
     whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);
     auto context_params = whisper_context_default_params();
     // Keep the production and fixture paths identical until Metal is qualified.
@@ -189,4 +199,5 @@ int main(int argc, char **argv) {
     phase("stopped");
     emit({{"type","stopped"}});
     return 0;
+#endif
 }

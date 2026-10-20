@@ -37,6 +37,7 @@ if (process.platform === "darwin") {
     const build = join(cache, architecture);
     run("cmake", ["-S", source, "-B", build, `-DWHISPER_SOURCE=${whisper}`, "-DCMAKE_BUILD_TYPE=Release",
       `-DCMAKE_OSX_ARCHITECTURES=${architecture}`, "-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0",
+      "-DSHERPA_ONNX_INCLUDE_DIR=", "-DSHERPA_ONNX_C_API_LIBRARY=",
       "-DGGML_BLAS=ON", "-DGGML_BLAS_VENDOR=Apple", "-DGGML_METAL=OFF"]);
     // Restoring the pinned archive can make removed patches older than cached objects.
     run("cmake", ["--build", build, "--clean-first", "--config", "Release", "-j", "4"]);

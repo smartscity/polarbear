@@ -339,11 +339,16 @@ def main():
             for kind in ("whisper", args.candidate):
                 report[kind] = run_engine({**vars(args), "engine": kind}, clips, corpus, args.corpus.parent,
                                           deadline, emit, paced=args.paced and kind != "whisper")
+                print(json.dumps({"engine": kind, "accuracy": report[kind]["accuracy"].get("all"),
+                                  "paced": {key: value for key, value in report[kind]["paced"].items()
+                                            if key != "records"} if args.paced and kind != "whisper" else None}),
+                      flush=True)
                 args.output.write_text(json.dumps(report, indent=2) + "\n")
         report["screeningDecision"] = screening_decision(
             report["whisper"]["accuracy"], report[args.candidate]["accuracy"],
             report[args.candidate]["paced"] if args.paced else None)
         report["status"] = "MEASURED"
+        print(json.dumps(report["screeningDecision"]), flush=True)
     except BaseException:
         report["error"] = traceback.format_exc()
         raise
