@@ -336,7 +336,7 @@ initial nonlexical speech/silence and is not the production VAD-based metric.
 Source references contain overlapping speech and inferred timings; these strict
 scores are a paired diagnostic, not a consumer accuracy percentage.
 
-The next controlled run uses the publisher's 660 ms EOF lookahead instead of the
+The controlled run at `09f7544` uses the publisher's 660 ms EOF lookahead instead of the
 prototype's 300 ms and feeds accelerated accuracy clips in the same 80 ms chunks
 as paced inference. A full-precision model from the same pinned revision is added
 to distinguish quantization loss; neither change is presumed to improve results.
@@ -356,6 +356,42 @@ library provenance, licenses, signing and architecture verification. Native
 176-second PCM/VAD regression uses the unchanged 3.0/4.4-second latency gates and
 an eight-second drain deadline. Accuracy rejection still blocks a release even
 if the native latency gate passes.
+
+#### Cache-aware NeMo candidate
+
+Run [39429191978](https://github.com/smartscity/polarbear/actions/runs/39429191978)
+has rejected the full-precision GigaSpeech candidate on ARM: strict WER was
+51.26% versus Whisper's 49.22%, with two empty clips versus zero. Its native
+176-second replay also failed the unchanged first-text gate. Removing
+quantization and correcting EOF lookahead did not resolve the model's losses;
+this is not a reason to relax the release thresholds.
+
+The next bounded screen evaluates the English-only
+[Nemotron cache-aware streaming model](https://huggingface.co/nvidia/nemotron-speech-streaming-en-0.6b)
+using the publisher's
+[560 ms ONNX export](https://k2-fsa.github.io/sherpa/onnx/nemo/nemotron-streaming.html).
+This is not the previously rejected offline Parakeet TDT checkpoint. The export
+revision is `52056fdc070914a48dcd68b31b44d6a6f5b85902`; all five model/token/metadata
+files are verified against publisher SHA-256 or Git-blob digests. The same frozen
+24 clips, paired baseline, eight paced probes and 176-second native regression
+apply. No candidate-dependent trimming, reference editing or threshold relaxation
+is permitted.
+
+The candidate reuses the existing online C API, incremental FIFO, PCM/VAD path and
+protocol-1 events. Encoder/decoder/joiner/token paths are explicit native argv,
+owned by the pinned evaluation model catalog rather than hardcoded GigaSpeech
+filenames. The pinned upstream NeMo recognizer selects its feature dimension and
+normalization from the model metadata; the adapter does not emulate those
+features. Production resources and the default recognizer remain unchanged.
+
+The upstream model is governed by the
+[NVIDIA Open Model License](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/),
+not Apache-2.0. Its redistribution terms require the agreement and attribution,
+alongside compliance with its other conditions and component notices. This
+evaluation does not establish a redistributable bundle: model provenance, native
+library licensing, signing and offline installed-app acceptance must still be
+verified before inclusion in a DMG. Publisher performance claims are not local
+or CI measurements.
 
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies

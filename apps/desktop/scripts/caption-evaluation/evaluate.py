@@ -14,7 +14,7 @@ import time
 import numpy as np
 import soundfile as sf
 from metrics import score
-from prepare import MODELS, verify_model
+from prepare import MODELS, STREAMING_COMPONENTS, verify_model
 
 
 def inference_threads(available=None):
@@ -68,14 +68,7 @@ class SherpaCandidate:
                 joiner=str(directory / "joiner.int8.onnx"), tokens=str(directory / "tokens.txt"),
                 num_threads=threads, feature_dim=128, model_type="nemo_transducer", provider="cpu")
         else:
-            components = ({part: f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx"
-                           for part in ("encoder", "decoder", "joiner")} if kind == "zipformer" else {
-                "encoder": "encoder-epoch-99-avg-1.int8.onnx",
-                "decoder": "decoder-epoch-99-avg-1.onnx",
-                "joiner": "joiner-epoch-99-avg-1.int8.onnx",
-            })
-            if kind == "zipformer-gigaspeech-fp32":
-                components = {part: f"{part}-epoch-99-avg-1.onnx" for part in ("encoder", "decoder", "joiner")}
+            components = STREAMING_COMPONENTS[kind]
             self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
                 **{part: str(directory / filename) for part, filename in components.items()},
                 tokens=str(directory / "tokens.txt"), num_threads=threads,
@@ -144,7 +137,7 @@ def main():
     parser.add_argument("--paced", action="store_true")
     parser.add_argument("--threads", type=int, choices=range(1, 17), default=inference_threads())
     args = parser.parse_args()
-    if args.paced and args.engine not in ("zipformer", "zipformer-gigaspeech", "zipformer-gigaspeech-fp32"):
+    if args.paced and args.engine not in STREAMING_COMPONENTS:
         parser.error("--paced requires a native streaming candidate")
     cases = json.loads((args.directory / "samples/samples.json").read_text())
     if len(cases) != 20:

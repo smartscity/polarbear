@@ -156,10 +156,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runner: macos-26, arch: arm64, candidate: zipformer-gigaspeech }
-          - { runner: macos-15-intel, arch: x86_64, candidate: zipformer-gigaspeech }
-          - { runner: macos-26, arch: arm64, candidate: zipformer-gigaspeech-fp32 }
-          - { runner: macos-15-intel, arch: x86_64, candidate: zipformer-gigaspeech-fp32 }
+          - { runner: macos-26, arch: arm64, candidate: nemotron-streaming }
+          - { runner: macos-15-intel, arch: x86_64, candidate: nemotron-streaming }
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -182,7 +180,7 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ${{ runner.temp }}/models/${{ matrix.candidate }}
-          key: caption-${{ matrix.candidate }}-v1-9a65b6ea94c311ca770c2bf895b30f456a22d703
+          key: caption-${{ matrix.candidate }}-v1-${{ hashFiles('apps/desktop/scripts/caption-evaluation/prepare.py') }}
       - name: Fetch and verify pinned streaming evaluation assets
         timeout-minutes: 5
         run: python apps/desktop/scripts/caption-evaluation/prepare.py "$RUNNER_TEMP/models" --model "${{ matrix.candidate }}"
@@ -202,7 +200,6 @@ jobs:
             -framework Accelerate -o "$RUNNER_TEMP/whisper-baseline"
       - name: Build opt-in native streaming helper
         id: native
-        if: matrix.candidate == 'zipformer-gigaspeech-fp32'
         run: python apps/desktop/scripts/caption-evaluation/build_streaming_candidate.py "$RUNNER_TEMP/streaming-native"
       - name: Reject accuracy regressions and missing first text on short meetings
         id: screen
@@ -230,6 +227,7 @@ jobs:
             --helper "$RUNNER_TEMP/streaming-native/polarbear-caption-streaming-candidate" \
             --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
             --streaming-models "$RUNNER_TEMP/models/${{ matrix.candidate }}" \
+            --streaming-candidate "${{ matrix.candidate }}" \
             2>&1 | tee evidence/native-streaming.log
       - uses: actions/upload-artifact@v6
         if: always()

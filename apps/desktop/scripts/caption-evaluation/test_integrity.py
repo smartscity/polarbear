@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from prepare import MODELS, MODEL_SHA256, METADATA_GIT_BLOBS, verify_model
+from prepare import MODELS, MODEL_SHA256, METADATA_GIT_BLOBS, STREAMING_COMPONENTS, verify_model
 
 
 class IntegrityTest(unittest.TestCase):
@@ -14,6 +14,14 @@ class IntegrityTest(unittest.TestCase):
             for filename in model["files"]:
                 key = f"{name}/{filename}"
                 self.assertTrue(key in MODEL_SHA256 or key in METADATA_GIT_BLOBS, key)
+
+    def test_streaming_components_only_reference_pinned_assets(self):
+        self.assertNotIn("parakeet", STREAMING_COMPONENTS)
+        for name, components in STREAMING_COMPONENTS.items():
+            self.assertEqual(set(components), {"encoder", "decoder", "joiner"})
+            for filename in components.values():
+                self.assertIn(filename, MODELS[name]["files"])
+                self.assertIn(f"{name}/{filename}", MODEL_SHA256)
 
     def test_unknown_asset_is_not_silently_trusted(self):
         with self.assertRaisesRegex(ValueError, "Unpinned model asset"):

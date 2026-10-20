@@ -114,11 +114,15 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
 
 int main(int argc, char **argv) {
     const auto cores = std::thread::hardware_concurrency();
+#ifdef POLARBEAR_STREAMING_CANDIDATE
+    const auto config = inference_config(argc, argv, cores, 6);
+#else
     const auto config = inference_config(argc, argv, cores);
+#endif
     if (!config) return 2;
     if (config->diagnostics) metric({{"stage","config"},{"availableCpus",cores},{"threads",config->threads}});
 #ifdef POLARBEAR_STREAMING_CANDIDATE
-    return run_streaming(argv[1], argv[2], *config);
+    return run_streaming({argv[1], argv[2], argv[3], argv[4], config->threads}, argv[5], *config);
 #else
     whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);
     auto context_params = whisper_context_default_params();

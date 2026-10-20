@@ -4,25 +4,19 @@
 #include "streaming_input.h"
 #include "streaming_recognizer.h"
 #include "whisper.h"
-#include <filesystem>
 #include <iostream>
 #include <thread>
 
-int run_streaming(const char *model_directory, const char *vad_file, const InferenceConfig &config) {
+int run_streaming(const StreamingRecognizerConfig &model, const char *vad_file, const InferenceConfig &config) {
     using Clock = std::chrono::steady_clock;
     const auto elapsed = [](Clock::time_point start) {
         return std::chrono::duration<double, std::milli>(Clock::now() - start).count();
     };
-    const auto directory = std::filesystem::path(model_directory);
     std::unique_ptr<StreamingRecognizer> recognizer;
     whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);
     try {
         phase("loading-streaming-asr-cpu");
-        recognizer = std::make_unique<StreamingRecognizer>(StreamingRecognizerConfig{
-            (directory / "encoder-epoch-99-avg-1.onnx").string(),
-            (directory / "decoder-epoch-99-avg-1.onnx").string(),
-            (directory / "joiner-epoch-99-avg-1.onnx").string(),
-            (directory / "tokens.txt").string(), config.threads});
+        recognizer = std::make_unique<StreamingRecognizer>(model);
     } catch (const std::exception &) {
         emit({{"type", "error"}, {"code", "modelInvalid"}});
         return 3;

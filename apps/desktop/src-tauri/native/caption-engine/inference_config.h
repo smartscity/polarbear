@@ -15,11 +15,12 @@ inline int inference_threads(unsigned available) {
     return static_cast<int>(std::min(4u, available > 1 ? available - 1 : 1u));
 }
 
-inline std::optional<InferenceConfig> inference_config(int argc, char **argv, unsigned available) {
-    if (argc < 3) return std::nullopt;
+inline std::optional<InferenceConfig> inference_config(int argc, char **argv, unsigned available,
+                                                       int options_start = 3) {
+    if (options_start < 3 || argc < options_start) return std::nullopt;
     InferenceConfig config{inference_threads(available)};
     bool threads_seen = false;
-    for (int i = 3; i < argc; ++i) {
+    for (int i = options_start; i < argc; ++i) {
         const std::string_view argument(argv[i]);
         if (argument == "--diagnostics" && !config.diagnostics) {
             config.diagnostics = true;

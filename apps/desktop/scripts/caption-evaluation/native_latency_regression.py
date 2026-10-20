@@ -12,7 +12,7 @@ from native_replay import montage, replay
 from process_memory import ProcessMemory
 from qualification_corpus import digest
 from qualify import offline_control, validate_corpus, validate_native_arch
-from prepare import MODELS, verify_model
+from prepare import MODELS, STREAMING_COMPONENTS, verify_model
 
 # Include the preceding final, not just isolated utterances: queue contention is
 # part of the regression. These offsets are frozen from the failed production run.
@@ -41,6 +41,19 @@ def acceptance(result):
         and result["sampledPeakProcessTreeRssBytes"] <= 2 * 1024**3,
     }
 
+def native_command(helper, assets, candidate=None, models=None, threads=None):
+    if (candidate is None) != (models is None):
+        raise ValueError("Streaming candidate and model directory must be specified together")
+    components = STREAMING_COMPONENTS[candidate] if candidate else None
+    model_args = ([str((models / filename).resolve()) for filename in (
+        *(components[part] for part in ("encoder", "decoder", "joiner")), "tokens.txt")]
+        if components else [str((assets / "ggml-base.en-q5_1.bin").resolve())])
+    command = [str(helper.resolve()), *model_args,
+               str((assets / "ggml-silero-v6.2.0.bin").resolve()), "--diagnostics"]
+    if threads is not None:
+        command.append(f"--threads={threads}")
+    return command
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -51,7 +64,9 @@ def main():
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     parser.add_argument("--threads", type=int, choices=range(1, 17))
     parser.add_argument("--streaming-models", type=Path,
-                        help="Explicit FP32 candidate directory; never selected by release builds")
+                        help="Explicit candidate directory; never selected by release builds")
+    parser.add_argument("--streaming-candidate", choices=STREAMING_COMPONENTS,
+                        default="zipformer-gigaspeech-fp32")
     args = parser.parse_args()
     validate_native_arch(args.expect_arch)
     corpus = validate_corpus(args.corpus)
@@ -61,8 +76,8 @@ def main():
             raise ValueError("Bundled model checksum mismatch")
     candidate_pins = None
     if args.streaming_models:
-        candidate_pins = {filename: verify_model("zipformer-gigaspeech-fp32", args.streaming_models / filename)
-                          for filename in MODELS["zipformer-gigaspeech-fp32"]["files"]}
+        candidate_pins = {filename: verify_model(args.streaming_candidate, args.streaming_models / filename)
+                          for filename in MODELS[args.streaming_candidate]["files"]}
     report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v1",
               "windows": WINDOWS, "requiredAudioSeconds": SECONDS,
               "machine": platform.machine(), "platform": platform.platform(),
@@ -71,7 +86,7 @@ def main():
               "offlineControl": offline_control(), "memoryGrowth": "NOT_MEASURED_SHORT_PROFILE",
               "microphoneToUi": "NOT_RUN", "chineseTranslation": "NOT_RUN", "accuracy": "NOT_SCORED"}
     if candidate_pins:
-        report.update({"engine": "streaming-candidate", "candidatePins": candidate_pins,
+        report.update({"engine": args.streaming_candidate, "candidatePins": candidate_pins,
                        "replacement": "NOT_AUTHORIZED"})
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -79,11 +94,9 @@ def main():
             def emit(event):
                 stream.write(json.dumps(event) + "\n")
                 stream.flush()
-            command = [str(args.helper.resolve()),
-                       str((args.streaming_models or args.assets / "ggml-base.en-q5_1.bin").resolve()),
-                       str((args.assets / "ggml-silero-v6.2.0.bin").resolve()), "--diagnostics"]
-            if args.threads is not None:
-                command.append(f"--threads={args.threads}")
+            command = native_command(args.helper, args.assets,
+                                     args.streaming_candidate if args.streaming_models else None,
+                                     args.streaming_models, args.threads)
             memory = ProcessMemory()
             report["replay"] = asyncio.run(replay(command, regression_audio(corpus, args.corpus.parent),
                                                   SECONDS, emit, memory.sample,

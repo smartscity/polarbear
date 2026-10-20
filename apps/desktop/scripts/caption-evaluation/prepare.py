@@ -32,6 +32,26 @@ MODELS = {
         "files": [f"{part}-epoch-99-avg-1.onnx" for part in ("encoder", "decoder", "joiner")]
         + ["tokens.txt", "README.md"],
     },
+    "nemotron-streaming": {
+        "repo": "csukuangfj2/sherpa-onnx-nemotron-speech-streaming-en-0.6b-560ms-int8-2026-04-25",
+        "revision": "52056fdc070914a48dcd68b31b44d6a6f5b85902",
+        "files": ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt", "README.md"],
+        "license": "NVIDIA Open Model License; redistribution requires the agreement and attribution",
+        "licenseUrl": "https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/",
+    },
+}
+
+STREAMING_COMPONENTS = {
+    "zipformer": {part: f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx"
+                  for part in ("encoder", "decoder", "joiner")},
+    "zipformer-gigaspeech": {
+        "encoder": "encoder-epoch-99-avg-1.int8.onnx",
+        "decoder": "decoder-epoch-99-avg-1.onnx",
+        "joiner": "joiner-epoch-99-avg-1.int8.onnx",
+    },
+    "zipformer-gigaspeech-fp32": {part: f"{part}-epoch-99-avg-1.onnx"
+                                 for part in ("encoder", "decoder", "joiner")},
+    "nemotron-streaming": {part: f"{part}.int8.onnx" for part in ("encoder", "decoder", "joiner")},
 }
 
 MODEL_SHA256 = {
@@ -47,6 +67,9 @@ MODEL_SHA256 = {
     "zipformer-gigaspeech-fp32/encoder-epoch-99-avg-1.onnx": "b584884daad8cd4e60a5258e6da11876460089f1c4d3b5a92e19f0f104edb77a",
     "zipformer-gigaspeech-fp32/decoder-epoch-99-avg-1.onnx": "9da02b77cb08826756ec6a88635f35a40374e4164e7c6359121a9145958a6ceb",
     "zipformer-gigaspeech-fp32/joiner-epoch-99-avg-1.onnx": "bd5c26ad6a41cbd90c2cfa239c0b55b145af878ce1d79b4739d90f8be93359ba",
+    "nemotron-streaming/encoder.int8.onnx": "7d932213491ad355c6e5576705dc3494731a52af87d7a1b954559340147909d8",
+    "nemotron-streaming/decoder.int8.onnx": "0be9702c2f427a2b6bb241d298e0d3836a558de1f5b9fd3018f1cce6e2b3fa98",
+    "nemotron-streaming/joiner.int8.onnx": "a35eac38a22ebceb04d230ed7afe0d68f446ba6914a036b97f14fece95967e23",
 }
 METADATA_GIT_BLOBS = {
     "parakeet/tokens.txt": "f0742785f6073e80b911964c455b05f3609bf23b",
@@ -57,6 +80,8 @@ METADATA_GIT_BLOBS = {
     "zipformer-gigaspeech/README.md": "86afdd83874fab34d83100550b208e7c0ceceb54",
     "zipformer-gigaspeech-fp32/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
     "zipformer-gigaspeech-fp32/README.md": "86afdd83874fab34d83100550b208e7c0ceceb54",
+    "nemotron-streaming/tokens.txt": "50918f5e313e1cf846cf77dfd5b4489c9c7f0b76",
+    "nemotron-streaming/README.md": "90194c482dc9c3bca5268a9715be0087b4ddc293",
 }
 
 
