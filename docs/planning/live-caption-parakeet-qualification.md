@@ -278,6 +278,43 @@ no ARM candidate run was claimed, and no microphone/translation/DMG acceptance
 was performed. A future streaming candidate must preserve useful meeting
 recognition as well as reduce latency; first-text speed alone is insufficient.
 
+### Streaming implementation boundary and short candidate gate
+
+The approved next direction is cached incremental recognition, without reducing
+meeting accuracy to obtain earlier text. The next pinned screening candidate is
+the English LibriSpeech/GigaSpeech streaming model at revision
+`9a65b6ea94c311ca770c2bf895b30f456a22d703`. Its publisher declares Apache-2.0.
+It is an evaluation candidate, not a replacement selected by publication claims.
+Model/token files must match publisher digests before inference; an unpinned
+filename now fails verification rather than being accepted without a checksum.
+
+| Concern | Pattern decision | Ownership and constraint |
+| --- | --- | --- |
+| Incremental model state | Reuse the recognizer adapter boundary | One decoder owns one stream per utterance; no Python runtime in the shipped application |
+| PCM admission | Evolve the existing bounded producer/consumer queue | Every accepted incremental sample is delivered once in order; preview-dropping rules cannot discard streaming audio |
+| Capture and end detection | Reuse the existing pipeline | Swift capture, PCM framing, Silero VAD and sequence timestamps remain authoritative |
+| Finalization and shutdown | Explicit stream lifecycle | Finish, drain and emit final before destroying the stream; preserve overload errors and bounded stop behavior |
+| Accuracy correction | No simultaneous dual-engine pipeline | Do not hide a second CPU-heavy recognizer behind a fast partial or reintroduce final/partial contention |
+| UI, translation and history | Reuse protocol-1 events | No new event bus, storage format, translation service or caption UI |
+
+`streaming_screen.py` freezes first/middle/last annotated segments from the first
+record of each of the eight existing sources. Its 24 clips total at most 480
+seconds of audio, decoded faster than wall time sequentially by the two engines.
+Optional first-clip paced probes total at most 160 seconds. The overall inference
+deadline is five minutes, with per-request deadlines and process-group cleanup.
+There is no hour-long replay in this screen. It rejects worse overall/category
+WER, increased empty clips, lower measured technical-term recall, and missing or
+late paced partials. Source-level results remain visible. A small screen is not
+proof of general non-regression or the production VAD/UI latency contract.
+
+The existing qualification workflow has an isolated `codex/caption-streaming`
+branch trigger and an explicit `streaming_candidate` dispatch input. Only these
+paths run the short candidate screen on native Intel and ARM; normal release
+validation retains its existing production gate. This prevents candidate research
+from being treated as a release pass. Local model transfers hit bounded download
+limits; partial archives were not treated as valid models. Native CI measurements
+and subsequent production integration remain required before a release tag.
+
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies
 `PermissionError: Operation not permitted: /bin/ps`, not an inference exception.

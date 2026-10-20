@@ -68,9 +68,14 @@ class SherpaCandidate:
                 joiner=str(directory / "joiner.int8.onnx"), tokens=str(directory / "tokens.txt"),
                 num_threads=threads, feature_dim=128, model_type="nemo_transducer", provider="cpu")
         else:
+            components = ({part: f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx"
+                           for part in ("encoder", "decoder", "joiner")} if kind == "zipformer" else {
+                "encoder": "encoder-epoch-99-avg-1.int8.onnx",
+                "decoder": "decoder-epoch-99-avg-1.onnx",
+                "joiner": "joiner-epoch-99-avg-1.int8.onnx",
+            })
             self.recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
-                **{part: str(directory / f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx")
-                   for part in ("encoder", "decoder", "joiner")},
+                **{part: str(directory / filename) for part, filename in components.items()},
                 tokens=str(directory / "tokens.txt"), num_threads=threads,
                 enable_endpoint_detection=False, provider="cpu")
         self.load_seconds = time.perf_counter() - start
@@ -94,7 +99,7 @@ class SherpaCandidate:
         pass
 
     def paced_probe(self, samples):
-        if self.kind != "zipformer":
+        if self.kind == "parakeet":
             raise ValueError("The selected Parakeet model is not a native streaming model")
         stream = self.recognizer.create_stream()
         started = time.perf_counter()
@@ -125,15 +130,15 @@ class SherpaCandidate:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("engine", choices=("whisper", "parakeet", "zipformer"))
+    parser.add_argument("engine", choices=("whisper", *MODELS))
     parser.add_argument("directory", type=Path)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--whisper-model", type=Path)
     parser.add_argument("--paced", action="store_true")
     parser.add_argument("--threads", type=int, choices=range(1, 17), default=inference_threads())
     args = parser.parse_args()
-    if args.paced and args.engine != "zipformer":
-        parser.error("--paced requires a native streaming candidate (zipformer)")
+    if args.paced and args.engine not in ("zipformer", "zipformer-gigaspeech"):
+        parser.error("--paced requires a native streaming candidate")
     cases = json.loads((args.directory / "samples/samples.json").read_text())
     if len(cases) != 20:
         raise ValueError("The predeclared 20-sample corpus must be complete")

@@ -4,10 +4,21 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from prepare import MODEL_SHA256, METADATA_GIT_BLOBS, verify_model
+from prepare import MODELS, MODEL_SHA256, METADATA_GIT_BLOBS, verify_model
 
 
 class IntegrityTest(unittest.TestCase):
+    def test_every_declared_asset_has_a_publisher_digest(self):
+        for name, model in MODELS.items():
+            self.assertEqual(len(model["revision"]), 40)
+            for filename in model["files"]:
+                key = f"{name}/{filename}"
+                self.assertTrue(key in MODEL_SHA256 or key in METADATA_GIT_BLOBS, key)
+
+    def test_unknown_asset_is_not_silently_trusted(self):
+        with self.assertRaisesRegex(ValueError, "Unpinned model asset"):
+            verify_model("zipformer-gigaspeech", Path("unverified.onnx"))
+
     def test_pinned_model_digest(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "encoder.int8.onnx"
