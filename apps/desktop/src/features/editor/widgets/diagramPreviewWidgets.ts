@@ -6,6 +6,7 @@ import {
   copySvgElementAsPng,
 } from "../../diagram/diagramExport";
 import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
+import { DiagramRenderCache } from "../../diagram/diagramRenderCache";
 import {
   renderPlantUmlSvg,
 } from "../../diagram/plantUmlRenderer";
@@ -36,10 +37,8 @@ type DiagramRenderResult = {
   svgContent?: string;
 };
 
-const mermaidRenderCache = new Map<string, DiagramRenderResult>();
-const pendingMermaidRenders = new Map<string, Promise<DiagramRenderResult>>();
-const plantUmlRenderCache = new Map<string, DiagramRenderResult>();
-const pendingPlantUmlRenders = new Map<string, Promise<DiagramRenderResult>>();
+const mermaidRenderCache = new DiagramRenderCache();
+const plantUmlRenderCache = new DiagramRenderCache();
 
 export class MermaidPreviewWidget extends WidgetType {
   constructor(private readonly block: DiagramPreviewBlock) {
@@ -296,28 +295,11 @@ async function renderPlantUmlPreview(source: string, content: HTMLElement): Prom
 }
 
 function getPlantUmlRenderResult(source: string): Promise<DiagramRenderResult> {
-  const cachedResult = plantUmlRenderCache.get(source);
-  if (cachedResult) {
-    return Promise.resolve(cachedResult);
-  }
-
-  const pendingRender = pendingPlantUmlRenders.get(source);
-  if (pendingRender) {
-    return pendingRender;
-  }
-
-  const render = renderPlantUmlSvg(source)
+  return plantUmlRenderCache.getOrRender(source, () => renderPlantUmlSvg(source))
     .then((svgContent): DiagramRenderResult => ({ svgContent }))
     .catch((error): DiagramRenderResult => ({
       error: describePlantUmlRenderError(error, translateCurrent),
-    }))
-    .then((result) => {
-      plantUmlRenderCache.set(source, result);
-      pendingPlantUmlRenders.delete(source);
-      return result;
-    });
-  pendingPlantUmlRenders.set(source, render);
-  return render;
+    }));
 }
 
 async function renderMermaidPreview(source: string, content: HTMLElement): Promise<void> {
@@ -332,26 +314,13 @@ async function renderMermaidPreview(source: string, content: HTMLElement): Promi
 }
 
 function getMermaidRenderResult(source: string): Promise<DiagramRenderResult> {
-  const cachedResult = mermaidRenderCache.get(source);
-  if (cachedResult) return Promise.resolve(cachedResult);
-
-  const pendingRender = pendingMermaidRenders.get(source);
-  if (pendingRender) return pendingRender;
-
-  const render = renderMermaidSvg(diagramIdForSource(source), source)
+  return mermaidRenderCache.getOrRender(source, () => renderMermaidSvg(diagramIdForSource(source), source))
     .then((svgContent): DiagramRenderResult => ({ svgContent }))
     .catch((error): DiagramRenderResult => ({
       error: error instanceof Error
         ? error.message
         : translateCurrent("diagram.mermaidRenderError", { error: String(error) }),
-    }))
-    .then((result) => {
-      mermaidRenderCache.set(source, result);
-      pendingMermaidRenders.delete(source);
-      return result;
-    });
-  pendingMermaidRenders.set(source, render);
-  return render;
+    }));
 }
 
 function diagramIdForSource(source: string): string {
