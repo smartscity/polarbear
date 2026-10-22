@@ -199,6 +199,7 @@ import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 import { useVocabReading } from "./features/vocab/useVocabReading";
 import { SettingsDialog } from "./app/layout/SettingsDialog";
+import { recentDocumentStore, documentHistoryPath } from "./features/workspace/recentDocuments";
 import { ContextWorkspace } from "./features/memory/context/ContextWorkspace";
 import {
   captureMemoryDocumentContext,
@@ -319,7 +320,7 @@ export function App() {
   const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-  const [activeSurface, setActiveSurface] = useState<AppSurface>("context");
+  const [activeSurface, setActiveSurface] = useState<AppSurface>("workspace");
   const [memoryDocumentContext, setMemoryDocumentContext] =
     useState<MemoryDocumentContext | null>(null);
   const [workspaceRoot, setWorkspaceRoot] = useState("");
@@ -578,6 +579,16 @@ export function App() {
 
   const markdownContent = documents[activeFileId] ?? "";
   const activeRelativePath = documentRelativePathForId(activeFileId, documentRelativePaths);
+  const activeDocumentRoot = documentWorkspaceRootForId(activeFileId, documentWorkspaceRoots, workspaceRoot);
+  const activeDocumentLoaded = documents[activeFileId] !== undefined;
+  const recordRecentDocument = useEventCallback((path: string) => {
+    try { recentDocumentStore().record(path); }
+    catch { setStatusMessage(t("recent.storageFailed")); }
+  });
+  useEffect(() => {
+    if (!activeDocumentRoot || !activeDocumentLoaded || isUntitledDocument(activeFileId)) return;
+    recordRecentDocument(documentHistoryPath(activeDocumentRoot, activeRelativePath));
+  }, [activeFileId, activeDocumentRoot, activeRelativePath, activeDocumentLoaded, recordRecentDocument]);
   const activeFileName = displayNameForDocumentId(
     activeFileId,
     workspaceItems,
@@ -1459,8 +1470,21 @@ export function App() {
 
   useEffect(() => {
     applyThemeTokens(themeName);
-    storeTheme(themeName);
   }, [themeName]);
+
+  useEffect(() => {
+    const refreshTheme = () => setThemeName(readStoredTheme());
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    window.addEventListener(APP_EVENTS.settingsChanged, refreshTheme);
+    window.addEventListener("storage", refreshTheme);
+    media.addEventListener("change", refreshTheme);
+    refreshTheme();
+    return () => {
+      window.removeEventListener(APP_EVENTS.settingsChanged, refreshTheme);
+      window.removeEventListener("storage", refreshTheme);
+      media.removeEventListener("change", refreshTheme);
+    };
+  }, []);
 
   useEffect(() => {
     if (!APP_CANVAS_ZOOM_ENABLED) {
@@ -1867,13 +1891,15 @@ export function App() {
   const openMarkdownPath = useEventCallback(async (filePath: string) => {
     try {
       const openedFile = await openMarkdownFile(filePath);
-      const existingDocumentId = findOpenDocumentIdForWorkspaceFile(
-        openFileIdsRef.current,
-        documentWorkspaceRoots,
-        documentRelativePaths,
-        openedFile.workspaceRoot,
-        openedFile.relativePath,
-      );
+      const openedPath = documentHistoryPath(openedFile.workspaceRoot, openedFile.relativePath);
+      const samePathTab = openFileIdsRef.current.find((id) => !isUntitledDocument(id)
+        && documentHistoryPath(documentWorkspaceRootForId(id, documentWorkspaceRoots, workspaceRoot), documentRelativePathForId(id, documentRelativePaths)) === openedPath);
+      if (samePathTab) {
+        setActiveSurface("workspace");
+        if (!await activateTab(samePathTab)) return false;
+        recordRecentDocument(openedPath);
+        return true;
+      }
 
       setActiveSurface("workspace");
       setWorkspaceRoot(openedFile.workspaceRoot);
@@ -1882,14 +1908,6 @@ export function App() {
         ...currentTrees,
         [openedFile.workspaceRoot]: openedFile.tree,
       }));
-
-      if (existingDocumentId) {
-        setActiveFileId(existingDocumentId);
-        setSelectedTreeItemId(openedFile.relativePath);
-        revealFolder(parentFolderIdOf(openedFile.relativePath));
-        setStatusMessage(t("status.openedPath", { path: openedFile.relativePath }));
-        return;
-      }
 
       const documentId = makeWorkspaceDocumentId({
         currentDocumentIds: new Set([...openFileIdsRef.current, ...Object.keys(documents)]),
@@ -1922,8 +1940,10 @@ export function App() {
         return nextDirtyFileIds;
       });
       setStatusMessage(t("status.openedPath", { path: openedFile.relativePath }));
+      return true;
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
+      return false;
     }
   });
 
@@ -2544,7 +2564,7 @@ export function App() {
 
   const activateTab = async (fileId: string) => {
     if (!fileId) {
-      return;
+      return false;
     }
 
     const nextWorkspaceRoot = documentWorkspaceRootForId(
@@ -2570,7 +2590,7 @@ export function App() {
           }));
         } catch (error) {
           setStatusMessage(error instanceof Error ? error.message : String(error));
-          return;
+          return false;
         }
       }
     }
@@ -2580,7 +2600,7 @@ export function App() {
     revealFolder(parentFolderIdOf(nextRelativePath));
 
     if (!nextWorkspaceRoot || documents[fileId] !== undefined || isUntitledDocument(fileId)) {
-      return;
+      return true;
     }
 
     try {
@@ -2597,8 +2617,10 @@ export function App() {
         [fileId]: document.revision,
       }));
       setStatusMessage(t("status.loadedPath", { path: nextRelativePath }));
+      return true;
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
+      return false;
     }
   };
 
@@ -3986,12 +4008,14 @@ export function App() {
       }
 
       if (command === "theme.light") {
+        storeTheme("light");
         setThemeName("light");
         setStatusMessage(t("status.themeChanged", { theme: t("menu.light") }));
         return;
       }
 
       if (command === "theme.dark") {
+        storeTheme("dark");
         setThemeName("dark");
         setStatusMessage(t("status.themeChanged", { theme: t("menu.dark") }));
         return;
@@ -4140,6 +4164,7 @@ export function App() {
               onRenameConfirm={(item, nextName) => void confirmRename(item, nextName)}
               onSelectDocumentStructureItem={selectDocumentStructureItem}
               onSelectFile={(fileId) => void selectFile(fileId)}
+              onOpenRecent={openMarkdownPath}
               onSelectTab={(tabId) => void activateTab(tabId)}
               onSelectTreeItem={setSelectedTreeItemId}
               onSidebarClose={() => setSidebarOpen(false)}

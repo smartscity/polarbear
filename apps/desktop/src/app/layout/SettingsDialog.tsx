@@ -4,6 +4,7 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
 import { updateUserSettings } from "../../shared/settings/userSettings";
 import { CaptionSettings } from "../../features/caption/CaptionSettings";
+import { SettingsSection, SettingsRow } from "../../shared/ui/SettingsSection";
 
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
@@ -14,11 +15,15 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   return <dialog ref={dialog} className="reading-settings-dialog" aria-label={t("settings.title")}
     onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <header><h2>{t("settings.title")}</h2><button type="button" onClick={onClose} aria-label={t("common.close")}><X size={18} /></button></header>
-    <label className="reading-setting"><span><strong>{t("settings.selectionTranslation")}</strong><small>{t("settings.selectionTranslationDescription")}</small></span>
-      <input type="checkbox" role="switch" checked={settings.selectionTranslation} onChange={(event) => {
+    <SettingsSection title={t("settings.general")}>
+    <SettingsRow label={t("settings.selectionTranslation")} description={t("settings.selectionTranslationDescription")}>
+      <input className="settings-toggle" type="checkbox" role="switch" aria-label={t("settings.selectionTranslation")} checked={settings.selectionTranslation} onChange={(event) => {
         try { updateUserSettings({ selectionTranslation: event.target.checked }); setFailed(false); } catch { setFailed(true); }
-      }} /></label>
+      }} />
+    </SettingsRow>
+    </SettingsSection>
     <CaptionSettings />
+    <SettingsSection title={t("settings.privacy")}><p className="settings-description">{t("settings.privacyDescription")}</p></SettingsSection>
     {failed && <p role="alert">{t("settings.saveFailed")}</p>}
   </dialog>;
 }

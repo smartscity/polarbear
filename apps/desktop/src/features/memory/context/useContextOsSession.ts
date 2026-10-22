@@ -54,8 +54,12 @@ export function useContextOsSession(workspaceRoot: string) {
   const [knowledgeSearch, setKnowledgeSearch] = useState<KnowledgeSearchResponse | null>(null);
   const [longMemoryAvailable, setLongMemoryAvailable] = useState(false);
   const searchRequestGateRef = useRef(new KnowledgeSearchRequestGate());
+  const refreshSequence = useRef(0);
+  const configRevision = useRef(0);
 
   const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
+    const revision = configRevision.current;
     searchRequestGateRef.current.invalidate();
     setKnowledgeSearch(null);
     if (!workspaceRoot) {
@@ -107,12 +111,13 @@ export function useContextOsSession(workspaceRoot: string) {
         supportsLongMemory ? memoryApi.projectContext(workspaceRoot) : Promise.resolve(null),
         supports("tasks.list") ? memoryApi.listTasks(workspaceRoot) : Promise.resolve({ items: [] }),
       ]);
+      if (sequence !== refreshSequence.current) return;
       setHello(nextHello);
       setStatus(nextStatus);
       setMemories(nextMemories.items);
       setMetrics(nextMetrics);
       setTokenSavings(nextSavings);
-      setConfig(nextConfig);
+      if (revision === configRevision.current) setConfig(nextConfig);
       setLastPacket(nextContext.packet);
       setContextReceipt(nextContext.receipt ?? null);
       setSafeToReplaceSession(nextContext.safeToReplaceSession ?? false);
@@ -122,9 +127,9 @@ export function useContextOsSession(workspaceRoot: string) {
       setTasks(nextTasks.items);
       setLongMemoryAvailable(supportsLongMemory);
     } catch (loadError) {
-      setError(errorMessage(loadError));
+      if (sequence === refreshSequence.current) setError(errorMessage(loadError));
     } finally {
-      setIsLoading(false);
+      if (sequence === refreshSequence.current) setIsLoading(false);
     }
   }, [workspaceRoot]);
 
@@ -134,6 +139,7 @@ export function useContextOsSession(workspaceRoot: string) {
     setKnowledgeSearch(null);
     setLongMemoryAvailable(false);
     void refresh();
+    return () => { refreshSequence.current += 1; };
   }, [refresh]);
 
   const run = useCallback(async <T,>(action: () => Promise<T>): Promise<T | null> => {
@@ -203,7 +209,9 @@ export function useContextOsSession(workspaceRoot: string) {
   }, [refresh, run, workspaceRoot]);
 
   const updateConfig = useCallback(async (next: ProjectMemoryConfig) => {
+    configRevision.current += 1;
     const nextConfig = await run(() => memoryApi.updateConfig(workspaceRoot, next));
+    configRevision.current += 1;
     if (nextConfig) setConfig(nextConfig);
     return nextConfig;
   }, [run, workspaceRoot]);

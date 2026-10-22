@@ -40,6 +40,7 @@ type AppShellProps = {
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectDocumentStructureItem: (position: number) => void;
   onSelectFile: (fileId: string) => void;
+  onOpenRecent: (path: string) => Promise<boolean>;
   onSelectTab: (tabId: string) => void;
   onSelectTreeItem: (itemId: string) => void;
   onSidebarClose: () => void;
@@ -77,6 +78,7 @@ export function AppShell({
   onRenameConfirm,
   onSelectDocumentStructureItem,
   onSelectFile,
+  onOpenRecent,
   onSelectTab,
   onSelectTreeItem,
   onSidebarClose,
@@ -126,6 +128,7 @@ export function AppShell({
           onRenameCancel={onRenameCancel}
           onRenameConfirm={onRenameConfirm}
           onSelectFile={onSelectFile}
+          onOpenRecent={onOpenRecent}
           onSelectTreeItem={onSelectTreeItem}
         />
         {children}

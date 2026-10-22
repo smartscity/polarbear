@@ -29,13 +29,14 @@ test("activates captions from the editor and keeps the settings hint aligned wit
   expect(await page.locator(".cm-content").innerText()).toBe(before);
   expect(await page.evaluate(() => (window as unknown as { __captionCalls: { action: string }[] }).__captionCalls.some(call => ["stop", "resume"].includes(call.action)))).toBe(false);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.locator(".caption-settings kbd")).toHaveText(primary === "Meta" ? "Command+Option+L" : "Control+Alt+L");
+  const hint = page.getByRole("region", { name: "Live Caption", exact: true }).locator("kbd");
+  await expect(hint).toHaveText(primary === "Meta" ? "\u2318\u2325L" : "Control+Alt+L");
   await page.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
     const { updateUserSettings } = await import(path);
     updateUserSettings({ keybindings: { "caption.start": "Mod+Shift+J" } });
   });
-  await expect(page.locator(".caption-settings kbd")).toHaveText(primary === "Meta" ? "Shift+Command+J" : "Shift+Control+J");
+  await expect(hint).toHaveText(primary === "Meta" ? "\u21e7\u2318J" : "Shift+Control+J");
   await page.keyboard.press(`${primary}+Shift+j`);
   await expect.poll(async () => (await starts()).length).toBe(3);
   await page.evaluate(async () => {
@@ -43,7 +44,7 @@ test("activates captions from the editor and keeps the settings hint aligned wit
     const { updateUserSettings } = await import(path);
     updateUserSettings({ keybindings: { "caption.start": null } });
   });
-  await expect(page.locator(".caption-settings kbd")).toHaveCount(0);
+  await expect(hint).toHaveCount(0);
   await page.keyboard.press(`${primary}+Alt+l`);
   await page.keyboard.press(`${primary}+Shift+j`);
   expect((await starts()).length).toBe(3);

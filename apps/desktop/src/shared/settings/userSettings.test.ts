@@ -1,9 +1,35 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_KEYS } from "../constants/storageKeys";
 import {
   DEFAULT_USER_SETTINGS,
   parseUserSettings,
   USER_SETTINGS_VERSION,
+  readUserSettings,
+  updateUserSettings,
 } from "./userSettings";
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("settings persistence", () => {
+  function mockWindow() {
+    const values = new Map<string, string>();
+    vi.stubGlobal("window", { localStorage: { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) }, dispatchEvent: vi.fn() });
+    return values;
+  }
+  it("does not overwrite explicit system preferences with legacy values on restart", () => {
+    const values = mockWindow();
+    values.set(STORAGE_KEYS.legacyLanguage, "zh-CN"); values.set(STORAGE_KEYS.legacyTheme, "dark");
+    expect(readUserSettings().theme).toBe("dark");
+    updateUserSettings({ theme: "system", language: "system", selectionTranslation: false });
+    expect(readUserSettings()).toMatchObject({ theme: "system", language: "system", selectionTranslation: false });
+  });
+  it("preserves caption preferences and keybindings when updating another setting", () => {
+    mockWindow();
+    updateUserSettings({ caption: { ...DEFAULT_USER_SETTINGS.caption, source: "microphone" }, keybindings: { "caption.start": "Mod+Alt+L" } });
+    updateUserSettings({ selectionTranslation: false });
+    expect(readUserSettings()).toMatchObject({ caption: { source: "microphone" }, keybindings: { "caption.start": "Mod+Alt+L" }, selectionTranslation: false });
+  });
+});
 
 describe("parseUserSettings", () => {
   it("accepts known commands and removes unknown entries", () => {

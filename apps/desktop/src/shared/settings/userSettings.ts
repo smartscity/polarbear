@@ -38,8 +38,9 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 
 export function readUserSettings(): UserSettings {
   try {
-    const serialized = window.localStorage.getItem(STORAGE_KEYS.settings)
-      ?? window.localStorage.getItem(STORAGE_KEYS.legacySettings);
+    const current = window.localStorage.getItem(STORAGE_KEYS.settings);
+    if (current !== null) return parseUserSettings(JSON.parse(current));
+    const serialized = window.localStorage.getItem(STORAGE_KEYS.legacySettings);
     if (!serialized) {
       return settingsFromLegacyPreferences(DEFAULT_USER_SETTINGS);
     }
