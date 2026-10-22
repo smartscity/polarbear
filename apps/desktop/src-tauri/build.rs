@@ -88,7 +88,7 @@ fn build_reading_native() -> Result<(), Box<dyn Error>> {
     .into_iter()
     .map(PathBuf::from)
     .collect::<Vec<_>>();
-    // Compile the same native document core as the iOS package, without replacing local saves.
+    // Desktop local saves reuse the document core's coordination boundary through a narrow C bridge.
     let document_core =
         PathBuf::from("../../../packages/apple-document-store/Sources/PolarbearDocumentStore");
     println!("cargo:rerun-if-changed={}", document_core.display());

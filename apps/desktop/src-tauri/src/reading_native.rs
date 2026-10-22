@@ -93,7 +93,7 @@ pub async fn begin_document_copy(
     #[cfg(target_os = "macos")]
     {
         let text = std::ffi::CString::new(markdown).map_err(|_| failure("invalidInput"))?;
-        return on_main(app, move || {
+        on_main(app, move || {
             let count = unsafe { polarbear_clipboard_begin(text.as_ptr()) };
             if count < 0 {
                 Err(failure("clipboardChanged"))
@@ -101,7 +101,7 @@ pub async fn begin_document_copy(
                 Ok(count)
             }
         })
-        .await;
+        .await
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -122,14 +122,14 @@ pub async fn write_document_copy(
     #[cfg(target_os = "macos")]
     {
         let json = std::ffi::CString::new(json).map_err(|_| failure("invalidInput"))?;
-        return on_main(app, move || {
+        on_main(app, move || {
             match unsafe { polarbear_clipboard_write(json.as_ptr()) } {
                 0 => Ok(()),
                 1 => Err(failure("clipboardChanged")),
                 _ => Err(failure("clipboardWriteFailed")),
             }
         })
-        .await;
+        .await
     }
     #[cfg(not(target_os = "macos"))]
     {

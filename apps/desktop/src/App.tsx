@@ -145,7 +145,7 @@ import {
   writeMarkdownFile,
   type MarkdownSaveResult,
 } from "./features/workspace/tauriWorkspaceAdapter";
-import { workspaceDocumentSaveConflict } from "./features/workspace/workspaceSaveError";
+import { workspaceDocumentSaveConflict, workspaceSaveFailureKey } from "./features/workspace/workspaceSaveError";
 import { openNewAppWindow } from "./shared/tauri/openNewAppWindow";
 import { useI18n } from "./shared/i18n/I18nProvider";
 import {
@@ -299,6 +299,8 @@ export function App() {
   const [workspaceItems, setWorkspaceItems] = useState(initialWorkspace);
   const [workspaceItemsByRoot, setWorkspaceItemsByRoot] = useState<Record<string, WorkspaceItem[]>>({});
   const [documents, setDocuments] = useState(initialDocuments);
+  const savesInProgressRef = useRef(new Set<string>());
+  const getCurrentDocument = useEventCallback((fileId: string) => documents[fileId]);
   const [documentRevisions, setDocumentRevisions] = useState<Record<string, string>>({});
   const [activeFileId, setActiveFileId] = useState("untitled:1");
   const [openFileIds, setOpenFileIds] = useState<string[]>(["untitled:1"]);
@@ -487,6 +489,11 @@ export function App() {
 
   const reportDocumentSaveError = useCallback(
     (error: unknown, document: ExternalDocumentReference) => {
+      const failureKey = workspaceSaveFailureKey(error);
+      if (failureKey) {
+        setStatusMessage(t(failureKey, { path: document.relativePath }));
+        return;
+      }
       const reason = workspaceDocumentSaveConflict(error);
 
       if (reason) {
@@ -572,9 +579,13 @@ export function App() {
       status: "busy",
     }));
   }, []);
+  const handleRepositoryProgressError = useEventCallback(() => {
+    setStatusMessage(t("status.syncProgressUnavailable"));
+  });
   useRepositorySyncProgress({
     busyRef: repositoryBusyRef,
     onProgress: handleRepositorySyncProgress,
+    onError: handleRepositoryProgressError,
   });
 
   const markdownContent = documents[activeFileId] ?? "";
@@ -2637,7 +2648,7 @@ export function App() {
     });
   };
 
-  const saveTab = async (fileId: string): Promise<string | null> => {
+  const performSaveTab = async (fileId: string): Promise<string | null> => {
     const content = documents[fileId] ?? "";
     const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
     const tabItem = findWorkspaceItem(workspaceItems, relativePath);
@@ -2667,6 +2678,9 @@ export function App() {
         workspaceRoot: workspacePath,
       });
       const items = await listWorkspaceFiles(workspacePath);
+      const currentContent = getCurrentDocument(fileId);
+      if (currentContent === undefined) return null;
+      const stillDirty = currentContent !== content;
 
       setWorkspaceRoot(workspacePath);
       setWorkspaceItems(items);
@@ -2677,7 +2691,7 @@ export function App() {
       setDocuments((currentDocuments) => {
         const nextDocuments = { ...currentDocuments };
         delete nextDocuments[fileId];
-        nextDocuments[nextDocumentId] = content;
+        nextDocuments[nextDocumentId] = currentDocuments[fileId] ?? currentContent;
         return nextDocuments;
       });
       setDocumentRevisions((currentRevisions) => {
@@ -2717,11 +2731,12 @@ export function App() {
       setDirtyFileIds((currentDirtyFileIds) => {
         const nextDirtyFileIds = new Set(currentDirtyFileIds);
         nextDirtyFileIds.delete(fileId);
+        if (stillDirty) nextDirtyFileIds.add(nextDocumentId);
         return nextDirtyFileIds;
       });
       lastSavedFileIdRef.current = nextDocumentId;
-      setStatusMessage(t("status.savedPath", { path: relativePath }));
-      return nextDocumentId;
+      setStatusMessage(t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: relativePath }));
+      return stillDirty ? null : nextDocumentId;
     }
 
     const tabWorkspaceRoot = documentWorkspaceRootForId(
@@ -2752,18 +2767,39 @@ export function App() {
       });
       return null;
     }
+    const currentContent = getCurrentDocument(fileId);
+    if (currentContent === undefined) return null;
+    const stillDirty = currentContent !== content;
     setDocumentRevisions((currentRevisions) => ({
       ...currentRevisions,
       [fileId]: saved.revision,
     }));
     setDirtyFileIds((currentDirtyFileIds) => {
       const nextDirtyFileIds = new Set(currentDirtyFileIds);
-      nextDirtyFileIds.delete(fileId);
+      if (stillDirty) nextDirtyFileIds.add(fileId);
+      else nextDirtyFileIds.delete(fileId);
       return nextDirtyFileIds;
     });
     lastSavedFileIdRef.current = fileId;
-    setStatusMessage(t("status.savedPath", { path: tabRelativePath }));
-    return fileId;
+    setStatusMessage(t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: tabRelativePath }));
+    return stillDirty ? null : fileId;
+  };
+
+  const saveTab = async (fileId: string): Promise<string | null> => {
+    if (savesInProgressRef.current.has(fileId)) return null;
+    savesInProgressRef.current.add(fileId);
+    try {
+      return await performSaveTab(fileId);
+    } catch (error) {
+      reportDocumentSaveError(error, {
+        fileId,
+        relativePath: documentRelativePathForId(fileId, documentRelativePaths),
+        workspaceRoot: documentWorkspaceRootForId(fileId, documentWorkspaceRoots, workspaceRoot) ?? "",
+      });
+      return null;
+    } finally {
+      savesInProgressRef.current.delete(fileId);
+    }
   };
 
   const closeTab = async (fileId: string) => {
@@ -2924,50 +2960,12 @@ export function App() {
       return saveActiveFileAs();
     }
 
-    const saveWorkspaceRoot = documentWorkspaceRootForId(
-      activeFileId,
-      documentWorkspaceRoots,
-      workspaceRoot,
-    );
-    const saveRelativePath = documentRelativePathForId(activeFileId, documentRelativePaths);
-
-    if (!saveWorkspaceRoot) {
-      setStatusMessage(t("status.openWorkspaceBeforeSave"));
-      return false;
-    }
-
     if (!activeFileId) {
       setStatusMessage(t("status.selectDocumentBeforeSave"));
       return false;
     }
 
-    try {
-      const saved = await saveMarkdownFile({
-        workspaceRoot: saveWorkspaceRoot,
-        relativePath: saveRelativePath,
-        markdownContent,
-        expectedRevision: documentRevisions[activeFileId],
-      });
-      setDocumentRevisions((currentRevisions) => ({
-        ...currentRevisions,
-        [activeFileId]: saved.revision,
-      }));
-      setDirtyFileIds((currentDirtyFileIds) => {
-        const nextDirtyFileIds = new Set(currentDirtyFileIds);
-        nextDirtyFileIds.delete(activeFileId);
-        return nextDirtyFileIds;
-      });
-      lastSavedFileIdRef.current = activeFileId;
-      setStatusMessage(t("status.savedPath", { path: saveRelativePath }));
-      return true;
-    } catch (error) {
-      reportDocumentSaveError(error, {
-        fileId: activeFileId,
-        relativePath: saveRelativePath,
-        workspaceRoot: saveWorkspaceRoot,
-      });
-      return false;
-    }
+    return (await saveTab(activeFileId)) !== null;
   };
 
   const saveActiveFileAs = async (): Promise<boolean> => {
@@ -2976,6 +2974,8 @@ export function App() {
       return false;
     }
 
+    if (savesInProgressRef.current.has(activeFileId)) return false;
+    savesInProgressRef.current.add(activeFileId);
     try {
       const defaultFileName = deriveDefaultMarkdownFileName(
         markdownContent,
@@ -3004,6 +3004,9 @@ export function App() {
         workspaceRoot: workspacePath,
       });
       const items = await listWorkspaceFiles(workspacePath);
+      const currentContent = getCurrentDocument(activeFileId);
+      if (currentContent === undefined) return false;
+      const stillDirty = currentContent !== markdownContent;
 
       setWorkspaceRoot(workspacePath);
       setWorkspaceItems(items);
@@ -3014,7 +3017,7 @@ export function App() {
       setDocuments((currentDocuments) => {
         const nextDocuments = { ...currentDocuments };
         delete nextDocuments[activeFileId];
-        nextDocuments[nextDocumentId] = markdownContent;
+        nextDocuments[nextDocumentId] = currentDocuments[activeFileId] ?? currentContent;
         return nextDocuments;
       });
       setDocumentRevisions((currentRevisions) => {
@@ -3048,14 +3051,18 @@ export function App() {
       setDirtyFileIds((currentDirtyFileIds) => {
         const nextDirtyFileIds = new Set(currentDirtyFileIds);
         nextDirtyFileIds.delete(activeFileId);
+        if (stillDirty) nextDirtyFileIds.add(nextDocumentId);
         return nextDirtyFileIds;
       });
       lastSavedFileIdRef.current = nextDocumentId;
-      setStatusMessage(t("status.savedPath", { path: relativePath }));
-      return true;
+      setStatusMessage(t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: relativePath }));
+      return !stillDirty;
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      const failureKey = workspaceSaveFailureKey(error);
+      setStatusMessage(failureKey ? t(failureKey, { path: activeFileName }) : error instanceof Error ? error.message : String(error));
       return false;
+    } finally {
+      savesInProgressRef.current.delete(activeFileId);
     }
   };
 

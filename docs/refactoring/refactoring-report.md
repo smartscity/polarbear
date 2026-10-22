@@ -20,7 +20,7 @@ Base: `22d9e0b`. Repository audit and the bounded, evidence-backed implementatio
 - Removed only the five proven-unused plugin-list/status selectors. Deleted the duplicate widget cache machinery, not model assets or compatibility migrations.
 - Added direct declarations for existing CodeMirror language and Lucide libraries and synchronized lock metadata without changing resolved versions. Added a source dependency/lock consistency check to the existing Desktop test command.
 
-## Validation
+## Audit Batch A-E Validation (Historical)
 
 | Check | Result | Scope |
 | --- | --- | --- |
@@ -46,9 +46,54 @@ Commands used the existing bundled Node executable for `tsc --noEmit`, `eslint s
 
 ## Structural review and remaining work
 
-Session lifetime and cache policy are feature-local owners with actual invariants. No new global singleton, event bus, framework or storage abstraction was introduced. Existing App and native binary responsibilities were not enlarged. Markdown, Engine API, user-setting formats, models and locales remain compatible. Local runtime resource tests do not prove stable RSS or typing latency; those remain unmeasured.
+In batches A-E, session lifetime and cache policy are feature-local owners with actual invariants. No new global singleton, event bus, framework or storage abstraction was introduced in those batches. Existing App and native binary responsibilities were not enlarged. Markdown, Engine API, user-setting formats and models remain compatible. Local runtime resource tests do not prove stable RSS or typing latency; those remain unmeasured.
 
-The next highest-value work is native save metadata/concurrent-writer protection and a behavior-tested document-session extraction. Menu native-resource ownership, table-width identity and massive-document render scheduling require dedicated evidence. Third-party advisory freshness, real microphone/ARM qualification, iPhone devices, installed Engine and signed DMG installation were not verified in this task.
+Native save metadata/concurrent-writer protection and delayed-save snapshot acknowledgment were implemented in the follow-up below. A full behavior-tested document-session extraction, native menu-resource ownership, table-width identity and massive-document render scheduling remain open. Third-party advisory freshness, real microphone/ARM qualification, iPhone devices, installed Engine and signed DMG installation are not inferred from these tests.
+
+## Save Safety Follow-up (Batches F-G, 2026-10-23)
+
+Base: `2bc4339`. Scope: real native save concurrency/permissions, frontend save acknowledgment, and the already-tracked progress-listener lifetime issue. The six pre-existing Feedback changes remain excluded from this batch's commits.
+
+### Test-first diagnosis
+
+- Four temporary-file native regressions failed before production changes: two overlapping save entry points accepted the same revision; `0600` widened to `0644`; read-only content was replaced; macOS xattr/ACL metadata disappeared.
+- A real editor browser test failed because a deferred save cleared the dirty indicator despite subsequent typing.
+- An additional Save As permission test reproduced incorrect generic failure classification when parent-directory creation was denied.
+- Repository progress tests reproduced an unhandled rejected registration and a post-disposal callback. These are now handled and reported through the existing localized status surface.
+
+### Implementation and ownership
+
+- Extracted `document_save.rs` from native main. It owns bounded process-local serialization, revision checking, staging, metadata preservation, final disk revalidation, publication and temporary-file cleanup. A shared Swift bridge reuses `SystemDocumentCoordination`; two actual macOS processes are tested, not just two Rust threads.
+- Both native save entry points and the existing atomic-write callers share this transaction. Create-only, existing-file and replace-or-create policies remain distinct. Existing command IDs, revision format and success payloads are retained.
+- macOS saves preserve POSIX mode/ownership, ACLs and extended attributes. Opening the target without truncation checks its write permissions; parent write access alone no longer permits replacing read-only content. Failures do not clear the editor buffer.
+- Ordinary save and save-before-close use one frontend path. An in-flight guard prevents duplicate stale requests. Acknowledgment compares the saved snapshot with current content; Save As preserves subsequent input while changing identity. Newer edits remain dirty and block save-driven close/quit.
+- Permission and uncertain directory-sync outcomes have stable error codes and matching EN/ZH messages. A sync-progress subscription error does not masquerade as an operation result.
+- No dependency installation, data migration, editor redesign, Memory database access or caption gate relaxation.
+
+### Current-run validation
+
+| Check | Result | Boundary |
+| --- | --- | --- |
+| Desktop typecheck / ESLint | PASS | Existing frontend plus new save/error/subscription paths |
+| Desktop Vitest | PASS: 51 files, 249 tests | New error mapping and three subscription regressions |
+| Desktop Playwright | PASS: 36 tests | Three new save cases; actual editor/UI with mocked native IPC; existing translation, caption, Mermaid and Context coverage retained |
+| Desktop Node scripts | PASS: 26 tests | Asset, process-protocol, artifact-path and dependency-ownership checks |
+| Desktop Vite production build | PASS | Existing large-chunk warning remains |
+| Shared Swift package | PASS: 29 tests | Compiled new bridge and ran existing coordinated-document suite on macOS x86_64 |
+| Generated Memory Admin contract | PASS | No drift from canonical contract |
+| Desktop native suite | PASS: 48 tests; 2 direct invocations ignored | Includes 13 new save regressions. The ignored subprocess fixture is invoked successfully twice by its parent test; the real Memory Engine test remains unrun |
+| Rust formatting | PASS | Only touched native files formatted; whole-workspace check passed |
+| Strict native Clippy | PASS | `cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml --bin polarbear-desktop -- -D warnings` |
+
+Native file-coordination tests require macOS coordination-service access. An initial sandboxed attempt rejected the coordinator before reaching file IO; rerunning with that service accessible exercised the production implementation. No fallback disabling coordination was added to make tests pass.
+
+Strict Clippy initially found two pre-existing redundant returns in the macOS clipboard bridge. Those tail expressions were cleaned without changing clipboard behavior; the final strict check passed with zero warnings. The shared Swift package was rerun, but iOS browser/device suites were not rerun in this save-only follow-up.
+
+### Remaining boundaries
+
+The [owning save contract](file-save-safety.md) explicitly distinguishes cooperating macOS writers from non-cooperating external tools. The final recheck does not eliminate the last filesystem race window. Power-loss/ENOSPC fault injection, orphan-staging recovery, Windows/Linux ACL parity, and installed signed-DMG acceptance are not verified. A local write followed by sync-outbox failure remains a separately tracked acknowledgment issue (TD-23). Full App session extraction and the other OPEN debt entries are not labeled complete.
+
+Manual save acceptance: open the same document in two windows, save divergent edits and verify the conflict; save a `chmod 600` fixture and verify permissions; try a read-only fixture and confirm the tab remains dirty; type while saving/Save As and verify the newer text survives and requires another save. Use disposable copies for permission tests.
 
 ## Manual follow-up
 

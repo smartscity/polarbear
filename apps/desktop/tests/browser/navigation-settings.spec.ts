@@ -42,6 +42,98 @@ async function nativeFixture(page: Page) {
   });
 }
 
+test("retains edits made while a document save is pending", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "save_markdown_file") return new Promise((resolve) => {
+        (window as any).__saveCount = ((window as any).__saveCount ?? 0) + 1;
+        (window as any).__pendingSave = { args, resolve: () => resolve({ revision: "saved-first" }) };
+      });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Save.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Save.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" first edit");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => !!(window as any).__pendingSave)).toBe(true);
+  await page.keyboard.press("ControlOrMeta+s");
+  expect(await page.evaluate(() => (window as any).__saveCount)).toBe(1);
+  await page.keyboard.type(" newer unsaved edit");
+  await page.evaluate(() => (window as any).__pendingSave.resolve());
+  await expect(page.locator(".workspace-status")).toContainText(/Saved|saved/);
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await expect(editor).toContainText("newer unsaved edit");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__pendingSave.args.expectedRevision)).toBe("saved-first");
+  await page.evaluate(() => (window as any).__pendingSave.resolve());
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(0);
+});
+
+test("preserves newer text and its dirty state when Save As replaces the document identity", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/test/Renamed.md");
+      if (command === "write_markdown_file") return new Promise((resolve) => {
+        (window as any).__pendingSaveAs = () => resolve({ revision: "saved-as" });
+      });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Original.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Original.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" before save as");
+  await page.keyboard.press("ControlOrMeta+Shift+s");
+  await expect.poll(() => page.evaluate(() => !!(window as any).__pendingSaveAs)).toBe(true);
+  await page.keyboard.type(" after save as");
+  await page.evaluate(() => (window as any).__pendingSaveAs());
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Renamed.md" })).toBeVisible();
+  await expect(editor).toContainText("after save as");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
+test("keeps the document open and dirty when saving before close is denied", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|message") return Promise.resolve("Yes");
+      if (command === "save_markdown_file") return Promise.reject({ code: "workspace.permissionDenied", message: "EACCES" });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Private.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Private.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("pending text ");
+  await page.getByRole("button", { name: "Close Private.md", exact: true }).click();
+  await expect(page.locator(".workspace-status")).toContainText("not writable");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await expect(editor).toContainText("pending text");
+});
+
 test("opens Workspace on launch and reload even after visiting Context", async ({ page }) => {
   await nativeFixture(page); await page.goto("/");
   await expect(page.locator(".activity-rail button").first()).toHaveAttribute("aria-pressed", "true", { timeout: 15000 });

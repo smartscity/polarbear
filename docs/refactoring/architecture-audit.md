@@ -18,6 +18,8 @@ flowchart TD
   Features --> IPC[Feature adapters and shared invokeTauri]
   IPC --> Native[Rust command entrypoints]
   Native --> Storage[Workspace files, sync SQLite, caption SQLite, vocab outbox]
+  Native --> Save[Native document save transaction]
+  Save --> DocumentStore
   Native --> Admin[Versioned Memory Admin API]
   Native --> Mac[Swift clipboard, speech and audio capture]
   Native --> ASR[Caption helper process]
@@ -68,11 +70,12 @@ No source file, model, locale, compatibility migration or dependency was proven 
 
 ## Risks requiring separate protection
 
-- `main.rs::save_markdown_file_content` checks revision, then replaces the file. Atomic rename protects against partial writes, not a concurrent external writer between read and replace. `atomic_write` creates a fresh inode without explicitly preserving existing mode/ACL metadata. Coordinate filesystem semantics and add real multi-writer/permissions tests before changing this contract.
+- Native save risks were reproduced and addressed in follow-up batch F. `document_save::save` now owns serialized/coordinated version checking, staging, macOS metadata preservation, final recheck and publication. See [the owning save contract](file-save-safety.md) for cooperative-writer guarantees and the remaining non-cooperating writer/power-loss limits.
+- A pending frontend save also cleared dirty state for newer input, and Save As replaced that input with its older snapshot. Browser regressions now protect snapshot-aware acknowledgment and identity transitions. Full App document-session extraction remains separate work.
 - `App::selectFile` updates active tab state before load success. Add delayed load/failure/tab-switch tests before extracting a document session controller.
 - `useNativeAppMenu` rebuilds native objects on dependency changes without explicit disposal. Native resource ownership needs Tauri resource-table measurement before claiming a leak or changing menu lifetime.
 - `tableLayoutState` is module-global and has no document disposal API. Document identity, width retention and undo expectations need tests before changing keys or eviction.
-- Repository progress registration has no rejection handler. Decide the diagnostics surface; do not hide registration failure with a no-op catch.
+- Repository progress registration failures now reach the existing localized status surface, and disposed registrations cannot deliver stale progress. This was reproduced before the batch G fix; sync success/failure remains owned by the operation, not the progress subscription.
 - Caption ingress is bounded, first failure seals the epoch, and `EngineProcess::drop` kills/reaps the helper. These protections must remain. This audit does not requalify ASR accuracy, latency, Intel/ARM parity or microphone permission behavior.
 - iOS import/read flows and Desktop localStorage updates have separate concurrency concerns. Do not merge native document coordination and simple UI preferences into one generic storage service.
 

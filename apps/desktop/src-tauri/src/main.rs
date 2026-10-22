@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
-use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -12,6 +11,7 @@ use tauri::{Emitter, Manager};
 
 mod app_zoom;
 mod cloud_sync_store;
+mod document_save;
 mod ipc_contracts;
 mod live_caption;
 mod memory_admin;
@@ -1318,23 +1318,12 @@ fn save_markdown_file_content(
         ));
     }
 
-    let current_content = fs::read(&path).map_err(|error| {
-        if error.kind() == std::io::ErrorKind::NotFound {
-            WorkspaceSaveError::document_missing()
-        } else {
-            WorkspaceSaveError::unexpected(error.to_string())
-        }
-    })?;
-    if let Some(expected_revision) = expected_revision {
-        if content_revision(&current_content) != expected_revision {
-            return Err(WorkspaceSaveError::document_changed());
-        }
-    }
-
-    atomic_write(&path, markdown_content.as_bytes()).map_err(WorkspaceSaveError::unexpected)?;
-    Ok(MarkdownSaveResponseDto {
-        revision: content_revision(markdown_content.as_bytes()),
-    })
+    document_save::save(
+        &path,
+        markdown_content.as_bytes(),
+        expected_revision,
+        document_save::SaveTarget::Existing,
+    )
 }
 
 #[tauri::command]
@@ -1352,27 +1341,15 @@ fn write_markdown_file(
     }
 
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| WorkspaceSaveError::unexpected(error.to_string()))?;
+        fs::create_dir_all(parent).map_err(document_save::save_error)?;
     }
 
-    if let Some(expected_revision) = expected_revision {
-        let current_content = fs::read(&path).map_err(|error| {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                WorkspaceSaveError::document_missing()
-            } else {
-                WorkspaceSaveError::unexpected(error.to_string())
-            }
-        })?;
-        if content_revision(&current_content) != expected_revision {
-            return Err(WorkspaceSaveError::document_changed());
-        }
-    }
-
-    atomic_write(&path, markdown_content.as_bytes()).map_err(WorkspaceSaveError::unexpected)?;
-    Ok(MarkdownSaveResponseDto {
-        revision: content_revision(markdown_content.as_bytes()),
-    })
+    document_save::save(
+        &path,
+        markdown_content.as_bytes(),
+        expected_revision.as_deref(),
+        document_save::SaveTarget::ReplaceOrCreate,
+    )
 }
 
 fn read_markdown_document(path: &Path) -> Result<MarkdownDocumentDto, String> {
@@ -1384,43 +1361,18 @@ fn read_markdown_document(path: &Path) -> Result<MarkdownDocumentDto, String> {
 }
 
 fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| "The target file does not have a parent directory.".to_owned())?;
-    let file_name = path
-        .file_name()
-        .and_then(|value| value.to_str())
-        .ok_or_else(|| "The target file name is invalid.".to_owned())?;
-    let temporary_path = parent.join(format!(
-        ".{file_name}.polarbear-{}-{}.tmp",
-        std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_nanos())
-            .unwrap_or_default(),
-    ));
-
-    let result = (|| -> Result<(), String> {
-        let mut temporary_file = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temporary_path)
-            .map_err(|error| error.to_string())?;
-        temporary_file
-            .write_all(content)
-            .map_err(|error| error.to_string())?;
-        temporary_file
-            .sync_all()
-            .map_err(|error| error.to_string())?;
-        fs::rename(&temporary_path, path).map_err(|error| error.to_string())
-    })();
-
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary_path);
-    }
-
-    result
+    document_save::save(
+        path,
+        content,
+        None,
+        document_save::SaveTarget::ReplaceOrCreate,
+    )
+    .map(|_| ())
+    .map_err(|error| error.message)
 }
+
+#[cfg(test)]
+mod save_regression_tests;
 
 #[tauri::command]
 fn create_markdown_file(workspace_root: String, relative_path: String) -> Result<(), String> {
@@ -1438,7 +1390,14 @@ fn create_markdown_file(workspace_root: String, relative_path: String) -> Result
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
 
-    atomic_write(&path, b"# Untitled\n\nStart writing in Polarbear.\n")
+    document_save::save(
+        &path,
+        b"# Untitled\n\nStart writing in Polarbear.\n",
+        None,
+        document_save::SaveTarget::CreateNew,
+    )
+    .map(|_| ())
+    .map_err(|error| error.message)
 }
 
 #[tauri::command]
