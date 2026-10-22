@@ -29,6 +29,7 @@ export function Sidebar({
   dirtyFileIds,
   folderRevealRequest,
   sidebarOpen,
+  statusMessage,
   workspaceRoot,
   workspaceItems,
   executeCommand,
@@ -61,6 +62,7 @@ export function Sidebar({
         onSelectTreeItem={onSelectTreeItem}
       />
       <div className="sidebar-bottom">
+        {statusMessage && <p className="workspace-status" role="status">{statusMessage}</p>}
         <RecentDocuments onOpen={onOpenRecent} />
         <span className="workspace-path" title={workspaceRoot}>
           {workspaceRoot || ""}

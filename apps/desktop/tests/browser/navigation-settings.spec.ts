@@ -67,6 +67,8 @@ test("reopens recent documents through native access and retains unavailable ent
   await page.reload();
   await expect(recent.locator("li")).toHaveCount(2);
   await recent.getByRole("button", { name: /missing.md/ }).first().click();
+  await expect(page.locator(".workspace-status")).toContainText("File not found");
+  await page.screenshot({ path: "test-results/workspace-operation-feedback.png" });
   await expect(recent.getByRole("alert")).toContainText("Cannot open missing.md");
   await recent.getByRole("button", { name: "Remove missing.md from history", exact: true }).click();
   await expect(recent.locator("li")).toHaveCount(1);
@@ -202,4 +204,51 @@ test("rejects an older refresh response after a newer Context save", async ({ pa
   await expect(page.locator("output")).toContainText('"captureMode":"off"');
   await page.reload();
   await expect(page.locator("output")).toContainText('"captureMode":"off"');
+});
+
+test("discards a pending Context save when switching to another workspace", async ({ page }) => {
+  await nativeFixture(page); await page.goto("/tests/browser/navigation.html?probe");
+  await expect(page.locator("output")).toContainText('"captureMode":"manual"');
+  await page.evaluate(() => {
+    const w = window as any;
+    const invoke = w.__TAURI_INTERNALS__.invoke;
+    w.__TAURI_INTERNALS__.invoke = (command: string, args: any) => args?.method === "projects.config_update"
+      ? new Promise((resolve) => { w.__finishSave = () => resolve(args.params); }) : invoke(command, args);
+    w.__pendingSave = w.__contextSession.updateConfig({ ...w.__contextSession.config, captureMode: "off" });
+    w.__selectWorkspace("/test/other");
+  });
+  await expect(page.locator("output")).toContainText('"loading":false');
+  await page.evaluate(async () => { const w = window as any; w.__finishSave(); await w.__pendingSave; });
+  await expect(page.locator("output")).toContainText('"captureMode":"manual"');
+  await expect(page.locator("output")).toContainText('"mutating":false');
+});
+
+test("keeps Context busy until every current operation finishes", async ({ page }) => {
+  await nativeFixture(page); await page.goto("/tests/browser/navigation.html?probe");
+  await expect(page.locator("output")).toContainText('"captureMode":"manual"');
+  await page.evaluate(() => {
+    const w = window as any; const invoke = w.__TAURI_INTERNALS__.invoke;
+    w.__finishes = [];
+    w.__TAURI_INTERNALS__.invoke = (command: string, args: any) => args?.method === "memories.history"
+      ? new Promise((resolve) => w.__finishes.push(() => resolve({ items: [] }))) : invoke(command, args);
+    w.__first = w.__contextSession.loadMemoryHistory("a");
+    w.__second = w.__contextSession.loadMemoryHistory("b");
+  });
+  await expect(page.locator("output")).toContainText('"mutating":true');
+  await page.evaluate(async () => { const w = window as any; w.__finishes[0](); await w.__first; });
+  await expect(page.locator("output")).toContainText('"mutating":true');
+  await page.evaluate(async () => { const w = window as any; w.__finishes[1](); await w.__second; });
+  await expect(page.locator("output")).toContainText('"mutating":false');
+});
+
+test("does not carry an unsaved Context draft into a different workspace", async ({ page }) => {
+  await nativeFixture(page); await page.goto("/tests/browser/navigation.html");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("combobox", { name: "Capture mode" }).selectOption("off");
+  await expect(page.getByRole("button", { name: "Save settings" })).toBeEnabled();
+  await page.getByRole("button", { name: "Switch workspace", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Capture mode" })).toBeEnabled();
+  await expect(page.getByRole("combobox", { name: "Capture mode" })).toHaveValue("manual");
+  await expect(page.getByRole("button", { name: "Save settings" })).toBeDisabled();
 });

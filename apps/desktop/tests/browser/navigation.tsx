@@ -7,12 +7,15 @@ import "../../src/styles.css";
 
 function Harness() {
   const [visible, setVisible] = useState(true);
+  const [workspace, setWorkspace] = useState("/test/project");
   return <><button onClick={() => setVisible(!visible)}>Switch surface</button>
-    {visible && <ContextWorkspace documentContext={null} workspaceRoot="/test/project" onOpenSource={() => {}} onOpenWorkspace={() => {}} />}</>;
+    <button onClick={() => setWorkspace("/test/other")}>Switch workspace</button>
+    {visible && <ContextWorkspace documentContext={null} workspaceRoot={workspace} onOpenSource={() => {}} onOpenWorkspace={() => {}} />}</>;
 }
 function SessionProbe() {
-  const session = useContextOsSession("/test/project");
-  useEffect(() => { Object.assign(window, { __contextSession: session }); }, [session]);
-  return <output>{JSON.stringify(session.config)}</output>;
+  const [workspace, setWorkspace] = useState("/test/project");
+  const session = useContextOsSession(workspace);
+  useEffect(() => { Object.assign(window, { __contextSession: session, __selectWorkspace: setWorkspace }); }, [session]);
+  return <output>{JSON.stringify({ config: session.config, loading: session.isLoading, mutating: session.isMutating, error: session.error })}</output>;
 }
 createRoot(document.getElementById("root")!).render(<I18nProvider>{location.search.includes("probe") ? <SessionProbe /> : <Harness />}</I18nProvider>);

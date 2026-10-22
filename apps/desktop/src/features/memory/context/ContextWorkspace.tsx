@@ -24,7 +24,12 @@ type ContextWorkspaceProps = {
   onOpenWorkspace: () => void;
 };
 
-export function ContextWorkspace({
+export function ContextWorkspace(props: ContextWorkspaceProps) {
+  // Drafts, selected memories and pending UI actions belong to one project.
+  return <ContextWorkspaceSession key={props.workspaceRoot} {...props} />;
+}
+
+function ContextWorkspaceSession({
   documentContext,
   workspaceRoot,
   onOpenSource,

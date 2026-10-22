@@ -16,13 +16,29 @@ export function readSettings(): ReadingSettings {
 }
 export function saveSettings(settings: ReadingSettings): void { localStorage.setItem(KEYS.settings, JSON.stringify(settings)); }
 export function readPositions(): Record<string, ReadingPosition> {
-  try { const value: unknown = JSON.parse(localStorage.getItem(KEYS.positions) ?? "{}"); return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, ReadingPosition> : {}; }
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(KEYS.positions) ?? "{}");
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.entries(value).flatMap(([id, record]) => {
+      const position = parsePosition(record);
+      return position ? [[id, position]] : [];
+    }));
+  }
   catch { return {}; }
 }
 export function readPosition(id: string): ReadingPosition | null {
-  const p = readPositions()[id];
-  return p && Number.isFinite(p.ratio) && Number.isFinite(p.offset) && (p.anchor === null || typeof p.anchor === "string")
-    ? { ...p, ratio: Math.max(0, Math.min(1, p.ratio)) } : null;
+  const positions = readPositions();
+  return Object.hasOwn(positions, id) ? positions[id] : null;
+}
+
+function parsePosition(value: unknown): ReadingPosition | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const p = value as Partial<ReadingPosition>;
+  if (typeof p.ratio !== "number" || !Number.isFinite(p.ratio)
+    || typeof p.offset !== "number" || !Number.isFinite(p.offset)
+    || typeof p.openedAt !== "number" || !Number.isFinite(p.openedAt) || p.openedAt < 0
+    || (p.anchor !== null && typeof p.anchor !== "string")) return null;
+  return { anchor: p.anchor, ratio: Math.max(0, Math.min(1, p.ratio)), offset: Math.max(0, p.offset), openedAt: p.openedAt };
 }
 export function savePosition(id: string, position: ReadingPosition): void {
   const recent = Object.entries({ ...readPositions(), [id]: position }).sort(([, a], [, b]) => b.openedAt - a.openedAt).slice(0, 500);
