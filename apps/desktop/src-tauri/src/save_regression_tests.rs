@@ -45,6 +45,105 @@ impl Drop for Workspace {
 }
 
 #[test]
+fn outbox_failure_acknowledges_the_committed_revision_and_allows_the_next_save() {
+    let workspace = Workspace::new();
+    // A directory at the SQLite path deterministically fails without touching user data.
+    let invalid_database = workspace.0.join("outbox.sqlite");
+    fs::create_dir(&invalid_database).unwrap();
+    let saved = super::save_markdown_file_with_outbox(
+        workspace.root(),
+        "note.md",
+        "committed",
+        Some(&content_revision(b"original")),
+        || {
+            super::cloud_sync_store::queue_outbox_path(
+                &invalid_database,
+                workspace.root(),
+                "note.md",
+                "upload",
+            )
+        },
+    );
+    assert_eq!(fs::read_to_string(workspace.path()).unwrap(), "committed");
+    let saved = saved.expect("outbox failure must not reject a committed local save");
+    assert_eq!(saved.revision, content_revision(b"committed"));
+    let payload = serde_json::to_value(&saved).unwrap();
+    assert_eq!(payload["warning"], "workspace.syncQueueUnavailable");
+    let next = super::save_markdown_file_with_outbox(
+        workspace.root(),
+        "note.md",
+        "next edit",
+        Some(&saved.revision),
+        || Ok(()),
+    )
+    .unwrap();
+    assert_eq!(next.revision, content_revision(b"next edit"));
+    assert!(serde_json::to_value(next).unwrap().get("warning").is_none());
+}
+
+#[test]
+fn a_rejected_local_save_does_not_enqueue_sync_work() {
+    let workspace = Workspace::new();
+    let error = super::save_markdown_file_with_outbox(
+        workspace.root(),
+        "note.md",
+        "stale",
+        Some("stale revision"),
+        || panic!("sync work must only follow a committed save"),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, "workspace.documentChanged");
+    assert_eq!(fs::read_to_string(workspace.path()).unwrap(), "original");
+}
+
+#[test]
+fn successful_outbox_write_preserves_the_legacy_success_shape() {
+    let workspace = Workspace::new();
+    let database = workspace.0.join("outbox.sqlite");
+    let binding = super::RepositoryBindingDto {
+        workspace_ref: workspace.root().to_owned(),
+        provider: "github".to_owned(),
+        owner: "fixture".to_owned(),
+        repo: "fixture".to_owned(),
+        branch: "main".to_owned(),
+        remote_path: String::new(),
+        base_url: None,
+        last_sync_commit_sha: None,
+        last_sync_at: None,
+        has_synced: false,
+        manifest: Default::default(),
+    };
+    super::cloud_sync_store::replace_bindings(
+        &database,
+        &[(workspace.root().to_owned(), binding)]
+            .into_iter()
+            .collect(),
+    )
+    .unwrap();
+    let saved =
+        super::save_markdown_file_with_outbox(workspace.root(), "note.md", "saved", None, || {
+            super::cloud_sync_store::queue_outbox_path(
+                &database,
+                workspace.root(),
+                "note.md",
+                "upload",
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(saved).unwrap(),
+        serde_json::json!({"revision": content_revision(b"saved")})
+    );
+    assert_eq!(
+        super::cloud_sync_store::read_outbox(&database, workspace.root())
+            .unwrap()
+            .get("note.md")
+            .unwrap(),
+        "upload"
+    );
+}
+
+#[test]
 fn concurrent_workspace_and_absolute_saves_commit_only_one_revision() {
     let workspace = Workspace::new();
     let root = workspace.root().to_owned();

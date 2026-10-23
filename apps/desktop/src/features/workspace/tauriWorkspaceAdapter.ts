@@ -32,6 +32,7 @@ export type MarkdownDocument = {
 
 export type MarkdownSaveResult = {
   revision: string;
+  warning?: "workspace.syncQueueUnavailable";
 };
 
 export type MarkdownFileRevision = {

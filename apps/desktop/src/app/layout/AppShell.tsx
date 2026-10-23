@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { ExecuteAppCommand } from "../../shared/commands/appCommandTypes";
 import type { WorkspaceItem } from "../../features/workspace/workspaceModel";
+import type { DocumentOpenResult } from "../../features/workspace/documentNavigation";
 import type { DocumentStructureItem } from "../../features/editor/documentModel";
 import { Sidebar } from "./Sidebar";
 import { StatusBar } from "./StatusBar";
@@ -40,7 +41,7 @@ type AppShellProps = {
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectDocumentStructureItem: (position: number) => void;
   onSelectFile: (fileId: string) => void;
-  onOpenRecent: (path: string) => Promise<boolean>;
+  onOpenRecent: (path: string) => Promise<DocumentOpenResult>;
   onSelectTab: (tabId: string) => void;
   onSelectTreeItem: (itemId: string) => void;
   onSidebarClose: () => void;

@@ -91,9 +91,43 @@ Strict Clippy initially found two pre-existing redundant returns in the macOS cl
 
 ### Remaining boundaries
 
-The [owning save contract](file-save-safety.md) explicitly distinguishes cooperating macOS writers from non-cooperating external tools. The final recheck does not eliminate the last filesystem race window. Power-loss/ENOSPC fault injection, orphan-staging recovery, Windows/Linux ACL parity, and installed signed-DMG acceptance are not verified. A local write followed by sync-outbox failure remains a separately tracked acknowledgment issue (TD-23). Full App session extraction and the other OPEN debt entries are not labeled complete.
+The [owning save contract](file-save-safety.md) explicitly distinguishes cooperating macOS writers from non-cooperating external tools. The final recheck does not eliminate the last filesystem race window. Power-loss/ENOSPC fault injection, orphan-staging recovery, Windows/Linux ACL parity, and installed signed-DMG acceptance are not verified. TD-23 was still open at the end of F-G and is addressed by batch H below. Full App session extraction and the other OPEN debt entries are not labeled complete.
 
 Manual save acceptance: open the same document in two windows, save divergent edits and verify the conflict; save a `chmod 600` fixture and verify permissions; try a read-only fixture and confirm the tab remains dirty; type while saving/Save As and verify the newer text survives and requires another save. Use disposable copies for permission tests.
+
+## Save Acknowledgment and Navigation Follow-up (H-I, 2026-10-23)
+
+Base: `0a9fde6` / `v0.10.6`. Scope remains document safety and existing lifecycle debt. The six unrelated Feedback edits are preserved and excluded from the commit.
+
+### Test-first evidence and changes
+
+- A real SQLite failure fixture first proved that committed bytes were followed by a rejected save response. `save_markdown_file_with_outbox` now returns the committed revision plus an optional typed warning. Local failure still skips queue work. A real healthy binding/outbox fixture verifies the legacy warning-free response and persisted upload row; a subsequent save accepts the revision from the warned save.
+- Browser tests first reproduced the missing queue warning and duplicate pending save through Sync. `saveWorkspaceDocuments` now owns batch preflight, delegates to the existing guarded `saveTab`, and checks intervening edits without mutating editor state. Six unit scenarios cover pending/denied saves, earlier-document edits, newly dirty files, deferred dirty markers and removed buffers.
+- Browser tests first reproduced phantom tabs after read failure, stale recent-file completion after new-tab navigation, and workspace replacement losing unsaved drafts. `DocumentNavigation` owns only per-window result acceptance. File-tree reads finish before tab activation; superseded recent-file reads are not reported as missing; workspace replacement prepares data before committing and rejects unsaved buffers. See [the navigation contract](document-navigation.md).
+- No changes to Markdown, stored revision format, Memory contracts, database schema, dependencies or caption thresholds. EN/ZH resources and owning architecture/debt documents are synchronized.
+
+### Validation for this follow-up
+
+| Check | Result | Scope |
+| --- | --- | --- |
+| Desktop TypeScript / ESLint | PASS | Zero errors, including optional save warning and cancelled navigation result |
+| Desktop Vitest | PASS: 53 files / 257 tests | Eight additional preflight/navigation-owner tests |
+| Desktop Playwright | PASS: 41 tests, sequential full run | Five additional save/navigation cases; existing real offline translation and Mermaid image checks retained |
+| Desktop native tests | PASS: 51; 2 default ignores | Three additional commit/outbox tests; subprocess coordination fixture is explicitly exercised by its parent |
+| Real Memory Engine integration | PASS: 1 explicit ignored-test invocation | Descriptor install/launch, source registration, capture, shutdown/restart, search/resolve and stale-source exclusion through Admin API |
+| Node script tests | PASS: 26 | Existing packaging/process/dependency checks |
+| Desktop production build | PASS | Existing large-chunk warnings remain; no performance claim |
+| Rust format / strict Clippy / generated Admin contract | PASS | No production warnings or contract drift |
+
+The first combined browser attempt failed during trace cleanup because two Playwright invocations shared the output directory. The final complete run was sequential, with all 41 tests passing and no relaxed assertion. The new healthy-outbox fixture initially omitted its required repository binding; the fixture was corrected to establish a real binding rather than bypassing the foreign key.
+
+The real Engine run used Node `v24.19.0` and the existing local `polarbear-memory/dist/cli.js` (entrypoint SHA-256 `ca000939d8dda7ee1fe076272d932d6fd5d375294a93eb48240fccce49c68f25`). Its temporary HOME, data store and project were removed after shutdown. No user Engine database was accessed by Desktop, no production service was stopped, and no Engine source was modified. This verifies that local build, not every published Engine version or installed GUI environment.
+
+Shared Swift and iOS suites were not rerun in H-I because no shared/native Apple storage implementation changed. Installed DMG acceptance, power-loss/ENOSPC, non-cooperating writers, Windows/Linux ACL parity, menu resources, table metadata lifetime and full document-session extraction remain open. The new navigation owner is not a replacement for testing external reload/rename/Save As generations.
+
+### Release verification
+
+On 2026-10-23, [v0.10.6 release run 39834767637](https://github.com/smartscity/polarbear/actions/runs/39834767637) was `completed/success`. Artifact `Polarbear-macOS-0.10.6` exists, is not expired, and is 149,153,172 bytes. The workflow uploads only the required renamed DMG to that artifact after mounted-DMG verification. Public release lookup returned 404; the workflow creates releases as drafts, so public-release availability is not inferred from artifact success.
 
 ## Manual follow-up
 
@@ -102,6 +136,8 @@ Manual save acceptance: open the same document in two windows, save divergent ed
 3. Open an unavailable recent document: the failure is visible, existing document/history remain available, and the history item can be removed.
 4. Edit/render many distinct Mermaid blocks, then revisit an evicted source: it must re-render without changing Markdown; retry a failed PlantUML render only through the existing consent path.
 5. On iPhone, read mid-document and immediately return to Library; reopen and check position. Browser/native fixture coverage does not replace device acceptance.
+6. Save a document while Sync is pending or while continuing to type: only completed snapshots become clean, and Sync pauses when edits remain unsaved. A sync queue warning must acknowledge the local save rather than claim disk failure.
+7. Try an unreadable file, create a new tab during a slow recent-file open, and open another workspace with an unsaved draft: the active buffer must remain available and no stale/failed tab may appear.
 
 ## Explicit limits
 

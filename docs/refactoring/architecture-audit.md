@@ -72,7 +72,7 @@ No source file, model, locale, compatibility migration or dependency was proven 
 
 - Native save risks were reproduced and addressed in follow-up batch F. `document_save::save` now owns serialized/coordinated version checking, staging, macOS metadata preservation, final recheck and publication. See [the owning save contract](file-save-safety.md) for cooperative-writer guarantees and the remaining non-cooperating writer/power-loss limits.
 - A pending frontend save also cleared dirty state for newer input, and Save As replaced that input with its older snapshot. Browser regressions now protect snapshot-aware acknowledgment and identity transitions. Full App document-session extraction remains separate work.
-- `App::selectFile` updates active tab state before load success. Add delayed load/failure/tab-switch tests before extracting a document session controller.
+- `App::selectFile` previously updated active tab state before load success. Batch I reproduces and fixes the phantom-tab path, adds window-local `DocumentNavigation` result acceptance, and protects workspace replacement from unsaved drafts. Full buffer/session ownership across external reload, rename and Save As remains a separate task.
 - `useNativeAppMenu` rebuilds native objects on dependency changes without explicit disposal. Native resource ownership needs Tauri resource-table measurement before claiming a leak or changing menu lifetime.
 - `tableLayoutState` is module-global and has no document disposal API. Document identity, width retention and undo expectations need tests before changing keys or eviction.
 - Repository progress registration failures now reach the existing localized status surface, and disposed registrations cannot deliver stale progress. This was reproduced before the batch G fix; sync success/failure remains owned by the operation, not the progress subscription.
@@ -89,6 +89,9 @@ Retain a feature-based modular application, not mandatory MVVM/DDD layers. App r
 | Duplicate diagram caching | Feature cache policy | Pending deduplication and bounded successful strings; renderer consent and error localization remain outside |
 | Invalid reading positions | Boundary parsing | Existing storage key/shape and 500-entry cap retained |
 | Lost feedback | Complete existing presentation path | No new notification bus or parallel status store |
+| Save commit versus sync bookkeeping | Explicit partial-success DTO | The committed revision remains authoritative; optional queue warning does not claim remote delivery |
+| Sync preflight | Feature use case reusing saveTab | No duplicate IO, dirty-state owner or retry loop; batch snapshots protect intervening edits |
+| Superseded file reads | Window-local navigation intent owner | Reject stale UI application, do not pretend native IO was cancelled; no persisted navigation store |
 | Large App/native main | Defer guarded extraction | First protect file open/save/close and zoom behavior; no mechanical line-count splits |
 | Platform differences | Retain feature adapters | No service interface per simple function; no mobile filesystem assumptions added |
 

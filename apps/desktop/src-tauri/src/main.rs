@@ -61,6 +61,14 @@ struct MarkdownFileRevisionDto {
 #[serde(rename_all = "camelCase")]
 struct MarkdownSaveResponseDto {
     revision: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    warning: Option<SaveWarning>,
+}
+
+#[derive(Debug, Serialize)]
+enum SaveWarning {
+    #[serde(rename = "workspace.syncQueueUnavailable")]
+    SyncQueueUnavailable,
 }
 
 #[derive(Debug, Serialize)]
@@ -1282,23 +1290,41 @@ fn save_markdown_file(
     markdown_content: String,
     expected_revision: Option<String>,
 ) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
-    let saved = save_markdown_file_content(
+    save_markdown_file_with_outbox(
         &workspace_root,
         &relative_path,
         &markdown_content,
         expected_revision.as_deref(),
+        || {
+            if read_binding(&app, &workspace_root)?.is_some() {
+                cloud_sync_store::queue_outbox_path(
+                    &cloud_sync_database_path(&app)?,
+                    &workspace_root,
+                    &relative_path,
+                    "upload",
+                )?;
+            }
+            Ok(())
+        },
+    )
+}
+
+fn save_markdown_file_with_outbox(
+    workspace_root: &str,
+    relative_path: &str,
+    markdown_content: &str,
+    expected_revision: Option<&str>,
+    enqueue: impl FnOnce() -> Result<(), String>,
+) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
+    let mut saved = save_markdown_file_content(
+        workspace_root,
+        relative_path,
+        markdown_content,
+        expected_revision,
     )?;
-    if read_binding(&app, &workspace_root)
-        .map_err(WorkspaceSaveError::unexpected)?
-        .is_some()
-    {
-        cloud_sync_store::queue_outbox_path(
-            &cloud_sync_database_path(&app).map_err(WorkspaceSaveError::unexpected)?,
-            &workspace_root,
-            &relative_path,
-            "upload",
-        )
-        .map_err(WorkspaceSaveError::unexpected)?;
+    // The local commit cannot be rolled back by optional sync bookkeeping.
+    if enqueue().is_err() {
+        saved.warning = Some(SaveWarning::SyncQueueUnavailable);
     }
     Ok(saved)
 }

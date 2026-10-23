@@ -134,6 +134,150 @@ test("keeps the document open and dirty when saving before close is denied", asy
   await expect(editor).toContainText("pending text");
 });
 
+test("acknowledges a local save with a sync warning and reuses its revision", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "save_markdown_file") {
+        (window as any).__lastSave = args;
+        return Promise.resolve({ revision: "locally-committed", warning: "workspace.syncQueueUnavailable" });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Local.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Local.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("first edit ");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(0);
+  await expect(page.locator(".workspace-status")).toContainText("sync queue");
+  await page.keyboard.type("second edit "); await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__lastSave.expectedRevision)).toBe("locally-committed");
+  await expect(editor).toContainText("second edit");
+});
+
+test("does not start a second save or synchronize while a document save is pending", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    Object.assign(window, { __saveCount: 0, __remoteSyncCount: 0 });
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "repository_get_account") return Promise.resolve({ provider: "github", login: "fixture" });
+      if (command === "repository_get_workspace_binding") return Promise.resolve({ provider: "github", owner: "fixture", repo: "fixture", branch: "main", manifest: {} });
+      if (command === "repository_sync_now") { (window as any).__remoteSyncCount++; return Promise.resolve({ conflicts: [] }); }
+      if (command === "save_markdown_file") {
+        (window as any).__saveCount++;
+        return new Promise((resolve) => { (window as any).__finishSave = () => resolve({ revision: "saved" }); });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Sync.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Sync.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("pending sync edit ");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__saveCount)).toBe(1);
+  await page.keyboard.press("ControlOrMeta+Alt+s");
+  await expect(page.locator(".workspace-status")).toContainText("Sync paused");
+  expect(await page.evaluate(() => (window as any).__saveCount)).toBe(1);
+  expect(await page.evaluate(() => (window as any).__remoteSyncCount)).toBe(0);
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await page.evaluate(() => (window as any).__finishSave());
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(0);
+});
+
+test("retains the current document when a file-tree read fails", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    runtime.invoke = async (command: string, args: any) => {
+      if (command === "open_markdown_file") {
+        const result = await invoke(command, args);
+        result.tree.push({ id: "Unavailable.md", name: "Unavailable.md", itemType: "file" });
+        return result;
+      }
+      if (command === "load_markdown_file") throw new Error("Read permission denied");
+      if (command === "list_workspace_files") return [
+        { id: "Working.md", name: "Working.md", itemType: "file" },
+        { id: "Unavailable.md", name: "Unavailable.md", itemType: "file" },
+      ];
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Working.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Working.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("important unsaved text ");
+  await page.locator('[data-tree-item-id="Unavailable.md"]').click();
+  await expect(page.locator(".workspace-status")).toContainText("Read permission denied");
+  await expect(editor).toContainText("important unsaved text");
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Unavailable.md" })).toHaveCount(0);
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
+test("ignores an old recent-file completion after a new tab is created", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "open_markdown_file" && args.filePath.endsWith("Slow.md")) {
+        return new Promise((resolve) => { (window as any).__finishOpen = async () => resolve(await invoke(command, args)); });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    const store = (await import(path)).recentDocumentStore();
+    store.record("/test/Slow.md", 1);
+  });
+  const recent = page.locator(".recent-documents");
+  await recent.getByRole("button", { name: /Slow.md/ }).first().click();
+  await expect.poll(() => page.evaluate(() => !!(window as any).__finishOpen)).toBe(true);
+  await page.getByRole("button", { name: "New tab", exact: true }).click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("newer document text ");
+  await page.evaluate(() => (window as any).__finishOpen());
+  await expect(editor).toContainText("newer document text");
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Slow.md" })).toHaveCount(0);
+  await expect(recent.getByRole("alert")).toHaveCount(0);
+});
+
+test("does not discard unsaved text when opening another workspace", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|open") return Promise.resolve("/next-workspace");
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("unsaved workspace draft");
+  await page.locator('.workspace-empty, .workspace-tree-shell').first().click({ button: "right" });
+  await page.getByRole("button", { name: "OPEN A FOLDER", exact: true }).click();
+  await expect(page.locator(".workspace-status")).toContainText("Save or close");
+  await expect(editor).toContainText("unsaved workspace draft");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
 test("opens Workspace on launch and reload even after visiting Context", async ({ page }) => {
   await nativeFixture(page); await page.goto("/");
   await expect(page.locator(".activity-rail button").first()).toHaveAttribute("aria-pressed", "true", { timeout: 15000 });

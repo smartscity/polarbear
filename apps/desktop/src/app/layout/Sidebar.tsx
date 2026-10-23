@@ -1,5 +1,6 @@
 import type { ExecuteAppCommand } from "../../shared/commands/appCommandTypes";
 import type { WorkspaceItem } from "../../features/workspace/workspaceModel";
+import type { DocumentOpenResult } from "../../features/workspace/documentNavigation";
 import { FileTree } from "../../features/workspace/components/FileTree";
 import { RecentDocuments } from "../../features/workspace/components/RecentDocuments";
 import { useI18n } from "../../shared/i18n/I18nProvider";
@@ -19,7 +20,7 @@ type SidebarProps = {
   onRenameCancel: () => void;
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectFile: (fileId: string) => void;
-  onOpenRecent: (path: string) => Promise<boolean>;
+  onOpenRecent: (path: string) => Promise<DocumentOpenResult>;
   onSelectTreeItem: (itemId: string) => void;
 };
 

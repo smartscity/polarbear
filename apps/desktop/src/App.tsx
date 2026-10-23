@@ -146,6 +146,8 @@ import {
   type MarkdownSaveResult,
 } from "./features/workspace/tauriWorkspaceAdapter";
 import { workspaceDocumentSaveConflict, workspaceSaveFailureKey } from "./features/workspace/workspaceSaveError";
+import { saveWorkspaceDocuments } from "./features/workspace/saveWorkspaceDocuments";
+import { DocumentNavigation } from "./features/workspace/documentNavigation";
 import { openNewAppWindow } from "./shared/tauri/openNewAppWindow";
 import { useI18n } from "./shared/i18n/I18nProvider";
 import {
@@ -299,6 +301,8 @@ export function App() {
   const [workspaceItems, setWorkspaceItems] = useState(initialWorkspace);
   const [workspaceItemsByRoot, setWorkspaceItemsByRoot] = useState<Record<string, WorkspaceItem[]>>({});
   const [documents, setDocuments] = useState(initialDocuments);
+  const [documentNavigation] = useState(() => new DocumentNavigation());
+  useEffect(() => () => documentNavigation.invalidate(), [documentNavigation]);
   const savesInProgressRef = useRef(new Set<string>());
   const getCurrentDocument = useEventCallback((fileId: string) => documents[fileId]);
   const [documentRevisions, setDocumentRevisions] = useState<Record<string, string>>({});
@@ -1842,9 +1846,23 @@ export function App() {
   ]);
 
   const loadWorkspace = async (nextWorkspaceRoot: string): Promise<boolean> => {
+    const isCurrent = documentNavigation.begin();
+    const hasUnsavedDocuments = () => {
+      if (dirtyFileIdsRef.current.size === 0) return false;
+      setStatusMessage(t("status.workspaceOpenUnsaved"));
+      return true;
+    };
+    if (hasUnsavedDocuments()) return false;
     try {
       const items = await listWorkspaceFiles(nextWorkspaceRoot);
+      if (!isCurrent()) return false;
       const firstFile = findFirstFile(items);
+      const document = firstFile ? await loadMarkdownFile({
+        workspaceRoot: nextWorkspaceRoot,
+        relativePath: firstFile.id,
+      }) : null;
+      if (!isCurrent()) return false;
+      if (hasUnsavedDocuments()) return false;
 
       setWorkspaceRoot(nextWorkspaceRoot);
       setWorkspaceItems(items);
@@ -1860,11 +1878,7 @@ export function App() {
       setSelectedTreeItemId("");
       setStatusMessage(t("status.openedWorkspace", { path: nextWorkspaceRoot }));
 
-      if (firstFile) {
-        const document = await loadMarkdownFile({
-          workspaceRoot: nextWorkspaceRoot,
-          relativePath: firstFile.id,
-        });
+      if (firstFile && document) {
         setDocuments({ [firstFile.id]: document.markdownContent });
         setDocumentRevisions({ [firstFile.id]: document.revision });
         setDocumentWorkspaceRoots({ [firstFile.id]: nextWorkspaceRoot });
@@ -1879,6 +1893,7 @@ export function App() {
 
       return true;
     } catch (error) {
+      if (!isCurrent()) return false;
       setStatusMessage(error instanceof Error ? error.message : String(error));
       return false;
     }
@@ -1900,8 +1915,10 @@ export function App() {
   };
 
   const openMarkdownPath = useEventCallback(async (filePath: string) => {
+    const isCurrent = documentNavigation.begin();
     try {
       const openedFile = await openMarkdownFile(filePath);
+      if (!isCurrent()) return null;
       const openedPath = documentHistoryPath(openedFile.workspaceRoot, openedFile.relativePath);
       const samePathTab = openFileIdsRef.current.find((id) => !isUntitledDocument(id)
         && documentHistoryPath(documentWorkspaceRootForId(id, documentWorkspaceRoots, workspaceRoot), documentRelativePathForId(id, documentRelativePaths)) === openedPath);
@@ -1953,6 +1970,7 @@ export function App() {
       setStatusMessage(t("status.openedPath", { path: openedFile.relativePath }));
       return true;
     } catch (error) {
+      if (!isCurrent()) return null;
       setStatusMessage(error instanceof Error ? error.message : String(error));
       return false;
     }
@@ -2206,7 +2224,7 @@ export function App() {
     }
   };
 
-  const dirtyDocumentIdsForWorkspace = (targetWorkspaceRoot: string): string[] =>
+  const dirtyDocumentIdsForWorkspace = useEventCallback((targetWorkspaceRoot: string): string[] =>
     Array.from(dirtyFileIds).filter((fileId) => {
       if (isUntitledDocument(fileId)) {
         return false;
@@ -2218,35 +2236,14 @@ export function App() {
           workspaceRoot,
         ) === targetWorkspaceRoot
       );
-    });
+    }));
 
-  const saveDirtyDocumentsForWorkspace = async (targetWorkspaceRoot: string) => {
-    const dirtyIds = dirtyDocumentIdsForWorkspace(targetWorkspaceRoot);
-    for (const fileId of dirtyIds) {
-      const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-      const content = documents[fileId];
-      if (!relativePath || content === undefined) {
-        continue;
-      }
-      const saved = await saveMarkdownFile({
-        workspaceRoot: targetWorkspaceRoot,
-        relativePath,
-        markdownContent: content,
-        expectedRevision: documentRevisions[fileId],
-      });
-      setDocumentRevisions((currentRevisions) => ({
-        ...currentRevisions,
-        [fileId]: saved.revision,
-      }));
-    }
-    if (dirtyIds.length > 0) {
-      setDirtyFileIds((currentDirtyFileIds) => {
-        const nextDirtyFileIds = new Set(currentDirtyFileIds);
-        dirtyIds.forEach((fileId) => nextDirtyFileIds.delete(fileId));
-        return nextDirtyFileIds;
-      });
-    }
-  };
+  const saveDirtyDocumentsForWorkspace = (targetWorkspaceRoot: string) =>
+    saveWorkspaceDocuments({
+      getDirtyDocumentIds: () => dirtyDocumentIdsForWorkspace(targetWorkspaceRoot),
+      getContent: getCurrentDocument,
+      saveDocument: async (fileId) => Boolean(await saveTab(fileId)),
+    });
 
   const reloadWorkspaceAfterDownload = async (targetWorkspaceRoot: string) => {
     const items = await listWorkspaceFiles(targetWorkspaceRoot);
@@ -2372,7 +2369,12 @@ export function App() {
         return;
       }
       showRepositoryOperation(operation.title, operation.message, true);
-      await saveDirtyDocumentsForWorkspace(context.workspaceRoot);
+      if (!await saveDirtyDocumentsForWorkspace(context.workspaceRoot)) {
+        const message = t("status.syncPausedUnsaved");
+        setRepositoryOperation({ title: operation.title, message, isBusy: false, status: "error" });
+        setStatusMessage((current) => `${message} ${current}`);
+        return;
+      }
       const params = {
         workspaceRef: context.workspaceRoot,
         dirty: false,
@@ -2422,6 +2424,7 @@ export function App() {
   };
 
   const createUntitledDocument = () => {
+    documentNavigation.invalidate();
     const nextUntitledNumber = untitledCounter + 1;
     const baseTitle = t("top.untitled");
     const title =
@@ -2450,46 +2453,36 @@ export function App() {
   };
 
   const selectFile = async (fileId: string) => {
+    const isCurrent = documentNavigation.begin();
     const documentId = findOpenDocumentIdForWorkspaceFile(
       openFileIds,
       documentWorkspaceRoots,
       documentRelativePaths,
       workspaceRoot,
       fileId,
-    ) ?? fileId;
-
-    setDocumentWorkspaceRoots((currentRoots) => ({
-      ...currentRoots,
-      [documentId]: workspaceRoot,
-    }));
-    setDocumentRelativePaths((currentPaths) => ({
-      ...currentPaths,
-      [documentId]: fileId,
-    }));
-    setActiveFileId(documentId);
-    setSelectedTreeItemId(findWorkspaceItem(workspaceItems, fileId) ? fileId : "");
-    revealFolder(parentFolderIdOf(fileId));
-    addOpenTab(documentId);
-
-    if (!workspaceRoot || documents[documentId] !== undefined) {
-      return;
-    }
-
+    ) ?? makeWorkspaceDocumentId({
+      currentDocumentIds: new Set([...openFileIds, ...Object.keys(documents)]),
+      currentWorkspaceRoot: workspaceRoot,
+      relativePath: fileId,
+      workspaceRoot,
+    });
     try {
-      const document = await loadMarkdownFile({
-        workspaceRoot,
-        relativePath: fileId,
-      });
-      setDocuments((currentDocuments) => ({
-        ...currentDocuments,
-        [documentId]: document.markdownContent,
-      }));
-      setDocumentRevisions((currentRevisions) => ({
-        ...currentRevisions,
-        [documentId]: document.revision,
-      }));
+      if (workspaceRoot && getCurrentDocument(documentId) === undefined) {
+        const document = await loadMarkdownFile({ workspaceRoot, relativePath: fileId });
+        if (!isCurrent()) return;
+        setDocuments((current) => ({ ...current, [documentId]: document.markdownContent }));
+        setDocumentRevisions((current) => ({ ...current, [documentId]: document.revision }));
+      }
+      if (!isCurrent()) return;
+      setDocumentWorkspaceRoots((current) => ({ ...current, [documentId]: workspaceRoot }));
+      setDocumentRelativePaths((current) => ({ ...current, [documentId]: fileId }));
+      setActiveFileId(documentId);
+      setSelectedTreeItemId(findWorkspaceItem(workspaceItems, fileId) ? fileId : "");
+      revealFolder(parentFolderIdOf(fileId));
+      addOpenTab(documentId);
       setStatusMessage(t("status.loadedPath", { path: fileId }));
     } catch (error) {
+      if (!isCurrent()) return;
       setStatusMessage(error instanceof Error ? error.message : String(error));
     }
   };
@@ -2574,6 +2567,7 @@ export function App() {
   }, [workspaceRoot]);
 
   const activateTab = async (fileId: string) => {
+    const isCurrent = documentNavigation.begin();
     if (!fileId) {
       return false;
     }
@@ -2593,6 +2587,7 @@ export function App() {
       } else {
         try {
           const items = await listWorkspaceFiles(nextWorkspaceRoot);
+          if (!isCurrent()) return false;
           setWorkspaceRoot(nextWorkspaceRoot);
           setWorkspaceItems(items);
           setWorkspaceItemsByRoot((currentTrees) => ({
@@ -2600,6 +2595,7 @@ export function App() {
             [nextWorkspaceRoot]: items,
           }));
         } catch (error) {
+          if (!isCurrent()) return false;
           setStatusMessage(error instanceof Error ? error.message : String(error));
           return false;
         }
@@ -2619,6 +2615,8 @@ export function App() {
         workspaceRoot: nextWorkspaceRoot,
         relativePath: nextRelativePath,
       });
+      if (!isCurrent() || !openFileIdsRef.current.includes(fileId)) return false;
+      if (getCurrentDocument(fileId) !== undefined) return true;
       setDocuments((currentDocuments) => ({
         ...currentDocuments,
         [fileId]: document.markdownContent,
@@ -2630,6 +2628,7 @@ export function App() {
       setStatusMessage(t("status.loadedPath", { path: nextRelativePath }));
       return true;
     } catch (error) {
+      if (!isCurrent()) return false;
       setStatusMessage(error instanceof Error ? error.message : String(error));
       return false;
     }
@@ -2781,11 +2780,12 @@ export function App() {
       return nextDirtyFileIds;
     });
     lastSavedFileIdRef.current = fileId;
-    setStatusMessage(t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: tabRelativePath }));
+    const message = t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: tabRelativePath });
+    setStatusMessage(saved.warning ? `${message} ${t("status.savedSyncQueueUnavailable")}` : message);
     return stillDirty ? null : fileId;
   };
 
-  const saveTab = async (fileId: string): Promise<string | null> => {
+  const saveTab = useEventCallback(async (fileId: string): Promise<string | null> => {
     if (savesInProgressRef.current.has(fileId)) return null;
     savesInProgressRef.current.add(fileId);
     try {
@@ -2800,9 +2800,10 @@ export function App() {
     } finally {
       savesInProgressRef.current.delete(fileId);
     }
-  };
+  });
 
   const closeTab = async (fileId: string) => {
+    documentNavigation.invalidate();
     if (!fileId) {
       return;
     }

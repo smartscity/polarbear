@@ -198,6 +198,7 @@ fn save_coordinated(
     })?;
     Ok(MarkdownSaveResponseDto {
         revision: content_revision(content),
+        warning: None,
     })
 }
 

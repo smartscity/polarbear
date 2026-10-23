@@ -16,7 +16,7 @@ Save / Save before close / Save before quit
 
 Save As keeps its existing file picker and document identity transition. Both paths compare the captured content with the current editor buffer before clearing dirty state. A completed save of an earlier version updates the disk revision but leaves newer edits dirty; close/quit does not treat that result as a fully saved document. Repeated save requests for an already-saving document are ignored, not queued with stale revisions. Retry remains an explicit user action.
 
-`document_save.rs` owns the write transaction and temporary file lifetime. The existing Rust command names, parameters, revision format and success DTO are unchanged. The existing atomic-write helper for creation and repository download also delegates to this implementation. A fixed 64-stripe mutex array bounds process-local coordination state. Unrelated paths that hash to one stripe may briefly serialize; no unbounded lock registry is retained.
+`document_save.rs` owns the write transaction and temporary file lifetime. The existing Rust command names, parameters and revision format are unchanged. The success DTO adds an optional `warning: "workspace.syncQueueUnavailable"`; absence means the post-save queue operation did not fail, not that remote upload completed. The existing atomic-write helper for creation and repository download also delegates to this implementation. A fixed 64-stripe mutex array bounds process-local coordination state. Unrelated paths that hash to one stripe may briefly serialize; no unbounded lock registry is retained.
 
 The narrow C bridge invokes the shared Swift `SystemDocumentCoordination.write` accessor synchronously. Revision validation and replacement both run inside it. This reuses the same NSFileCoordinator implementation as the Apple document store, without forcing Desktop local files into the linked-workspace bookmark/journal model. Rust panics cannot unwind across the C callback.
 
@@ -40,7 +40,9 @@ The narrow C bridge invokes the shared Swift `SystemDocumentCoordination.write` 
 | `workspace.saveDurabilityUncertain` | Replacement succeeded but directory sync failed | Localized warning to retain the buffer and verify disk before retrying |
 | `workspace.saveFailed` | Other IO or coordination failure | Existing error surface, with no success acknowledgment |
 
-Do not retry automatically after an uncertain result. A completed local write followed by a repository-outbox failure still uses the legacy command behavior and is a separate post-commit acknowledgment limitation; this batch does not change the sync DTO or introduce an implicit network action.
+Do not retry automatically after an uncertain result. `save_markdown_file_with_outbox` owns the ordering of local commit and optional repository bookkeeping. A local failure skips queue work. Once local save succeeds, binding/database/queue failures return the committed revision with `workspace.syncQueueUnavailable`, never a rejected local save. The UI updates that revision, preserves any newer edits, and displays a localized sync warning alongside the local-save status. Queue success does not imply remote delivery. Recovery uses the existing explicit Sync action and its filesystem scan, not a new automatic network retry.
+
+The explicit Sync preflight reuses the same per-document save path and in-flight guard. It must stop if a save is pending, denied, or only saved an older buffer. After saving multiple documents it checks again for new edits, including edits to a document saved earlier in the batch. A paused preflight must not call pull/push/sync or clear dirty state itself.
 
 ## Guarantee boundaries
 

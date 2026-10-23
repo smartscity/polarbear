@@ -14,7 +14,9 @@ Preserve the six unrelated Feedback changes and existing persistent formats. Reu
 | E.1 | Declare existing direct imports and check workspace dependency ownership | AST scan reproduces missing declarations | Low | Node dependency tests plus unchanged resolved lock versions | Revert declarations and test wiring together |
 | F (implemented) | Native save transaction and editor snapshot acknowledgment | Four failing native tests and one failing browser regression | High | Same-process and real two-process saves, POSIX/ACL/xattr, external edits, delayed Save/Save As, denied close | Revert transaction/bridge/UI/error resources together; no persistent migration |
 | G (implemented) | Repository progress listener lifecycle | Rejected-registration and late-event failures | Low | Error surface, late registration disposal, no stale callback | Revert hook/caller/locales together |
-| Next | Remaining document session extraction and post-commit acknowledgment | Delayed-open/session-switch and outbox failure tests | High | Closed/reopened identity, async navigation, save/outbox outcome | Separate commits; no storage rewrite |
+| H (implemented) | Separate local-save acknowledgment from sync bookkeeping; consolidate Sync preflight | Failing SQLite and browser save regressions | Medium | Committed revision plus warning, subsequent saves, batch dirty snapshots and in-flight guard | Revert DTO, consumer and locales together; no storage migration |
+| I (implemented, bounded) | Window-local navigation intent and safe workspace replacement | Failed-read, stale recent-open and unsaved workspace browser failures | Medium | Only current read applies; no failed-read tab; drafts block replacement | Revert gate and callers together; no persistent navigation state |
+| Next | Remaining document session extraction | Lifecycle coverage across close/reopen, external reload, rename and Save As | High | Document generation and metadata ownership across every asynchronous mutation | Separate commits; no storage rewrite |
 | Later | Native menu lifetime, table width ownership, performance | Resource traces and interaction baselines | Medium-high | Compare equivalent workloads and native behavior | Preserve current product semantics |
 
 ## Compatibility
@@ -23,7 +25,8 @@ Preserve the six unrelated Feedback changes and existing persistent formats. Reu
 - The default surface remains Workspace. Engine configuration remains owned by the Engine. No local substitute for project config is introduced.
 - Diagram cache eviction affects reuse only. Markdown is untouched; no new remote request source is added. PlantUML consent remains per existing policy.
 - Reader positions retain the same key/shape. Validate records individually and keep valid entries; do not clear the entire history on one corrupt value.
-- Status messages reuse existing App state. Batch F extends the existing save error codes for permission denial and uncertain directory durability, with synchronized EN/ZH resources; success payloads remain unchanged.
+- Status messages reuse existing App state. Batch F adds permission and uncertain-durability codes. Batch H adds an optional sync warning to successful saves; revision and normal success shape remain unchanged. EN/ZH resources are synchronized.
+- A superseded recent-file navigation returns `null`, distinct from unreadable-file `false`; the Recent panel must not report cancellation as a missing file. Workspace replacement refuses unsaved buffers and directs the user to existing Save/Close actions.
 - [File save safety](file-save-safety.md) owns the native transaction and its explicit cooperative-writer/platform limits. It does not claim an arbitrary external-writer filesystem CAS.
 
 ## Out of this release gate

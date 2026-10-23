@@ -5,8 +5,9 @@ import { STORAGE_KEYS } from "../../../shared/constants/storageKeys";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
 import { fileNameOf } from "../workspacePaths";
 import { recentDocumentStore, type RecentDocument } from "../recentDocuments";
+import type { DocumentOpenResult } from "../documentNavigation";
 
-export function RecentDocuments({ onOpen }: { onOpen: (path: string) => Promise<boolean> }) {
+export function RecentDocuments({ onOpen }: { onOpen: (path: string) => Promise<DocumentOpenResult> }) {
   const { t, language } = useI18n();
   const [entries, setEntries] = useState<RecentDocument[]>([]);
   const [error, setError] = useState("");
@@ -30,7 +31,7 @@ export function RecentDocuments({ onOpen }: { onOpen: (path: string) => Promise<
   };
   const open = async (path: string) => {
     setOpening(path); setError("");
-    try { if (!await onOpen(path)) setError(t("recent.unavailable", { name: fileNameOf(path) })); }
+    try { if (await onOpen(path) === false) setError(t("recent.unavailable", { name: fileNameOf(path) })); }
     catch { setError(t("recent.unavailable", { name: fileNameOf(path) })); }
     finally { setOpening(null); }
   };
