@@ -129,6 +129,38 @@ Shared Swift and iOS suites were not rerun in H-I because no shared/native Apple
 
 On 2026-10-23, [v0.10.6 release run 39834767637](https://github.com/smartscity/polarbear/actions/runs/39834767637) was `completed/success`. Artifact `Polarbear-macOS-0.10.6` exists, is not expired, and is 149,153,172 bytes. The workflow uploads only the required renamed DMG to that artifact after mounted-DMG verification. Public release lookup returned 404; the workflow creates releases as drafts, so public-release availability is not inferred from artifact success.
 
+## Document Reload Follow-up (J, 2026-10-23)
+
+Base: `fceb09e` / `v0.10.7`. This batch addresses remaining asynchronous read safety, not a wholesale App rewrite. The six unrelated Feedback changes remain uncommitted and excluded.
+
+### Test-first evidence
+
+Three browser regressions failed against the previous implementation: a late read updated a closed/reopened file; Keep Editing did not revoke a pending explicit reload and the local words were replaced; typing during an automatic reload retained the buffer but lost the conflict prompt. A fourth regression reproduced the absent conflict prompt during post-sync reload. Fixture setup failures were corrected separately: the revision-read stub needed its own start signal, and the repository binding had to exist before App initialized command state. These fixture failures are not counted as product defects.
+
+Eight owner unit cases now cover independent windows/documents, edit/undo, close/reopen, root/path/revision changes, competing reads, stale observers, one-time consumption and disposal. The stale-observer case initially failed against the first owner implementation; expected identity validation now occurs before replacing its current request.
+
+### Ownership and compatibility
+
+`DocumentReadRequests` owns only bounded, window-local permissions for currently open, loaded files. App remains the content/metadata owner; the Tauri adapter remains the IO boundary. Automatic, explicit and post-sync reloads share one result-application path. Editing, closing, remapping identity, revision changes and dismissal reject obsolete completions; obsolete errors do not replace current status. Valid explicit discard still works and clears only the affected dirty marker. Sync distinguishes retained local edits from full reload success, and propagates current read failures instead of hiding them.
+
+No native protocol, data schema, dependency, Markdown format, saved preference or caption threshold changed. The new EN/ZH status message explains that remote sync can finish while local drafts remain. Rejection of a result is not cancellation of accepted IO or remote changes. The pattern/ownership decisions and bounds are in [document navigation](document-navigation.md).
+
+### Current-run validation
+
+| Check | Result | Scope |
+| --- | --- | --- |
+| Desktop TypeScript / ESLint | PASS | Zero errors |
+| Desktop Vitest | PASS: 54 files / 265 tests | Eight new read-permission cases |
+| Desktop Playwright | PASS: 48 tests, one sequential full run | Seven new reload cases, real App/editor with controlled native IPC; existing translation/caption/Mermaid cases retained |
+| Desktop native suite | PASS: 51; 2 default ignores | macOS x86_64; real two-process coordination fixture invoked by its parent |
+| Desktop Node scripts | PASS: 26 | Packaging/process/dependency checks |
+| Desktop production build | PASS | Existing large-chunk warnings remain; no performance claim |
+| Rust formatting / strict Clippy / generated Admin contract | PASS | No warnings, formatting or contract drift |
+
+The real Memory Engine opt-in test, shared Swift and iOS suites were not rerun in this frontend-only batch; their earlier results are historical, not current-run acceptance. Installed DMG, arbitrary external-writer races and fault-injection coverage remain outside this evidence. Native-menu resource counts, table-width ownership, broader Save As/rename/close completion and measured diagram scheduling remain open in the debt register. Inspection alone does not justify declaring them fixed or mechanically moving their code.
+
+On 2026-10-23, [v0.10.7 run 39880393441](https://github.com/smartscity/polarbear/actions/runs/39880393441) was `completed/success`. Artifact `Polarbear-macOS-0.10.7` (`12471102316`, 149,155,100 bytes) exists and is not expired. This is the preceding release, not proof that the current batch's DMG has been built. Public release availability is separate from workflow artifacts.
+
 ## Manual follow-up
 
 1. Open Workspace, visit Context, alter settings, refresh and restart: canonical saved settings persist and launch remains Workspace.
@@ -138,6 +170,8 @@ On 2026-10-23, [v0.10.6 release run 39834767637](https://github.com/smartscity/p
 5. On iPhone, read mid-document and immediately return to Library; reopen and check position. Browser/native fixture coverage does not replace device acceptance.
 6. Save a document while Sync is pending or while continuing to type: only completed snapshots become clean, and Sync pauses when edits remain unsaved. A sync queue warning must acknowledge the local save rather than claim disk failure.
 7. Try an unreadable file, create a new tab during a slow recent-file open, and open another workspace with an unsaved draft: the active buffer must remain available and no stale/failed tab may appear.
+8. Change a file externally while typing; keep the local draft and verify the conflict choice. Start Reload from Disk, then choose Keep Editing before IO completes: the old response must not overwrite the draft. Close/reopen a file while a read is pending: the new session must reject the old response.
+9. Edit while Sync is downloading/reloading: local edits remain dirty, the conflict choice remains available and the status describes retained local edits. A read failure must remain visible rather than becoming a success message.
 
 ## Explicit limits
 

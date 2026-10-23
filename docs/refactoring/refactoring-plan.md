@@ -16,6 +16,7 @@ Preserve the six unrelated Feedback changes and existing persistent formats. Reu
 | G (implemented) | Repository progress listener lifecycle | Rejected-registration and late-event failures | Low | Error surface, late registration disposal, no stale callback | Revert hook/caller/locales together |
 | H (implemented) | Separate local-save acknowledgment from sync bookkeeping; consolidate Sync preflight | Failing SQLite and browser save regressions | Medium | Committed revision plus warning, subsequent saves, batch dirty snapshots and in-flight guard | Revert DTO, consumer and locales together; no storage migration |
 | I (implemented, bounded) | Window-local navigation intent and safe workspace replacement | Failed-read, stale recent-open and unsaved workspace browser failures | Medium | Only current read applies; no failed-read tab; drafts block replacement | Revert gate and callers together; no persistent navigation state |
+| J (implemented, bounded) | Document-local reload permissions and unified reload application | Failing closed/reopened, dismissed reload and missing conflict-choice regressions | Medium | Edit/undo, competing reads, explicit discard/cancel, post-sync reload, late errors and disposal | Revert owner, callers and messages together; no migration |
 | Next | Remaining document session extraction | Lifecycle coverage across close/reopen, external reload, rename and Save As | High | Document generation and metadata ownership across every asynchronous mutation | Separate commits; no storage rewrite |
 | Later | Native menu lifetime, table width ownership, performance | Resource traces and interaction baselines | Medium-high | Compare equivalent workloads and native behavior | Preserve current product semantics |
 
@@ -26,7 +27,7 @@ Preserve the six unrelated Feedback changes and existing persistent formats. Reu
 - Diagram cache eviction affects reuse only. Markdown is untouched; no new remote request source is added. PlantUML consent remains per existing policy.
 - Reader positions retain the same key/shape. Validate records individually and keep valid entries; do not clear the entire history on one corrupt value.
 - Status messages reuse existing App state. Batch F adds permission and uncertain-durability codes. Batch H adds an optional sync warning to successful saves; revision and normal success shape remain unchanged. EN/ZH resources are synchronized.
-- A superseded recent-file navigation returns `null`, distinct from unreadable-file `false`; the Recent panel must not report cancellation as a missing file. Workspace replacement refuses unsaved buffers and directs the user to existing Save/Close actions.
+- A superseded recent-file navigation returns `null`, distinct from unreadable-file `false`; the Recent panel must not report cancellation as a missing file. Workspace replacement refuses unsaved buffers and directs the user to existing Save/Close actions. Reload permissions reject late reads after changes or disposal; they do not cancel accepted native IO or remote sync operations.
 - [File save safety](file-save-safety.md) owns the native transaction and its explicit cooperative-writer/platform limits. It does not claim an arbitrary external-writer filesystem CAS.
 
 ## Out of this release gate

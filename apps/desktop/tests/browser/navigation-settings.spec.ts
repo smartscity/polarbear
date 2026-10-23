@@ -42,6 +42,119 @@ async function nativeFixture(page: Page) {
   });
 }
 
+async function reloadFixture(page: Page) {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__; const invoke = runtime.invoke;
+    Object.assign(window, { __diskVersion: "initial", __reads: [] });
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "repository_get_account") return Promise.resolve({ provider: "github", login: "fixture" });
+      if (command === "repository_get_workspace_binding") return Promise.resolve({ provider: "github", owner: "fixture", repo: "fixture", branch: "main", manifest: {} });
+      if (command === "repository_sync_now") return Promise.resolve({ conflicts: [] });
+      if (command === "get_markdown_file_revision") {
+        (window as any).__watchStarted = true;
+        return Promise.resolve({ exists: true, watchToken: (window as any).__diskVersion });
+      }
+      if (command === "list_workspace_files") return Promise.resolve([{ id: "Reload.md", name: "Reload.md", itemType: "file" }]);
+      if (command === "load_markdown_file") return new Promise((resolve, reject) => {
+        (window as any).__reads.push({ resolve: () => resolve({ markdownContent: "# Stale disk response", revision: "stale" }), reject });
+      });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Reload.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Reload.md/ }).first().click();
+  await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
+}
+
+test("preserves typing during an external reload and offers an explicit conflict choice", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(() => { (window as any).__diskVersion = "changed"; });
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("new unsaved words ");
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(editor).toContainText("new unsaved words");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Reload from Disk", exact: true })).toBeVisible();
+});
+
+test("does not apply an old disk read to a closed and reopened document", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(() => { (window as any).__diskVersion = "changed"; });
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await page.getByRole("button", { name: "Close Reload.md", exact: true }).click();
+  await page.locator(".recent-documents").getByRole("button", { name: /Reload.md/ }).first().click();
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(page.locator(".workspace-status")).not.toContainText("Reloaded");
+  await expect(page.locator(".editor-workspace .cm-content").first()).toContainText("Opened document");
+});
+
+test("cancels a pending explicit reload when the user chooses to keep editing", async ({ page }) => {
+  await reloadFixture(page);
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("keep these words ");
+  await page.evaluate(() => { (window as any).__diskVersion = "changed"; });
+  await page.getByRole("button", { name: "Reload from Disk", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await page.getByRole("button", { name: "Keep Editing", exact: true }).click();
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(editor).toContainText("keep these words");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
+test("preserves edits made while synchronization reloads a clean document", async ({ page }) => {
+  await reloadFixture(page);
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await editor.click(); await page.keyboard.type("typed during reload ");
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(page.locator(".repository-operation-toast")).toHaveCount(0);
+  await expect(editor).toContainText("typed during reload");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Reload from Disk", exact: true })).toBeVisible();
+  await expect(page.locator(".workspace-status")).toContainText("local edits were kept");
+});
+
+test("reloads an accepted dirty snapshot and clears only its dirty marker", async ({ page }) => {
+  await reloadFixture(page);
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("discard this snapshot ");
+  await page.evaluate(() => { (window as any).__diskVersion = "changed"; });
+  await page.getByRole("button", { name: "Reload from Disk", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(page.getByRole("button", { name: "Reload from Disk", exact: true })).toHaveCount(0);
+  await expect(editor).toContainText("Stale disk response");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(0);
+  await expect(page.locator(".workspace-status")).toContainText("Reloaded Reload.md");
+});
+
+test("reports sync reload failures without declaring success or changing the buffer", async ({ page }) => {
+  await reloadFixture(page);
+  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await page.evaluate(() => (window as any).__reads[0].reject(new Error("Disk read denied")));
+  await expect(page.locator(".workspace-status")).toContainText("Disk read denied");
+  await expect(page.locator(".repository-operation-toast")).toHaveCount(0);
+  await expect(page.locator(".editor-workspace .cm-content").first()).toContainText("Opened document");
+});
+
+test("ignores read errors from a closed document", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(() => { (window as any).__diskVersion = "changed"; });
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await page.getByRole("button", { name: "Close Reload.md", exact: true }).click();
+  await page.evaluate(() => (window as any).__reads[0].reject(new Error("Obsolete error")));
+  await expect(page.locator(".workspace-status")).toContainText("Closed");
+  await expect(page.locator(".workspace-status")).not.toContainText("Obsolete error");
+});
+
 test("retains edits made while a document save is pending", async ({ page }) => {
   await nativeFixture(page);
   await page.addInitScript(() => {
