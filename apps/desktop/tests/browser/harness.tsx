@@ -23,6 +23,7 @@ import "../../src/styles.css";
 function Harness() {
   const [markdown, setMarkdown] = useState(() => localStorage.getItem("quality.document") ?? "# Reading\n\nAn attractive opportunity.\n\nThis is an English sentence.");
   const [mode, setMode] = useState<"source" | "live" | "preview">("live");
+  const [documentId, setDocumentId] = useState("Quality.md");
   const [settings, setSettings] = useState(false);
   const [status, setStatus] = useState("");
   useAppShortcuts((command) => {
@@ -38,6 +39,8 @@ function Harness() {
   useEffect(() => {
     Object.assign(window, { __quality: {
       setMarkdown, setMode, translate: translateReadingLocal, setTheme: applyThemeTokens, source: () => editor.current?.state.doc.toString() ?? markdown,
+      setDocument: (id: string, text: string) => { setDocumentId(id); setMarkdown(text); },
+      insertText: (from: number, text: string) => editor.current?.dispatch({ changes: { from, insert: text } }),
       select: (from: number, to: number) => editor.current?.dispatch({ selection: { anchor: from, head: to } }),
       undo: () => editor.current && undo(editor.current), redo: () => editor.current && redo(editor.current),
       validate: validateMermaidSource, fixtures: flowchartFixtures, diagramDocument,
@@ -53,7 +56,7 @@ function Harness() {
     <nav style={{ display: "flex", gap: 12, padding: 12 }}><button onClick={() => setSettings(true)}>Settings</button><button onClick={() => setMode("source")}>Source</button><button onClick={() => setMode("live")}>Live</button><button onClick={() => setMode("preview")}>Preview</button></nav>
     <section className="editor-workspace" style={{ flex: 1, minHeight: 0 }} onPointerDown={reading.onPointerDown} onPointerUp={reading.onPointerUp} onScrollCapture={reading.onScroll}>
       {mode === "source" ? <MarkdownEditor markdownContent={markdown} onMarkdownChange={setMarkdown} onEditorReady={(view) => { editor.current = view; }} onClipboardStatus={setStatus} onImageDrop={() => {}} onImagePaste={() => {}} onCommand={() => {}} />
-        : mode === "live" ? <TyporaLiveEditor activeFileId="Quality.md" workspaceRoot="" markdownContent={markdown} onMarkdownChange={setMarkdown} onEditorReady={(view) => { editor.current = view; }} onClipboardStatus={setStatus} onImageDrop={() => {}} onImagePaste={() => {}} />
+        : mode === "live" ? <TyporaLiveEditor activeFileId={documentId} workspaceRoot="" markdownContent={markdown} onMarkdownChange={setMarkdown} onEditorReady={(view) => { editor.current = view; }} onClipboardStatus={setStatus} onImageDrop={() => {}} onImagePaste={() => {}} />
           : <MarkdownPreview activeFileId="Quality.md" workspaceRoot="" markdownContent={markdown} onClipboardStatus={setStatus} />}
     </section>
     {reading.controls()}{settings && <SettingsDialog onClose={() => setSettings(false)} />}<output role="status">{status}</output>

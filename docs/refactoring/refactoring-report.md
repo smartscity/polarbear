@@ -161,6 +161,37 @@ The real Memory Engine opt-in test, shared Swift and iOS suites were not rerun i
 
 On 2026-10-23, [v0.10.7 run 39880393441](https://github.com/smartscity/polarbear/actions/runs/39880393441) was `completed/success`. Artifact `Polarbear-macOS-0.10.7` (`12471102316`, 149,155,100 bytes) exists and is not expired. This is the preceding release, not proof that the current batch's DMG has been built. Public release availability is separate from workflow artifacts.
 
+## Native Menu and Table Lifetime Follow-up (K-L, 2026-10-23)
+
+Base: `e23bd03` / `v0.10.8`. This batch addresses TD-09 and TD-10. The six unrelated Feedback changes remain excluded from the commit. No persistent format, dependency, native command contract, user-facing text or caption threshold changes.
+
+### Test-first evidence and root causes
+
+- Six native-menu lifecycle tests failed before implementation. The previous hook separately created seven check-item resources and never released root/returned previous-menu handles. It also generated IDs for some custom actions, while the resolved Tauri plugin retains action channels by ID. Resolved native/API source inspection established the handle ownership contract; mocked resource counts alone are not native RSS measurements.
+- Two browser tests first reproduced widths leaking between documents at the same table offset and widths disappearing after inserting a prefix. A further identical-content document test failed after the first state fix: widget equality ignored document identity and retained the previous DOM. The widget now includes document identity.
+- State/history tests cover isolated editors, prefix mapping without restoring stale resize values, batch insert, duplicate, delete, move, atomic undo/redo, table deletion and neighboring tables. Additional failing cases caught reuse of old width effects after reopening the same path and loss of widths on refused all-column deletion when serialization normalized whitespace. Session generations and unchanged-column-count handling resolve those cases.
+- An intermediate Auto Fit integration used an inner table element for `EditorView.findFromDOM`; the browser tests caught the missing view. Lookup now uses the CodeMirror widget root. A test initially used the wrong gap-button selector; it was corrected to the existing selector, without changing product behavior or weakening the assertion.
+
+### Implementation and architecture review
+
+`NativeMenuInstaller` is a hook-owned serialized resource owner with one pending replacement. It closes all returned menu leases, skips cancelled builds, recovers from creation/installation errors and retains the existing command/i18n/accelerator definitions. Check items are inline options and custom actions have stable IDs. There is no parallel command registry or general task scheduler.
+
+`tableLayoutExtension` replaces the module-global width map with editor/document-owned CodeMirror state. Layout positions map with transactions; invalid/deleted tables leave the live map. Structural commands update Markdown and width metadata in one transaction, with inverse effects handled by existing history. Resize remains non-history session UI state. Widget identity prevents cross-document DOM reuse. No new event bus, store, Markdown syntax or table parser is introduced. See [the ownership contract](menu-table-lifetimes.md) for disposal, compatibility and manual acceptance.
+
+### Current-run verification
+
+| Check | Result | Evidence / limits |
+| --- | --- | --- |
+| Desktop TypeScript / ESLint | PASS | Zero errors |
+| Desktop Vitest | PASS: 56 files / 284 tests | Six new native-menu lifecycle tests and thirteen table layout/history tests |
+| Desktop Playwright | PASS: 52 tests, sequential full run | Four new real CodeMirror/browser cases; includes actual Auto Fit, gap insertion, undo/redo and remount; screenshot inspected |
+| Desktop native tests | PASS: 51; 2 default ignores | macOS x86_64; the two-process save fixture is explicitly exercised by its parent |
+| Node script tests | PASS: 26 | Existing packaging/process/dependency checks |
+| Desktop production build | PASS | Existing large-chunk warning remains |
+| Rust format / strict Clippy / generated Admin contract | PASS | No formatting, warning or generated-contract drift |
+
+No actual native-menu GUI or RSS measurement, installed DMG acceptance, iOS/Swift suite, real Engine opt-in integration, ARM run or long caption performance test was performed in this frontend-only batch. Earlier such evidence is not relabeled as current-run proof. Full document-session extraction, rename/Save As completion ownership, diagram workload measurements and other OPEN debt entries remain separate work. This batch is not a claim that the entire audit is finished.
+
 ## Manual follow-up
 
 1. Open Workspace, visit Context, alter settings, refresh and restart: canonical saved settings persist and launch remains Workspace.

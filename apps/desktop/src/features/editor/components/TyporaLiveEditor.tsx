@@ -17,6 +17,7 @@ import {
   StateField,
   Transaction,
   type Range,
+  type StateEffect,
 } from "@codemirror/state";
 import {
   Decoration,
@@ -126,11 +127,10 @@ import {
 } from "../table/tableInteractionDom";
 import { readTableInteractionState, updateTableInteractionState } from "../table/tableInteractionState";
 import {
-  insertTableColumnWidth,
-  moveTableColumnWidth,
   readTableColumnWidths,
-  removeTableColumnWidths,
-  setTableColumnWidth,
+  tableLayoutExtension,
+  tableWidthsEffect,
+  tableWidthsForCommand,
 } from "../table/tableLayoutState";
 import { parseMarkdownTable } from "../table/tableModel";
 import type { TableCellPosition, TableSelection } from "../table/tableTypes";
@@ -440,6 +440,7 @@ export function TyporaLiveEditor({
   const editorExtensions = useMemo(
     () => [
       typoraLiveKeymap(userSettings.keybindings),
+      tableLayoutExtension(JSON.stringify([workspaceRoot, activeFileId])),
       createRichMarkdownCopyExtension(onClipboardStatus),
       createMermaidPasteExtension(onClipboardStatus),
       liveDocumentSelection,
@@ -930,7 +931,7 @@ function previewWidgetForBlock(
   }
 
   if (block.type === "table") {
-    return new TablePreviewWidget(block, params.keybindingOverrides);
+    return new TablePreviewWidget(block, params.keybindingOverrides, JSON.stringify([params.workspaceRoot, params.activeFileId]));
   }
 
   if (block.type === "image") {
@@ -1828,6 +1829,7 @@ class TablePreviewWidget extends WidgetType {
   constructor(
     private readonly block: PreviewBlock,
     private readonly keybindingOverrides: KeybindingOverrides,
+    private readonly documentId: string,
   ) {
     super();
   }
@@ -1837,10 +1839,11 @@ class TablePreviewWidget extends WidgetType {
       other.block.id === this.block.id
       && other.block.raw === this.block.raw
       && other.keybindingOverrides === this.keybindingOverrides
+      && other.documentId === this.documentId
     );
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-typora-table-preview";
     wrapper.tabIndex = -1;
@@ -1920,7 +1923,7 @@ class TablePreviewWidget extends WidgetType {
 
     const table = document.createElement("table");
     table.dataset.tableKey = String(this.block.from);
-    applyTableColumnWidths(table, String(this.block.from), headers.length);
+    applyTableColumnWidths(table, readTableColumnWidths(view.state, this.block.from), headers.length);
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
     let tableFocusIndex = 0;
@@ -1974,7 +1977,7 @@ class TablePreviewWidget extends WidgetType {
     wrapper.append(scrollport);
     this.disposeInteraction = installTableInteractionControls({
       columnCount: headers.length,
-      onAutoFitColumn: (column) => autoFitTableColumn(table, String(this.block.from), column),
+      onAutoFitColumn: (column) => autoFitTableColumn(table, this.block.from, column),
       onCommand: (command, position) => applyTableCommand(wrapper, this.block, command, position),
       onMoveColumn: (from, to) =>
         applyTableCommand(wrapper, this.block, TABLE_COMMANDS.columnMove, {
@@ -1987,8 +1990,7 @@ class TablePreviewWidget extends WidgetType {
           column: 0,
         }, { targetRow: to }),
       onResizeColumn: (column, width) => {
-        setTableColumnWidth(String(this.block.from), column, width);
-        applyTableColumnWidths(table, String(this.block.from), headers.length);
+        resizeTableColumn(view, table, this.block.from, column, width);
       },
       rowCount: bodyLines.filter(isTableRowLine).length + 1,
       scrollport,
@@ -2379,8 +2381,7 @@ function createTableIcon(iconName: string): SVGSVGElement {
   return svg;
 }
 
-function applyTableColumnWidths(table: HTMLTableElement, tableKey: string, columnCount: number): void {
-  const widths = readTableColumnWidths(tableKey);
+function applyTableColumnWidths(table: HTMLTableElement, widths: readonly number[], columnCount: number): void {
   const colgroup = table.querySelector("colgroup") ?? document.createElement("colgroup");
   if (!colgroup.parentElement) {
     table.prepend(colgroup);
@@ -2399,14 +2400,22 @@ function applyTableColumnWidths(table: HTMLTableElement, tableKey: string, colum
   table.style.tableLayout = widths.some(Boolean) ? "fixed" : "auto";
 }
 
-function autoFitTableColumn(table: HTMLTableElement, tableKey: string, column: number): void {
+function resizeTableColumn(view: EditorView, table: HTMLTableElement, from: number, column: number, width: number): void {
+  const widths = readTableColumnWidths(view.state, from);
+  widths[column] = width;
+  view.dispatch({ effects: tableWidthsEffect(view.state, from, widths), annotations: Transaction.addToHistory.of(false) });
+  applyTableColumnWidths(table, readTableColumnWidths(view.state, from), table.tHead?.rows[0]?.cells.length ?? 1);
+}
+
+function autoFitTableColumn(table: HTMLTableElement, from: number, column: number): void {
+  const view = EditorView.findFromDOM(table.closest(".cm-typora-table-preview") ?? table);
+  if (!view) return;
   const widths = Array.from(table.rows)
     .map((row) => row.cells[column])
     .filter((cell): cell is HTMLTableCellElement => Boolean(cell))
     .map((cell) => Math.max(cell.scrollWidth, cell.getBoundingClientRect().width));
   const width = Math.min(TABLE_UI.columnMaxWidthPx, Math.max(TABLE_UI.columnMinWidthPx, ...widths));
-  setTableColumnWidth(tableKey, column, width);
-  applyTableColumnWidths(table, tableKey, table.tHead?.rows[0]?.cells.length ?? 1);
+  resizeTableColumn(view, table, from, column, width);
 }
 
 function activeTableColumn(wrapper: HTMLElement): number {
@@ -2808,39 +2817,26 @@ function applyTableCommand(
   if (command === TABLE_COMMANDS.columnAutoFit) {
     const table = wrapper.querySelector<HTMLTableElement>("table");
     if (table) {
-      autoFitTableColumn(table, String(block.from), position.column);
+      autoFitTableColumn(table, block.from, position.column);
     }
     return;
   }
 
   const selection = readTableInteractionState(wrapper).selection;
   const selected = tableSelectionIndices(block.raw, selection, position);
-  const result = executeTableCommand(command, {
+  const context = {
     rawTable: block.raw,
     row: position.row,
     column: position.column,
     selectedColumns: selected.columns,
     selectedRows: selected.rows,
     ...target,
-  });
-  if (command === TABLE_COMMANDS.columnMove && target?.targetColumn !== undefined) {
-    moveTableColumnWidth(String(block.from), position.column, target.targetColumn);
-  }
-  if (command === TABLE_COMMANDS.columnInsertBefore) {
-    insertTableColumnWidth(String(block.from), position.column);
-  }
-  if (command === TABLE_COMMANDS.columnInsertAfter) {
-    insertTableColumnWidth(String(block.from), position.column + 1);
-  }
-  if (command === TABLE_COMMANDS.columnDuplicate) {
-    [...selected.columns].sort((left, right) => right - left).forEach((column) => {
-      insertTableColumnWidth(String(block.from), column + 1);
-    });
-  }
-  if (command === TABLE_COMMANDS.columnDelete) {
-    removeTableColumnWidths(String(block.from), selected.columns);
-  }
-  applyTableEdit(wrapper, block, result.rawTable, result.focus);
+  };
+  const result = executeTableCommand(command, context);
+  const view = EditorView.findFromDOM(wrapper);
+  if (!view) return;
+  const widths = tableWidthsForCommand(readTableColumnWidths(view.state, block.from), command, context, result.rawTable);
+  applyTableEdit(wrapper, block, result.rawTable, result.focus, [tableWidthsEffect(view.state, block.from, widths)]);
 }
 
 function tableSelectionIndices(
@@ -2888,6 +2884,7 @@ function applyTableEdit(
   block: PreviewBlock,
   nextRaw: string,
   focus?: TableCellPosition,
+  effects?: StateEffect<unknown>[],
 ) {
   const view = EditorView.findFromDOM(wrapper);
   if (!view) {
@@ -2907,6 +2904,7 @@ function applyTableEdit(
     },
     scrollIntoView: false,
     userEvent: "input.table",
+    effects,
   });
   scrollDOM.scrollTop = scrollTop;
   scrollDOM.scrollLeft = scrollLeft;

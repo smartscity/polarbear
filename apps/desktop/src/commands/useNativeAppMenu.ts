@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { NativeMenuInstaller } from "./nativeMenuInstaller";
 import { getCommandState, type CommandRuntimeContext } from "./commandState";
 import {
   titleForCommand,
@@ -27,28 +28,29 @@ export function useNativeAppMenu(
 ): void {
   const { language, t } = useI18n();
   const userSettings = useUserSettings();
+  const [installer] = useState(() => new NativeMenuInstaller((error) => {
+    console.info("Native menu is unavailable in this environment.", error);
+  }));
 
   useEffect(() => {
-    let isDisposed = false;
     const commandTitle = (command: AppCommand) => titleForCommand(command, t);
     const commandState = (command: AppCommand) =>
       getCommandState(command, state.commandContext);
     const accelerator = (command: AppCommand) =>
       effectiveAcceleratorForCommand(command, userSettings.keybindings);
 
-    async function installMenu() {
-      try {
-        const { CheckMenuItem, Menu } = await import("@tauri-apps/api/menu");
+    return installer.replace(async () => {
+        const { Menu } = await import("@tauri-apps/api/menu");
         const checkableMenuItem = (command: AppCommand) => {
           const state = commandState(command);
-          return CheckMenuItem.new({
+          return {
             id: command,
             text: commandTitle(command),
             accelerator: accelerator(command),
             enabled: state.enabled,
             checked: state.checked,
             action: () => executeCommand(command, { commandSource: "menu" }),
-          });
+          };
         };
         const [
           sourceModeItem,
@@ -58,7 +60,7 @@ export function useNativeAppMenu(
           sidebarItem,
           lightThemeItem,
           darkThemeItem,
-        ] = await Promise.all([
+        ] = [
           checkableMenuItem("view.sourceCode"),
           checkableMenuItem("view.liveEdit"),
           checkableMenuItem("view.split"),
@@ -66,8 +68,8 @@ export function useNativeAppMenu(
           checkableMenuItem("view.toggleSidebar"),
           checkableMenuItem("theme.light"),
           checkableMenuItem("theme.dark"),
-        ]);
-        const menu = await Menu.new({
+        ];
+        return Menu.new({
           items: [
             {
               id: "app",
@@ -155,12 +157,14 @@ export function useNativeAppMenu(
                   action: () => executeCommand("edit.copyMarkdown") },
                 { item: "Separator" },
                 {
+                  id: "edit.undo",
                   text: commandTitle("edit.undo"),
                   accelerator: accelerator("edit.undo"),
                   enabled: commandState("edit.undo").enabled,
                   action: () => executeCommand("edit.undo", { commandSource: "menu" }),
                 },
                 {
+                  id: "edit.redo",
                   text: commandTitle("edit.redo"),
                   accelerator: accelerator("edit.redo"),
                   enabled: commandState("edit.redo").enabled,
@@ -171,6 +175,7 @@ export function useNativeAppMenu(
                 { item: "Copy", text: commandTitle("edit.copy") },
                 { item: "Paste", text: commandTitle("edit.paste") },
                 {
+                  id: "edit.selectAll",
                   text: commandTitle("edit.selectAll"),
                   accelerator: accelerator("edit.selectAll"),
                   enabled: commandState("edit.selectAll").enabled,
@@ -178,18 +183,21 @@ export function useNativeAppMenu(
                 },
                 { item: "Separator" },
                 {
+                  id: "edit.find",
                   text: commandTitle("edit.find"),
                   accelerator: accelerator("edit.find"),
                   enabled: commandState("edit.find").enabled,
                   action: () => executeCommand("edit.find")
                 },
                 {
+                  id: "edit.findNext",
                   text: commandTitle("edit.findNext"),
                   accelerator: accelerator("edit.findNext"),
                   enabled: commandState("edit.findNext").enabled,
                   action: () => executeCommand("edit.findNext")
                 },
                 {
+                  id: "edit.findPrevious",
                   text: commandTitle("edit.findPrevious"),
                   accelerator: accelerator("edit.findPrevious"),
                   enabled: commandState("edit.findPrevious").enabled,
@@ -202,23 +210,27 @@ export function useNativeAppMenu(
               text: t("menu.paragraph"),
               items: [
                 {
+                  id: "format.paragraph",
                   text: commandTitle("format.paragraph"),
                   enabled: commandState("format.paragraph").enabled,
                   action: () => executeCommand("format.paragraph")
                 },
                 { item: "Separator" },
                 {
+                  id: "editor.insertTable",
                   text: commandTitle("editor.insertTable"),
                   accelerator: accelerator("editor.insertTable"),
                   enabled: commandState("editor.insertTable").enabled,
                   action: () => executeCommand("editor.insertTable")
                 },
                 {
+                  id: "editor.insertCodeFence",
                   text: commandTitle("editor.insertCodeFence"),
                   enabled: commandState("editor.insertCodeFence").enabled,
                   action: () => executeCommand("editor.insertCodeFence")
                 },
                 {
+                  id: "format.mathBlock",
                   text: commandTitle("format.mathBlock"),
                   accelerator: accelerator("format.mathBlock"),
                   enabled: commandState("format.mathBlock").enabled,
@@ -226,36 +238,42 @@ export function useNativeAppMenu(
                 },
                 { item: "Separator" },
                 {
+                  id: "format.heading1",
                   text: commandTitle("format.heading1"),
                   accelerator: accelerator("format.heading1"),
                   enabled: commandState("format.heading1").enabled,
                   action: () => executeCommand("format.heading1")
                 },
                 {
+                  id: "format.heading2",
                   text: commandTitle("format.heading2"),
                   accelerator: accelerator("format.heading2"),
                   enabled: commandState("format.heading2").enabled,
                   action: () => executeCommand("format.heading2")
                 },
                 {
+                  id: "format.heading3",
                   text: commandTitle("format.heading3"),
                   accelerator: accelerator("format.heading3"),
                   enabled: commandState("format.heading3").enabled,
                   action: () => executeCommand("format.heading3")
                 },
                 {
+                  id: "format.heading4",
                   text: commandTitle("format.heading4"),
                   accelerator: accelerator("format.heading4"),
                   enabled: commandState("format.heading4").enabled,
                   action: () => executeCommand("format.heading4")
                 },
                 {
+                  id: "format.heading5",
                   text: commandTitle("format.heading5"),
                   accelerator: accelerator("format.heading5"),
                   enabled: commandState("format.heading5").enabled,
                   action: () => executeCommand("format.heading5")
                 },
                 {
+                  id: "format.heading6",
                   text: commandTitle("format.heading6"),
                   accelerator: accelerator("format.heading6"),
                   enabled: commandState("format.heading6").enabled,
@@ -263,21 +281,25 @@ export function useNativeAppMenu(
                 },
                 { item: "Separator" },
                 {
+                  id: "format.quote",
                   text: commandTitle("format.quote"),
                   enabled: commandState("format.quote").enabled,
                   action: () => executeCommand("format.quote")
                 },
                 {
+                  id: "format.orderedList",
                   text: commandTitle("format.orderedList"),
                   enabled: commandState("format.orderedList").enabled,
                   action: () => executeCommand("format.orderedList")
                 },
                 {
+                  id: "format.unorderedList",
                   text: commandTitle("format.unorderedList"),
                   enabled: commandState("format.unorderedList").enabled,
                   action: () => executeCommand("format.unorderedList")
                 },
                 {
+                  id: "format.taskList",
                   text: commandTitle("format.taskList"),
                   enabled: commandState("format.taskList").enabled,
                   action: () => executeCommand("format.taskList")
@@ -289,47 +311,55 @@ export function useNativeAppMenu(
               text: t("menu.format"),
               items: [
                 {
+                  id: "format.bold",
                   text: commandTitle("format.bold"),
                   accelerator: accelerator("format.bold"),
                   enabled: commandState("format.bold").enabled,
                   action: () => executeCommand("format.bold")
                 },
                 {
+                  id: "format.italic",
                   text: commandTitle("format.italic"),
                   accelerator: accelerator("format.italic"),
                   enabled: commandState("format.italic").enabled,
                   action: () => executeCommand("format.italic")
                 },
                 {
+                  id: "format.underline",
                   text: commandTitle("format.underline"),
                   accelerator: accelerator("format.underline"),
                   enabled: commandState("format.underline").enabled,
                   action: () => executeCommand("format.underline")
                 },
                 {
+                  id: "format.code",
                   text: commandTitle("format.code"),
                   enabled: commandState("format.code").enabled,
                   action: () => executeCommand("format.code")
                 },
                 {
+                  id: "format.link",
                   text: commandTitle("format.link"),
                   accelerator: accelerator("format.link"),
                   enabled: commandState("format.link").enabled,
                   action: () => executeCommand("format.link")
                 },
                 {
+                  id: "format.clearFormat",
                   text: commandTitle("format.clearFormat"),
                   enabled: commandState("format.clearFormat").enabled,
                   action: () => executeCommand("format.clearFormat")
                 },
                 { item: "Separator" },
                 {
+                  id: "format.codeFence",
                   text: commandTitle("format.codeFence"),
                   accelerator: accelerator("format.codeFence"),
                   enabled: commandState("format.codeFence").enabled,
                   action: () => executeCommand("format.codeFence")
                 },
                 {
+                  id: "format.insertImage",
                   text: commandTitle("format.insertImage"),
                   accelerator: accelerator("format.insertImage"),
                   enabled: commandState("format.insertImage").enabled,
@@ -356,21 +386,25 @@ export function useNativeAppMenu(
                   action: () => executeCommand("caption.start", { commandSource: "menu" }),
                 },
                 {
+                  id: "view.fileTree",
                   text: commandTitle("view.fileTree"),
                   action: () => executeCommand("view.fileTree")
                 },
                 { item: "Separator" },
                 {
+                  id: "view.resetZoom",
                   text: commandTitle("view.resetZoom"),
                   accelerator: accelerator("view.resetZoom"),
                   action: () => executeCommand("view.resetZoom", { commandSource: "menu" })
                 },
                 {
+                  id: "view.zoomIn",
                   text: commandTitle("view.zoomIn"),
                   accelerator: accelerator("view.zoomIn"),
                   action: () => executeCommand("view.zoomIn", { commandSource: "menu" })
                 },
                 {
+                  id: "view.zoomOut",
                   text: commandTitle("view.zoomOut"),
                   accelerator: accelerator("view.zoomOut"),
                   action: () => executeCommand("view.zoomOut", { commandSource: "menu" })
@@ -402,20 +436,8 @@ export function useNativeAppMenu(
           ]
         });
 
-        if (!isDisposed) {
-          await menu.setAsAppMenu();
-        }
-      } catch (error) {
-        console.info("Native menu is unavailable in this environment.", error);
-      }
-    }
-
-    void installMenu();
-
-    return () => {
-      isDisposed = true;
-    };
-  }, [executeCommand, language, state.commandContext, state.repositoryAccount, state.repositoryBinding, t, userSettings.keybindings]);
+    });
+  }, [installer, executeCommand, language, state.commandContext, state.repositoryAccount, state.repositoryBinding, t, userSettings.keybindings]);
 }
 
 function repositoryMenuItems(params: {

@@ -18,7 +18,9 @@ Preserve the six unrelated Feedback changes and existing persistent formats. Reu
 | I (implemented, bounded) | Window-local navigation intent and safe workspace replacement | Failed-read, stale recent-open and unsaved workspace browser failures | Medium | Only current read applies; no failed-read tab; drafts block replacement | Revert gate and callers together; no persistent navigation state |
 | J (implemented, bounded) | Document-local reload permissions and unified reload application | Failing closed/reopened, dismissed reload and missing conflict-choice regressions | Medium | Edit/undo, competing reads, explicit discard/cancel, post-sync reload, late errors and disposal | Revert owner, callers and messages together; no migration |
 | Next | Remaining document session extraction | Lifecycle coverage across close/reopen, external reload, rename and Save As | High | Document generation and metadata ownership across every asynchronous mutation | Separate commits; no storage rewrite |
-| Later | Native menu lifetime, table width ownership, performance | Resource traces and interaction baselines | Medium-high | Compare equivalent workloads and native behavior | Preserve current product semantics |
+| K (implemented) | Native menu resource ownership and bounded replacement queue | Failing resource-lease tests plus resolved Tauri ownership inspection | Medium | Create/install/disposal races, handle release, stable IDs and existing command state tests | Revert installer and inline-menu changes together |
+| L (implemented) | Document-owned table widths and transactional column metadata | Failing multi-document and prefix-edit browser tests | Medium | Generation isolation, column operations/history, identical-content document switches and editor disposal | Revert state field and widget integration together; no data migration |
+| Later | Measured native resource usage, diagram scheduling and startup performance | Equivalent workloads and interaction baselines | Medium-high | Native resource/RSS traces and reproducible timings | Preserve current product semantics |
 
 ## Compatibility
 
@@ -29,6 +31,7 @@ Preserve the six unrelated Feedback changes and existing persistent formats. Reu
 - Status messages reuse existing App state. Batch F adds permission and uncertain-durability codes. Batch H adds an optional sync warning to successful saves; revision and normal success shape remain unchanged. EN/ZH resources are synchronized.
 - A superseded recent-file navigation returns `null`, distinct from unreadable-file `false`; the Recent panel must not report cancellation as a missing file. Workspace replacement refuses unsaved buffers and directs the user to existing Save/Close actions. Reload permissions reject late reads after changes or disposal; they do not cancel accepted native IO or remote sync operations.
 - [File save safety](file-save-safety.md) owns the native transaction and its explicit cooperative-writer/platform limits. It does not claim an arbitrary external-writer filesystem CAS.
+- [Menu and table lifetimes](menu-table-lifetimes.md) owns native handle disposal and session-only column widths. Neither change introduces a new persistent format or command system.
 
 ## Out of this release gate
 
