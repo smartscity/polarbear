@@ -50,3 +50,14 @@ test("native repository contracts and providers do not depend on entry-point int
     assert.doesNotMatch(source, /use (?:super|crate)::\*|super::super/);
   }
 });
+
+test("native quality produces frontend assets before checking custom-protocol", () => {
+  const workflow = readFileSync(join(root, ".github/workflows/quality.yml"), "utf8");
+  const native = workflow.slice(workflow.indexOf("  native-tests:"), workflow.indexOf("  desktop-browser:"));
+  const install = native.indexOf("run: npm ci");
+  const setup = native.indexOf("uses: actions/setup-node@");
+  const build = native.indexOf("run: npm --workspace apps/desktop run build");
+  const clippy = native.indexOf("run: cargo clippy --all-targets --all-features -- -D warnings");
+  assert.ok(install >= 0 && build > install && clippy > build, "The independent native job must build real assets before embedding them");
+  assert.ok(setup >= 0 && setup < install);
+});

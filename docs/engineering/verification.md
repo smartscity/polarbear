@@ -353,3 +353,30 @@ staging files remain. Deny configuration-directory write access and confirm the
 localized connection failure does not report success. Restore permissions before
 cleanup. Use a release build separately to confirm Keychain denial never creates
 a plaintext fallback. Do not use production credentials for these exercises.
+
+### Clean-Job CI Prerequisite Follow-up
+
+The first branch run for `0609fb2355265a15afae460c43faba1bd22bbce8`,
+[Quality 40084576906](https://github.com/smartscity/polarbear/actions/runs/40084576906),
+finished with Frontend quality, Rust format, and Desktop editor and clipboard
+passing. Native tests failed at all-feature Clippy: Tauri's `generate_context!`
+requires `../dist` when `custom-protocol` is enabled, but this independent job
+never built the frontend. Local validation had an existing production build;
+that did not prove fresh-job prerequisites were complete.
+
+The workflow-order regression failed before the fix. Native CI now installs
+the locked Node dependencies and builds the real frontend before Clippy, while
+retaining `--all-targets --all-features -- -D warnings`. A command-scoped local
+`TAURI_CONFIG` override pointing `frontendDist` to a nonexistent temporary path
+reproduced the exact macro failure (exit 101), without moving user assets or
+changing committed configuration. Desktop tests were rerun after the fix:
+310 Vitest tests and 33 Node tests passed. This check does not pretend that a
+local dependency cache is a fresh `npm ci` installation; the hosted job is the
+independent-checkout verification.
+
+After removing the command-scoped override, the real production frontend build
+passed (46.51 seconds), followed by normal all-target/all-feature Clippy (74
+seconds), Rust formatting and `git diff --check`. The existing large frontend
+chunk warning remains. This CI-only follow-up changes no runtime source; the
+92 native and 71 browser cases above are from the preceding implementation
+verification, not a claim that those suites were rerun for a YAML-only edit.

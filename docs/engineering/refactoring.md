@@ -240,6 +240,14 @@ to `codex/**` pushes. Tests protect that trigger, the unchanged native command
 registration and the new contract boundary. No release tag or DMG is implied by
 a branch quality run; release gates and the alpha latency policy are untouched.
 
+The first triggered run also exposed a separate clean-job prerequisite:
+`custom-protocol`, enabled by all-feature Clippy, embeds `frontendDist`. The
+independent native job did not build that directory, although a developer's
+checkout could already contain it. The native job now sets up Node, installs
+locked dependencies and builds the real Desktop frontend before Clippy. A
+test-first workflow ordering assertion protects this dependency; no empty asset
+placeholder, reduced feature set or disabled lint substitutes for the build.
+
 ### Verification and Remaining Ownership
 
 New symlink and hard-link tests failed against the previous writer before the
