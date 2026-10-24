@@ -17,6 +17,10 @@ and checks without a recorded acceptance pass.
 | [iPhone reading assistant](planning/iphone-reading-assistant.md) | Separate Apple translation/speech, system dictionary and explicit capture-file transfer |
 | [Bundled model notices](../apps/desktop/public/models/en-zh/README.md) | Model/engine provenance, integrity and third-party licenses |
 | [Locale resources](../apps/desktop/src/shared/i18n/locales/README.md) | UI translation-resource maintenance |
+| [Engineering audit](engineering/audit.md) | 2026-10-24 findings, implemented ownership fixes and explicitly open risks |
+| [Engineering refactoring](engineering/refactoring.md) | Module changes, compatibility and test-first evidence |
+| [Quality scorecard](engineering/scorecard.md) | Before/after evidence maturity, measurements and missing acceptance |
+| [Engineering verification](engineering/verification.md) | Actual local checks, failed attempts, CI changes and platform limits |
 
 Desktop's language-pack dependency is superseded by bundled Bergamot. The iPhone
 reader has a separate installed-only Apple translation path; do not apply either

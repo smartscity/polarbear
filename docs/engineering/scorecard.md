@@ -1,0 +1,59 @@
+# Engineering Quality Scorecard
+
+Date: 2026-10-24. Baseline `166e231c`; implementation `2747dc36`.
+See [audit](audit.md) for findings and [verification](verification.md) for scope.
+
+## Rubric
+
+Scores below measure **evidence maturity in the audited slice**, not customer
+satisfaction, defect probability, or a certified whole-product grade:
+
+- 0: no usable evidence in this pass.
+- 1: inspected and limitations documented.
+- 2: targeted repeatable tests/checks exist and run locally.
+- 3: layered regression plus configured blocking CI for that slice.
+- 4: corresponding current-revision hosted/package/device or measured workload
+  acceptance has also been demonstrated.
+
+No aggregate score is calculated. In particular, 3/4 does not imply 7.5/10
+product quality. Unmeasured performance and unverified release environments
+prevent a defensible 9.5-10 claim.
+
+| Dimension | Before | After | Evidence and remaining limit |
+| --- | ---: | ---: | --- |
+| Correctness | 2 | 3 | Existing units/native tests; new real editor race/lifecycle regressions and release browser gate. Installed-app acceptance remains separate. |
+| Architecture | 1 | 2 | Owner extraction plus executable TS import graph. App and main responsibilities remain broad; graph is not a complete native/runtime dependency model. |
+| Code quality | 1 | 2 | All-target Clippy now clean under explicit fixture policy; duplicate portal lifecycle removed. No measured duplication/complexity or complete dead-code proof. |
+| Maintainability | 1 | 2 | Repository identity, table menu lifetime and path policy have separate ownership and tests. Major core decomposition remains partial. |
+| Reliability | 2 | 3 | Existing save/IPC failure coverage plus stale-read and disposal regressions; CI configuration strengthened. No two-hour hardware endurance result. |
+| Security | 2 | 2 | Native path/permission/contract checks rerun; no changed trust model. Credential deletion, external URL fallback and platform-specific risks remain open. No fresh advisory database scan. |
+| Performance | 0 | 0 | Bundle/build observations exist, but no controlled editor latency/CPU/RSS before-after experiment. No speedup claimed. |
+| Testability | 2 | 3 | 10 added browser cases, two native path cases, three Node graph/gate checks; actual translation and clipboard integration rerun. Coverage percentage unmeasured. |
+| Release quality | 2 | 3 | macOS release now runs the critical checks directly. Current-revision hosted execution, new DMG and physical-device acceptance not established. |
+| Open-source governance | 1 | 2 | Contribution/security/verification guidance added. Root license grant/texts and GitHub settings still require maintainer decisions. |
+
+## Measurements
+
+| Metric | Before | After | Interpretation |
+| --- | --- | --- | --- |
+| Desktop Vitest | 57 files / 288 passing tests | 57 files / 288 passing tests | New UI regressions belong in browser tests, not a fabricated unit-test increase. |
+| Desktop Node tests | 27 passing | 30 passing | Dependency and workflow assertions added. |
+| Desktop browser cases | 56 existing cases; no clean full baseline run claimed | 66 passing in 2.5 minutes | 10 additions; targeted old-behavior failures recorded separately. |
+| Desktop native tests | 59 pass, 2 ignored | 61 pass, 2 ignored | Two added path-policy cases; child save process fixture is invoked by its parent test. |
+| All-target Clippy diagnostics | 127 errors | 0 | 126 fixture unwrap/expect diagnostics and test-module placement, not 127 production defects. |
+| Runtime TS cycles / forbidden reverse edges | No automated graph gate | 0 / 0 in 167 files | Current scan proves the scoped graph, not all possible dependencies. |
+| Cross-feature TS edges | Not used as a deletion target | 21 | Includes legitimate diagram composition and type-only coupling. |
+| Desktop App JS chunk | 1,690.44 kB / 507.26 kB gzip | 1,690.51 kB / 507.50 kB gzip | Vite output units; chunk-size warning remains. |
+| Desktop production build | 18.11 s | 24.12 s | Different concurrent machine load; not a controlled performance regression or improvement measurement. |
+| iOS production build | 12.72 s | No changed iOS production sources | Build passed; large Mermaid/diagram chunks still warned. |
+| Real editing latency / CPU / RSS | Not measured | Not measured | Must be measured using a fixed workload before optimization claims. |
+| Branch/line coverage / duplicate ratio | Not measured | Not measured | Passing tests do not imply complete coverage. |
+
+## Acceptance Status
+
+Local correctness gates for this slice pass. The broad governance target remains
+**PARTIAL**, not achieved: composition-only core entry points, controlled
+large-document performance, comprehensive security fault testing, hosted
+required-check enforcement, license completion, and device/release acceptance
+are outstanding. Existing product behavior has no regression observed in the
+executed suites; unexecuted platforms are not covered by that statement.
