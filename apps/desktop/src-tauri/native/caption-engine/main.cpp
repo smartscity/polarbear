@@ -80,7 +80,7 @@ static int read_pcm(whisper_vad_context *vad, RecognitionQueue &queue,
                 bool final = quiet>=sample_rate*3/5 || speech.size()>=max_samples;
                 if (final) {
                     if ((failure = finalize())) return false;
-                } else if (previews.due(speech.size())) {
+                } else if (previews.due(speech.size(), quiet)) {
                     previews.attempted(speech.size(), queue.offer_partial(speech, sequence, start, end));
                 }
                 if (final) { speech.clear(); quiet=0; previews.reset(); preroll.clear(); }

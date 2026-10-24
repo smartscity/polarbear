@@ -6,7 +6,11 @@
 class PreviewSchedule {
 public:
     explicit PreviewSchedule(size_t sample_rate) : rate_(sample_rate), next_(sample_rate) {}
-    bool due(size_t samples) const { return samples >= next_; }
+    bool due(size_t samples, size_t quiet_samples = 0) const {
+        // A pending silence boundary will submit the complete utterance. Starting
+        // a preview here repeats the encoder and delays that authoritative job.
+        return quiet_samples == 0 && samples >= next_;
+    }
     void attempted(size_t samples, bool accepted) {
         next_ = samples + (accepted ? rate_ * 2 : rate_ / 8);
     }
