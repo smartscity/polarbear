@@ -71,6 +71,82 @@ async function reloadFixture(page: Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
 }
 
+test("native link failure keeps the document and reports a localized error without browser fallback", async ({ page }) => {
+  await reloadFixture(page);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.evaluate(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    Object.assign(window, { isTauri: true, __externalDialogs: [], __browserOpens: 0 });
+    window.open = () => { (window as any).__browserOpens++; return null; };
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "open_external_url") return Promise.reject("private launcher diagnostic");
+      if (command === "plugin:dialog|message") {
+        (window as any).__externalDialogs.push(args);
+        return Promise.resolve();
+      }
+      return invoke(command, args);
+    };
+  });
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("unsaved link test ");
+  const original = page.url();
+  await page.locator(".designer-credit").click();
+  await expect.poll(() => page.evaluate(() => (window as any).__externalDialogs.length)).toBe(1);
+  expect(await page.evaluate(() => JSON.stringify((window as any).__externalDialogs))).toContain("The link could not be opened");
+  await page.locator(".status-language-select").selectOption("zh-CN");
+  await page.locator(".designer-credit").click();
+  await expect.poll(() => page.evaluate(() => (window as any).__externalDialogs.length)).toBe(2);
+  expect(await page.evaluate(() => JSON.stringify((window as any).__externalDialogs))).toContain("无法打开链接");
+  expect(await page.evaluate(() => (window as any).__browserOpens)).toBe(0);
+  expect(page.url()).toBe(original);
+  await expect(editor).toContainText("unsaved link test");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
+test("a blocked browser link never replaces the editor page", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(() => {
+    Object.assign(window, { isTauri: false, __browserOpens: 0 });
+    window.open = () => { (window as any).__browserOpens++; return null; };
+  });
+  const original = page.url();
+  await page.locator(".designer-credit").click();
+  await expect.poll(() => page.evaluate(() => (window as any).__browserOpens)).toBe(1);
+  expect(page.url()).toBe(original);
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Reload.md" })).toHaveCount(1);
+});
+
+test("failed credential deletion retains the disconnect command and a successful retry clears it", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(async () => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    Object.assign(window, { __disconnects: 0 });
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "repository_disconnect_provider") {
+        if (++(window as any).__disconnects === 1) return Promise.reject(JSON.stringify({
+          code: "repository.secretDeletionFailed", message: "private native details",
+        }));
+        return Promise.resolve();
+      }
+      return invoke(command, args);
+    };
+    const path = "/src/shared/settings/userSettings.ts";
+    (await import(path)).updateUserSettings({ keybindings: { "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
+  });
+  await page.locator(".editor-workspace .cm-content").first().click();
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+D");
+  await expect(page.locator(".workspace-status")).toContainText("Some saved credentials could not be removed");
+  await expect(page.locator(".workspace-status")).not.toContainText("Disconnected cloud sync");
+  await expect(page.locator(".workspace-status")).not.toContainText("private native details");
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+D");
+  await expect(page.locator(".workspace-status")).toContainText("Disconnected cloud sync");
+  expect(await page.evaluate(() => (window as any).__disconnects)).toBe(2);
+});
+
 test("preserves typing during an external reload and offers an explicit conflict choice", async ({ page }) => {
   await reloadFixture(page);
   await page.evaluate(() => { (window as any).__diskVersion = "changed"; });

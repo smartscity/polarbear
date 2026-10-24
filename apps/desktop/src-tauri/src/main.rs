@@ -12,6 +12,7 @@ use tauri::{Emitter, Manager};
 mod app_zoom;
 mod cloud_sync_store;
 mod document_save;
+mod external_url;
 mod ipc_contracts;
 mod live_caption;
 mod memory_admin;
@@ -1646,42 +1647,7 @@ fn reveal_in_file_manager(workspace_root: String, relative_path: String) -> Resu
 
 #[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> {
-    if !(url.starts_with("https://") || url.starts_with("http://")) {
-        return Err("Only http and https URLs can be opened externally.".to_owned());
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        Command::new("open")
-            .arg(url)
-            .status()
-            .map_err(|error| error.to_string())?;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        Command::new("cmd")
-            .arg("/C")
-            .arg("start")
-            .arg("")
-            .arg(url)
-            .status()
-            .map_err(|error| error.to_string())?;
-        return Ok(());
-    }
-
-    #[cfg(all(unix, not(target_os = "macos")))]
-    {
-        Command::new("xdg-open")
-            .arg(url)
-            .status()
-            .map_err(|error| error.to_string())?;
-        return Ok(());
-    }
-
-    #[allow(unreachable_code)]
-    Err("Opening external URLs is not supported on this platform.".to_owned())
+    external_url::open(&url)
 }
 
 #[tauri::command]

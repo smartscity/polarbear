@@ -1,5 +1,6 @@
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
-import { invokeTauri } from "../../shared/tauri/invokeTauri";
+import { hasTauriErrorCode, invokeTauri } from "../../shared/tauri/invokeTauri";
+import { translateCurrent } from "../../shared/i18n/translate";
 
 export type RepositoryProvider = "github" | "gitlab";
 
@@ -61,7 +62,14 @@ export async function connectRepositoryProvider(params: {
 }
 
 export async function disconnectRepositoryProvider(): Promise<void> {
-  await invokeTauri(TAURI_COMMANDS.repositoryDisconnectProvider);
+  try {
+    await invokeTauri(TAURI_COMMANDS.repositoryDisconnectProvider);
+  } catch (error) {
+    if (hasTauriErrorCode(error, "repository.secretDeletionFailed")) {
+      throw new Error(translateCurrent("repository.secretDeletionFailed"), { cause: error });
+    }
+    throw error;
+  }
 }
 
 export async function getRepositoryAccount(): Promise<RepositoryAccount | null> {

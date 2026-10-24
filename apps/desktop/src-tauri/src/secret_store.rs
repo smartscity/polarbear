@@ -96,9 +96,26 @@ pub(crate) fn save_repository_secret(
 }
 
 pub(crate) fn delete_repository_secrets(app: &tauri::AppHandle) -> Result<(), String> {
-    let _ = KeychainSecretStore.delete_secret(GITHUB_TOKEN_KEY);
-    let _ = KeychainSecretStore.delete_secret(GITLAB_TOKEN_KEY);
-    write_fallback_secrets(app, &BTreeMap::new())
+    delete_repository_secrets_using(&KeychainSecretStore, || {
+        write_fallback_secrets(app, &BTreeMap::new())
+    })
+}
+
+fn delete_repository_secrets_using(
+    store: &dyn SecretStore,
+    clear_fallback: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    // Attempt every location even after a partial failure; retries are idempotent.
+    let github = store.delete_secret(GITHUB_TOKEN_KEY);
+    let gitlab = store.delete_secret(GITLAB_TOKEN_KEY);
+    let fallback = clear_fallback();
+    if github.is_err() || gitlab.is_err() || fallback.is_err() {
+        return Err(serde_json::json!({
+            "code": "repository.secretDeletionFailed",
+            "message": "Some saved credentials could not be removed. Retry disconnecting Cloud Sync."
+        }).to_string());
+    }
+    Ok(())
 }
 
 fn repository_secret_key(provider: &str) -> &'static str {
@@ -145,4 +162,81 @@ fn write_fallback_secrets(
     fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
         .map_err(|error| error.to_string())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    struct FakeSecrets {
+        failures: Vec<&'static str>,
+        remaining: RefCell<Vec<&'static str>>,
+        attempts: RefCell<Vec<String>>,
+    }
+
+    impl SecretStore for FakeSecrets {
+        fn save_secret(&self, _: &str, _: &str) -> Result<(), String> {
+            unreachable!("Deletion must not save credentials")
+        }
+        fn get_secret(&self, _: &str) -> Result<Option<String>, String> {
+            unreachable!("Deletion must not read credentials")
+        }
+        fn delete_secret(&self, key: &str) -> Result<(), String> {
+            self.attempts.borrow_mut().push(key.to_owned());
+            if self.failures.contains(&key) {
+                return Err("sensitive provider diagnostic".to_owned());
+            }
+            self.remaining.borrow_mut().retain(|entry| *entry != key);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn deletion_reports_partial_failure_attempts_every_store_and_can_be_retried() {
+        for failures in [
+            vec![GITHUB_TOKEN_KEY],
+            vec![GITLAB_TOKEN_KEY],
+            vec![GITHUB_TOKEN_KEY, GITLAB_TOKEN_KEY],
+        ] {
+            let mut store = FakeSecrets {
+                failures,
+                remaining: RefCell::new(vec![GITHUB_TOKEN_KEY, GITLAB_TOKEN_KEY]),
+                attempts: RefCell::new(vec![]),
+            };
+            let cleared = std::cell::Cell::new(false);
+            let result = delete_repository_secrets_using(&store, || {
+                cleared.set(true);
+                Ok(())
+            });
+            assert!(
+                result.is_err(),
+                "A failed keychain deletion must not acknowledge disconnect"
+            );
+            assert!(cleared.get(), "Fallback cleanup must still be attempted");
+            assert_eq!(
+                *store.attempts.borrow(),
+                [GITHUB_TOKEN_KEY, GITLAB_TOKEN_KEY]
+            );
+            assert!(!format!("{result:?}").contains("sensitive provider diagnostic"));
+            store.failures.clear();
+            assert!(delete_repository_secrets_using(&store, || Ok(())).is_ok());
+            assert!(store.remaining.borrow().is_empty());
+            assert!(delete_repository_secrets_using(&store, || Ok(())).is_ok());
+        }
+    }
+
+    #[test]
+    fn fallback_failure_is_not_success_and_does_not_expose_internal_details() {
+        let store = FakeSecrets {
+            failures: vec![],
+            remaining: RefCell::new(vec![]),
+            attempts: RefCell::new(vec![]),
+        };
+        let result =
+            delete_repository_secrets_using(&store, || Err("private local path".to_owned()));
+        assert!(result.is_err());
+        assert!(!format!("{result:?}").contains("private local path"));
+        assert_eq!(store.attempts.borrow().len(), 2);
+    }
 }
