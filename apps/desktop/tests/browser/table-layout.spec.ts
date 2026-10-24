@@ -111,3 +111,27 @@ test("closes table portals when the owning editor is replaced with preview", asy
   await page.getByRole("button", { name: "Preview", exact: true }).click();
   await expect(page.locator(".cm-typora-table-size-menu")).toHaveCount(0);
 });
+
+test("gap insertion restores focus only inside its owning editor", async ({ page }) => {
+  await page.evaluate(async (text) => {
+    const reactPath = "/node_modules/.vite/deps/react.js";
+    const domPath = "/node_modules/.vite/deps/react-dom_client.js";
+    const editorPath = "/src/features/editor/components/TyporaLiveEditor.tsx";
+    const { default: React } = await import(reactPath), { default: ReactDOM } = await import(domPath);
+    const { TyporaLiveEditor } = await import(editorPath);
+    const host = document.createElement("div");
+    host.id = "second-editor"; host.style.height = "400px";
+    document.body.append(host);
+    ReactDOM.createRoot(host).render(React.createElement(TyporaLiveEditor, { activeFileId: "Other.md", workspaceRoot: "/other", markdownContent: text }));
+  }, markdown);
+  const second = page.locator("#second-editor .cm-typora-table-preview");
+  await expect(second).toBeVisible();
+  const cell = second.locator("th").first();
+  await cell.scrollIntoViewIfNeeded();
+  const box = await cell.boundingBox();
+  await page.mouse.move(box!.x + box!.width, box!.y + 5);
+  await second.locator(".cm-typora-table-gap-column").click();
+  await expect(second.locator("th")).toHaveCount(3);
+  await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest("#second-editor")))).toBe(true);
+  await expect(page.locator("#root .cm-typora-table-preview th")).toHaveCount(2);
+});

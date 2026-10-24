@@ -433,3 +433,79 @@ they do not prove remote provider behavior. Document-session/zoom extraction,
 table widget internal decomposition and other audit items remain explicitly open.
 The post-push CI result must be checked against this commit, not inferred from
 the passing baseline or local cache.
+
+## Document Session, Zoom and Table Ownership Follow-up
+
+Baseline: `aac3e472e6836e153c38dfe99584449d418a97de`. GitHub independently
+confirmed that its [Quality run](https://github.com/smartscity/polarbear/actions/runs/40087173802)
+passed. The following local evidence is from macOS 26.5.1, Intel x86_64, Node
+26.1.0. It is not installed-app, release, hardware gesture or performance evidence.
+
+### Test-first Findings
+
+- Delayed Save As failed before its fix: finishing the save after switching to
+  another workspace activated the renamed source document. The session now
+  updates inactive document identity without taking over the current workspace.
+- Delayed close failed before its fix: closing the original tab after a new tab
+  was opened discarded the new tab. Completion now reads the current tab list.
+- Reset versus a queued gesture failed before its fix: the canvas returned to a
+  scale of approximately 1.43333 instead of `none`. Reset now cancels queued
+  frames and settle/unlock timers before committing its transform.
+- A dual-editor Table insertion failed before its fix: the second editor inserted
+  a column but focused the first editor's same-offset table. Focus lookup and
+  delayed restoration now belong to the originating EditorView/document.
+- Three adapter lifecycle tests initially failed because the explicit subscription
+  API did not exist. Two additional fault tests reproduced uncontained asynchronous
+  unlisten rejection, including a registration arriving after disposal. The
+  adapter now releases each registration once, ignores disposed events, reports
+  active registration errors and logs cleanup failure without updating a closed UI.
+- The first complete browser pass found a locale-dependent regression introduced
+  during extraction: switching language repeated the native zoom baseline and
+  subscription. A strengthened assertion records both calls. Stable error
+  callbacks preserve current translation without reinitializing the subscription.
+- The extra cross-workspace close characterization passes without another
+  production fix. Its initial empty-tree failure came from an incomplete fixture
+  returning no files on refresh; that was corrected, not counted as a product
+  defect. One intermediate attempt was invalidated by development-server HMR and
+  rerun after source changes stopped. Other initial fixture corrections included
+  waiting for App mount and using the actual ReactDOM module export.
+
+### Scope and Remaining Risk
+
+`App` delegates session and zoom ownership; Table composition delegates input,
+menus, sizing, clipboard and transactions. Cell edits and structural edits now
+share the same transaction bridge while retaining their existing user-event
+annotations. Existing Markdown, IPC, settings and history formats remain intact.
+
+The staged App is 946 lines, down from 3,917; the Table widget is 217 lines,
+down from 1,214. The session (1,685 lines) and zoom hook (1,228 lines) remain large
+owners internally. Those measurements establish separation, not a speedup or
+proof that every asynchronous filesystem mutation is safe.
+
+NOT RUN: real trackpad/native-window gesture acceptance, installed-app upgrade,
+physical IME, Windows/Linux/iPhone acceptance, remote repository sync faults,
+ASR accuracy/endurance and a controlled performance benchmark. Rename/move/delete
+completion races, pending diagram admission, multi-window settings contention and
+maintainer licensing decisions remain in the audit. No tag or DMG is produced by
+this engineering-only batch. Pre-existing Feedback UI edits remain unstaged.
+
+### Local Gates
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Desktop Vitest | PASS | 326 tests in 61 files, including five native pinch subscription lifetime tests. |
+| Desktop Node tests | PASS | 35 tests, including App/session/zoom/Table boundary guards. |
+| Full Desktop Playwright | PASS | 81 tests, 6.3 minutes, after correcting the locale regression and fixtures. |
+| Native clipboard receiver | PASS | This run's generated payload: all three real Mermaid attachments and surrounding text; Unicode, four clipboard formats, single-image copy and stale-copy protection. AppKit receiver only, not Word/Lark acceptance. |
+| Bundled offline translation | PASS | Chromium and WebKit production CSP, sentence/paragraph inference and cancellation. |
+| Desktop typecheck / lint | PASS | No TypeScript errors or lint warnings. |
+| Production frontend build | PASS | 56.98 seconds on the loaded local machine; App chunk 1,697.02 kB, gzip 509.84 kB. Existing large-chunk warning remains; timing is not a benchmark. |
+| Native Cargo tests | PASS | 92 passed, 3 ignored entries; subprocess helpers are invoked by parent tests, installed Memory integration remains opt-in. |
+| All-target/all-feature Clippy | PASS | Warnings denied; rerun after the final frontend asset build. |
+| Rust format / Memory contract | PASS | No native contract or schema change. |
+| Dependency graph | PASS | 181 production TypeScript files; zero runtime cycles, forbidden reverse dependencies, unresolved or computed imports. 24 cross-feature edges are recorded, not claimed eliminated. |
+
+Only trailing blank lines were removed from three new files after these runtime
+checks; executable statements are unchanged. The staged commit excludes the
+pre-existing Feedback additions. Hosted CI must be checked for the pushed SHA;
+the baseline result and local cache are not substitutes for that result.

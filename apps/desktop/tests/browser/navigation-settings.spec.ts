@@ -71,6 +71,107 @@ async function reloadFixture(page: Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
 }
 
+test("Save As completion keeps the newly selected document and workspace active", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/saved/Renamed.md");
+      if (command === "write_markdown_file") return new Promise((resolve) => {
+        (window as any).__finishSaveAs = () => resolve({ revision: "saved" });
+      });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts", { recentDocumentStore } = await import(path);
+    recentDocumentStore().record("/first/First.md", 1);
+    recentDocumentStore().record("/second/Second.md", 2);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /First.md/ }).first().click();
+  await page.keyboard.press("ControlOrMeta+Shift+s");
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.locator(".recent-documents").getByRole("button", { name: /Second.md/ }).first().click();
+  await page.evaluate(() => (window as any).__finishSaveAs());
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Renamed.md" })).toBeVisible();
+  await expect(page.locator(".window-tab.active")).toContainText("Second.md");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args.workspaceRoot)).toBe("/second");
+});
+
+test("closing after a delayed confirmation preserves tabs opened during the prompt", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => command === "plugin:dialog|message"
+      ? new Promise((resolve) => { (window as any).__finishClose = () => resolve("No"); }) : invoke(command, args);
+  });
+  await page.goto("/");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("original draft");
+  await page.getByRole("button", { name: "Close Untitled", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishClose)).toBe("function");
+  await page.keyboard.press("ControlOrMeta+n");
+  await editor.click(); await page.keyboard.type("new draft");
+  await page.evaluate(() => (window as any).__finishClose());
+  await expect(page.locator(".window-tab-title")).toHaveCount(1);
+  await expect(page.locator(".window-tab.active")).toContainText("Untitled 2");
+  await expect(editor).toContainText("new draft");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
+test("reset cancels a queued zoom gesture and keeps the header inside the viewport", async ({ page }) => {
+  await nativeFixture(page);
+  await page.goto("/");
+  await expect(page.locator(".app-zoom-canvas")).toBeVisible();
+  await page.evaluate(async () => {
+    const path = "/src/shared/settings/userSettings.ts";
+    (await import(path)).updateUserSettings({ keybindings: { "view.resetZoom": "Mod+Alt+0" } });
+  });
+  await page.evaluate(() => {
+    const target = document.querySelector(".app-zoom-canvas")!;
+    target.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -200, clientX: 350, clientY: 200 }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "0", code: "Digit0", ctrlKey: !navigator.platform.includes("Mac"), metaKey: navigator.platform.includes("Mac"), altKey: true }));
+  });
+  await page.waitForTimeout(700);
+  await expect.poll(() => page.locator(".app-zoom-canvas").evaluate((el) => getComputedStyle(el).transform)).toBe("none");
+  const box = await page.locator(".polarbear-root-surface").boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(-1);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+});
+
+test("delayed close preserves the workspace of a subsequently opened document", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|message") return new Promise((resolve) => { (window as any).__finishClose = () => resolve("No"); });
+      if (command === "list_workspace_files") {
+        const name = args.workspaceRoot === "/second" ? "Second.md" : "First.md";
+        return Promise.resolve([{ id: name, name, itemType: "file" }]);
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts", { recentDocumentStore } = await import(path);
+    recentDocumentStore().record("/first/First.md", 1);
+    recentDocumentStore().record("/second/Second.md", 2);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /First.md/ }).first().click();
+  await page.locator(".editor-workspace .cm-content").first().click();
+  await page.keyboard.type("draft ");
+  await page.getByRole("button", { name: "Close First.md", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishClose)).toBe("function");
+  await page.locator(".recent-documents").getByRole("button", { name: /Second.md/ }).first().click();
+  await expect(page.locator(".workspace-tree-shell")).toContainText("Second.md");
+  await page.evaluate(() => (window as any).__finishClose());
+  await expect(page.locator(".window-tab.active")).toContainText("Second.md");
+  await expect(page.locator(".workspace-tree-shell")).toContainText("Second.md");
+});
+
 test("repository connection retries a secure write failure and preserves the empty repository state", async ({ page }) => {
   await reloadFixture(page);
   await page.evaluate(async () => {
@@ -170,6 +271,9 @@ test("native link failure keeps the document and reports a localized error witho
   await page.locator(".designer-credit").click();
   await expect.poll(() => page.evaluate(() => (window as any).__externalDialogs.length)).toBe(1);
   expect(await page.evaluate(() => JSON.stringify((window as any).__externalDialogs))).toContain("The link could not be opened");
+  const zoomSetup = () => page.evaluate(() => (window as any).__navigationCalls.filter((call: any) =>
+    call.command === "set_app_zoom" || (call.command === "plugin:event|listen" && call.args.event === "polarbear-native-pinch")));
+  const zoomSetupBeforeLanguageChange = await zoomSetup();
   await page.locator(".status-language-select").selectOption("zh-CN");
   await page.locator(".designer-credit").click();
   await expect.poll(() => page.evaluate(() => (window as any).__externalDialogs.length)).toBe(2);
@@ -178,6 +282,7 @@ test("native link failure keeps the document and reports a localized error witho
   expect(page.url()).toBe(original);
   await expect(editor).toContainText("unsaved link test");
   await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  expect(await zoomSetup()).toEqual(zoomSetupBeforeLanguageChange);
   expect(errors).toEqual([]);
 });
 

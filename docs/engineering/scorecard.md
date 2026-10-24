@@ -136,3 +136,24 @@ Based on `aa936d2`; detailed evidence is in
 Scores remain unchanged. This slice establishes tested responsibilities, not a
 complete App document-session extraction, whole-product acceptance or measured
 performance improvement. No second store, event bus or command system was added.
+
+## Document Session, Zoom and Table Ownership Follow-up
+
+Based on `aac3e47`; detailed evidence is in
+[verification](verification.md#document-session-zoom-and-table-ownership-follow-up).
+
+| Metric | Previous verified slice | Current local result |
+| --- | --- | --- |
+| Desktop Vitest / Node | 321 / 34 | 326 / 35, PASS |
+| Desktop browser | 76 | 81, PASS |
+| Native tests | 92 passed / 3 ignored entries | Same suite rerun: 92 passed / 3 ignored entries |
+| App ownership | Buffers, tabs and zoom lifecycle inline | Session and zoom feature owners with semantic actions; staged App 3,917 to 946 lines |
+| Table widget ownership | 1,214-line DOM/input/menu/transaction implementation | 217-line composition with local input, menu, clipboard, sizing and transaction modules |
+| Confirmed regressions | Not previously covered | Save As focus, delayed-close tab loss, queued-gesture Reset, and cross-editor Table focus |
+| Resource behavior | Inline native pinch registration | Late registration disposal, disposed-event suppression, active errors, async cleanup diagnostics and stable locale callbacks |
+
+Scores remain unchanged. Smaller composition files do not imply lower CPU/RSS,
+elimination of all race conditions or installed-device acceptance. The session
+and zoom owners remain substantial internally. Pending diagram pressure,
+multi-window settings contention, filesystem mutation race qualification and
+platform acceptance remain explicit audit work.

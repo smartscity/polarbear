@@ -325,3 +325,69 @@ Review outcome: React composition and CodeMirror/DOM behavior have distinct
 owners without new dependency packages, global stores, event buses or protocol
 versions. App's document-session/zoom coordination and the table widget's internal
 size remain follow-up boundaries; moving code does not prove a performance gain.
+
+## Document Session, Zoom and Table Interaction Ownership
+
+The next slice keeps the current Markdown, IPC, settings and command contracts.
+The document session owns buffers, revisions, tab identity, dirty markers, read
+permissions and save/navigation lifetimes. App consumes snapshots and semantic
+actions; it must not mutate those collections. Workspace file operations remain
+inside this owner because they remap those same identities. Repository and Memory
+features receive explicit document operations, not setters or a second store.
+
+Zoom owns canvas references, transforms, gesture frames, settle timers, native
+subscriptions and scroll locks. It receives the editor reference and a status
+callback; document replacement requests viewport reconciliation through an
+explicit callback. Reset supersedes queued gesture work. Disposing the owner
+must release subscriptions, frames and timers.
+
+Table composition delegates cell input, menus, widths and transaction/focus
+restoration to table-local modules. Commands and layout history retain their
+existing owners. Post-transaction focus queries must be scoped to the originating
+EditorView, never a document-global table offset.
+
+| Problem | Pattern decision | Rationale |
+| --- | --- | --- |
+| Document state transitions spread through App | Feature session facade with semantic actions | One owner of existing state; no parallel global store or ViewModel class. |
+| Gesture and viewport lifetime mixed with document IO | Dedicated React lifecycle hook | Reuse zoom policies and native adapter; explicit editor/status ports. |
+| Table DOM, menus and transactions coupled | Local composition and transaction adapter | Keep command/model pure and scope focus to the owning editor. |
+| Delayed save/close completion | Current-session completion checks | Preserve navigation and newly opened tabs; do not claim cancellation of native writes. |
+
+Test-first acceptance covers delayed Save As across a document switch, closing
+after a new tab opens, Reset while a gesture is queued and duplicate table
+offsets across editor instances. Existing save/reload, table undo/width, menu
+disposal, clipboard and full browser suites remain required. No benchmark,
+new format, data migration, ASR work, tag or release is included in this slice.
+
+### Implementation and Review
+
+- `features/workspace/useDocumentSession.ts` owns document collections, native
+  read/save lifetimes, workspace identity remapping, and create/rename/conflict
+  dialog state. It exposes snapshots and semantic actions, not collection
+  setters. App supplies status, workspace-surface activation, empty-session
+  notification and viewport-reconciliation callbacks. Repository sync and Memory
+  source navigation reuse these actions rather than introducing another store.
+- `features/zoom/useAppZoom.ts` owns canvas transforms and all gesture resources.
+  `editorPointerPosition.ts` contains the existing hit-test fallback. Reset
+  cancels queued gesture frames, settling and scroll-unlock work before applying
+  its transform. Native subscriptions use stable callbacks with current locale;
+  language changes do not reinitialize native WebView zoom. The adapter releases
+  late registrations and contains asynchronous unlisten failures after disposal.
+- `tablePreviewWidget.ts` composes the existing DOM. `tableCellEditing.ts` owns
+  cell input/navigation, `tableWidgetMenus.ts` owns menu presentation,
+  `tableColumnSizing.ts` owns width projection, and `tableWidgetClipboard.ts`
+  owns clipboard representations. `tableWidgetTransactions.ts` is the shared
+  mutation/focus bridge for cell and structural edits. It preserves existing
+  history annotations, scroll restoration and width effects.
+- Table focus restoration captures the originating EditorView before widget
+  replacement, queries only that editor, and stops retrying after document change
+  or teardown. Two editors with identical source offsets no longer compete.
+- Save As updates an inactive document's identity without activating it or
+  replacing the current workspace. Delayed close computes remaining tabs from
+  current session state, preserving documents opened while confirmation was pending.
+
+No protocol, storage migration, formatting policy, table syntax or model engine
+changed. App still coordinates view/editor commands and image insertion. The
+session and zoom hooks remain substantial; further splitting should follow
+tested state ownership, not arbitrary file-size thresholds. Rename/move/delete
+concurrency and measured editor performance remain separate audit work.

@@ -73,3 +73,16 @@ test("App composes repository workflows and the live editor composes feature ext
   const scanner = readFileSync(join(source, "features/editor/markdown/previewBlocks.ts"), "utf8");
   assert.doesNotMatch(scanner, /from "react"|document\.|window\.|invoke\(|from .*components\//);
 });
+
+test("document sessions, zoom resources and table transactions have dedicated owners", () => {
+  const source = join(root, "apps/desktop/src");
+  const app = readFileSync(join(source, "App.tsx"), "utf8");
+  assert.match(app, /useDocumentSession\(/);
+  assert.match(app, /useAppZoom\(/);
+  assert.doesNotMatch(app, /setDocuments\(|setDocumentRevisions\(|setOpenFileIds\(|setDirtyFileIds\(|zoomRafRef|zoomSettleTimerRef|saveMarkdownFile\(/);
+  const table = (file) => readFileSync(join(source, "features/editor/table", file), "utf8");
+  assert.doesNotMatch(table("tablePreviewWidget.ts"), /function makeTableCellEditable|function openTableActionMenu|function applyTableEdit|view\.dispatch\(/);
+  assert.doesNotMatch(table("tableCellEditing.ts"), /view\.dispatch\(/);
+  assert.doesNotMatch(table("tableWidgetMenus.ts"), /view\.dispatch\(/);
+  assert.doesNotMatch(table("tableWidgetTransactions.ts"), /document\.querySelector/);
+});
