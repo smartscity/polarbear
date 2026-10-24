@@ -448,7 +448,7 @@ export function installTableInteractionControls(options: TableInteractionControl
   window.addEventListener("pointerup", endPointer);
   window.addEventListener("pointercancel", endPointer);
   window.addEventListener("keydown", cancelDrag);
-  window.requestAnimationFrame(layoutControls);
+  scheduleLayout();
 
   return () => {
     if (layoutFrame) {

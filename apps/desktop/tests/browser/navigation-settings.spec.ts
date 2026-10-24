@@ -83,6 +83,64 @@ test("preserves typing during an external reload and offers an explicit conflict
   await expect(page.getByRole("button", { name: "Reload from Disk", exact: true })).toBeVisible();
 });
 
+async function pendingKnowledgeSource(page: Page) {
+  await reloadFixture(page);
+  await page.evaluate(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "memory_admin_request") {
+        if (args.method === "system.hello") return Promise.resolve({
+          apiVersion: "1.0", capabilities: ["projects.status", "memories.list", "memories.get",
+            "projects.context", "sources.register", "sources.resolve", "knowledge.capture", "knowledge.search", "knowledge.review"],
+        });
+        if (args.method === "knowledge.search") return Promise.resolve({
+          items: [{ card: { id: "source", revision: 1, answer: "Document source", appliesWhen: "Reading", reason: "Evidence" }, decision: "REUSABLE", reasonCodes: [] }],
+          reviewNotices: [], excludedCounts: {}, partial: false,
+        });
+        if (args.method === "sources.resolve") return Promise.resolve({
+          decision: "REUSABLE", source: { relativePath: "Reload.md" },
+          observedSection: { locator: { startLine: 1, endLine: 1 }, excerpt: "# Stale disk response" },
+        });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.locator(".activity-rail button").nth(1).click();
+  await page.getByRole("button", { name: "Knowledge", exact: true }).click();
+  await page.getByRole("textbox", { name: "Related question" }).fill("source");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("button", { name: "Open source", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
+  await page.locator(".activity-rail button").first().click();
+}
+
+test("preserves typing while Memory opens the source of an already open document", async ({ page }) => {
+  await pendingKnowledgeSource(page);
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("new source edits ");
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(page.getByRole("button", { name: "Reload from Disk", exact: true })).toBeVisible();
+  await expect(editor).toContainText("new source edits");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
+test("does not reopen a closed document when a Memory source read finishes", async ({ page }) => {
+  await pendingKnowledgeSource(page);
+  await page.getByRole("button", { name: "Close Reload.md", exact: true }).click();
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(page.locator(".workspace-status")).toContainText("Closed");
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Reload.md" })).toHaveCount(0);
+});
+
+test("refreshes and selects an unchanged Memory source document", async ({ page }) => {
+  await pendingKnowledgeSource(page);
+  await page.evaluate(() => (window as any).__reads[0].resolve());
+  await expect(page.locator(".editor-workspace .cm-content").first()).toContainText("Stale disk response");
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toContain("Stale disk response");
+});
+
 test("does not apply an old disk read to a closed and reopened document", async ({ page }) => {
   await reloadFixture(page);
   await page.evaluate(() => { (window as any).__diskVersion = "changed"; });

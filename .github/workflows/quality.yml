@@ -66,12 +66,17 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: |
             apps/desktop/src-tauri -> target
+
+      - name: Clippy all targets
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run native tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast

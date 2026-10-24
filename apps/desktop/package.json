@@ -20,7 +20,7 @@
     "memory-m1:assets:test": "node --test scripts/memory-m1-assets.node-test.mjs",
     "memory-m1:evaluate": "node scripts/evaluate-memory-m1-results.mjs",
     "memory-m1:engine-evaluate": "node scripts/run-memory-m1-engine-evaluation.mjs",
-    "test": "vitest run && node --test scripts/memory-m1-assets.node-test.mjs scripts/caption-engine-fixture.node-test.mjs scripts/macos-release-artifacts.node-test.mjs scripts/workspace-dependencies.node-test.mjs",
+    "test": "vitest run && node --test scripts/memory-m1-assets.node-test.mjs scripts/caption-engine-fixture.node-test.mjs scripts/macos-release-artifacts.node-test.mjs scripts/workspace-dependencies.node-test.mjs scripts/architecture-graph.node-test.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

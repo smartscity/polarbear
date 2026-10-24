@@ -21,6 +21,9 @@ mod secret_store;
 mod system_open;
 mod vocab_bridge;
 mod vocab_outbox;
+mod workspace_paths;
+
+use workspace_paths::{normalize_relative_path, validate_entry_name, workspace_path};
 
 type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
 
@@ -411,85 +414,6 @@ struct GitlabCommitAction {
 struct RemoteChangeSet {
     changed_paths: BTreeSet<String>,
     deleted_paths: BTreeSet<String>,
-}
-
-fn normalize_relative_path(relative_path: &str) -> Result<PathBuf, String> {
-    let path = Path::new(relative_path);
-
-    if path.is_absolute() {
-        return Err("Absolute paths are not allowed inside a workspace.".to_owned());
-    }
-
-    let mut normalized_path = PathBuf::new();
-
-    for component in path.components() {
-        match component {
-            Component::Normal(value) => normalized_path.push(value),
-            Component::CurDir => {}
-            Component::ParentDir => {
-                return Err("Parent directory traversal is not allowed.".to_owned());
-            }
-            Component::RootDir | Component::Prefix(_) => {
-                return Err("Unsupported path component.".to_owned());
-            }
-        }
-    }
-
-    Ok(normalized_path)
-}
-
-fn workspace_path(workspace_root: &str, relative_path: &str) -> Result<PathBuf, String> {
-    let root = PathBuf::from(workspace_root);
-    let canonical_root = root
-        .canonicalize()
-        .map_err(|_| "Workspace root is not a directory.".to_owned())?;
-    if !canonical_root.is_dir() {
-        return Err("Workspace root is not a directory.".to_owned());
-    }
-
-    let path = root.join(normalize_relative_path(relative_path)?);
-    let mut existing_ancestor = path.as_path();
-    loop {
-        match fs::symlink_metadata(existing_ancestor) {
-            Ok(_) => {
-                let canonical_ancestor = existing_ancestor
-                    .canonicalize()
-                    .map_err(|error| error.to_string())?;
-                if !canonical_ancestor.starts_with(&canonical_root) {
-                    return Err("Path must stay inside the workspace.".to_owned());
-                }
-                break;
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                existing_ancestor = existing_ancestor
-                    .parent()
-                    .ok_or_else(|| "Path must stay inside the workspace.".to_owned())?;
-            }
-            Err(error) => return Err(error.to_string()),
-        }
-    }
-
-    Ok(path)
-}
-
-fn validate_entry_name(name: &str) -> Result<(), String> {
-    let trimmed_name = name.trim();
-
-    if trimmed_name.is_empty() {
-        return Err("Name cannot be empty.".to_owned());
-    }
-
-    if trimmed_name == "."
-        || trimmed_name == ".."
-        || trimmed_name.contains('/')
-        || trimmed_name.contains('\\')
-    {
-        return Err(
-            "Name cannot contain path separators or parent directory traversal.".to_owned(),
-        );
-    }
-
-    Ok(())
 }
 
 fn is_markdown_file(path: &Path) -> bool {
@@ -3411,6 +3335,54 @@ mod tests {
         save_markdown_file_content,
     };
     use std::fs;
+
+    #[test]
+    fn workspace_paths_preserve_logical_roots_and_reject_escape(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let root = test_workspace_root("path-policy");
+        let root_path = std::path::Path::new(&root);
+        assert_eq!(
+            super::workspace_path(&root, "./nested/new.md")?,
+            root_path.join("nested/new.md")
+        );
+        assert!(super::workspace_path(&root, "../outside.md").is_err());
+        assert!(super::workspace_path(&root, "/outside.md").is_err());
+        fs::write(root_path.join("file.md"), "content")?;
+        assert!(
+            super::workspace_path(&root_path.join("file.md").to_string_lossy(), "child.md")
+                .is_err()
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::symlink;
+            let alias = root_path.with_extension("alias");
+            symlink(root_path, &alias)?;
+            assert_eq!(
+                super::workspace_path(&alias.to_string_lossy(), "nested/new.md")?,
+                alias.join("nested/new.md")
+            );
+            symlink(
+                root_path.parent().ok_or("missing parent")?,
+                root_path.join("escape"),
+            )?;
+            assert!(super::workspace_path(&root, "escape/missing/new.md").is_err());
+            symlink(root_path.join("absent"), root_path.join("dangling"))?;
+            assert!(super::workspace_path(&root, "dangling/new.md").is_err());
+            fs::remove_file(alias)?;
+        }
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[test]
+    fn workspace_entry_names_keep_the_existing_validation_contract() {
+        for name in ["", "  ", ".", "..", "a/b", "a\\b"] {
+            assert!(super::validate_entry_name(name).is_err(), "{name:?}");
+        }
+        for name in ["notes.md", "Notes with spaces", " notes.md "] {
+            assert!(super::validate_entry_name(name).is_ok(), "{name:?}");
+        }
+    }
 
     fn test_workspace_root(test_name: &str) -> String {
         let test_id = std::time::SystemTime::now()

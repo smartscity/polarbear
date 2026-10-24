@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)] // Test setup and assertions must fail on invalid fixtures.
+
 use super::{content_revision, save_markdown_file_content, write_markdown_file};
 use std::cell::RefCell;
 use std::fs;

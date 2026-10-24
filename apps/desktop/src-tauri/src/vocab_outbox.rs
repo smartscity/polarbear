@@ -320,6 +320,7 @@ pub async fn vocab_capture_status(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)] // Invalid fixtures must fail tests; production remains deny.
 mod tests {
     use super::*;
     fn capture() -> ReadingCapture {

@@ -66,6 +66,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
+          components: clippy,rustfmt
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
@@ -85,11 +86,36 @@ jobs:
       - name: Frontend tests
         run: npm --workspace apps/desktop run test
 
+      - name: Install browser test runtimes
+        run: npm exec --workspace apps/desktop -- playwright install chromium webkit
+
+      - name: Desktop behavior gate
+        run: npm --workspace apps/desktop run test:ui
+
+      - name: Bundled offline translation gate
+        run: npm --workspace apps/desktop run test:offline-translation -- --webkit
+
       - name: Native rich document paste
-        run: npm --workspace apps/desktop run test:native-clipboard
+        run: npm --workspace apps/desktop run test:native-clipboard -- test-results/real-mermaid-clipboard.json
+
+      - name: Preserve browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-desktop-browser-test-results
+          path: apps/desktop/test-results
+          if-no-files-found: ignore
 
       - name: Rust format
         run: cargo fmt --all -- --check
+
+      - name: Native correctness and lint gate
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast
+
+      - name: Memory Admin contract
+        run: npm --workspace apps/desktop run memory-contract:check
 
       - name: Resolve release metadata
         id: release_metadata

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ContextWorkspace } from "../../src/features/memory/context/ContextWorkspace";
 import { useContextOsSession } from "../../src/features/memory/context/useContextOsSession";
 import { I18nProvider } from "../../src/shared/i18n/I18nProvider";
+import { useRepositoryIdentity } from "../../src/features/repository/useRepositoryIdentity";
 import "../../src/styles.css";
 
 function Harness() {
@@ -18,4 +19,11 @@ function SessionProbe() {
   useEffect(() => { Object.assign(window, { __contextSession: session, __selectWorkspace: setWorkspace }); }, [session]);
   return <output>{JSON.stringify({ config: session.config, loading: session.isLoading, mutating: session.isMutating, error: session.error })}</output>;
 }
-createRoot(document.getElementById("root")!).render(<I18nProvider>{location.search.includes("probe") ? <SessionProbe /> : <Harness />}</I18nProvider>);
+function RepositoryProbe() {
+  const [workspace, setWorkspace] = useState("/test/project");
+  const [error, setError] = useState("");
+  const identity = useRepositoryIdentity(workspace, setError);
+  useEffect(() => { Object.assign(window, { __repositoryIdentity: identity, __selectWorkspace: setWorkspace }); }, [identity]);
+  return <output>{JSON.stringify({ workspace, account: identity.repositoryAccount, binding: identity.repositoryBinding, error })}</output>;
+}
+createRoot(document.getElementById("root")!).render(<I18nProvider>{location.search.includes("repository") ? <RepositoryProbe /> : location.search.includes("probe") ? <SessionProbe /> : <Harness />}</I18nProvider>);

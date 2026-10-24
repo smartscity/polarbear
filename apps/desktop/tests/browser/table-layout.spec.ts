@@ -59,3 +59,55 @@ test("maps widths when text is inserted before a table and releases them on edit
   await page.getByRole("button", { name: "Live", exact: true }).click();
   await expect.poll(() => column.evaluate((col) => (col as HTMLElement).style.width)).toBe("");
 });
+
+test("cancels the initial table layout frame when controls are disposed immediately", async ({ page }) => {
+  const remaining = await page.evaluate(async () => {
+    const path = "/src/features/editor/table/tableInteractionDom.ts";
+    const { installTableInteractionControls } = await import(path);
+    const request = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
+    const pending = new Set<number>(); let next = 0;
+    window.requestAnimationFrame = () => { pending.add(++next); return next; };
+    window.cancelAnimationFrame = (id) => { pending.delete(id); };
+    try {
+      const wrapper = document.createElement("div"), table = document.createElement("table");
+      const dispose = installTableInteractionControls({ wrapper, table, scrollport: wrapper, rowCount: 0, columnCount: 0,
+        onAutoFitColumn() {}, onCommand() {}, onMoveColumn() {}, onMoveRow() {}, onResizeColumn() {} });
+      dispose();
+      return pending.size;
+    } finally { window.requestAnimationFrame = request; window.cancelAnimationFrame = cancel; }
+  });
+  expect(remaining).toBe(0);
+});
+
+test("does not register outside listeners after closing a table menu before its first frame", async ({ page }) => {
+  const remaining = await page.evaluate(async () => {
+    const add = document.addEventListener.bind(document), remove = document.removeEventListener.bind(document);
+    const listeners = new Set<EventListenerOrEventListenerObject>();
+    document.addEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options: any) => {
+      if (type === "pointerdown") listeners.add(listener);
+      add(type, listener, options);
+    }) as typeof document.addEventListener;
+    document.removeEventListener = ((type: string, listener: EventListenerOrEventListenerObject, options: any) => {
+      if (type === "pointerdown") listeners.delete(listener);
+      remove(type, listener, options);
+    }) as typeof document.removeEventListener;
+    try {
+      document.querySelector<HTMLButtonElement>(".cm-typora-table-toolbar button")!.click();
+      const menu = document.querySelector<HTMLElement>(".cm-typora-table-size-menu")!;
+      menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await new Promise(requestAnimationFrame);
+      return { listeners: listeners.size, connected: menu.isConnected };
+    } finally {
+      document.addEventListener = add; document.removeEventListener = remove;
+      for (const listener of listeners) remove("pointerdown", listener, true);
+    }
+  });
+  expect(remaining).toEqual({ listeners: 0, connected: false });
+});
+
+test("closes table portals when the owning editor is replaced with preview", async ({ page }) => {
+  await page.locator(".cm-typora-table-toolbar button").first().evaluate((button: HTMLButtonElement) => button.click());
+  await expect(page.locator(".cm-typora-table-size-menu")).toBeVisible();
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(page.locator(".cm-typora-table-size-menu")).toHaveCount(0);
+});

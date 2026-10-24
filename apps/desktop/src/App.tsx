@@ -93,7 +93,6 @@ import {
   repositoryProviderLabel,
   syncWorkspaceNow,
   type RepositoryAccount,
-  type RepositoryBinding,
   type RepositoryInfo,
   type RepositoryProvider,
   type RepositorySyncStatus,
@@ -194,6 +193,7 @@ import {
   storeDebugEnabled,
 } from "./shared/debug/debugSettings";
 import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
+import { useRepositoryIdentity } from "./features/repository/useRepositoryIdentity";
 import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
 import { setNativeAppZoom } from "./features/zoom/tauriZoomAdapter";
 import { STORAGE_KEYS } from "./shared/constants/storageKeys";
@@ -367,10 +367,6 @@ export function App() {
   const [isInsertTableDialogOpen, setIsInsertTableDialogOpen] = useState(false);
   const [isInsertCodeFenceDialogOpen, setIsInsertCodeFenceDialogOpen] =
     useState(false);
-  const [repositoryAccount, setRepositoryAccount] =
-    useState<RepositoryAccount | null>(null);
-  const [repositoryBinding, setRepositoryBinding] =
-    useState<RepositoryBinding | null>(null);
   const [repositories, setRepositories] = useState<RepositoryInfo[]>([]);
   const [repositorySyncStatus, setRepositorySyncStatus] =
     useState<RepositorySyncStatus | null>(null);
@@ -397,6 +393,8 @@ export function App() {
   const dirtyFileIdsRef = useRef(dirtyFileIds);
   const openFileIdsRef = useRef(openFileIds);
   const [statusMessage, setStatusMessage] = useState("");
+  const { repositoryAccount, repositoryBinding, setRepositoryAccount, setRepositoryBinding } =
+    useRepositoryIdentity(workspaceRoot, setStatusMessage);
   const [debugEnabled, setDebugEnabled] = useState(readStoredDebugEnabled);
 
   useEffect(() => {
@@ -2045,24 +2043,6 @@ export function App() {
     };
   }, [openMarkdownPath]);
 
-  const refreshRepositoryState = useCallback(async () => {
-    try {
-      const account = await getRepositoryAccount();
-      const binding = workspaceRoot
-        ? await getWorkspaceRepositoryBinding(workspaceRoot)
-        : null;
-
-      setRepositoryAccount(account);
-      setRepositoryBinding(binding);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
-    }
-  }, [workspaceRoot]);
-
-  useEffect(() => {
-    void refreshRepositoryState();
-  }, [refreshRepositoryState]);
-
   const repositoryErrorMessage = errorMessage;
 
   const isRepositoryAuthenticationError = (message: string): boolean =>
@@ -2515,22 +2495,13 @@ export function App() {
       target.relativePath,
     );
     if (openDocumentId && !dirtyFileIds.has(openDocumentId)) {
-      try {
-        const document = await loadMarkdownFile({
-          workspaceRoot,
-          relativePath: target.relativePath,
-        });
-        setDocuments((current) => ({
-          ...current,
-          [openDocumentId]: document.markdownContent,
-        }));
-        setDocumentRevisions((current) => ({
-          ...current,
-          [openDocumentId]: document.revision,
-        }));
-      } catch (error) {
-        setStatusMessage(error instanceof Error ? error.message : String(error));
-      }
+      const result = await reloadDocumentFromDisk({
+        fileId: openDocumentId,
+        workspaceRoot,
+        relativePath: target.relativePath,
+        revision: documentRevisions[openDocumentId],
+      });
+      if (result.status !== "reloaded") return;
     }
     if (!isMemorySourceTargetCurrent(target, workspaceRootRef.current)) {
       setStatusMessage(t("context.knowledge.sourceNavigationStale"));

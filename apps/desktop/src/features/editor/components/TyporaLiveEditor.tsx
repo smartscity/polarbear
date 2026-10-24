@@ -126,6 +126,7 @@ import {
   setTableCellEditing,
 } from "../table/tableInteractionDom";
 import { readTableInteractionState, updateTableInteractionState } from "../table/tableInteractionState";
+import { closeTableMenus, registerTableMenu } from "../table/tableMenuLifecycle";
 import {
   readTableColumnWidths,
   tableLayoutExtension,
@@ -366,7 +367,6 @@ function codeLineDecorationForLanguage(
   return decoration;
 }
 
-const tablePortalMenuCleanups = new Set<() => void>();
 
 export function TyporaLiveEditor({
   activeFileId,
@@ -1975,7 +1975,7 @@ class TablePreviewWidget extends WidgetType {
     table.append(tbody);
     scrollport.append(table);
     wrapper.append(scrollport);
-    this.disposeInteraction = installTableInteractionControls({
+    const disposeInteraction = installTableInteractionControls({
       columnCount: headers.length,
       onAutoFitColumn: (column) => autoFitTableColumn(table, this.block.from, column),
       onCommand: (command, position) => applyTableCommand(wrapper, this.block, command, position),
@@ -1997,6 +1997,10 @@ class TablePreviewWidget extends WidgetType {
       table,
       wrapper,
     });
+    this.disposeInteraction = () => {
+      closeTableMenus(wrapper);
+      disposeInteraction();
+    };
     wrapper.addEventListener("keydown", (event) => handleTableSelectionKeydown(event, wrapper, table));
     wrapper.addEventListener("copy", (event) => {
       writeTableSelectionToClipboard(event, wrapper, this.block.raw);
@@ -2491,19 +2495,7 @@ function openTableSizeMenu(
   const anchorRect = anchorElement.getBoundingClientRect();
   positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
-  const close = () => {
-    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.removeEventListener("blur", close);
-    tablePortalMenuCleanups.delete(close);
-    updateTableInteractionState(wrapper, { mode: "idle" });
-    menu.remove();
-  };
-  const closeOnOutsidePointer = (event: PointerEvent) => {
-    if (event.target instanceof Node && menu.contains(event.target)) {
-      return;
-    }
-    close();
-  };
+  const close = registerTableMenu(wrapper, menu, () => menu.focus({ preventScroll: true }));
 
   menu.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -2514,12 +2506,6 @@ function openTableSizeMenu(
     moveTableMenuFocus(menu, event);
   });
 
-  window.requestAnimationFrame(() => {
-    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.addEventListener("blur", close, { once: true });
-    tablePortalMenuCleanups.add(close);
-    menu.focus({ preventScroll: true });
-  });
 }
 
 function openTableActionMenu(
@@ -2652,23 +2638,9 @@ function openTableActionMenu(
   const anchorRect = anchorElement.getBoundingClientRect();
   positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
-  const close = (restoreFocus = true) => {
-    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.removeEventListener("blur", closeAfterWindowBlur);
-    tablePortalMenuCleanups.delete(close);
-    updateTableInteractionState(wrapper, { mode: "idle" });
-    menu.remove();
-    if (restoreFocus && anchorElement.isConnected) {
-      anchorElement.focus({ preventScroll: true });
-    }
-  };
-  const closeOnOutsidePointer = (event: PointerEvent) => {
-    if (event.target instanceof Node && menu.contains(event.target)) {
-      return;
-    }
-    close();
-  };
-  const closeAfterWindowBlur = () => close(false);
+  const close = registerTableMenu(wrapper, menu,
+    () => menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true }),
+    () => { if (anchorElement.isConnected) anchorElement.focus({ preventScroll: true }); });
 
   menu.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -2679,12 +2651,6 @@ function openTableActionMenu(
     moveTableMenuFocus(menu, event);
   });
 
-  window.requestAnimationFrame(() => {
-    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.addEventListener("blur", closeAfterWindowBlur, { once: true });
-    tablePortalMenuCleanups.add(close);
-    menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
-  });
 }
 
 function positionTablePortalMenu(menu: HTMLElement, left: number, top: number): void {
@@ -2734,19 +2700,12 @@ function openTableInsertCountMenu(
   const anchorRect = anchorElement.getBoundingClientRect();
   positionTablePortalMenu(menu, anchorRect.left, anchorRect.bottom + 4);
 
-  const close = () => {
-    document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.removeEventListener("blur", close);
-    tablePortalMenuCleanups.delete(close);
-    updateTableInteractionState(wrapper, { mode: "idle" });
-    menu.remove();
-  };
-  const closeOnOutsidePointer = (event: PointerEvent) => {
-    if (event.target instanceof Node && menu.contains(event.target)) return;
-    close();
-  };
+  const close = registerTableMenu(wrapper, menu, () => {
+    input.focus({ preventScroll: true });
+    input.select();
+  });
 
-  cancel.addEventListener("click", close);
+  cancel.addEventListener("click", () => close());
   menu.addEventListener("submit", (event) => {
     event.preventDefault();
     const count = Math.min(
@@ -2762,24 +2721,11 @@ function openTableInsertCountMenu(
       close();
     }
   });
-  window.requestAnimationFrame(() => {
-    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
-    window.addEventListener("blur", close, { once: true });
-    tablePortalMenuCleanups.add(close);
-    input.focus({ preventScroll: true });
-    input.select();
-  });
 }
 
 function closeTableActionMenus(wrapper: HTMLElement) {
   void wrapper;
-  for (const cleanup of tablePortalMenuCleanups) {
-    cleanup();
-  }
-  tablePortalMenuCleanups.clear();
-  for (const menu of document.querySelectorAll(".cm-typora-table-menu, .cm-typora-table-size-menu, .cm-typora-table-count-menu")) {
-    menu.remove();
-  }
+  closeTableMenus();
 }
 
 function moveTableMenuFocus(menu: HTMLElement, event: KeyboardEvent): void {
