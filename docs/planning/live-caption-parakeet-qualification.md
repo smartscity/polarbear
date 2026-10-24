@@ -3,6 +3,66 @@
 Status: PREDECLARED, 2026-10-17. Production replacement is NOT AUTHORIZED by a
 screening pass. Owner: live-caption-engine-evaluation.md.
 
+## Intel admission follow-up (2026-10-24)
+
+Release run `40103182055`, commit `b10d736`, failed the unchanged five-second
+gate at 5.231579491 seconds. The recorded PCM feed did not overflow or time out.
+Sequence 6 spent 2.251 seconds on an empty one-second preview and 1.983 seconds
+on its retry. Sequence 14 spent 1.664 seconds on a subsequently cancelled
+preview; its final waited 1.537 seconds and the next final waited 2.568 seconds.
+This is evidence of redundant prefix work and serial contention, not evidence
+that every latency outlier has the same cause.
+
+The bounded follow-up reuses `PreviewSchedule` as the admission policy and
+`RecognitionQueue` as the single decoder owner. No new executor or model is
+introduced. A due preview is not admitted while VAD is accumulating trailing
+silence; the existing finalization path still submits the complete audio. Speech
+resumption can immediately use the outstanding due preview. PCM/VAD remains
+independent of inference. Thread allocation is unchanged.
+
+Model hashes, full audio context, greedy decoding, silence finalization, queue
+capacity, cancellation, and all release thresholds remain unchanged. Already
+running previews retain the existing cancellation rules. This does not replace
+Whisper, qualify general recognition accuracy, or claim two-hour stability.
+
+Validation plan: first fail native tests for silence admission; then run a
+paired 120-second public AMI EN2002a excerpt on local Intel,
+with OS network denial and no competing build. Compare all final text and source
+positions, latency, feed lag, memory and overflow counts. Fixture SHA-256:
+`7a87df1dcc217957f6bf183101ab3d01b1d4c8b67766da28d4b3af26c6a99b24`.
+The short local result is a prerequisite, not a substitute for the unchanged
+Intel/ARM release regressions and packaged-DMG verification.
+
+A four-thread allocation experiment was rejected: combined with silence
+admission it measured 4.013/3.148 seconds first/final P95 versus a three-thread
+baseline at 3.790/2.334 seconds. All 23 finals were identical, but this was not
+evidence of a speed improvement. The existing thread policy is retained; the
+admission-only follow-up uses the baseline's explicit three-thread setting.
+
+Local admission-only verification passed the unchanged gates: first/final P95
+4.610963556/3.059086171 seconds, 23 finals, 29 previews, 3,750 frames, maximum
+feed lag 0.132397 seconds, peak process-tree RSS 213,172,224 bytes, zero overflows
+and zero timeouts. All 23 final texts, sequence IDs and source positions exactly
+matched the baseline. Helper SHA-256 before ad-hoc signing:
+`734637bf95ff1ded6878afd73802de7677aac489929a8dcd09e164bcbd42ff92`.
+The baseline produced 37 previews. This proves removal of redundant work and
+sample-level final preservation, **not a measured overall speedup**: the baseline
+was faster in this sequential local pair. The host had 12 logical CPUs and other
+desktop processes; it is not equivalent to the four-vCPU hosted Intel runner.
+Do not declare the hosted regression fixed until its original gates pass.
+
+Native CTest (7), Python native regression tests (25), Node script tests (38),
+Swift clock checks and the real helper's packetization/silence/malformed-input
+fixture passed. The new silence-admission test failed to compile against the old
+single-argument policy before implementation. No full WER, physical microphone,
+translation or long-duration stability acceptance follows from these checks.
+
+| Concern | Existing mechanism | Decision |
+| --- | --- | --- |
+| Preview eligibility | `PreviewSchedule` policy | Extend with current VAD quiet-sample count; no new persistent state. |
+| Decoder ownership and backpressure | `RecognitionQueue` producer/consumer | Reuse unchanged; preserve every accepted final and bounded cancellation. |
+| Model throughput | Fixed bounded thread policy | Retain unchanged after the allocation experiment failed to establish benefit. |
+
 ## Current production release exception (2026-10-20)
 
 The user explicitly approved a temporary five-second production first-text P95

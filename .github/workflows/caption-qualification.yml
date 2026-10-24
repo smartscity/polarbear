@@ -154,7 +154,7 @@ jobs:
   streaming:
     name: Short streaming screen (${{ matrix.arch }}, ${{ matrix.candidate }})
     needs: corpus
-    if: ${{ inputs.streaming_candidate || github.ref == 'refs/heads/codex/caption-streaming' }}
+    if: ${{ inputs.streaming_candidate && !inputs.production_only }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -244,7 +244,7 @@ jobs:
   production:
     name: Production first-text regression (${{ matrix.arch }})
     needs: corpus
-    if: ${{ !inputs.streaming_candidate && github.ref != 'refs/heads/codex/caption-streaming' }}
+    if: ${{ inputs.production_only || !inputs.streaming_candidate }}
     timeout-minutes: 30
     strategy:
       fail-fast: false

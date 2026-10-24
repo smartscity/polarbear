@@ -36,4 +36,13 @@ int main() {
     // Late feedback must not delay an already-due preview.
     schedule.retry_empty(50000);
     check(schedule.due(28000));
+    // A short utterance can cross its preview boundary while waiting for VAD
+    // silence finalization. Do not start a redundant full decode in that gap.
+    schedule.reset();
+    check(!schedule.due(16000, 512));
+    check(!schedule.due(22000, 9000));
+    check(schedule.due(22000, 0));
+    schedule.attempted(22000, true);
+    check(!schedule.due(54000, 512));
+    check(schedule.due(54000, 0));
 }
