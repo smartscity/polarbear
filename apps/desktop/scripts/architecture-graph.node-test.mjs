@@ -62,6 +62,16 @@ test("native quality produces frontend assets before checking custom-protocol", 
   assert.ok(setup >= 0 && setup < install);
 });
 
+test("release builds frontend assets before all-feature native validation", () => {
+  const workflow = readFileSync(join(root, ".github/workflows/release.yml"), "utf8");
+  const native = workflow.slice(workflow.indexOf("  build_macos:"));
+  const install = native.indexOf("run: npm ci");
+  const build = native.indexOf("run: npm --workspace apps/desktop run build");
+  const clippy = native.indexOf("cargo clippy --all-targets --all-features -- -D warnings");
+  assert.ok(install >= 0 && build > install && clippy > build,
+    "The release job must build frontendDist before direct Cargo embeds custom-protocol assets");
+});
+
 test("App composes repository workflows and the live editor composes feature extensions", () => {
   const source = join(root, "apps/desktop/src");
   const app = readFileSync(join(source, "App.tsx"), "utf8");

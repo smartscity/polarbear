@@ -1,5 +1,25 @@
 # Engineering Verification
 
+## Release Prerequisite Follow-up
+
+Base: `8074fd7de4c1aef5525aac7bfd5647a086497bf7`, the verified merge of PR #2.
+Its branch and PR Quality, iPhone Reader Quality and both Caption Engine jobs
+passed before merge. Main also starts the release workflow without a tag.
+
+Inspecting that independent job exposed the same prerequisite previously fixed
+only in Quality: direct all-feature Cargo checks embed `frontendDist`, but run
+before Tauri's `beforeBuildCommand`. Browser tests use Vite development assets;
+the offline translation probe builds into a temporary directory. Neither
+produces `apps/desktop/dist` for the release Cargo gate.
+
+A new workflow regression failed before adding an explicit production frontend
+build ahead of native validation. This is a job-order fix, not a relaxation of
+caption gates or a new release tag. The preceding slice already verified the
+exact build-then-Clippy sequence locally; application sources are unchanged by
+this follow-up. The updated full unit command passed before commit: 338 Vitest
+tests in 63 files and 37 Node tests. Hosted results are verified for the new
+pushed/merged SHAs rather than the older run.
+
 ## Workspace Mutation and Diagram Admission Follow-up
 
 Date: 2026-10-24. Base `a2e0b32a899a1fffe73827166687bdeff6abd59e`.

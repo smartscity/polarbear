@@ -109,6 +109,9 @@ jobs:
       - name: Rust format
         run: cargo fmt --all -- --check
 
+      - name: Build assets embedded by custom-protocol
+        run: npm --workspace apps/desktop run build
+
       - name: Native correctness and lint gate
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
