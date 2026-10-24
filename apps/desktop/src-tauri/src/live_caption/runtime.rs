@@ -23,6 +23,7 @@ static AUDIO: OnceLock<Mutex<Option<CaptureIngress>>> = OnceLock::new();
 static CAPTURE_READY: AtomicBool = AtomicBool::new(false);
 static CAPTURE_ERROR: AtomicI32 = AtomicI32::new(0);
 static AUDIO_LEVEL: AtomicU32 = AtomicU32::new(0);
+static RECORDING_FAILED: AtomicBool = AtomicBool::new(false);
 
 fn record_capture_failure(state: &AtomicI32, code: i32) {
     let _ = state.compare_exchange(0, code.max(2), Ordering::AcqRel, Ordering::Acquire);
@@ -86,11 +87,31 @@ impl CaptureIngress {
     }
 }
 
-fn drain_capture(receiver: mpsc::Receiver<Frame>, output: &mut impl Write) -> std::io::Result<()> {
+fn drain_capture(
+    receiver: mpsc::Receiver<Frame>,
+    output: &mut impl Write,
+    mut recording: Option<super::recording::WavRecording<std::fs::File>>,
+) -> std::io::Result<()> {
+    let mut result = Ok(());
     for frame in receiver {
-        write_frame(output, &frame)?;
+        if let Some(recorder) = recording.as_mut() {
+            if recorder.append(&frame.samples).is_err() {
+                let _ = recorder.finish();
+                recording = None;
+                RECORDING_FAILED.store(true, Ordering::Release);
+            }
+        }
+        if let Err(error) = write_frame(output, &frame) {
+            result = Err(error);
+            break;
+        }
     }
-    Ok(())
+    if let Some(mut recorder) = recording {
+        if recorder.finish().is_err() {
+            RECORDING_FAILED.store(true, Ordering::Release);
+        }
+    }
+    result
 }
 
 struct EngineProcess(Child);
@@ -125,6 +146,14 @@ pub struct Status {
     pub audio_level: u32,
     pub view_revision: u64,
     pub history_requested: bool,
+    pub record_audio: bool,
+    pub recording_failed: bool,
+    #[serde(skip)]
+    pub final_sequence: i64,
+    #[serde(skip)]
+    pub partial_sequence: i64,
+    #[serde(skip)]
+    pub capture_generation: i64,
 }
 
 pub struct Run {
@@ -290,7 +319,7 @@ mod tests {
         }
         drop(ingress);
         let mut actual = FrameWriter::default();
-        drain_capture(receiver, &mut actual).unwrap();
+        drain_capture(receiver, &mut actual, None).unwrap();
         assert_eq!(actual.bytes, expected.bytes);
         assert_eq!(actual.writes, 3);
     }
@@ -455,11 +484,22 @@ pub fn launch(
     source: String,
     offset: u64,
     generation: i64,
+    record_audio: bool,
 ) -> CaptionResult<Run> {
     if !cfg!(target_os = "macos") {
         return Err(CaptionError::new("unsupportedPlatform"));
     }
     let directory = assets(&app)?;
+    let recording = if record_audio {
+        let path = super::recordings_directory(&app)?
+            .join(format!("{session}-{generation}-{offset}ms.wav"));
+        Some(
+            super::recording::WavRecording::create(&path)
+                .map_err(|_| CaptionError::new("recordingsUnavailable"))?,
+        )
+    } else {
+        None
+    };
     let mut child = Command::new(directory.join("polarbear-caption-engine"))
         .arg(directory.join("ggml-base.en-q5_1.bin"))
         .arg(directory.join("ggml-silero-v6.2.0.bin"))
@@ -484,12 +524,13 @@ pub fn launch(
     let (done_sender, done) = mpsc::channel();
     CAPTURE_READY.store(false, Ordering::Release);
     CAPTURE_ERROR.store(0, Ordering::Release);
+    RECORDING_FAILED.store(false, Ordering::Release);
     if let Ok(mut slot) = AUDIO.get_or_init(|| Mutex::new(None)).lock() {
         *slot = Some(CaptureIngress::new(sender));
     }
     let writer = std::thread::spawn(move || {
         // Stop closes the sender. Finish the admitted prefix before closing stdin.
-        if drain_capture(receiver, &mut input).is_err() {
+        if drain_capture(receiver, &mut input, recording).is_err() {
             record_capture_failure(&CAPTURE_ERROR, ENGINE_PIPE_CLOSED);
         }
     });
@@ -523,17 +564,6 @@ pub fn launch(
         let mut capture_offset = offset;
         let mut failure = None;
         loop {
-            if CAPTURE_READY.load(Ordering::Acquire)
-                && super::store::now()
-                    - app
-                        .state::<super::CaptionService>()
-                        .panel_seen
-                        .load(Ordering::Acquire)
-                    > 10_000
-            {
-                failure.get_or_insert("panelUnavailable");
-                worker_cancel.store(true, Ordering::Release);
-            }
             if CAPTURE_ERROR.load(Ordering::Acquire) != 0 {
                 failure.get_or_insert(match CAPTURE_ERROR.load(Ordering::Acquire) {
                     3 => "microphoneDenied",
@@ -581,12 +611,23 @@ pub fn launch(
                         }
                     }
                     "partial" if ready => {
-                        if let Ok(mut status) = app.state::<super::CaptionService>().status.lock() {
-                            status.partial = event.english;
+                        if event.sequence <= 0
+                            || event.sequence >= 1_000_000
+                            || app
+                                .state::<super::CaptionService>()
+                                .accept_partial(
+                                    &session,
+                                    generation * 1_000_000 + event.sequence,
+                                    &event.english,
+                                )
+                                .is_err()
+                        {
+                            failure = Some("engineProtocol");
+                            worker_cancel.store(true, Ordering::Release);
                         }
                     }
                     "final" if ready => {
-                        let saved = app.state::<super::CaptionService>().with_store(|db| {
+                        let saved = (|| {
                             if event.sequence <= 0
                                 || event.sequence >= 1_000_000
                                 || event.start_ms < 0
@@ -600,28 +641,20 @@ pub fn launch(
                             let end = (capture_offset as i64)
                                 .checked_add(event.end_ms)
                                 .ok_or_else(|| CaptionError::new("engineProtocol"))?;
-                            db.append(
+                            app.state::<super::CaptionService>().accept_final(
                                 &session,
                                 generation * 1_000_000 + event.sequence,
                                 start,
                                 end,
                                 &event.english,
-                            )?;
-                            if db.pending()? > 60 {
-                                return Err(CaptionError::new("translationBacklog"));
-                            }
-                            Ok(())
-                        });
+                            )
+                        })();
                         if let Err(error) = saved {
                             failure = Some(match error.code.as_str() {
-                                "caption.translationBacklog" => "translationBacklog",
                                 "caption.engineProtocol" => "engineProtocol",
                                 _ => "storageFailed",
                             });
                             worker_cancel.store(true, Ordering::Release);
-                        }
-                        if let Ok(mut status) = app.state::<super::CaptionService>().status.lock() {
-                            status.partial.clear();
                         }
                     }
                     "stopped" => {
@@ -654,6 +687,7 @@ pub fn launch(
             if let Ok(mut status) = app.state::<super::CaptionService>().status.lock() {
                 status.elapsed_ms = offset + started.elapsed().as_millis() as u64;
                 status.audio_level = AUDIO_LEVEL.load(Ordering::Relaxed);
+                status.recording_failed = RECORDING_FAILED.load(Ordering::Acquire);
                 if CAPTURE_READY.load(Ordering::Acquire) && status.state == "starting" {
                     status.state = "capturing".into();
                     if app
@@ -683,6 +717,9 @@ pub fn launch(
         drop(events);
         let _ = writer.join();
         let _ = reader.join();
+        if let Ok(mut status) = app.state::<super::CaptionService>().status.lock() {
+            status.recording_failed = RECORDING_FAILED.load(Ordering::Acquire);
+        }
         if let Some(code) = failure {
             if let Ok(mut status) = app.state::<super::CaptionService>().status.lock() {
                 status.state = "failed".into();

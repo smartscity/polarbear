@@ -66,6 +66,12 @@ pub fn validate_time_zone(zone: &str) -> CaptionResult<()> {
 }
 
 impl CaptionStore {
+    #[cfg(test)]
+    #[allow(clippy::unwrap_used)]
+    pub(super) fn memory() -> Self {
+        Self::initialize(Connection::open_in_memory().unwrap()).unwrap()
+    }
+
     pub fn open(path: &Path) -> CaptionResult<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(storage)?;
@@ -319,6 +325,7 @@ impl CaptionStore {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn pending(&self) -> CaptionResult<i64> {
         self.0
             .query_row(

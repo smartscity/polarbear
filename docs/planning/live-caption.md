@@ -1,6 +1,6 @@
 # Live Caption: offline English transcription and bilingual history
 
-Revision: 1.5, 2026-10-20 (Asia/Singapore).
+Revision: 1.6, 2026-10-24 (Asia/Singapore).
 Redesign baseline inspected: `13b9aff`.
 Earlier feature design: APPROVED as previously recorded. Streaming redesign:
 **T1 ACCEPTED FOR SCOPED IMPLEMENTATION** by the subsequent instruction to proceed
@@ -13,6 +13,55 @@ three-second optimization target or streaming replacement is complete.
 This document owns the feature design and its redesign review. The existing diagram
 describes the earlier architecture, not an implemented streaming redesign.
 See [implementation evidence and remaining gates](live-caption-implementation.md).
+
+## Current repair contract (2026-10-24)
+
+The user's English-first stability request supersedes earlier default-bilingual,
+translation-backlog-stop and panel-heartbeat requirements below. The subsequent
+request explicitly authorizes an optional local recording facility for reproducing
+live reading errors. It does not authorize automatic recording or uploading audio.
+
+| Owner | Current responsibility | Excluded responsibility |
+| --- | --- | --- |
+| Native `CaptionService` | Serialize lifecycle; atomically commit English and publish a bounded live snapshot; scope hypotheses by session and capture generation | Treat panel polling or translation throughput as capture health |
+| Capture/ASR | Existing bounded PCM admission, sample clock, Silero VAD and pinned Whisper CPU helper | Infer genuine repetition from screenshots; silently drop audio or rewrite final words |
+| Translator surface | Claim one durable job at a time only after persistent manual opt-in; dispose its worker on opt-out | Stop capture because pending translations exceed a count |
+| Panel | Read one consistent status/tail projection; retain unchanged row identities; memoize finalized text; recover polling errors | Own audio liveness or retain the complete session in its DOM |
+| Diagnostic recorder | Explicit next-session opt-in; save admitted 16 kHz mono float32 PCM on the native pipe-writer thread | Record by default, run disk IO in the audio callback, upload or sync recordings |
+
+Pattern assessment: reuse the existing native service/SQLite ownership and React
+projection. A bounded read model fixes the snapshot race without a new event bus,
+global store, virtual-list dependency or ASR implementation. Translation remains
+an independent consumer, not a second source of English text. No new model is selected.
+
+Preferences v4 changes `caption.showChinese` from default-on display to explicit
+translation opt-in. Versions 1-3 migrate it to false because they did not record
+processing consent; other preferences are preserved. A new v4 opt-in persists.
+New installations copy English by default. Existing explicit copy-language choices
+remain valid. Both Settings and Caption options update the same preference.
+
+`caption_request` adds `live` (atomic status plus the last 200 finalized segments),
+optional `recordAudio` on `start` (default false), and `recordingsFolder` (opens only
+the native-owned recording directory). No arbitrary filesystem path enters this API.
+Partial text is replaceable, non-durable and sequence-scoped; final commits retain
+genuine repeated words and cannot be overwritten by old events. Session/epoch checks
+exclude late results from a previous run.
+
+Recording is armed only for the next start in Caption options, resets after start,
+and stays explicit in the footer. Pause/resume retains that session's choice but
+opens a new WAV. Files are named `<session UUID>-<capture generation>-<offset>ms.wav`
+under `app_local_data_dir()/live-caption/recordings`, with 0700 directory and 0600
+file permissions. One capture file is capped at two hours (460.8 MB). A recording
+write error or limit stops recording with a visible warning, not recognition.
+The header is checkpointed once a second and finalized on ordinary stop. A crash
+can lose the uncheckpointed suffix; recording is diagnostic, not lossless archival
+capture. Files persist independently of transcript deletion until explicitly removed
+in the recordings folder. They are not encrypted by this feature or sent to Memory.
+
+Model accuracy and 30/60/120-minute native stability are separate acceptance gates.
+Logical-time storage tests, skipped browser timers and repeated short fixtures do
+not satisfy them. Until reviewed audio and reference transcripts exist, WER improvement
+is NOT_SCORED; do not claim the screenshot's recognition errors are repaired.
 
 ## 0. Streaming redesign review
 
@@ -647,8 +696,8 @@ gates. Ship exactly the validated English profile, not a model-choice UI.
   require measurement; they are not product promises.
 - If audio processing falls behind the buffer budget, pause capture with a visible
   gap and performance error. Never accumulate hours of audio or silently omit speech.
-  Translation uses a durable queue and one in-flight job; at 60 pending segments
-  pause capture with a backlog message until the user resumes. Keep all committed text.
+  Translation uses a durable queue and one in-flight job only while opted in.
+  Pending translations never stop English capture. Keep all committed text.
 - The helper separates PCM ingestion/VAD from its single model-owning inference
   thread. A partial snapshot is accepted only when inference is idle; it is never
   queued behind previous inference. Finalized audio supersedes queued partials and

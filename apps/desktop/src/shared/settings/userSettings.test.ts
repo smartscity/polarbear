@@ -29,6 +29,17 @@ describe("settings persistence", () => {
     updateUserSettings({ selectionTranslation: false });
     expect(readUserSettings()).toMatchObject({ caption: { source: "microphone" }, keybindings: { "caption.start": "Mod+Alt+L" }, selectionTranslation: false });
   });
+  it("defaults caption translation off and persists a new explicit opt-in", () => {
+    const values = mockWindow();
+    expect(readUserSettings().caption).toMatchObject({ showChinese: false, language: "english" });
+    values.set(STORAGE_KEYS.settings, JSON.stringify({ version: 3, theme: "dark", caption: { showChinese: true, source: "microphone" } }));
+    expect(readUserSettings()).toMatchObject({ theme: "dark", caption: { source: "microphone", showChinese: false } });
+    updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: true } });
+    updateUserSettings({ theme: "light" });
+    expect(readUserSettings().caption.showChinese).toBe(true);
+    updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: false } });
+    expect(readUserSettings().caption.showChinese).toBe(false);
+  });
 });
 
 describe("parseUserSettings", () => {
@@ -96,7 +107,7 @@ describe("parseUserSettings", () => {
   it("migrates caption preferences without persisting recording state", () => {
     expect(parseUserSettings({ version: 2 }).caption).toEqual(DEFAULT_USER_SETTINGS.caption);
     const settings = parseUserSettings({ version: 3, caption: { source: "microphone", language: "chinese", timestamps: true, active: true } });
-    expect(settings.caption).toEqual({ source: "microphone", language: "chinese", timestamps: true, showChinese: true, pinned: true });
+    expect(settings.caption).toEqual({ source: "microphone", language: "chinese", timestamps: true, showChinese: false, pinned: true });
     expect(parseUserSettings({ version: 3, caption: { source: "remote", language: "invalid" } }).caption).toEqual(DEFAULT_USER_SETTINGS.caption);
   });
 });

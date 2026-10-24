@@ -3,7 +3,7 @@ import type { AppCommand } from "../commands/appCommandTypes";
 import { STORAGE_KEYS } from "../constants/storageKeys";
 import { APP_EVENTS } from "../events/appEvents";
 
-export const USER_SETTINGS_VERSION = 3;
+export const USER_SETTINGS_VERSION = 4;
 
 export type CaptionPreferences = {
   source: "system" | "microphone";
@@ -12,7 +12,7 @@ export type CaptionPreferences = {
   showChinese: boolean;
   pinned: boolean;
 };
-const DEFAULT_CAPTION: CaptionPreferences = { source: "system", language: "bilingual", timestamps: false, showChinese: true, pinned: true };
+const DEFAULT_CAPTION: CaptionPreferences = { source: "system", language: "english", timestamps: false, showChinese: false, pinned: true };
 
 export type KeybindingOverrides = Partial<Record<AppCommand, string | null>>;
 export type LanguagePreference = string;
@@ -72,7 +72,7 @@ export function updateUserSettings(
 }
 
 export function parseUserSettings(value: unknown): UserSettings {
-  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== USER_SETTINGS_VERSION)) {
+  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== USER_SETTINGS_VERSION)) {
     return DEFAULT_USER_SETTINGS;
   }
 
@@ -93,18 +93,19 @@ export function parseUserSettings(value: unknown): UserSettings {
     language: isLanguagePreference(value.language) ? value.language : "system",
     theme: isThemePreference(value.theme) ? value.theme : "system",
     selectionTranslation: typeof value.selectionTranslation === "boolean" ? value.selectionTranslation : true,
-    caption: parseCaption(value.caption),
+    caption: parseCaption(value.caption, value.version === USER_SETTINGS_VERSION),
     keybindings
   };
 }
 
-function parseCaption(value: unknown): CaptionPreferences {
+function parseCaption(value: unknown, translationOptIn: boolean): CaptionPreferences {
   if (!isRecord(value)) return DEFAULT_CAPTION;
   return {
     source: value.source === "microphone" ? "microphone" : "system",
-    language: value.language === "english" || value.language === "chinese" ? value.language : "bilingual",
+    language: value.language === "bilingual" || value.language === "chinese" ? value.language : "english",
     timestamps: value.timestamps === true,
-    showChinese: value.showChinese !== false,
+    // Earlier versions enabled display by default, not translation by explicit consent.
+    showChinese: translationOptIn && value.showChinese === true,
     pinned: value.pinned !== false,
   };
 }

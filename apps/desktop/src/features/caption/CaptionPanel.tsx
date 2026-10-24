@@ -8,6 +8,7 @@ import { captionRequest, type CaptionSegment, type CaptionSession, type CaptionS
 import { changeCaptionSource, executeCaptionCommand } from "./captionCommands";
 import { CaptionSourceSelect } from "./CaptionSourceSelect";
 import { LiveTranscript } from "./LiveTranscript";
+import { reconcileSegments } from "./liveProjection";
 import { captionTimestamp } from "./transcript";
 import { applyThemeTokens } from "../theme/themeTokens";
 import "./caption.css";
@@ -25,9 +26,11 @@ export function CaptionPanel() {
   const [after, setAfter] = useState(0);
   const [format, setFormat] = useState<"txt" | "md" | "srt">("txt");
   const [error, setError] = useState("");
+  const [pollError, setPollError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [follow, setFollow] = useState(true);
+  const [recordAudio, setRecordAudio] = useState(false);
   const scroll = useRef<HTMLDivElement>(null);
   const viewRevision = useRef<number | undefined>(undefined);
   const selectedId = selected ?? status?.sessionId;
@@ -43,18 +46,19 @@ export function CaptionPanel() {
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const current = await captionRequest<"status">({ action: "status" });
-        const id = selected ?? current.sessionId;
-        const rows = id ? selected ? await captionRequest<"segments">({ action: "segments", id, after }) : await captionRequest<"tail">({ action: "tail", id }) : [];
+        const snapshot = await captionRequest<"live">({ action: "live" });
+        const current = snapshot.status;
+        const rows = selected ? await captionRequest<"segments">({ action: "segments", id: selected, after }) : snapshot.segments;
         const list = history ? await captionRequest<"list">({ action: "list", query, offset }) : [];
         if (!disposed) {
           if (current.viewRevision !== undefined && current.viewRevision !== viewRevision.current) {
             viewRevision.current = current.viewRevision;
             setHistory(current.historyRequested); setSelected(undefined); setAfter(0);
           }
-          setStatus(current); setSegments(rows); if (history) setSessions(list);
+          setPollError("");
+          setStatus(current); setSegments(previous => reconcileSegments(previous, rows)); if (history) setSessions(list);
         }
-      } catch (reason) { if (!disposed) fail(reason); }
+      } catch (reason) { if (!disposed) setPollError(reason instanceof TauriCommandError ? reason.code : "caption.operationFailed"); }
       if (!disposed) timer = setTimeout(() => { void poll(); }, 750);
     };
     void poll();
@@ -93,7 +97,10 @@ export function CaptionPanel() {
         }), !segments.length)}
         {!history && active && button("caption.pauseResume", status?.state === "paused" ? <Play size={18} /> : <Pause size={18} />, () => perform(() => executeCaptionCommand("caption.pauseResume")))}
         {!history && active && button("caption.stop", <Square size={18} />, () => perform(() => executeCaptionCommand("caption.stop")))}
-        {!active && !history && button("caption.start", <Play size={18} />, () => perform(() => executeCaptionCommand("caption.start")))}
+        {!active && !history && button("caption.start", <Play size={18} />, () => perform(async () => {
+          await executeCaptionCommand("caption.start", undefined, "txt", recordAudio);
+          setRecordAudio(false);
+        }))}
         {button("caption.history", <History size={18} />, () => { setHistory(!history); setSelected(undefined); })}
         <button type="button" popoverTarget="caption-options" aria-label={t("caption.options")} title={t("caption.options")}><MoreHorizontal size={18} /></button>
       </div>
@@ -106,6 +113,9 @@ export function CaptionPanel() {
       })} />
     </div>}
     <div className="caption-options caption-options-popover" id="caption-options" popover="auto">
+      <label title={t("caption.recordAudioHelp")}><input type="checkbox" checked={active ? !!status.recordAudio : recordAudio} disabled={!!active} onChange={event => setRecordAudio(event.target.checked)} />{t("caption.recordAudio")}</label>
+      <small>{t("caption.recordAudioHelp")}</small>
+      <button type="button" onClick={() => perform(() => captionRequest({ action: "recordingsFolder" }))}>{t("caption.recordingsFolder")}</button>
       {button("caption.pin", <Pin size={18} fill={preferences.pinned ? "currentColor" : "none"} />, () => {
         try { updateUserSettings({ caption: { ...preferences, pinned: !preferences.pinned } }); } catch (reason) { fail(reason); }
       })}
@@ -126,7 +136,8 @@ export function CaptionPanel() {
       </select></label>
       {button("caption.export", <Download size={16} />, () => perform(() => executeCaptionCommand("caption.export", selectedId ?? undefined, format)), !segments.length)}
     </div>
-    {(error || status?.error) && <p role="alert" className="caption-error">{t(error || `caption.${status?.error}`)}</p>}
+    {(error || pollError || status?.error) && <p role="alert" className="caption-error">{t(error || pollError || `caption.${status?.error}`)}</p>}
+    {status?.recordingFailed && <p role="alert" className="caption-error">{t("caption.recordingFailed")}</p>}
     {notice && <p role="status" className="caption-notice"><Check size={14} />{notice}</p>}
     {history && !selected ? <div className="caption-history">
       <input type="search" aria-label={t("caption.search")} placeholder={t("caption.search")} value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); }} />
@@ -167,6 +178,6 @@ export function CaptionPanel() {
       </div>}
       {!follow && !selected && <button type="button" className="caption-follow" onClick={() => setFollow(true)}><ArrowDown size={16} />{t("caption.latest")}</button>}
     </>}
-    <footer><span>{captionTimestamp(status?.elapsedMs ?? 0)}</span><meter min={0} max={100} value={status?.audioLevel ?? 0} aria-label={t("caption.audioLevel")} title={t("caption.audioLevel")} /><span>{t("caption.localOnly")}</span></footer>
+    <footer><span>{captionTimestamp(status?.elapsedMs ?? 0)}</span><meter min={0} max={100} value={status?.audioLevel ?? 0} aria-label={t("caption.audioLevel")} title={t("caption.audioLevel")} /><span role="status">{t(active && status.recordAudio && !status.recordingFailed ? "caption.recordingAudio" : "caption.localOnly")}</span></footer>
   </main>;
 }

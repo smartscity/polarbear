@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { History } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
+import { updateUserSettings } from "../../shared/settings/userSettings";
 import { TauriCommandError } from "../../shared/tauri/invokeTauri";
 import { effectiveAcceleratorForCommand } from "../../commands/keybindingResolver";
 import { displayAccelerator } from "../../shared/platform/keyboard";
@@ -47,6 +48,12 @@ export function CaptionSettings() {
       <input className="settings-toggle" type="checkbox" role="switch" aria-label={t("settings.captionEnabled")} checked={Boolean(active)} disabled={!status || busy || status.state === "stopping"} onChange={() => run(() => executeCaptionCommand("caption.toggle"))} />
     </SettingsRow>
     {shortcut && <SettingsRow label={t("settings.shortcut")}><kbd>{shortcut}</kbd></SettingsRow>}
+    <SettingsRow label={t("caption.showChinese")}>
+      <input className="settings-toggle" type="checkbox" role="switch" aria-label={t("caption.showChinese")} checked={caption.showChinese} onChange={event => {
+        try { updateUserSettings({ caption: { ...caption, showChinese: event.target.checked } }); setError(""); }
+        catch { setError("settings.saveFailed"); }
+      }} />
+    </SettingsRow>
     <CaptionSourceSelect source={active && (status.source === "system" || status.source === "microphone") ? status.source : caption.source} disabled={!status || Boolean(active) || busy || status.state === "stopping"} onChange={(source) => run(() => changeCaptionSource(source))} />
     <div className="settings-action"><button type="button" onClick={() => run(() => executeCaptionCommand("caption.history"))} disabled={busy}><History size={16} aria-hidden="true" /> {t("caption.history")}</button></div>
     {(error || statusError || status?.error) && <p role="alert">{t(error || statusError || `caption.${status?.error}`)}</p>}

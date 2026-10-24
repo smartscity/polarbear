@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pcm16FromWav, recognizeFixture } from "./caption-engine-fixture.mjs";
+import { pcm16FromWav, float32FromWav, recognizeFixture } from "./caption-engine-fixture.mjs";
 
 const handshake = `console.log(JSON.stringify({type:'ready',protocol:1,backend:'cpu'}));`;
 function run(source, options = {}, pcm = Buffer.alloc(32000)) {
@@ -17,6 +17,26 @@ test("validates fixture format and rejects truncated WAV chunks", () => {
   assert.throws(() => pcm16FromWav(wav.subarray(0, 47)), /Truncated WAV/);
   wav.writeUInt32LE(48000, 24);
   assert.throws(() => pcm16FromWav(wav));
+});
+
+test("replays diagnostic float WAV samples without quantizing them", async () => {
+  const wav = Buffer.alloc(56);
+  wav.write("RIFF"); wav.writeUInt32LE(48, 4); wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16); wav.writeUInt16LE(3, 20); wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(16000, 24); wav.writeUInt16LE(32, 34);
+  wav.write("data", 36); wav.writeUInt32LE(12, 40);
+  wav.writeFloatLE(0.000001, 44); wav.writeFloatLE(-0.25, 48); wav.writeFloatLE(0.5, 52);
+  const pcm = float32FromWav(wav);
+  const result = await run(`${handshake}
+    const chunks=[]; process.stdin.on('data', b=>chunks.push(b));
+    process.stdin.on('end',()=>{
+      const data=Buffer.concat(chunks);
+      if(data.readUInt32LE(8)!==3 || data.readFloatLE(12)!==Math.fround(0.000001) || data.readFloatLE(16)!==-0.25) process.exit(9);
+      console.log(JSON.stringify({type:'stopped'}));
+    });`, { pcmFormat: "float32" }, pcm);
+  assert.equal(result.code, 0);
+  assert.throws(() => pcm16FromWav(wav));
+  assert.throws(() => float32FromWav(wav.subarray(0, 55)));
 });
 
 test("feeds timestamped PCM with an empty environment and waits for EOF", async () => {

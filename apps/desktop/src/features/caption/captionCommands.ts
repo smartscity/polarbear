@@ -16,15 +16,15 @@ export async function changeCaptionSource(source: CaptionSource) {
   }
 }
 
-function startCaption() {
+function startCaption(recordAudio = false) {
   // Native Start serializes activation and reveals an existing session without
   // stopping or resuming it, including repeated menu/shortcut activation.
-  return captionRequest({ action: "start", source: readUserSettings().caption.source, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+  return captionRequest({ action: "start", source: readUserSettings().caption.source, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, ...(recordAudio ? { recordAudio: true } : {}) });
 }
 
-export async function executeCaptionCommand(command: AppCommand, sessionId?: string, format: "txt" | "md" | "srt" = "txt") {
+export async function executeCaptionCommand(command: AppCommand, sessionId?: string, format: "txt" | "md" | "srt" = "txt", recordAudio = false) {
   if (command === "caption.history") return captionRequest({ action: "open", history: true });
-  if (command === "caption.start") return startCaption();
+  if (command === "caption.start") return startCaption(recordAudio);
   const status = await captionRequest<"status">({ action: "status" });
   if (command === "caption.toggle") {
     return ["starting", "capturing", "paused"].includes(status.state)
