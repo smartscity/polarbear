@@ -41,7 +41,9 @@ fn with_identity<T>(
     action: impl FnOnce(&DisconnectJournal) -> Result<T, String>,
 ) -> Result<T, String> {
     let _guard = IDENTITY_LOCK.lock().map_err(|_| cleanup_error())?;
-    action(&DisconnectJournal::new(&crate::app_config_dir(app)?))
+    action(&DisconnectJournal::new(&crate::app_paths::app_config_dir(
+        app,
+    )?))
 }
 
 pub(crate) fn read_account(app: &tauri::AppHandle) -> Result<Option<RepositoryAccountDto>, String> {

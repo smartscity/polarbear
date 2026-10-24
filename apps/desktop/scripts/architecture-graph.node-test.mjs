@@ -28,3 +28,25 @@ test("quality and macOS release keep native correctness and all-target lint chec
   assert.match(release, /npm --workspace apps\/desktop run test:offline-translation -- --webkit/);
   assert.match(release, /test:native-clipboard -- test-results\/real-mermaid-clipboard.json/);
 });
+
+test("quality runs on engineering branch pushes without requiring a release tag", () => {
+  const workflow = readFileSync(join(root, ".github/workflows/quality.yml"), "utf8");
+  const triggers = workflow.slice(0, workflow.indexOf("\npermissions:"));
+  assert.match(triggers, /pull_request:/);
+  assert.match(triggers, /push:\s+branches:\s+- main\s+- ["']codex\/\*\*["']/);
+});
+
+test("native repository contracts and providers do not depend on entry-point internals", () => {
+  const native = join(root, "apps/desktop/src-tauri/src");
+  const main = readFileSync(join(native, "main.rs"), "utf8");
+  assert.doesNotMatch(main, /reqwest::|fn repository_\w+|struct RepositoryBindingDto/);
+  for (const command of ["connect_provider", "disconnect_provider", "get_account", "list_repositories", "link_workspace", "get_workspace_binding", "get_sync_status", "push_workspace", "pull_workspace", "sync_now"]) {
+    assert.ok(main.includes(`repository::repository_${command},`));
+  }
+  const store = readFileSync(join(native, "cloud_sync_store.rs"), "utf8");
+  assert.match(store, /use crate::repository::model::RepositoryBindingDto;/);
+  for (const file of ["model.rs", "policy.rs", "provider.rs", "store.rs", "progress.rs"]) {
+    const source = readFileSync(join(native, "repository", file), "utf8");
+    assert.doesNotMatch(source, /use (?:super|crate)::\*|super::super/);
+  }
+});

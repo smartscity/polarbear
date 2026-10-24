@@ -181,3 +181,78 @@ denial prompts still require platform acceptance; directory sync is Unix-only.
 This is one core-owner extraction, not completion of all decomposition. Provider
 HTTP, sync orchestration, editor composition and document-session state remain
 separate follow-up slices with their own fault-test requirements.
+
+## Private Credential Publication and Native Repository Ownership
+
+This follow-up starts from `358d0b2`. It changes debug credential-file publication
+and separates the native repository owners; it does not change editor behavior,
+ASR, language resources, binding schemas or public command identifiers.
+
+### Design and Responsibility
+
+| Concern | Owner and decision |
+| --- | --- |
+| Credential file lifecycle | `secret_store/credential_file.rs`, a private filesystem adapter used by the existing Keychain-first store; no general persistence framework. |
+| Crash-safe publication | A fresh exclusive sibling file is private before the first credential byte, then synced and atomically renamed. A failed pre-publication write preserves the old file. |
+| macOS inherited access grants | Empty the temporary file's extended ACL before writing. Mode 0600 alone does not revoke inherited macOS grants. ACL setup failure aborts publication. |
+| Non-POSIX debug builds | Require the system credential store rather than claiming a POSIX mode secures a Windows ACL. Release behavior remains Keychain-only. |
+| DTO and stored binding schema | `repository/model.rs` is the canonical Rust owner, also consumed by `cloud_sync_store.rs`; JSON names and legacy defaults are unchanged. |
+| Sync path and manifest rules | `repository/policy.rs` owns pure filtering, digest, change-count and path mapping. |
+| Local snapshots and outbox | `repository/store.rs` composes existing SQLite operations and filesystem scanning. It does not own credentials. |
+| Provider protocol | `repository/provider.rs` owns GitHub/GitLab HTTP models and requests. Existing timeouts, error strings, incremental compare limits and upload semantics remain unchanged. |
+| Progress delivery | `repository/progress.rs` composes the existing Tauri event and durable run-event append. |
+| Command orchestration | `repository/mod.rs` owns connect/link/status/push/pull/sync execution. Main only registers the same ten command names. |
+| Shared native helpers | `app_paths.rs` owns the existing config directory resolution; unconditional document-byte publication stays in `document_save.rs`, reusing its existing transaction. |
+
+No dependency, alternate credential database, generic Repository trait, global
+event bus or public IPC version was introduced. The private writer deliberately
+does not reuse the document saver: document saving preserves original metadata,
+while a credential must not inherit a legacy file's permissive mode or ACL.
+
+### Security and Recovery Contract
+
+- Existing `repository-secrets.json` and its map keys remain compatible on Unix.
+  Symlink/non-file targets are rejected; atomic replacement never mutates an old
+  hard-linked inode. Reads use `O_NOFOLLOW` and reject nonregular files.
+- Fresh files are created with 0600 before content, including under umask 000.
+  macOS inherited ACL grants are removed before content. Linux relies on POSIX
+  creation-mode masking; Linux runtime acceptance has not been performed here.
+- Normal failure removes unpublished staging. Disconnect also removes precisely
+  named UUID staging files left by a crash, without glob-deleting unrelated files.
+  Any failed deletion remains a failure of the existing durable cleanup journal.
+- A directory-sync failure after rename is reported, but the new credential may
+  already be published. Retry is safe; an error is not a guarantee of rollback.
+- Secure-write failures use `repository.secretWriteFailed` at the native store
+  boundary. The existing connection adapter localizes the code in both resource
+  files and preserves its cause, without exposing raw filesystem diagnostics or
+  acknowledging a completed connection. Unrelated provider errors are unchanged.
+- This is debug-only plaintext hardening, not encryption. It does not revoke
+  historical copies or defeat another process running as the same user/root.
+  The existing identity mutex owns concurrent operations in the single Desktop
+  process. Power-loss and independent-binary concurrent writers are not proven.
+
+### CI Trigger Correction
+
+GitHub returned zero workflow runs for `358d0b20b37f8bbb199e6b4dc6e35442baa13ecc`.
+Quality previously listened only to `main` pushes and PRs, so pushing the current
+`codex/caption-streaming` branch did not mean CI had run. Quality now also listens
+to `codex/**` pushes. Tests protect that trigger, the unchanged native command
+registration and the new contract boundary. No release tag or DMG is implied by
+a branch quality run; release gates and the alpha latency policy are untouched.
+
+### Verification and Remaining Ownership
+
+New symlink and hard-link tests failed against the previous writer before the
+fix. Five protocol/schema/manifest/scan/HTTP-diagnostic characterization tests
+passed before and after extraction. The inherited-ACL fixture verifies actual
+ACL inheritance rather than relying on a displayed principal name, which may be
+a UUID under sandboxed account lookup. See [verification](verification.md) for
+the final local counts and limits.
+
+The native entry point no longer owns repository protocols or sync algorithms.
+This is not a claim that App's document session, repository dialogs, or editor
+widgets have become composition-only. Those remain independent work, along with
+measured diagram admission policy, cross-window settings contention, license
+ownership and physical-device/packaged acceptance. Reverting publication
+hardening would restore a confirmed secret-exposure path; it is not a safe
+rollback strategy. The module extraction alone needs no data migration.

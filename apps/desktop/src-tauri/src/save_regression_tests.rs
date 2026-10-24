@@ -102,7 +102,7 @@ fn a_rejected_local_save_does_not_enqueue_sync_work() {
 fn successful_outbox_write_preserves_the_legacy_success_shape() {
     let workspace = Workspace::new();
     let database = workspace.0.join("outbox.sqlite");
-    let binding = super::RepositoryBindingDto {
+    let binding = crate::repository::model::RepositoryBindingDto {
         workspace_ref: workspace.root().to_owned(),
         provider: "github".to_owned(),
         owner: "fixture".to_owned(),

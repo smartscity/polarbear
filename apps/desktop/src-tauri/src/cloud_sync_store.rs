@@ -1,4 +1,4 @@
-use super::RepositoryBindingDto;
+use crate::repository::model::RepositoryBindingDto;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

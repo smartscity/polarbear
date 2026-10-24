@@ -268,3 +268,88 @@ successful cleanup removes the status node, so a negative text assertion still
 waiting for that node was invalid. The assertion now checks that the loaded
 editor has no status node. The complete suite above was rerun, not reported from
 the failed run. No product guard or acceptance threshold was relaxed.
+
+## Credential Publication and Native Repository Extraction
+
+Date: 2026-10-24. Base: `358d0b20b37f8bbb199e6b4dc6e35442baa13ecc`.
+Implementation and this report are committed together. Environment: Intel
+macOS 26.5.1, Node 26.1.0, existing locked dependencies. The six pre-existing
+Feedback changes remain in the tested checkout but are excluded from the commit.
+No real credential file or system Keychain entry was read, written or deleted
+by the regression fixtures.
+
+### Test-first Evidence
+
+1. Two new tests ran against the previous `fs::write` + chmod implementation:
+   the symlink write succeeded and the hard-linked alias received the new token.
+   Both failed before private atomic publication and pass after it.
+2. A new crash-staging cleanup test failed after introducing atomic publication:
+   disconnect removed the final file but left the unpublished credential copy.
+   Cleanup now removes only UUID-named staging files, attempts every entry after
+   a failure, retains unrelated files and supports idempotent retry.
+3. The permissions fixture inspects the actual open descriptor before any
+   content is written, injects a partial write failure, and checks old content
+   and absence of staging leftovers. A separate child process runs it with
+   umask 000. The parent process never changes its global umask.
+4. A macOS fixture installs an inherited read ACL, verifies a control file really
+   inherits it, then checks the staging file has no ACL entries before content.
+   Its first assertion incorrectly assumed account lookup prints `everyone`;
+   this machine prints its UUID. The corrected test checks the inherited grant
+   and then the absence of all ACL entries, not a relaxed permissions policy.
+5. Five repository characterization tests passed before and after extraction:
+   provider path encoding/scoping, JSON/legacy defaults, manifest changes, local
+   scan exclusions/symlinks, and loopback HTTP authentication/permission errors.
+   No live GitHub/GitLab token or remote mutation is used.
+6. The engineering-branch CI trigger test failed against the old main-only push
+   list. The new trigger passes. A native boundary/registration assertion also
+   protects all ten existing command identifiers and model ownership.
+7. The connection adapter test reproduced a private native diagnostic being
+   exposed instead of a localized secure-write failure. Both locale resources
+   and the existing error mapping now cover `repository.secretWriteFailed`;
+   successful connections and unrelated errors retain their original behavior.
+
+### Final Local Checks
+
+| Command / check | Result | Scope |
+| --- | --- | --- |
+| `npm --workspace apps/desktop run test` | PASS: 310 Vitest tests / 59 files; 32 Node tests | Includes connection errors, native boundary registration and branch trigger. |
+| `npm --workspace apps/desktop run typecheck` | PASS | Final TS source and tests. |
+| `npm --workspace apps/desktop run lint` | PASS | No new lint errors. |
+| `npm --workspace apps/desktop run test:ui` | PASS: 71 browser cases | Complete final suite rerun after localized connection mapping; native credential IPC mocked, bundled translation uses actual local assets. |
+| `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast` | PASS: 92 passed, 3 ignored entries | Two child helpers are invoked by their parent regressions; the real installed Memory Engine opt-in test is NOT RUN. |
+| `cargo clippy --all-targets --all-features -- -D warnings` | PASS | Final native source and tests. |
+| `cargo fmt --all -- --check` | PASS | Formatting restricted to changed files; no repository-wide autoformat. |
+| `npm --workspace apps/desktop run build` | PASS: 28.83 seconds | App chunk 1,692.18 kB / 507.92 kB gzip; existing large-chunk warning remains. Not a DMG build or performance benchmark. |
+| `npm --workspace apps/desktop run memory-contract:check` | PASS | Canonical contract unchanged. |
+
+During extraction, the initial compile found six missing imports in the remaining
+workspace commands; these were restored explicitly. The initial fmt check also
+found one moved config-path call needing wrapping. Full native tests, all-target
+Clippy and fmt were rerun after correction. No gate was skipped or threshold
+weakened. Moving functions is not performance evidence: main shrank from 3,449
+to 1,446 physical lines, but the provider and sync algorithms are unchanged.
+
+### Hosted CI and Remaining Acceptance
+
+The GitHub Actions API returned **zero runs**, not success, for the previous
+commit `358d0b2`. The repository's Quality workflow listened only to main pushes
+and PRs. It now also listens to `codex/**` pushes; actual post-push run status is
+reported separately and must not be inferred from this local report. No tag,
+DMG, branch-protection change or new release qualification is claimed.
+
+NOT RUN: actual system-Keychain denial prompts, Windows/Linux execution, real
+provider synchronization, installed-app upgrade/restart, power-loss durability,
+iPhone suites, ASR accuracy/endurance and a controlled editor performance study.
+The newly hardened file path is a Unix debug fallback; release storage remains
+system-Keychain only, and non-Unix debug builds now also require that store.
+Legacy files are made private on replacement; previously leaked copies cannot
+be revoked. In-flight requests already holding tokens and hostile same-user
+processes are outside this file-publication guarantee.
+
+For manual acceptance on a disposable debug profile: deny Keychain storage,
+connect with a test credential, verify the fallback is private, reconnect and
+disconnect, then restart and confirm no account, intent, final fallback or UUID
+staging files remain. Deny configuration-directory write access and confirm the
+localized connection failure does not report success. Restore permissions before
+cleanup. Use a release build separately to confirm Keychain denial never creates
+a plaintext fallback. Do not use production credentials for these exercises.

@@ -56,9 +56,13 @@ export async function connectRepositoryProvider(params: {
   token: string;
   baseUrl?: string;
 }): Promise<RepositoryAccount> {
-  return invokeTauri<RepositoryAccount>(TAURI_COMMANDS.repositoryConnectProvider, {
-    request: params
-  });
+  try {
+    return await invokeTauri<RepositoryAccount>(TAURI_COMMANDS.repositoryConnectProvider, {
+      request: params
+    });
+  } catch (error) {
+    throw localizedIdentityError(error);
+  }
 }
 
 export async function disconnectRepositoryProvider(): Promise<void> {
@@ -83,7 +87,7 @@ export function isRepositoryCleanupPending(error: unknown): boolean {
 }
 
 function localizedIdentityError(error: unknown): unknown {
-  for (const key of ["repository.secretDeletionFailed", "repository.secretReadFailed"] as const) {
+  for (const key of ["repository.secretDeletionFailed", "repository.secretReadFailed", "repository.secretWriteFailed"] as const) {
     if (hasTauriErrorCode(error, key)) return new Error(translateCurrent(key), { cause: error });
   }
   return error;

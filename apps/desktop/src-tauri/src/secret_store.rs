@@ -1,9 +1,12 @@
 use std::collections::BTreeMap;
 use std::fs;
-#[cfg(unix)]
+#[cfg(all(test, unix))]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tauri::Manager;
+
+mod credential_file;
+use credential_file::{clear as clear_fallback_file, write as write_fallback_file};
 
 const KEYCHAIN_SERVICE: &str = "dev.polarbear.app";
 const GITHUB_TOKEN_KEY: &str = "github_token";
@@ -90,6 +93,21 @@ pub(crate) fn save_repository_secret(
     provider: &str,
     token: &str,
 ) -> Result<(), String> {
+    secure_write_result(save_repository_secret_inner(app, provider, token))
+}
+
+fn secure_write_result(result: Result<(), String>) -> Result<(), String> {
+    result.map_err(|_| serde_json::json!({
+        "code": "repository.secretWriteFailed",
+        "message": "Cloud Sync could not securely store credentials. Check credential-store and configuration directory permissions, then reconnect."
+    }).to_string())
+}
+
+fn save_repository_secret_inner(
+    app: &tauri::AppHandle,
+    provider: &str,
+    token: &str,
+) -> Result<(), String> {
     let key = repository_secret_key(provider);
     let keychain_verified = KeychainSecretStore
         .save_secret(key, token)
@@ -154,10 +172,8 @@ fn fallback_secrets_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 #[cfg(debug_assertions)]
 fn read_fallback_secrets(app: &tauri::AppHandle) -> Result<BTreeMap<String, String>, String> {
     let path = fallback_secrets_path(app)?;
-    let content = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
-        Err(error) => return Err(error.to_string()),
+    let Some(content) = credential_file::read(&path)? else {
+        return Ok(BTreeMap::new());
     };
     serde_json::from_str(&content).map_err(|error| error.to_string())
 }
@@ -172,19 +188,7 @@ fn write_fallback_secrets(
     }
 
     let content = serde_json::to_string(secrets).map_err(|error| error.to_string())?;
-    fs::write(&path, content).map_err(|error| error.to_string())?;
-    #[cfg(unix)]
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
-        .map_err(|error| error.to_string())?;
-    Ok(())
-}
-
-fn clear_fallback_file(path: &Path) -> Result<(), String> {
-    match fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.to_string()),
-    }
+    write_fallback_file(&path, content.as_bytes())
 }
 
 #[cfg(test)]
@@ -192,6 +196,58 @@ fn clear_fallback_file(path: &Path) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::cell::RefCell;
+
+    #[test]
+    fn credential_publication_failure_has_a_stable_code_without_private_details() {
+        let error =
+            secure_write_result(Err("fixture-token and private-path".to_owned())).unwrap_err();
+        let value: serde_json::Value = serde_json::from_str(&error).unwrap();
+        assert_eq!(value["code"], "repository.secretWriteFailed");
+        assert!(!error.contains("fixture-token"));
+        assert!(!error.contains("private-path"));
+        assert!(secure_write_result(Ok(())).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fallback_never_writes_through_a_symbolic_link() {
+        let directory =
+            std::env::temp_dir().join(format!("polarbear-secret-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&directory).unwrap();
+        let outside = directory.join("outside.json");
+        let path = directory.join("repository-secrets.json");
+        fs::write(&outside, b"original").unwrap();
+        std::os::unix::fs::symlink(&outside, &path).unwrap();
+        let result = write_fallback_file(&path, b"new secret");
+        let unchanged = fs::read(&outside).unwrap() == b"original";
+        fs::remove_dir_all(directory).unwrap();
+        assert!(result.is_err(), "A symlink is not a credential file");
+        assert!(unchanged, "An unrelated file must never receive a secret");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fallback_replacement_does_not_modify_a_hard_link_or_reuse_public_permissions() {
+        let directory =
+            std::env::temp_dir().join(format!("polarbear-secret-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&directory).unwrap();
+        let path = directory.join("repository-secrets.json");
+        let alias = directory.join("legacy-copy.json");
+        fs::write(&path, b"original").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        fs::hard_link(&path, &alias).unwrap();
+        let result = write_fallback_file(&path, b"new secret");
+        let alias_content = fs::read(&alias).unwrap();
+        let saved = fs::read(&path).unwrap();
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        let count = fs::read_dir(&directory).unwrap().count();
+        fs::remove_dir_all(directory).unwrap();
+        result.unwrap();
+        assert_eq!(alias_content, b"original");
+        assert_eq!(saved, b"new secret");
+        assert_eq!(mode, 0o600);
+        assert_eq!(count, 2, "Staging files must not remain after publication");
+    }
 
     #[cfg(unix)]
     #[test]

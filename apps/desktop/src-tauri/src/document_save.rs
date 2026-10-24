@@ -1,3 +1,9 @@
+pub(crate) fn atomic_write(path: &Path, content: &[u8]) -> Result<(), String> {
+    save(path, content, None, SaveTarget::ReplaceOrCreate)
+        .map(|_| ())
+        .map_err(|error| error.message)
+}
+
 use crate::{content_revision, MarkdownSaveResponseDto, WorkspaceSaveError};
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{self, File, OpenOptions};

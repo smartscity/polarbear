@@ -97,3 +97,23 @@ checks pass. Security score remains 2; real Keychain/Windows/installed-app and
 power-loss acceptance are not inferred from local fixtures. Debug fallback
 creation permissions and broader core decomposition remain open. Detailed
 limits and commands are in [verification](verification.md#credential-restart-recovery-follow-up).
+
+## Credential Publication and Repository Ownership Follow-up
+
+Based on `358d0b2`; current-run results are in
+[verification](verification.md#credential-publication-and-native-repository-extraction).
+
+| Metric | Previous slice | Current local result |
+| --- | --- | --- |
+| Desktop Vitest / Node | 308 / 30 | 310 / 32, PASS |
+| Desktop browser | 71 | 71, PASS on the final source |
+| Native tests | 78 passed / 3 ignored entries | 92 passed / 3 ignored entries; existing child-process helpers still executed |
+| Credential publication | Write first, chmod later; follows links | Private exclusive staging before content, macOS ACL removal, atomic replacement, symlink rejection and crash-staging cleanup |
+| Native core ownership | Repository HTTP/DTO/sync in main | Explicit repository command/model/policy/provider/store/progress owners; main 3,449 to 1,446 lines |
+| Previous branch CI | Not established | API confirmed zero runs for `358d0b2`; Quality trigger now includes engineering branches |
+
+Scores remain unchanged: source decomposition and local security fault tests do
+not establish whole-product security, Windows acceptance, measured performance,
+or hosted success. App/editor ownership, pending-render pressure, multi-window
+settings contention, licensing decisions and physical-device acceptance remain
+open. No overall completion or speedup is inferred from fewer lines in main.
