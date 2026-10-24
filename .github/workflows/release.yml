@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing desktop release tag, for example v0.9.1"
-        required: true
+        description: "Optional existing release tag (for example v0.9.1); leave empty to validate the selected branch"
+        required: false
         type: string
   push:
     branches:

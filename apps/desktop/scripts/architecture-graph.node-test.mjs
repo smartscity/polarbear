@@ -72,6 +72,13 @@ test("release builds frontend assets before all-feature native validation", () =
     "The release job must build frontendDist before direct Cargo embeds custom-protocol assets");
 });
 
+test("manual release validation can target a branch without creating a version tag", () => {
+  const workflow = readFileSync(join(root, ".github/workflows/release.yml"), "utf8");
+  const input = workflow.slice(workflow.indexOf("      release_tag:"), workflow.indexOf("  push:"));
+  assert.match(input, /required: false/);
+  assert.match(workflow, /if: env\.RELEASE_TAG != ''/);
+});
+
 test("App composes repository workflows and the live editor composes feature extensions", () => {
   const source = join(root, "apps/desktop/src");
   const app = readFileSync(join(source, "App.tsx"), "utf8");
