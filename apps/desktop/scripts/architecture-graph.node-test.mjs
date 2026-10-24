@@ -79,6 +79,17 @@ test("manual release validation can target a branch without creating a version t
   assert.match(workflow, /if: env\.RELEASE_TAG != ''/);
 });
 
+test("caption production gates are not replaced by research based on the branch name", () => {
+  const workflow = readFileSync(join(root, ".github/workflows/caption-qualification.yml"), "utf8");
+  const streaming = workflow.slice(workflow.indexOf("  streaming:"), workflow.indexOf("  production:"));
+  const production = workflow.slice(workflow.indexOf("  production:"));
+  assert.match(streaming, /if: \$\{\{ inputs\.streaming_candidate && !inputs\.production_only \}\}/);
+  assert.match(production, /if: \$\{\{ inputs\.production_only \|\| !inputs\.streaming_candidate \}\}/);
+  assert.doesNotMatch(streaming + production, /if:.*github\.ref/);
+  const release = readFileSync(join(root, ".github/workflows/release.yml"), "utf8");
+  assert.match(release, /production_only: true/);
+});
+
 test("App composes repository workflows and the live editor composes feature extensions", () => {
   const source = join(root, "apps/desktop/src");
   const app = readFileSync(join(source, "App.tsx"), "utf8");

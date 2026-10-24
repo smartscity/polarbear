@@ -18,6 +18,14 @@ claiming the release failure resolved. Native CTest 7/7, Python native tests
 25/25, Node tests 38/38 and the real helper protocol fixture passed. No additional
 full frontend or physical-device acceptance is claimed for this native-only change.
 
+The first branch push also exposed a workflow-selection defect: the historical
+`codex/caption-streaming` name selected candidate research and skipped production
+validation, even when a reusable release caller requested `production_only`.
+A test-first workflow guard now requires explicit research opt-in and gives
+`production_only` precedence. Ordinary pushes select production verification.
+This changes which engine is tested, not acceptance thresholds; the old research
+run is not presented as production evidence. Node script coverage is now 39 tests.
+
 ## Release Browser Readiness Follow-up
 
 Base: `86d2aa4b614bdc28652cfa4a6f3211fd7954531c`. Main Quality passed all four
