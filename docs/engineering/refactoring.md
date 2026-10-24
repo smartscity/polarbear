@@ -84,3 +84,37 @@ there is no persistent migration to reverse. Do not reset unrelated changes or
 rewrite published history. A rollback would restore the documented Memory and
 table races and must not be presented as a correctness fix. The native path
 module extraction may be reverted separately if necessary without data changes.
+
+## Credential and Navigation Boundary Follow-up
+
+The next slice starts from `ad33ca4` and is implemented in `e1fd7c08b0bd8102e97c0b57764a9f17869b2cf2`. It addresses ENG-09 and the deletion portion
+of ENG-10, without changing account files, bindings, command names or arguments.
+See [verification](verification.md#boundary-hardening-follow-up) for its commit
+identity and measured results.
+
+| Problem | Pattern decision | Implementation owner |
+| --- | --- | --- |
+| Keychain failures need deterministic fault injection and complete cleanup attempts | Reuse the existing `SecretStore` adapter; no new repository framework | `secret_store::delete_repository_secrets_using` attempts both providers and fallback cleanup before deciding success. No rollback restores a deleted credential. |
+| Native rejection must not be mistaken for browser availability | Explicit environment selection in the existing adapter, not exception-driven fallback | `shared/tauri/openExternalUrl.ts` chooses Tauri or browser before launching and consumes UI-action failures with localized feedback. |
+| Native URL validation and launcher outcomes must be independently testable | Small native platform module, not more policy in main | `external_url.rs` validates HTTP(S), host and absence of embedded credentials/control characters; checks Unix launcher exits and uses a URL argument to ShellExecuteW on Windows. |
+
+The disconnect IPC still returns `Result<(), String>`; deletion failures now use
+the existing JSON error-envelope convention with `repository.secretDeletionFailed`.
+The feature adapter maps that code to the active locale. The existing App catch
+path reports failure without clearing identity or announcing success. Partial
+cleanup is not an atomic cross-store transaction; retries remove remaining
+entries and do not restore credentials already removed.
+
+`openExternalUrl` remains a UI action returning `Promise<void>`. All existing
+callers, including the uncommitted Feedback entry, share its error handling.
+Native failures never invoke a browser fallback. Browser mode opens only a new
+noopener/noreferrer target; a null return never redirects the editing window.
+Because noopener can return null even on success, this is not a reliable popup
+blocker detector. Malformed links, non-HTTP(S) schemes, backslashes/control
+characters and embedded credentials are deliberately rejected. URL normalization
+preserves query/fragment semantics. No Markdown content is rewritten.
+
+Windows no longer passes URLs through `cmd /C start`. The isolated FFI adapter
+uses the documented [ShellExecuteW contract](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew).
+Its return-code policy is unit tested; a macOS pass does not establish Windows
+compilation or real browser-association acceptance. No dependency was added.

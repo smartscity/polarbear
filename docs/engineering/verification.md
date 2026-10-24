@@ -135,3 +135,67 @@ model requires its own acceptance before changing the shipping engine.
 6. Before release, require clean hosted checks and inspect the packaged app and
    mounted DMG from the exact tag. Record artifact/version/OS facts; do not reuse
    a previous alpha's PASS for this implementation.
+
+## Boundary Hardening Follow-up
+
+Date: 2026-10-24. Base: `ad33ca4`; implementation:
+`e1fd7c08b0bd8102e97c0b57764a9f17869b2cf2`. Same local Intel/macOS environment.
+The six existing Feedback edits were preserved in the worktree and excluded
+from this commit, including selective staging of the new locale messages.
+These remain local worktree checks, not pristine hosted or installed-app proof.
+
+### Failure Reproduction Before Correction
+
+- External-navigation unit tests: 11 of 12 initially failed against the old
+  helper. Native rejection invoked `window.open`, browser mode still invoked
+  native IPC, unsafe URLs reached the launcher, and failure feedback was absent.
+- Credential tests: extracted the old deletion sequence unchanged behind the
+  existing `SecretStore` interface, then injected failures. Both tests failed:
+  keychain errors returned success, and fallback errors exposed private paths.
+- Native URL tests: both initially failed against the original prefix-only
+  policy. Additional malformed authority input (`https:example.com://path`)
+  caught a parser-normalization ambiguity before the final policy was accepted.
+- Native launcher regression: an actual harmless child process exiting with
+  status 7 was incorrectly accepted by the old status-ignoring sequence.
+- Repository adapter test: deletion error was not localized before the mapping.
+
+### Final Local Results
+
+| Command | Result | Scope |
+| --- | --- | --- |
+| `npm --workspace apps/desktop run typecheck` | PASS | Final source and unit-test types. |
+| `npm --workspace apps/desktop run lint` | PASS | Final source ESLint, no diagnostics. |
+| `npm --workspace apps/desktop run test` | PASS: 59 files / 304 Vitest tests, 30 Node tests | Adds 14 external-navigation and two repository-adapter tests. |
+| `npm --workspace apps/desktop run test:ui` | PASS: 69 tests, 3.4 minutes | Adds three actual-App browser tests: native rejection preserves unsaved text and localized feedback, blocked popup preserves page, disconnect failure remains retryable and success clears state. IPC is mocked. |
+| `npm --workspace apps/desktop run build` | PASS, 31.41 s | App chunk 1,691.18 kB / 507.72 kB gzip; large-chunk warnings retained. Not a controlled performance measurement. |
+| `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast` | PASS: 67 passed / 2 existing ignored | Adds two credential and four URL/launcher cases. Ignored entries have the same meaning as the preceding report. |
+| `cargo clippy --all-targets --all-features -- -D warnings` | PASS | Final native source and tests. |
+| `cargo fmt --all -- --check` | PASS | No repository-wide formatting rewrite. |
+| `npm --workspace apps/desktop run memory-contract:check` | PASS | No Memory contract changes. |
+| `git diff --check`, staged whitespace and documentation links | PASS | Only this task's source, tests, messages and reports staged. |
+
+### Acceptance and Limits
+
+- PASS: keychain failure cannot be acknowledged as successful disconnect; both
+  providers and fallback cleanup are attempted even after partial failure.
+- PASS: retries are idempotent in the isolated store; failed disconnect keeps
+  the real App command available during the current session. No real user
+  credentials were created, read, or removed by these tests.
+- PASS: native launcher rejection cannot cross into browser fallback or replace
+  the current editor page; safe error feedback does not include the rejected
+  URL, OS diagnostic or private path.
+- PASS: valid HTTP(S) queries/fragments remain usable and normalization is
+  tested. Invalid schemes, authority syntax, control characters, backslashes
+  and embedded credentials are rejected before launch.
+- NOT RUN: real Keychain denial/prompt UI, OS default-browser dispatch, Windows
+  compilation and handler acceptance, Linux desktop handler acceptance, new
+  packaged DMG, hosted clean-checkout CI, and iPhone suites in this follow-up.
+  The Windows result-code unit test on macOS is not Windows integration proof.
+- OPEN: cleanup is not atomic across keychains and fallback storage. Successfully
+  removed entries are never recreated. Recovery after partial deletion followed
+  by application restart requires a separate test/design; debug fallback file
+  creation permissions are unchanged. A hung OS handler also has no new timeout
+  in this slice. Broader App decomposition/performance work remains incomplete.
+
+No caption model, latency gate, document format, database schema, dependency or
+public command name/argument changed. No tag or DMG is implied by these commits.

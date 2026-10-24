@@ -57,3 +57,22 @@ large-document performance, comprehensive security fault testing, hosted
 required-check enforcement, license completion, and device/release acceptance
 are outstanding. Existing product behavior has no regression observed in the
 executed suites; unexecuted platforms are not covered by that statement.
+
+## Boundary Follow-up Evidence
+
+Implementation `e1fd7c08b0bd8102e97c0b57764a9f17869b2cf2` closes the reproduced
+credential deletion acknowledgement and external-navigation fallback defects.
+The original scorecard above remains its dated baseline, not rewritten history.
+
+| Metric | Before follow-up | After follow-up |
+| --- | --- | --- |
+| Desktop Vitest | 288 tests / 57 files | 304 tests / 59 files, PASS |
+| Desktop browser | 66 tests | 69 tests, PASS |
+| Native Rust | 61 passed / 2 ignored | 67 passed / 2 ignored |
+| Code/contract gates | Passing | Typecheck, lint, fmt, Clippy, Node graph/contract checks still pass |
+| Security boundary evidence | Suspected URL impact and inspected deletion bug | Reproduced negative tests plus guarded implementation and actual-App browser regression |
+
+The security dimension remains 2: these targeted checks do not establish whole-
+application security or real Windows/Keychain acceptance. No overall numerical
+quality increase or performance improvement is asserted. Remaining scope is
+explicit in [verification](verification.md#boundary-hardening-follow-up).

@@ -2,6 +2,7 @@
 
 Date: 2026-10-24. Baseline: `166e231c61dc568876aab8dbebdb6636a2c281ae`.
 Implementation: `2747dc36d2a0cb559ba7e33415118597c711b96f`.
+Boundary follow-up: `e1fd7c08b0bd8102e97c0b57764a9f17869b2cf2` (ENG-09/ENG-10).
 See [verification](verification.md) for the exact worktree and environment limits.
 
 ## Conclusion
@@ -73,8 +74,8 @@ confirmed P0 catastrophic failure was reproduced in this pass.
 | ENG-06 | P2 / Confirmed | `src-tauri/src/main.rs` mixed path normalization/containment/name validation with bootstrap and IO | Extracted unchanged functions into `workspace_paths.rs` after adding compatibility tests. Canonical ancestor containment and logical-root paths are preserved. Other filesystem and repository responsibilities remain in main. |
 | ENG-07 | P2 / Confirmed | `App`, `TyporaLiveEditor`, `main.rs` still combine several responsibilities | Partial: removed repository refresh ownership and duplicated table portal cleanup. App function remains about 4,057 lines; ImageViewer 690; table controller 435. Further extraction must follow behavioral ownership, not arbitrary file-size limits. |
 | ENG-08 | P2 / Confirmed design limit; resource impact Suspected | `features/diagram/diagramRenderCache.ts::getOrRender` bounds completed entries/code units but not distinct pending render requests | Deduplication and completed-cache bounds remain intact. Queue growth under many unique diagrams has no new measured memory/latency evidence. Add a fixed stress fixture before introducing admission control. OPEN. |
-| ENG-09 | P1 / Suspected security impact | `shared/tauri/openExternalUrl.ts` treats every native rejection as a browser fallback; `main.rs::open_external_url` uses a Windows shell launcher | Current inspected callers constrain URLs; no exploit was reproduced. Separate environment availability from native rejection, validate schemes in the shared boundary, then exercise Windows quoting with safe fixtures. OPEN. |
-| ENG-10 | P1 / Confirmed error handling; user impact not reproduced | `src-tauri/src/secret_store.rs::delete_repository_secrets` ignores both keychain deletion errors | Clearing UI state can be mistaken for credential deletion. Add an injectable credential-store failure test and preserve an actionable error before changing disconnect semantics. Debug fallback also sets mode after writing; production fails closed on keychain save failure. OPEN. |
+| ENG-09 | P1 / Confirmed fallback and validation defects; exploitation not reproduced | `shared/tauri/openExternalUrl.ts` treated native rejection as browser availability; native launcher ignored unsuccessful exit status and used Windows command-shell parsing | FIXED in the boundary follow-up: explicit runtime choice, validation on both IPC sides, no current-page navigation, localized failure feedback, checked process status, and direct Windows ShellExecuteW URL dispatch. Browser/native regressions pass; actual Windows handler acceptance remains NOT RUN. See the follow-up in verification. |
+| ENG-10 | P1 / Confirmed by injected failures | `src-tauri/src/secret_store.rs::delete_repository_secrets` ignored both keychain deletion errors | FIXED for deletion acknowledgement: attempt both keychains and fallback cleanup, return a sanitized coded error if any fail, retain the existing account/UI failure path and support idempotent retry. No real credentials were deleted in tests. Debug fallback file-creation permissions and restart recovery after partial deletion remain separate follow-up work. |
 | ENG-11 | P2 / Suspected | Settings are local persistent values projected into React/native state; cross-window read-modify-write has no stress proof | Existing restart/invalid-setting tests pass. Do not infer multi-writer atomicity from them. No new storage format or speculative global store was added. OPEN. |
 | ENG-12 | P1 / Confirmed verification gap | macOS release lacked Desktop browser, real bundled translation, all-target Clippy/native correctness, and Memory contract checks in its own dependency path | Added blocking steps to `release.yml`; `quality.yml` gains all-target Clippy. Local commands pass. Hosted execution and branch protection are NOT VERIFIED for this revision. |
 | ENG-13 | P2 / Confirmed governance gap | Cargo license declarations exist but root license texts are missing; no root contribution/security guide or issue/PR template existed | Added `CONTRIBUTING.md`, `SECURITY.md`, and evidence-oriented issue/PR templates. License ownership/grant must be resolved by maintainers; no arbitrary copyright/license text added. Private reporting and required checks require GitHub administration. |
@@ -91,7 +92,7 @@ confirmed P0 catastrophic failure was reproduced in this pass.
 | Caption | Existing native session owns capture/store; frontend observes, translator has separate lifecycle | Mock/helper coverage is not production recognition accuracy or hardware endurance. |
 | Rendered input | Existing Markdown/SVG sanitation and diagram error/consent boundaries retained | Rich browser/native paste fixtures passed, not a complete XSS fuzzing campaign. |
 | Native capabilities | Main and caption windows have separate capabilities; caption command restrictions exist in native handlers | A capability JSON description alone does not prove application-command authorization. No comprehensive IPC fuzzing or Windows audit was performed. |
-| Secrets | Production keychain storage, debug-only fallback, no new diagnostic content logging | Deletion failure and debug file-creation semantics remain ENG-10. |
+| Secrets | Production keychain storage, debug-only fallback, no new diagnostic content logging; deletion failures now block disconnect acknowledgement | Debug file-creation permissions and restart recovery after partial cleanup remain open. Cross-store deletion is not transactional. |
 
 ## Dependency and Cleanup Decisions
 
@@ -108,8 +109,9 @@ fallbacks and historical documentation remain until their retirement is proven.
 
 ## Next Safe Sequence
 
-1. Credential deletion failures and external-navigation fallback: failing pure
-   tests, narrow boundary correction, native/platform regression.
+1. Complete real OS-handler acceptance for the external-navigation correction;
+   separately test debug credential-file creation permissions and recovery after
+   a partially successful credential cleanup followed by process restart.
 2. Document session ownership out of App and repository sync out of main: retain
    payloads, revision rules, errors, and fault tests; move one owner per commit.
 3. Fixed small/medium/large/table/diagram document corpus; measure opening,
