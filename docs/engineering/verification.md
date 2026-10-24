@@ -1,5 +1,40 @@
 # Engineering Verification
 
+## Release Browser Readiness Follow-up
+
+Base: `86d2aa4b614bdc28652cfa4a6f3211fd7954531c`. Main Quality passed all four
+jobs, and the release's Intel/Apple Silicon production first-text regressions
+also passed. Its independent desktop behavior gate then failed at
+`caption.spec.ts`: the test expected a translation claim after advancing the
+virtual clock by one second without establishing that the lazy
+`CaptionTranslator` module and its effect were ready. The observed zero claims
+do not distinguish delayed module loading from delayed React scheduling; the
+controlled delayed-mount case covers this missing readiness boundary. A virtual
+timer deadline is not a React/module readiness signal. No native translation or
+ASR implementation change is indicated by this assertion.
+
+The test now waits for observed claim activity while advancing its clock, then
+proves polling becomes and remains idle after opt-out. A second case explicitly
+holds the lazy module response through opt-in, proves there are no claims before
+mount, releases it, and verifies the same enable/disable contract. Both cases
+passed five repetitions locally before the full suite was rerun. This preserves
+the assertions instead of merely retrying the failed CI job or increasing a
+fixed sleep.
+
+Manual release validation also accepts an empty tag so a selected branch can be
+checked without inventing or publishing a version. The workflow regression
+failed before making that input optional. Nonempty release tags retain their
+existing validation and publication conditions. Branch verification retains
+strict production gates; existing prerelease exceptions are unchanged. This
+supports future verification before tagging and does not add a tag in this task.
+
+Local results: the final full desktop browser run passed 90/90 in 6.2 minutes;
+the full unit command passed 338 Vitest tests in 63 files and 38 Node tests.
+The normal/delayed-mount focused run passed 10/10 (five repetitions each).
+The native clipboard receiver accepted all three real Mermaid attachments from
+this final run, surrounding text, Unicode, single-image copy and stale-copy checks.
+Production source is unchanged from the preceding verified build/native slice.
+
 ## Release Prerequisite Follow-up
 
 Base: `8074fd7de4c1aef5525aac7bfd5647a086497bf7`, the verified merge of PR #2.

@@ -180,7 +180,14 @@ test("defaults to English and persists translation opt-in across reloads", async
   await expect(page.locator(".caption-chinese")).toHaveCount(0);
 });
 
-test("does not claim translation work while disabled and stops polling on opt-out", async ({ page }) => {
+for (const delayedMount of [false, true]) test(`does not claim translation work while disabled and stops polling on opt-out (delayed mount: ${delayedMount})`, async ({ page }) => {
+  let releaseMount = () => {};
+  const mountAllowed = new Promise<void>(resolve => { releaseMount = resolve; });
+  if (delayedMount) await page.route("**/src/features/caption/CaptionTranslator.tsx", async route => {
+    await mountAllowed;
+    await route.continue();
+  });
+  try {
   await page.addInitScript(() => Object.assign(window, {
     __claims: 0,
     __TAURI_INTERNALS__: { invoke: async (_: string, args: { request: { action: string } }) => {
@@ -189,22 +196,32 @@ test("does not claim translation work while disabled and stops polling on opt-ou
     } },
   }));
   await page.clock.install();
-  await page.goto("/caption.html?surface=caption-translator");
+  await page.goto("/caption.html?surface=caption-translator", { waitUntil: "domcontentloaded" });
   await page.clock.runFor(3000);
   const claims = () => page.evaluate(() => (window as unknown as { __claims: number }).__claims);
   expect(await claims()).toBe(0);
   await enableTranslation(page);
   await page.clock.runFor(1000);
-  expect(await claims()).toBeGreaterThan(0);
+  if (delayedMount) expect(await claims()).toBe(0);
+  releaseMount();
+  await expect.poll(async () => {
+    await page.clock.runFor(250);
+    return claims();
+  }).toBeGreaterThan(0);
   await page.evaluate(async () => {
     const modulePath = "/src/shared/settings/userSettings.ts";
     const { readUserSettings, updateUserSettings } = await import(modulePath);
     updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: false } });
   });
-  await page.clock.runFor(100);
+  await expect.poll(async () => {
+    const before = await claims();
+    await page.clock.runFor(1500);
+    return (await claims()) - before;
+  }).toBe(0);
   const stopped = await claims();
   await page.clock.runFor(3000);
   expect(await claims()).toBe(stopped);
+  } finally { releaseMount(); }
 });
 
 test("records audio only for an explicitly armed session", async ({ page }) => {
