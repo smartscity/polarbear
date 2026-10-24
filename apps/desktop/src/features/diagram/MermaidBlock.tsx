@@ -8,6 +8,7 @@ import {
   copySvgElementAsPng,
 } from "./diagramExport";
 import { renderMermaidSvg } from "./mermaidRenderer";
+import { DiagramBusyError } from "./diagramRenderQueue";
 import { errorMessage } from "../../shared/tauri/invokeTauri";
 
 const COPY_FEEDBACK_DURATION_MS = 1_400;
@@ -58,6 +59,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
     if (!isNearViewport || svgContent || renderError || renderingRef.current) return;
 
     let cancelled = false;
+    const controller = new AbortController();
     let started = false;
     let idleCallbackId: number | null = null;
     let timerId: number | null = null;
@@ -72,15 +74,15 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       renderVersionRef.current += 1;
       const renderVersion = renderVersionRef.current;
 
-      void renderMermaidSvg(`${diagramId}-${renderVersion}`, source)
+      void renderMermaidSvg(`${diagramId}-${renderVersion}`, source, controller.signal)
         .then((nextSvgContent) => {
-          if (renderVersionRef.current === renderVersion) {
+          if (!cancelled && renderVersionRef.current === renderVersion) {
             setSvgContent(nextSvgContent);
           }
         })
         .catch((error: unknown) => {
-          if (renderVersionRef.current === renderVersion) {
-            setRenderError(errorMessage(error));
+          if (!cancelled && renderVersionRef.current === renderVersion) {
+            setRenderError(error instanceof DiagramBusyError ? t("diagram.renderBusy") : errorMessage(error));
           }
         })
         .finally(() => {
@@ -105,11 +107,13 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
 
     return () => {
       cancelled = true;
+      controller.abort();
+      renderingRef.current = false;
       scrollRoot?.removeEventListener("scroll", scheduleRender);
       if (idleCallbackId !== null) window.cancelIdleCallback(idleCallbackId);
       if (timerId !== null) window.clearTimeout(timerId);
     };
-  }, [diagramId, isNearViewport, renderError, source, svgContent]);
+  }, [diagramId, isNearViewport, renderError, source, svgContent, t]);
 
   const copySource = async () => {
     try {
@@ -154,6 +158,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       <figure className="mermaid-card mermaid-card-error">
         <figcaption>{t("diagram.mermaidRenderFailed")}</figcaption>
         <pre>{renderError}</pre>
+        <button type="button" onClick={() => setRenderError(null)}>{t("diagram.retry")}</button>
         <details className="mermaid-source"><summary>{t("diagram.source")}</summary><pre><code>{source}</code></pre></details>
       </figure>
     );

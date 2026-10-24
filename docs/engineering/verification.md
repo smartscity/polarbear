@@ -1,5 +1,75 @@
 # Engineering Verification
 
+## Workspace Mutation and Diagram Admission Follow-up
+
+Date: 2026-10-24. Base `a2e0b32a899a1fffe73827166687bdeff6abd59e`.
+This is current-checkout evidence on macOS 26.5.1, Intel x86_64, Node 26.1.0.
+The implementation and ownership decisions are in
+[the refactoring report](refactoring.md#workspace-mutation-and-diagram-admission-follow-up).
+
+### Test-first Findings
+
+- Delayed rename/move allowed saves to the old path; a repeated path operation
+  reached native IO while the first was unresolved. Three initial browser cases
+  reproduced those failures before the session admission fix.
+- Cancellation tests timed out against the old diagram cache. New queue and
+  tree-generation APIs initially failed import/member checks; these specify new
+  contracts rather than prove independently reproduced old races.
+- A real-App rename regression found two identity consumers missed by internal
+  session tests: the dirty marker disappeared and image paste sent the opaque ID
+  `/test::Original.md` instead of the current path `Renamed.md`.
+- Native regressions exercise concurrent no-replace publication, existing empty
+  directory/dangling-symlink targets, lifecycle exclusion, and an actual save
+  paused before publication while a rename waits. The old revision-aware path
+  cannot recreate the file after the rename.
+- Browser and unit fixtures cover edits during pending mutations, same-path documents in
+  different roots, failed post-commit refresh, stale polling, repeated commands,
+  failure/retry, dirty documents and in-flight saves. Real Mermaid tests cover an
+  80-request cancellation burst and shared consumers surviving widget disposal.
+
+An intermediate tree fixture returned the renamed file for every workspace and
+was corrected. A missing App destructuring field was caught by typecheck and
+the real-App regression, then fixed. An existing Node caption-fixture test twice
+hit its synthetic three-second process-start deadline, including a final suite
+run. A deterministic fake-clock regression reproduced the false failure before
+the test-only budget was corrected. Healthy protocol fixtures now allow fifteen
+seconds for host process startup and completion; dedicated stall tests still
+advance their explicit one-second deadlines and prove kill/reap behavior.
+Production engine timeouts, first-text latency thresholds and release gates are
+unchanged. The complete unit/Node command then passed. These attempts are not
+hidden as a clean first run or treated as ASR performance evidence.
+
+### Verification Boundary
+
+No Markdown, IPC or settings schema migration is needed. Move/rename updates
+root-qualified path metadata while document IDs own buffers and history.
+Diagram admission is bounded and cancellation-aware, but a running Mermaid
+call is not interruptible and has not moved to a Worker. No controlled speedup
+or memory benchmark is claimed.
+
+NOT RUN: Windows/Linux native execution, installed-app upgrade, hostile
+cross-process directory replacement, real hardware gestures, physical IME,
+audio/ASR accuracy or endurance, and release packaging. Full asynchronous
+create/delete/duplicate projection qualification, repository sync races and
+multi-window settings arbitration remain documented debt. Unrelated Feedback
+edits are excluded from the commit. Hosted CI must be checked for the pushed
+and merged SHAs, not inferred from this local result.
+
+### Local Gates for This Slice
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Desktop Vitest / Node | PASS | 338 tests in 63 files; 36 Node tests, including the deterministic host-startup regression. |
+| Full Desktop Playwright | PASS | 89 tests in 4.4 minutes on the final executable source, including eight new browser cases. |
+| Native clipboard receiver | PASS | All three Mermaid attachments from this browser run and surrounding text; Unicode, four clipboard formats, single-image copy and stale-copy protection. AppKit receiver, not Word/Lark acceptance. |
+| Bundled offline translation | PASS | Chromium and WebKit production CSP, actual sentence/paragraph inference and cancellation; external requests denied and none attempted. |
+| Desktop typecheck / lint | PASS | Final source passes without TypeScript or ESLint errors. |
+| Production frontend build | PASS | 36.53 seconds; App chunk 1,701.58 kB, gzip 511.66 kB. Existing large-chunk warning remains; timing is not a benchmark. |
+| Native Cargo tests | PASS | 96 passed, 3 ignored entries; subprocess fixtures remain exercised by their parent tests. |
+| All-target/all-feature Clippy | PASS | Warnings denied; rerun after the final production frontend build. |
+| Rust format / Memory contract | PASS | No contract generation drift or Rust formatting differences. |
+| Dependency graph | PASS | 183 production TypeScript files; no runtime cycles, forbidden reverse dependencies, unresolved or computed imports. 25 cross-feature edges remain explicit. |
+
 Date: 2026-10-24. Baseline `166e231c61dc568876aab8dbebdb6636a2c281ae`;
 implementation `2747dc36d2a0cb559ba7e33415118597c711b96f`.
 

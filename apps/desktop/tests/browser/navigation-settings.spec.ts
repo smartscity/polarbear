@@ -71,6 +71,45 @@ async function reloadFixture(page: Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
 }
 
+test("renaming keeps file-tree dirty state and image writes on the current path", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state = window as any, runtime = state.__TAURI_INTERNALS__, invoke = runtime.invoke;
+    let renamed = false;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "rename_entry") { renamed = true; return Promise.resolve({ oldRelativePath: "Original.md", newRelativePath: "Renamed.md" }); }
+      if (command === "list_workspace_files") {
+        const name = renamed ? "Renamed.md" : "Original.md";
+        return Promise.resolve([{ id: name, name, itemType: "file" }]);
+      }
+      if (command === "save_image_asset") {
+        state.__imageWrite = args;
+        return Promise.resolve({ assetRelativePath: "assets/image.png", markdownInsertText: "![image](assets/image.png)", absolutePath: "/test/assets/image.png" });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record("/test/Original.md", 1);
+  });
+  await page.locator(".recent-documents").getByRole("button", { name: /Original.md/ }).first().click();
+  await page.locator('[data-tree-item-id="Original.md"]').dblclick();
+  await page.locator(".rename-input").fill("Renamed.md");
+  await page.locator(".rename-input").press("Enter");
+  await expect(page.locator(".window-tab.active")).toContainText("Renamed.md");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type(" changed");
+  await expect.soft(page.locator('[data-tree-item-id="Renamed.md"] .dirty-dot')).toBeVisible();
+  await editor.evaluate((element) => {
+    const clipboardData = new DataTransfer();
+    clipboardData.items.add(new File([new Uint8Array([137, 80, 78, 71])], "image.png", { type: "image/png" }));
+    element.dispatchEvent(new ClipboardEvent("paste", { clipboardData, bubbles: true, cancelable: true }));
+  });
+  await expect.poll(() => page.evaluate(() => (window as any).__imageWrite?.markdownRelativePath)).toBe("Renamed.md");
+});
+
 test("Save As completion keeps the newly selected document and workspace active", async ({ page }) => {
   await nativeFixture(page);
   await page.addInitScript(() => {

@@ -1,5 +1,25 @@
 # Engineering Quality Scorecard
 
+## Workspace Mutation and Diagram Admission Follow-up
+
+Based on `a2e0b32`; detailed current-checkout evidence is in
+[verification](verification.md#workspace-mutation-and-diagram-admission-follow-up).
+
+| Metric | Previous verified slice | Current local result |
+| --- | --- | --- |
+| Desktop Vitest / Node | 326 / 35 | 338 / 36, PASS |
+| Desktop browser | 81 | 89, PASS |
+| Native tests | 92 passed / 3 ignored entries | 96 passed / 3 ignored entries |
+| Move/rename ownership | Repeated mutations and saves could race; paths remapped global identity maps | Session admission, root-qualified path metadata, native save exclusion and atomic no-replace publication |
+| Diagram admission | Completed SVG cache bounded; pending ownership unbounded | Per-renderer active/pending/source limits, cancellable queued work and reference-counted shared consumers |
+| Confirmed regressions | Not previously characterized | Saves during rename/move, repeated path mutations, cancelled cache consumers, renamed dirty marker and image destination |
+| Dependency graph | 181 files / 24 cross-feature edges | 183 files / 25 edges; zero runtime cycles or forbidden reverse dependencies |
+
+Scores remain unchanged: these are tested correctness boundaries, not a measured
+performance improvement or complete closure of the audit. One active Mermaid
+call can still block its window; full create/delete completion qualification,
+repository sync races, settings contention and non-macOS acceptance remain open.
+
 Date: 2026-10-24. Baseline `166e231c`; implementation `2747dc36`.
 See [audit](audit.md) for findings and [verification](verification.md) for scope.
 

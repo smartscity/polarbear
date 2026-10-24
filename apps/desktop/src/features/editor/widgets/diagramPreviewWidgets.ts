@@ -7,6 +7,7 @@ import {
 } from "../../diagram/diagramExport";
 import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
 import { DiagramRenderCache } from "../../diagram/diagramRenderCache";
+import { DiagramBusyError } from "../../diagram/diagramRenderQueue";
 import {
   renderPlantUmlSvg,
 } from "../../diagram/plantUmlRenderer";
@@ -39,6 +40,14 @@ type DiagramRenderResult = {
 
 const mermaidRenderCache = new DiagramRenderCache();
 const plantUmlRenderCache = new DiagramRenderCache();
+const previewOwners = new WeakMap<HTMLElement, AbortController>();
+
+function disposePreview(dom: HTMLElement): void {
+  previewOwners.get(dom)?.abort();
+  previewOwners.delete(dom);
+  const status = dom.querySelector<HTMLOutputElement>(".cm-typora-diagram-action-status");
+  if (status?.dataset.dismissTimer) window.clearTimeout(Number(status.dataset.dismissTimer));
+}
 
 export class MermaidPreviewWidget extends WidgetType {
   constructor(private readonly block: DiagramPreviewBlock) {
@@ -110,10 +119,14 @@ export class MermaidPreviewWidget extends WidgetType {
 
     wrapper.append(toolbar, content);
     scheduleEditorMeasureFromDom(wrapper);
-    void renderMermaidPreview(this.block.source, content);
+    const owner = new AbortController();
+    previewOwners.set(wrapper, owner);
+    void renderPreview(this.block.source, content, owner.signal, "mermaid");
 
     return wrapper;
   }
+
+  destroy(dom: HTMLElement): void { disposePreview(dom); }
 
   ignoreEvent(): boolean {
     return true;
@@ -181,9 +194,11 @@ export class PlantUmlPreviewWidget extends WidgetType {
     const content = document.createElement("div");
     content.className = "cm-typora-diagram-content";
 
+    const owner = new AbortController();
+    previewOwners.set(wrapper, owner);
     const renderApprovedSource = () => {
       content.textContent = translateCurrent("diagram.renderingPlantUml");
-      void renderPlantUmlPreview(this.block.source, content);
+      void renderPreview(this.block.source, content, owner.signal, "plantuml");
     };
 
     if (hasPlantUmlRemoteRenderApproval(this.block.source)) {
@@ -211,6 +226,8 @@ export class PlantUmlPreviewWidget extends WidgetType {
     scheduleEditorMeasureFromDom(wrapper);
     return wrapper;
   }
+
+  destroy(dom: HTMLElement): void { disposePreview(dom); }
 
   ignoreEvent(): boolean {
     return true;
@@ -270,6 +287,7 @@ async function exportDiagramAsPng(
 }
 
 function showDiagramActionStatus(actionStatus: HTMLOutputElement, message: string): void {
+  if (!actionStatus.isConnected) return;
   const pendingTimer = Number(actionStatus.dataset.dismissTimer ?? "0");
   if (pendingTimer) {
     window.clearTimeout(pendingTimer);
@@ -283,44 +301,30 @@ function showDiagramActionStatus(actionStatus: HTMLOutputElement, message: strin
   actionStatus.dataset.dismissTimer = String(timer);
 }
 
-async function renderPlantUmlPreview(source: string, content: HTMLElement): Promise<void> {
-  const result = await getPlantUmlRenderResult(source);
-  if (result.svgContent) {
-    content.innerHTML = result.svgContent;
-  } else if (result.error) {
+async function renderPreview(source: string, content: HTMLElement, signal: AbortSignal, kind: "mermaid" | "plantuml"): Promise<void> {
+  const retry = () => { void renderPreview(source, content, signal, kind); };
+  content.classList.remove("cm-typora-diagram-error");
+  content.textContent = translateCurrent(kind === "mermaid" ? "diagram.renderingMermaid" : "diagram.renderingPlantUml");
+  const cache = kind === "mermaid" ? mermaidRenderCache : plantUmlRenderCache;
+  const result: DiagramRenderResult = await cache.getOrRender(source, (owner) => kind === "mermaid"
+    ? renderMermaidSvg(diagramIdForSource(source), source, owner)
+    : renderPlantUmlSvg(source, { signal: owner }), signal)
+    .then((svgContent) => ({ svgContent }))
+    .catch((error: unknown) => ({
+      error: error instanceof DiagramBusyError ? translateCurrent("diagram.renderBusy")
+        : kind === "plantuml" ? describePlantUmlRenderError(error, translateCurrent) : errorMessage(error),
+    }));
+  if (signal.aborted) return;
+  if (result.svgContent) content.innerHTML = result.svgContent;
+  else {
     content.classList.add("cm-typora-diagram-error");
-    content.textContent = result.error;
+    content.textContent = result.error ?? "";
+    const button = document.createElement("button");
+    button.type = "button"; button.textContent = translateCurrent("diagram.retry");
+    button.addEventListener("click", retry, { once: true });
+    content.append(button);
   }
   scheduleEditorMeasureFromDom(content);
-}
-
-function getPlantUmlRenderResult(source: string): Promise<DiagramRenderResult> {
-  return plantUmlRenderCache.getOrRender(source, () => renderPlantUmlSvg(source))
-    .then((svgContent): DiagramRenderResult => ({ svgContent }))
-    .catch((error): DiagramRenderResult => ({
-      error: describePlantUmlRenderError(error, translateCurrent),
-    }));
-}
-
-async function renderMermaidPreview(source: string, content: HTMLElement): Promise<void> {
-  const result = await getMermaidRenderResult(source);
-  if (result.svgContent) {
-    content.innerHTML = result.svgContent;
-  } else if (result.error) {
-    content.classList.add("cm-typora-diagram-error");
-    content.textContent = result.error;
-  }
-  scheduleEditorMeasureFromDom(content);
-}
-
-function getMermaidRenderResult(source: string): Promise<DiagramRenderResult> {
-  return mermaidRenderCache.getOrRender(source, () => renderMermaidSvg(diagramIdForSource(source), source))
-    .then((svgContent): DiagramRenderResult => ({ svgContent }))
-    .catch((error): DiagramRenderResult => ({
-      error: error instanceof Error
-        ? error.message
-        : translateCurrent("diagram.mermaidRenderError", { error: String(error) }),
-    }));
 }
 
 function diagramIdForSource(source: string): string {

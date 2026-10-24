@@ -35,6 +35,12 @@ export class RecentDocumentStore {
     this.write([...this.read(), { path, openedAt }]);
   }
 
+  remap(root: string, from: string, to: string): void {
+    const source = documentHistoryPath(root, from), destination = documentHistoryPath(root, to);
+    this.write(this.read().map((entry) => entry.path === source || entry.path.startsWith(`${source}/`)
+      ? { ...entry, path: destination + entry.path.slice(source.length) } : entry));
+  }
+
   remove(path: string): void { this.write(this.read().filter((entry) => entry.path !== path)); }
   clear(): void { this.write([]); }
 

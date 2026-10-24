@@ -29,6 +29,7 @@ pub(crate) fn save(
     expected_revision: Option<&str>,
     target: SaveTarget,
 ) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
+    let _access = crate::workspace_io::document_access().map_err(save_error)?;
     let parent = path
         .parent()
         .ok_or_else(|| WorkspaceSaveError::unexpected("Missing parent directory."))?;

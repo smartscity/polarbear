@@ -1,5 +1,66 @@
 # Refactoring Report
 
+## Workspace Mutation and Diagram Admission Follow-up
+
+Base: `a2e0b32a899a1fffe73827166687bdeff6abd59e`. This slice keeps the existing
+document-session, renderer, native command and translation-resource boundaries.
+
+| Concern | Decision / owner | Compatibility |
+| --- | --- | --- |
+| Move/rename versus saves, repeated actions and old reads | `WorkspacePathMutations` admits one session path operation; `useDocumentSession` coordinates existing actions and invalidates navigation/read leases. Saves, Save As, close, replacement workspace loads and conflicting path operations report busy rather than racing. | Typing remains allowed during move/rename. No new persistent state or command IDs. Other-workspace document opens remain possible. |
+| Cross-workspace path remapping | Preserve document IDs, buffers, revisions, dirty flags and editor history; change root-qualified relative-path metadata only. | Opaque IDs and same-named documents in another workspace are not rewritten. |
+| UI/native consumers of identity | AppShell receives a separate active path and root-qualified dirty-path projection; image adapters receive the active document root/path rather than opaque ID. | Tab IDs remain stable; renamed documents retain visible dirty markers and place images beside the current Markdown file. |
+| Disk commit followed by failed tree refresh | Apply native acknowledgment immediately; project the moved subtree and update recent-document metadata before fetching the authoritative tree. | A failed refresh reports partial success, not a failed disk mutation or rollback. Recent timestamps remain intact; duplicates collapse through the existing store. |
+| Old tree/revision notifications | Tree requests capture a mutation generation; late missing-file callbacks verify current document identity. | Polling and native command contracts remain unchanged. |
+| Native save versus directory rename | `workspace_io` owns a process-wide read/write lifecycle lock: saves take shared access before resolving their destination; rename/move take exclusive access before resolving source/target. Existing per-file save locks and macOS save coordination remain. | Covers application windows and descendant saves, not uncooperative external processes. Lock order is lifecycle, then per-file, then macOS save coordination. |
+| Destination creation between exists-check and rename | `rename_exclusive` uses OS no-replace publication; no copy/delete fallback. | macOS `RENAME_EXCL`, Linux `RENAME_NOREPLACE`, Windows `MoveFileExW` without replacement. Unsupported filesystems/platforms fail closed. Cross-volume moves remain unsupported. |
+| Renderer-internal task accumulation | Shared `DiagramRenderQueue` policy at each renderer entry, also covering Mermaid validation and clipboard callers. | One active renderer call, at most 16 waiting calls and 1,000,000 retained source code units per renderer. Overload is a retryable localized error; Markdown is retained. |
+| Cache and preview lifecycle | Pending cache has count/source bounds and consumer leases; widget destruction and React effect cleanup cancel ownership. | A shared render is cancelled only when its last cancellable consumer leaves. A cancelled active Mermaid call keeps its slot until the engine actually settles. |
+
+### Boundaries Deliberately Retained
+
+- This is a window-local scheduler, not a Worker or an interruptible Mermaid
+  runtime. One pathological renderer call can still block its own window. The
+  queue bounds admitted work; it does not establish a CPU or render-time SLA.
+- PlantUML remains remote only after the existing explicit source consent. No
+  new network path, model, framework or dependency was introduced.
+- Create/delete/duplicate actions share admission with move/rename. Their full
+  async buffer/projection redesign is not claimed by these move/rename tests.
+  Deletion during subsequent typing and repository sync racing native directory
+  changes still require separate characterization.
+- Markdown links are not automatically rewritten by a path change. Multi-window
+  settings arbitration, hostile ancestor replacement, real Windows/Linux native
+  execution, installed AppKit acceptance and ASR qualification remain explicit.
+- Windows no-replace behavior follows the documented
+  [MoveFileExW flags](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw).
+  Local macOS tests do not claim Windows execution.
+
+### Test-first Record
+
+The initial three browser regressions failed on the original implementation:
+save still wrote the source path during rename/move, and a second path mutation
+reached native IO. The cache cancellation tests then timed out against the old
+cache. New queue/tree-generation APIs initially failed import/member checks;
+those failures specify new contracts, not independently reproduced old races.
+An intermediate browser fixture incorrectly returned the renamed file in every
+workspace; it was corrected to model each root, rather than counted as a product
+failure. Final commands and results are recorded in `verification.md`.
+
+The real-App regression also failed before correcting the consumers: the renamed
+tree item had no dirty marker, and image paste sent `/test::Original.md` instead
+of `Renamed.md`. A temporary missing App destructuring field was caught by both
+typecheck and this regression and fixed before the final verification run.
+
+Final validation also reproduced a protocol-test flake: the Node child process
+was killed by a three-second test-only deadline before its first handshake.
+A deterministic fake-clock regression now separates host bootstrap allowance
+from real-engine latency gates. Only the healthy synthetic protocol fixture
+budget changes; production timeouts and ASR release thresholds are untouched.
+
+Rollback: revert this slice's source/tests without migrating Markdown or settings.
+Already completed filesystem moves are real user actions and must not be reversed
+by a code rollback. Existing recent entries use the unchanged path/time schema.
+
 Date: 2026-10-24. Base `166e231c61dc568876aab8dbebdb6636a2c281ae`;
 implementation `2747dc36d2a0cb559ba7e33415118597c711b96f`.
 

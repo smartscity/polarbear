@@ -1,5 +1,29 @@
 # Desktop File Save Safety
 
+## Rename and Move Coordination (2026-10-24)
+
+`workspace_io` adds a process-wide path lifecycle lock before the existing save
+locks. `document_save::save` holds shared access from destination resolution to
+commit; `rename_entry` and `move_entry` hold exclusive access from validation to
+publication. Directory moves therefore wait for descendant saves in other app
+windows. A later save using the old name fails as missing instead of recreating it
+when using the existing revision-aware save API. Explicit Save As without a
+revision remains an intentional create/replace operation.
+
+Destination nonexistence is enforced by the publication syscall, not only an
+earlier `exists()` check. Concurrent contenders cannot replace each other's
+winner; dangling destination symlinks and existing empty directories also reject
+replacement. There is no unsafe cross-device copy/delete fallback. This is not a
+transaction spanning repository sync, other apps, recent-history persistence or
+the frontend file-tree refresh. Other windows learn path changes through their
+existing missing/conflict flow; their unsaved buffers are not silently rebound.
+
+The document session keeps stable IDs and root-qualified paths after native
+acknowledgment. A tree-refresh error does not undo a successful path change.
+The browser tests separately protect typing, save exclusion, duplicate mutation
+admission, opaque IDs and other-workspace isolation. Native tests exercise
+concurrent no-replace publication and a rename held behind a staged real save.
+
 This document owns the native local-save contract introduced after the v0.10.5 audit. It does not redefine the linked-document journal or the Memory Engine Admin API.
 
 ## Ownership and call path

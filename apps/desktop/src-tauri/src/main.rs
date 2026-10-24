@@ -24,6 +24,7 @@ mod secret_store;
 mod system_open;
 mod vocab_bridge;
 mod vocab_outbox;
+mod workspace_io;
 mod workspace_paths;
 
 use document_save::atomic_write;
@@ -733,6 +734,7 @@ fn rename_entry(
     source_relative_path: String,
     new_name: String,
 ) -> Result<RenameEntryResponseDto, String> {
+    let _mutation = workspace_io::path_mutation().map_err(|error| error.to_string())?;
     validate_entry_name(&new_name)?;
 
     let source_path = workspace_path(&workspace_root, &source_relative_path)?;
@@ -765,7 +767,8 @@ fn rename_entry(
         return Err("An entry with that name already exists.".to_owned());
     }
 
-    fs::rename(&source_path, &destination_path).map_err(|error| error.to_string())?;
+    workspace_io::rename_exclusive(&source_path, &destination_path)
+        .map_err(|error| error.to_string())?;
 
     let root = PathBuf::from(workspace_root);
     let new_relative_path = destination_path
@@ -882,6 +885,7 @@ fn move_entry(
     source_relative_path: String,
     target_parent_relative_path: Option<String>,
 ) -> Result<RenameEntryResponseDto, String> {
+    let _mutation = workspace_io::path_mutation().map_err(|error| error.to_string())?;
     let workspace_root_path = PathBuf::from(&workspace_root)
         .canonicalize()
         .map_err(|error| error.to_string())?;
@@ -926,7 +930,8 @@ fn move_entry(
         return Err("An entry with that name already exists in the target folder.".to_owned());
     }
 
-    fs::rename(&source_path, &destination_path).map_err(|error| error.to_string())?;
+    workspace_io::rename_exclusive(&source_path, &destination_path)
+        .map_err(|error| error.to_string())?;
 
     let new_relative_path = destination_path
         .strip_prefix(workspace_root_path)

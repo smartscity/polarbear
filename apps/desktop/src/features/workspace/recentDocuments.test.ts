@@ -7,6 +7,15 @@ function storage() {
 }
 
 describe("RecentDocumentStore", () => {
+  it("remaps only the moved subtree while retaining timestamps and deduplicating", () => {
+    const store = new RecentDocumentStore(storage());
+    store.record("/one/dir/a.md", 1); store.record("/two/dir/a.md", 2);
+    store.record("/one/dir2/b.md", 3); store.record("/one/moved/a.md", 4);
+    store.remap("/one", "dir", "moved");
+    expect(store.read()).toEqual([
+      { path: "/one/moved/a.md", openedAt: 4 }, { path: "/one/dir2/b.md", openedAt: 3 }, { path: "/two/dir/a.md", openedAt: 2 },
+    ]);
+  });
   it("deduplicates, orders and restores the last twenty successful opens", () => {
     const disk = storage();
     const store = new RecentDocumentStore(disk);

@@ -10,6 +10,7 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 
 type AppShellProps = {
   activeFileId: string;
+  activeRelativePath: string;
   activeFileName: string;
   characterCount: number;
   children: ReactNode;
@@ -52,6 +53,7 @@ type AppShellProps = {
 
 export function AppShell({
   activeFileId,
+  activeRelativePath,
   activeFileName,
   characterCount,
   children,
@@ -115,7 +117,7 @@ export function AppShell({
           />
         ) : null}
         <Sidebar
-          activeFileId={activeFileId}
+          activeFileId={activeRelativePath}
           collapseVersion={collapseVersion}
           dirtyFileIds={dirtyFileIds}
           folderRevealRequest={folderRevealRequest}

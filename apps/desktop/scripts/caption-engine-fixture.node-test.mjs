@@ -3,9 +3,23 @@ import assert from "node:assert/strict";
 import { pcm16FromWav, float32FromWav, recognizeFixture } from "./caption-engine-fixture.mjs";
 
 const handshake = `console.log(JSON.stringify({type:'ready',protocol:1,backend:'cpu'}));`;
+// Protocol fixtures include host process startup; ASR latency gates use separate real-engine measurements.
 function run(source, options = {}, pcm = Buffer.alloc(32000)) {
-  return recognizeFixture(process.execPath, ["-e", source], pcm, { name: "fixture", timeoutMs: 3000, ...options });
+  return recognizeFixture(process.execPath, ["-e", source], pcm, { name: "fixture", timeoutMs: 15000, ...options });
 }
+
+test("does not treat a three-second host bootstrap delay as a protocol failure", { timeout: 15000 }, async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const result = await run(`${handshake}
+    process.stdin.resume();
+    process.stdin.on('end',()=>console.log(JSON.stringify({type:'stopped'})));`, {
+    onProgress: progress => {
+      if (progress.phase === "starting") queueMicrotask(() => t.mock.timers.tick(3001));
+    },
+  });
+  assert.equal(result.code, 0);
+  assert.equal(result.events.at(-1).type, "stopped");
+});
 
 test("validates fixture format and rejects truncated WAV chunks", () => {
   const wav = Buffer.alloc(48);

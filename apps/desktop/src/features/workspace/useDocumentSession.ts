@@ -8,7 +8,8 @@ import { quitApp } from "../../shared/tauri/quitApp";
 import { deriveDefaultMarkdownFileName, displayNameForDocumentId, documentRelativePathForId, documentWorkspaceRootForId, findOpenDocumentIdForWorkspaceFile, isUntitledDocument, makeWorkspaceDocumentId, parentFolderIdOf } from "../../features/editor/documentModel";
 import { findWorkspaceItem, workspaceTreesEqual, type WorkspaceDocumentMap, type WorkspaceItem } from "../../features/workspace/workspaceModel";
 import { useWorkspaceDocumentRevision, type WorkspaceDocumentRevisionTarget } from "../../features/workspace/useWorkspaceDocumentRevision";
-import { ensureMarkdownFilePath, fileNameOf, findFirstFile, joinWorkspacePath, normalizeMarkdownFileName, normalizeWorkspacePath, parentPathOf, remapDirtyFileIds, remapDocumentMetadataKeys, remapDocumentMetadataPaths, remapDocumentPaths, remapPath, targetAffectsDirtyFile } from "../../features/workspace/workspacePaths";
+import { ensureMarkdownFilePath, fileNameOf, findFirstFile, joinWorkspacePath, normalizeMarkdownFileName, normalizeWorkspacePath, parentPathOf, remapPath } from "../../features/workspace/workspacePaths";
+import { WorkspacePathMutations, remapWorkspaceDocumentPaths, remapWorkspaceTree } from "./workspacePathMutations";
 import { chooseMarkdownFile, chooseMarkdownSavePath, chooseWorkspaceFolder, createMarkdownFile, createWorkspaceDirectory, deleteWorkspaceEntry, duplicateWorkspaceEntry, listWorkspaceFiles, loadMarkdownFile, moveEntry, openMarkdownFile, renameEntry, saveMarkdownFile, takePendingOpenFiles, writeMarkdownFile, type MarkdownSaveResult } from "../../features/workspace/tauriWorkspaceAdapter";
 import { workspaceDocumentSaveConflict, workspaceSaveFailureKey } from "../../features/workspace/workspaceSaveError";
 import { saveWorkspaceDocuments } from "../../features/workspace/saveWorkspaceDocuments";
@@ -57,6 +58,13 @@ export function useDocumentSession({
   const [documentReads] = useState(() => new DocumentReadRequests());
   useEffect(() => () => documentNavigation.invalidate(), [documentNavigation]);
   const savesInProgressRef = useRef(new Set<string>());
+  const [pathMutations] = useState(() => new WorkspacePathMutations());
+  const treeReadPermission = useCallback(() => pathMutations.readPermission(), [pathMutations]);
+  const rejectDuringPathMutation = () => {
+    if (!pathMutations.isBusy()) return false;
+    setStatusMessage(t("status.workspaceOperationBusy"));
+    return true;
+  };
   const getCurrentDocument = useEventCallback((fileId: string) => documents[fileId]);
   const [documentRevisions, setDocumentRevisions] = useState<Record<string, string>>({});
   const [activeFileId, setActiveFileId] = useState("untitled:1");
@@ -74,6 +82,10 @@ export function useDocumentSession({
     workspaceRootRef.current = workspaceRoot;
   }, [workspaceRoot]);
   const [dirtyFileIds, setDirtyFileIds] = useState<Set<string>>(new Set());
+  const hasDirtyPath = useEventCallback((root: string, path: string) => [...dirtyFileIds].some((id) =>
+    documentWorkspaceRootForId(id, documentWorkspaceRoots, workspaceRoot) === root
+    && (documentRelativePathForId(id, documentRelativePaths) === path
+      || documentRelativePathForId(id, documentRelativePaths).startsWith(`${path}/`))));
   useLayoutEffect(() => {
     const snapshots = new Map<string, DocumentReadSnapshot>();
     for (const fileId of openFileIds) {
@@ -119,6 +131,7 @@ export function useDocumentSession({
 
   const handleWorkspaceFileTreeRefresh = useCallback(
     (refreshedWorkspaceRoot: string, items: WorkspaceItem[]) => {
+      if (pathMutations.affects(refreshedWorkspaceRoot) || workspaceRootRef.current !== refreshedWorkspaceRoot) return;
       setWorkspaceItems((currentItems) =>
         workspaceTreesEqual(currentItems, items) ? currentItems : items,
       );
@@ -129,11 +142,12 @@ export function useDocumentSession({
           : { ...currentTrees, [refreshedWorkspaceRoot]: items };
       });
     },
-    [],
+    [pathMutations],
   );
 
   const reloadDocumentFromDisk = useEventCallback(
     async (changedDocument: WorkspaceDocumentRevisionTarget, discardAcceptedSnapshot = false): Promise<DocumentReloadResult> => {
+      if (pathMutations.affects(changedDocument.workspaceRoot)) return { status: "superseded" };
       const request = documentReads.begin(changedDocument.fileId, {
         ...changedDocument,
         revision: discardAcceptedSnapshot ? undefined : changedDocument.revision,
@@ -202,14 +216,17 @@ export function useDocumentSession({
     setExternalDocumentChange(null);
   };
 
-  const handleExternalDocumentMissing = useCallback(
+  const handleExternalDocumentMissing = useEventCallback(
     (deletedDocument: WorkspaceDocumentRevisionTarget) => {
+      if (pathMutations.affects(deletedDocument.workspaceRoot)) return;
+      if (!openFileIds.includes(deletedDocument.fileId)
+        || documentRelativePathForId(deletedDocument.fileId, documentRelativePaths) !== deletedDocument.relativePath
+        || documentWorkspaceRootForId(deletedDocument.fileId, documentWorkspaceRoots, workspaceRoot) !== deletedDocument.workspaceRoot) return;
       setExternalDocumentChange({ ...deletedDocument, reason: "deleted" });
       setStatusMessage(
         t("status.externalFileDeleted", { path: deletedDocument.relativePath }),
       );
     },
-    [setStatusMessage, t],
   );
 
   const reportDocumentSaveError = useCallback(
@@ -280,6 +297,7 @@ export function useDocumentSession({
   useWorkspaceFileTreeRefresh({
     workspaceRoot,
     onRefresh: handleWorkspaceFileTreeRefresh,
+    readPermission: treeReadPermission,
   });
   useWorkspaceDocumentRevision({
     document: activeDocumentRevisionTarget,
@@ -309,6 +327,9 @@ export function useDocumentSession({
 
 
   const isDirty = dirtyFileIds.has(activeFileId);
+  const dirtyWorkspacePaths = new Set([...dirtyFileIds]
+    .filter((id) => documentWorkspaceRootForId(id, documentWorkspaceRoots, workspaceRoot) === workspaceRoot)
+    .map((id) => documentRelativePathForId(id, documentRelativePaths)));
 
   const openTabs = openFileIds
     .filter((fileId) => documents[fileId] !== undefined || findWorkspaceItem(workspaceItems, fileId))
@@ -360,6 +381,7 @@ export function useDocumentSession({
 
 
   const loadWorkspace = async (nextWorkspaceRoot: string): Promise<boolean> => {
+    if (rejectDuringPathMutation()) return false;
     const isCurrent = documentNavigation.begin();
     const hasUnsavedDocuments = () => {
       if (dirtyFileIdsRef.current.size === 0) return false;
@@ -433,6 +455,7 @@ export function useDocumentSession({
     try {
       const openedFile = await openMarkdownFile(filePath);
       if (!isCurrent()) return null;
+      if (pathMutations.affects(openedFile.workspaceRoot)) { rejectDuringPathMutation(); return null; }
       const openedPath = documentHistoryPath(openedFile.workspaceRoot, openedFile.relativePath);
       const samePathTab = openFileIdsRef.current.find((id) => !isUntitledDocument(id)
         && documentHistoryPath(documentWorkspaceRootForId(id, documentWorkspaceRoots, workspaceRoot), documentRelativePathForId(id, documentRelativePaths)) === openedPath);
@@ -637,6 +660,7 @@ export function useDocumentSession({
   };
 
   const selectFile = async (fileId: string) => {
+    if (rejectDuringPathMutation()) return;
     const isCurrent = documentNavigation.begin();
     const documentId = findOpenDocumentIdForWorkspaceFile(
       openFileIds,
@@ -882,6 +906,7 @@ export function useDocumentSession({
   };
 
   const saveTab = useEventCallback(async (fileId: string): Promise<string | null> => {
+    if (rejectDuringPathMutation()) return null;
     if (savesInProgressRef.current.has(fileId)) return null;
     savesInProgressRef.current.add(fileId);
     try {
@@ -899,6 +924,7 @@ export function useDocumentSession({
   });
 
   const closeTab = async (fileId: string) => {
+    if (rejectDuringPathMutation()) return;
     documentNavigation.invalidate();
     if (!fileId) {
       return;
@@ -931,6 +957,7 @@ export function useDocumentSession({
       }
     }
 
+    if (rejectDuringPathMutation()) return;
     const currentTabIds = openFileIdsRef.current;
     const closeIndex = Math.max(
       0,
@@ -1001,6 +1028,7 @@ export function useDocumentSession({
   };
 
   const requestAppQuit = useEventCallback(async () => {
+    if (rejectDuringPathMutation()) return;
     if (quitRequestedRef.current) {
       return;
     }
@@ -1025,6 +1053,7 @@ export function useDocumentSession({
         }
       }
 
+      if (rejectDuringPathMutation()) { quitRequestedRef.current = false; return; }
       await quitApp();
     } catch (error) {
       quitRequestedRef.current = false;
@@ -1066,6 +1095,7 @@ export function useDocumentSession({
   };
 
   const saveActiveFileAs = async (): Promise<boolean> => {
+    if (rejectDuringPathMutation()) return false;
     if (!activeFileId) {
       setStatusMessage(t("status.selectDocumentBeforeSave"));
       return false;
@@ -1311,18 +1341,23 @@ export function useDocumentSession({
     createItemType === "file" ? "example.md" : "New Folder";
 
   const confirmCreateItem = async (name: string) => {
-    const itemType = createItemType;
+    if (rejectDuringPathMutation()) return;
+    const release = pathMutations.begin(workspaceRoot);
+    if (!release) return;
+    try {
+      const itemType = createItemType;
 
-    setCreateItemType(null);
-    setCreateParentPath(null);
+      setCreateItemType(null);
+      setCreateParentPath(null);
 
-    if (itemType === "file") {
-      await createFile(name);
-    }
+      if (itemType === "file") {
+        await createFile(name);
+      }
 
-    if (itemType === "folder") {
-      await createFolder(name);
-    }
+      if (itemType === "folder") {
+        await createFolder(name);
+      }
+    } finally { release(); }
   };
 
   const startRename = (targetPath?: string) => {
@@ -1334,7 +1369,7 @@ export function useDocumentSession({
       return;
     }
 
-    if (targetAffectsDirtyFile(targetItem.id, dirtyFileIds)) {
+    if (hasDirtyPath(workspaceRoot, targetItem.id)) {
       setStatusMessage(t("status.saveBeforeRename"));
       return;
     }
@@ -1343,6 +1378,7 @@ export function useDocumentSession({
   };
 
   const deleteWorkspaceItem = async (targetPath?: string) => {
+    if (rejectDuringPathMutation()) return;
     const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
     const targetItem = findWorkspaceItem(workspaceItems, targetId);
     if (!workspaceRoot || !targetItem) {
@@ -1373,6 +1409,12 @@ export function useDocumentSession({
     if (!confirmed) {
       return;
     }
+
+    if (rejectDuringPathMutation()) return;
+    if (hasDirtyPath(workspaceRoot, targetItem.id)) { setStatusMessage(t("status.saveBeforeDelete")); return; }
+    if (savesInProgressRef.current.size) { setStatusMessage(t("status.workspaceOperationBusy")); return; }
+    const release = pathMutations.begin(workspaceRoot);
+    if (!release) return;
 
     try {
       await deleteWorkspaceEntry({
@@ -1469,16 +1511,19 @@ export function useDocumentSession({
       setStatusMessage(t("status.deletedNeedsSync", { path: targetItem.id }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
-    }
+    } finally { release(); }
   };
 
   const duplicateWorkspaceItem = async (targetPath?: string) => {
+    if (rejectDuringPathMutation()) return;
     const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
     const targetItem = findWorkspaceItem(workspaceItems, targetId);
     if (!workspaceRoot || !targetItem) {
       setStatusMessage(t("status.selectBeforeDuplicate"));
       return;
     }
+    const release = pathMutations.begin(workspaceRoot);
+    if (!release) return;
     try {
       const result = await duplicateWorkspaceEntry({
         workspaceRoot,
@@ -1495,179 +1540,72 @@ export function useDocumentSession({
       setStatusMessage(t("status.duplicatedPath", { path: result.newRelativePath }));
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : String(error));
-    }
+    } finally { release(); }
   };
 
-  const confirmRename = async (item: WorkspaceItem, nextName: string) => {
-    if (!workspaceRoot) {
-      return;
-    }
-
-    if (targetAffectsDirtyFile(item.id, dirtyFileIds)) {
-      setStatusMessage(t("status.saveBeforeRename"));
-      return;
-    }
-
-    try {
-      const response = await renameEntry({
-        workspaceRoot,
-        sourceRelativePath: item.id,
-        newName: nextName,
-      });
-      const items = await listWorkspaceFiles(workspaceRoot);
-
-      setWorkspaceItems(items);
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspaceRoot]: items,
-      }));
+  const applyPathMutation = useEventCallback((root: string, from: string, to: string) => {
+    // IDs own buffers/history; only filesystem metadata follows the native rename.
+    setDocumentRelativePaths((paths) => remapWorkspaceDocumentPaths(paths, documentWorkspaceRoots, root, from, to));
+    setWorkspaceItemsByRoot((trees) => ({ ...trees, [root]: remapWorkspaceTree(trees[root] ?? [], from, to) }));
+    setExternalDocumentChange((current) => current?.workspaceRoot === root
+      ? { ...current, relativePath: remapPath(current.relativePath, from, to) } : current);
+    if (workspaceRootRef.current === root) {
+      setWorkspaceItems((items) => remapWorkspaceTree(items, from, to));
+      setSelectedTreeItemId((path) => remapPath(path, from, to));
       setRenameItemId(null);
-      setDocuments((currentDocuments) =>
-        remapDocumentPaths(
-          currentDocuments,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setDocumentRevisions((currentRevisions) =>
-        remapDocumentPaths(
-          currentRevisions,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setDirtyFileIds((currentDirtyFileIds) =>
-        remapDirtyFileIds(
-          currentDirtyFileIds,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setActiveFileId((currentActiveFileId) =>
-        remapPath(
-          currentActiveFileId,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setSelectedTreeItemId((currentSelectedItemId) =>
-        remapPath(
-          currentSelectedItemId,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setOpenFileIds((currentFileIds) =>
-        currentFileIds.map((fileId) =>
-          remapPath(fileId, response.oldRelativePath, response.newRelativePath),
-        ),
-      );
-      setDocumentWorkspaceRoots((currentRoots) =>
-        remapDocumentMetadataKeys(currentRoots, response.oldRelativePath, response.newRelativePath),
-      );
-      setDocumentRelativePaths((currentPaths) =>
-        remapDocumentMetadataPaths(currentPaths, response.oldRelativePath, response.newRelativePath),
-      );
-      setStatusMessage(
-        t("status.renamedPath", {
-          from: response.oldRelativePath,
-          to: response.newRelativePath,
-        }),
-      );
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      revealFolder(parentFolderIdOf(to));
     }
-  };
+    try { recentDocumentStore().remap(root, from, to); }
+    catch { setStatusMessage(t("recent.storageFailed")); }
+  });
 
-  const moveWorkspaceEntry = async (
-    sourcePath: string,
-    targetParentPath: string | null,
+  const runPathMutation = async (
+    sourcePath: string, kind: "rename" | "move",
+    execute: (root: string) => Promise<{ oldRelativePath: string; newRelativePath: string }>,
   ) => {
-    if (!workspaceRoot) {
-      setStatusMessage(t("status.openWorkspaceBeforeMove"));
-      return;
+    const root = workspaceRoot;
+    if (!root) { setStatusMessage(t("status.openWorkspaceBeforeMove")); return; }
+    if (hasDirtyPath(root, sourcePath)) {
+      setStatusMessage(t(kind === "rename" ? "status.saveBeforeRename" : "status.saveBeforeMove")); return;
     }
-
-    if (targetAffectsDirtyFile(sourcePath, dirtyFileIds)) {
-      setStatusMessage(t("status.saveBeforeMove"));
-      return;
+    if (savesInProgressRef.current.size || pathMutations.isBusy()) {
+      setStatusMessage(t("status.workspaceOperationBusy")); return;
     }
-
+    const release = pathMutations.begin(root);
+    if (!release) return;
+    documentNavigation.invalidate();
+    for (const id of openFileIds) documentReads.invalidate(id);
     try {
-      const response = await moveEntry({
-        workspaceRoot,
-        sourceRelativePath: sourcePath,
-        targetParentRelativePath: targetParentPath,
-      });
-      const items = await listWorkspaceFiles(workspaceRoot);
-
-      setWorkspaceItems(items);
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspaceRoot]: items,
-      }));
-      setDocuments((currentDocuments) =>
-        remapDocumentPaths(
-          currentDocuments,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setDocumentRevisions((currentRevisions) =>
-        remapDocumentPaths(
-          currentRevisions,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setDirtyFileIds((currentDirtyFileIds) =>
-        remapDirtyFileIds(
-          currentDirtyFileIds,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setActiveFileId((currentActiveFileId) =>
-        remapPath(
-          currentActiveFileId,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setSelectedTreeItemId((currentSelectedItemId) =>
-        remapPath(
-          currentSelectedItemId,
-          response.oldRelativePath,
-          response.newRelativePath,
-        ),
-      );
-      setOpenFileIds((currentFileIds) =>
-        currentFileIds.map((fileId) =>
-          remapPath(fileId, response.oldRelativePath, response.newRelativePath),
-        ),
-      );
-      setDocumentWorkspaceRoots((currentRoots) =>
-        remapDocumentMetadataKeys(currentRoots, response.oldRelativePath, response.newRelativePath),
-      );
-      setDocumentRelativePaths((currentPaths) =>
-        remapDocumentMetadataPaths(currentPaths, response.oldRelativePath, response.newRelativePath),
-      );
-      revealFolder(targetParentPath);
-      setStatusMessage(
-        t("status.movedPath", {
-          from: response.oldRelativePath,
-          to: response.newRelativePath,
-        }),
-      );
+      const response = await execute(root);
+      applyPathMutation(root, response.oldRelativePath, response.newRelativePath);
+      // Refresh is a projection, never the commit point of a successful disk mutation.
+      try {
+        const items = await listWorkspaceFiles(root);
+        setWorkspaceItemsByRoot((trees) => ({ ...trees, [root]: items }));
+        if (workspaceRootRef.current === root) {
+          setWorkspaceItems(items);
+          setStatusMessage(t(kind === "rename" ? "status.renamedPath" : "status.movedPath", {
+            from: response.oldRelativePath, to: response.newRelativePath,
+          }));
+        }
+      } catch {
+        if (workspaceRootRef.current === root) setStatusMessage(t("status.workspaceRefreshAfterMoveFailed"));
+      }
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
-    }
+      if (workspaceRootRef.current === root) setStatusMessage(error instanceof Error ? error.message : String(error));
+    } finally { release(); }
   };
+
+  const confirmRename = (item: WorkspaceItem, nextName: string) => runPathMutation(item.id, "rename",
+    (root) => renameEntry({ workspaceRoot: root, sourceRelativePath: item.id, newName: nextName }));
+
+  const moveWorkspaceEntry = (sourcePath: string, targetParentPath: string | null) => runPathMutation(sourcePath, "move",
+    (root) => moveEntry({ workspaceRoot: root, sourceRelativePath: sourcePath, targetParentRelativePath: targetParentPath }));
 
 
   return {
     workspaceItems, documents, documentRevisions, documentWorkspaceRoots, documentRelativePaths,
-    workspaceRoot, activeFileId, openFileIds, dirtyFileIds, markdownContent, activeRelativePath,
+    workspaceRoot, activeFileId, openFileIds, dirtyFileIds, dirtyWorkspacePaths, markdownContent, activeRelativePath,
     activeDocumentRoot, activeFileName, isDirty, openTabs, collapseVersion, folderRevealRequest,
     selectedTreeItemId, createItemType, createDefaultName, renameItemId, externalDocumentChange,
     loadWorkspace, openWorkspace, openMarkdownPath, openFile, createUntitledDocument, selectFile,

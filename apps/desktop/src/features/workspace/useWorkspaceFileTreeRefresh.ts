@@ -6,11 +6,13 @@ import { WORKSPACE_CONFIG } from "./workspaceConfig";
 type WorkspaceFileTreeRefreshOptions = {
   workspaceRoot: string;
   onRefresh: (workspaceRoot: string, items: WorkspaceItem[]) => void;
+  readPermission?: () => () => boolean;
 };
 
 export function useWorkspaceFileTreeRefresh({
   workspaceRoot,
   onRefresh,
+  readPermission,
 }: WorkspaceFileTreeRefreshOptions): void {
   useEffect(() => {
     if (!workspaceRoot) {
@@ -25,10 +27,12 @@ export function useWorkspaceFileTreeRefresh({
         return;
       }
       refreshInProgress = true;
+      const isCurrent = readPermission?.() ?? (() => true);
       try {
+        if (!isCurrent()) return;
         const items = await listWorkspaceFiles(workspaceRoot);
         if (
-          !disposed &&
+          !disposed && isCurrent() &&
           (!lastReportedItems || !workspaceTreesEqual(lastReportedItems, items))
         ) {
           lastReportedItems = items;
@@ -60,5 +64,5 @@ export function useWorkspaceFileTreeRefresh({
       window.removeEventListener("focus", refreshFileTree);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [onRefresh, workspaceRoot]);
+  }, [onRefresh, workspaceRoot, readPermission]);
 }

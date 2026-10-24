@@ -47,6 +47,54 @@ impl Drop for Workspace {
 }
 
 #[test]
+fn rename_waits_for_a_staged_save_and_stale_saves_cannot_recreate_the_old_path() {
+    let workspace = Workspace::new();
+    let root = workspace.root().to_owned();
+    let rename_root = root.clone();
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let writer = std::thread::spawn(move || {
+        BEFORE_REPLACE.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || {
+                entered_tx.send(()).unwrap();
+                release_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+            }));
+        });
+        save_markdown_file_content(
+            &root,
+            "note.md",
+            "saved before move",
+            Some(&content_revision(b"original")),
+        )
+    });
+    entered_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+    let (finished_tx, finished_rx) = mpsc::channel();
+    let rename = std::thread::spawn(move || {
+        let result = super::rename_entry(rename_root, "note.md".into(), "renamed.md".into());
+        finished_tx.send(()).unwrap();
+        result
+    });
+    let bypassed = finished_rx.recv_timeout(Duration::from_millis(100)).is_ok();
+    release_tx.send(()).unwrap();
+    writer.join().unwrap().unwrap();
+    rename.join().unwrap().unwrap();
+    assert!(!bypassed);
+    assert_eq!(
+        fs::read_to_string(workspace.0.join("renamed.md")).unwrap(),
+        "saved before move"
+    );
+    let error = save_markdown_file_content(
+        workspace.root(),
+        "note.md",
+        "stale",
+        Some(&content_revision(b"original")),
+    )
+    .unwrap_err();
+    assert_eq!(error.code, "workspace.documentMissing");
+    assert!(!workspace.path().exists());
+}
+
+#[test]
 fn outbox_failure_acknowledges_the_committed_revision_and_allows_the_next_save() {
     let workspace = Workspace::new();
     // A directory at the SQLite path deterministically fails without touching user data.

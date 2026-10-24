@@ -2,6 +2,39 @@ import { describe, expect, it, vi } from "vitest";
 import { DiagramRenderCache } from "./diagramRenderCache";
 
 describe("diagram render cache", () => {
+  it("bounds distinct pending sources and admits another after cancellation", async () => {
+    const cache = new DiagramRenderCache();
+    const owners = Array.from({ length: 32 }, () => new AbortController());
+    const requests = owners.map((owner, index) => cache.getOrRender(String(index), (signal) => new Promise<string>((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(new DOMException("Cancelled", "AbortError")), { once: true });
+    }), owner.signal));
+    const settled = Promise.allSettled(requests);
+    await expect(cache.getOrRender("overflow", async () => "never")).rejects.toMatchObject({ name: "DiagramBusyError" });
+    owners.forEach((owner) => owner.abort()); await settled;
+    await expect(cache.getOrRender("current", async () => "svg")).resolves.toBe("svg");
+  });
+  it("cancels shared work only after its last preview is disposed", async () => {
+    const cache = new DiagramRenderCache();
+    const a = new AbortController(), b = new AbortController();
+    let signal!: AbortSignal, finish!: (svg: string) => void;
+    const render = vi.fn((owner: AbortSignal) => { signal = owner; return new Promise<string>((resolve) => { finish = resolve; }); });
+    const first = cache.getOrRender("shared", render, a.signal);
+    const second = cache.getOrRender("shared", render, b.signal);
+    await Promise.resolve(); a.abort();
+    await expect(first).rejects.toMatchObject({ name: "AbortError" });
+    expect(signal.aborted).toBe(false); finish("svg");
+    await expect(second).resolves.toBe("svg"); expect(render).toHaveBeenCalledTimes(1);
+  });
+  it("releases an abandoned source without caching its late completion", async () => {
+    const cache = new DiagramRenderCache(), controller = new AbortController();
+    let finish!: (svg: string) => void, signal!: AbortSignal;
+    const request = cache.getOrRender("stale", (owner) => { signal = owner; return new Promise((resolve) => { finish = resolve; }); }, controller.signal);
+    await Promise.resolve(); controller.abort(); await expect(request).rejects.toMatchObject({ name: "AbortError" });
+    expect(signal.aborted).toBe(true);
+    await expect(cache.getOrRender("stale", async () => "new")).resolves.toBe("new");
+    finish("old"); await Promise.resolve(); await Promise.resolve();
+    await expect(cache.getOrRender("stale", async () => "unexpected")).resolves.toBe("new");
+  });
   it("shares concurrent work and reuses completed SVG", async () => {
     const cache = new DiagramRenderCache();
     const render = vi.fn(async () => "<svg/>");

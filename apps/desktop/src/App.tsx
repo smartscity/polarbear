@@ -73,7 +73,7 @@ export function App() {
     onSessionEmpty: () => { editorViewRef.current = null; },
   });
   const { workspaceItems, documentRevisions, documentWorkspaceRoots, documentRelativePaths,
-    workspaceRoot, activeFileId, openFileIds, dirtyFileIds, markdownContent, activeRelativePath,
+    workspaceRoot, activeFileId, openFileIds, dirtyFileIds, dirtyWorkspacePaths, markdownContent, activeRelativePath, activeDocumentRoot,
     activeFileName, isDirty, openTabs, collapseVersion, folderRevealRequest,
     selectedTreeItemId, createItemType, createDefaultName, renameItemId, externalDocumentChange,
     loadWorkspace, openWorkspace, openMarkdownPath, openFile, createUntitledDocument, selectFile,
@@ -343,8 +343,8 @@ export function App() {
 
     try {
       const asset = await copyImageAsset({
-        workspaceRoot,
-        markdownRelativePath: activeFileId,
+        workspaceRoot: activeDocumentRoot,
+        markdownRelativePath: activeRelativePath,
         sourcePath,
       });
       insertMarkdownAtSelection(`${asset.markdownInsertText}\n`);
@@ -388,8 +388,8 @@ export function App() {
       const bytes = [...new Uint8Array(await imageFile.arrayBuffer())];
       const extension = imageFile.type.split("/").at(-1) ?? "png";
       const asset = await saveImageAsset({
-        workspaceRoot,
-        markdownRelativePath: activeFileId,
+        workspaceRoot: activeDocumentRoot,
+        markdownRelativePath: activeRelativePath,
         fileName: `image-${timestampForFileName()}.${extension}`,
         imageBytes: bytes,
         extension,
@@ -792,12 +792,13 @@ export function App() {
             />
             {activeSurface === "workspace" ? <AppShell
               activeFileId={activeFileId}
+              activeRelativePath={activeRelativePath}
               activeFileName={activeFileName}
               characterCount={markdownContent.length}
               collapseVersion={collapseVersion}
               debugEnabled={debugEnabled}
               documentStructureItems={documentStructureItems}
-              dirtyFileIds={dirtyFileIds}
+              dirtyFileIds={dirtyWorkspacePaths}
               executeCommand={executeCommand}
               folderRevealRequest={folderRevealRequest}
               isDocumentStructureOpen={isDocumentStructureOpen}

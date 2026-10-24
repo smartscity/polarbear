@@ -4,6 +4,7 @@ import { ContextWorkspace } from "../../src/features/memory/context/ContextWorks
 import { useContextOsSession } from "../../src/features/memory/context/useContextOsSession";
 import { I18nProvider } from "../../src/shared/i18n/I18nProvider";
 import { useRepositoryIdentity } from "../../src/features/repository/useRepositoryIdentity";
+import { useDocumentSession } from "../../src/features/workspace/useDocumentSession";
 import "../../src/styles.css";
 
 function Harness() {
@@ -26,4 +27,10 @@ function RepositoryProbe() {
   useEffect(() => { Object.assign(window, { __repositoryIdentity: identity, __selectWorkspace: setWorkspace }); }, [identity]);
   return <output>{JSON.stringify({ workspace, account: identity.repositoryAccount, binding: identity.repositoryBinding, error })}</output>;
 }
-createRoot(document.getElementById("root")!).render(<I18nProvider>{location.search.includes("repository") ? <RepositoryProbe /> : location.search.includes("probe") ? <SessionProbe /> : <Harness />}</I18nProvider>);
+function DocumentProbe() {
+  const [status, onStatus] = useState("");
+  const session = useDocumentSession({ onStatus, onDocumentOpened() {}, onSessionEmpty() {}, onReload() {} });
+  useEffect(() => { Object.assign(window, { __documents: session }); }, [session]);
+  return <output>{JSON.stringify({ status, paths: session.documentRelativePaths, root: session.workspaceRoot })}</output>;
+}
+createRoot(document.getElementById("root")!).render(<I18nProvider>{location.search.includes("documents") ? <DocumentProbe /> : location.search.includes("repository") ? <RepositoryProbe /> : location.search.includes("probe") ? <SessionProbe /> : <Harness />}</I18nProvider>);
