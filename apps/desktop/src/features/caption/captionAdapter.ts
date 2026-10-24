@@ -2,15 +2,17 @@ import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 
 export type CaptionSource = "system" | "microphone";
-export type CaptionStatus = { sessionId: string | null; state: string; source: string; partial: string; error: string | null; elapsedMs: number; audioLevel: number; viewRevision: number; historyRequested: boolean };
+export type CaptionStatus = { sessionId: string | null; state: string; source: string; partial: string; error: string | null; elapsedMs: number; audioLevel: number; viewRevision: number; historyRequested: boolean; recordAudio?: boolean; recordingFailed?: boolean };
 export type CaptionSession = { id: string; title: string; place: string; startedAt: number; endedAt: number | null; source: string; status: string; count: number; timeZone: string };
 export type CaptionSegment = { id: number; sessionId: string; startMs: number; endMs: number; english: string; chinese: string | null; translationStatus: string };
 export type TranslationJob = { id: number; lease: string; english: string };
 
 type Requests = {
+  live: { request: { action: "live" }; response: { status: CaptionStatus; segments: CaptionSegment[] } };
   status: { request: { action: "status" }; response: CaptionStatus };
   open: { request: { action: "open"; history: boolean }; response: void };
-  start: { request: { action: "start"; source: CaptionSource; timezone: string }; response: void };
+  start: { request: { action: "start"; source: CaptionSource; timezone: string; recordAudio?: boolean }; response: void };
+  recordingsFolder: { request: { action: "recordingsFolder" }; response: void };
   pause: { request: { action: "pause" }; response: void };
   resume: { request: { action: "resume" }; response: void };
   stop: { request: { action: "stop" }; response: void };

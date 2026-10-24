@@ -9,6 +9,7 @@ export function useUserSettings(): UserSettings {
     const handleSettingsChanged = () => setSettings(readUserSettings());
     window.addEventListener(APP_EVENTS.settingsChanged, handleSettingsChanged);
     window.addEventListener("storage", handleSettingsChanged);
+    handleSettingsChanged();
     return () => {
       window.removeEventListener(APP_EVENTS.settingsChanged, handleSettingsChanged);
       window.removeEventListener("storage", handleSettingsChanged);

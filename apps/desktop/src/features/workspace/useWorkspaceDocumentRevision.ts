@@ -46,6 +46,7 @@ export function useWorkspaceDocumentRevision({
           workspaceRoot: target.workspaceRoot,
           relativePath: target.relativePath,
         });
+        if (disposed) return;
         if (!fileState.exists) {
           if (!missingReported) {
             missingReported = true;

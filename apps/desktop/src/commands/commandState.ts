@@ -5,6 +5,7 @@ export type CommandRuntimeContext = {
   activeDocumentId: string;
   activeViewMode: "edit" | "live" | "preview" | "split";
   repositoryConnected: boolean;
+  repositoryCleanupPending?: boolean;
   repositoryLinked: boolean;
   repositoryBusy: boolean;
   selectedTreeItemId: string;
@@ -35,6 +36,10 @@ export function getCommandState(
   context: CommandRuntimeContext,
 ): CommandState {
   const hasDocument = Boolean(context.activeDocumentId);
+  if (context.repositoryCleanupPending && command.startsWith("repository.")) {
+    const retry = command === "repository.disconnectGithub";
+    return { ...DEFAULT_COMMAND_STATE, enabled: retry && !context.repositoryBusy, visible: retry };
+  }
   if (command === "edit.copyMarkdown") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
   if (command === "vocab.lookup") return { ...DEFAULT_COMMAND_STATE, enabled: hasDocument };
   const hasEditableDocument = hasDocument && context.activeViewMode !== "preview";

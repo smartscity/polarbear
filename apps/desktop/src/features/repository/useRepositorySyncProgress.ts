@@ -6,11 +6,13 @@ import { APP_EVENTS } from "../../shared/events/appEvents";
 type RepositorySyncProgressOptions = {
   busyRef: RefObject<boolean>;
   onProgress: (progress: RepositorySyncProgress) => void;
+  onError: (error: unknown) => void;
 };
 
 export function useRepositorySyncProgress({
   busyRef,
   onProgress,
+  onError,
 }: RepositorySyncProgressOptions): void {
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
@@ -19,7 +21,7 @@ export function useRepositorySyncProgress({
     void listen<RepositorySyncProgress>(
       APP_EVENTS.repositorySyncProgress,
       ({ payload }) => {
-        if (busyRef.current) {
+        if (!disposed && busyRef.current) {
           onProgress(payload);
         }
       },
@@ -29,11 +31,13 @@ export function useRepositorySyncProgress({
       } else {
         unlisten = stopListening;
       }
+    }).catch((error: unknown) => {
+      if (!disposed) onError(error);
     });
 
     return () => {
       disposed = true;
       unlisten?.();
     };
-  }, [busyRef, onProgress]);
+  }, [busyRef, onProgress, onError]);
 }

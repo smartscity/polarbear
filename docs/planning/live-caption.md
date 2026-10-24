@@ -1,11 +1,354 @@
 # Live Caption: offline English transcription and bilingual history
 
-Revision: 1.2, 2026-10-18 (Asia/Singapore).
-Code baseline inspected: `4d437f3`.
-Design: APPROVED by the user. Implementation: PARTIAL preview. Runtime verification:
-PARTIAL (offline helper fixtures and browser tests, not real capture acceptance).
-This document is the feature owner; the diagram is its architectural view.
+Revision: 1.6, 2026-10-24 (Asia/Singapore).
+Redesign baseline inspected: `13b9aff`.
+Earlier feature design: APPROVED as previously recorded. Streaming redesign:
+**T1 ACCEPTED FOR SCOPED IMPLEMENTATION** by the subsequent instruction to proceed
+and run local tests before committing. Implementation remains a PARTIAL preview;
+prior tests do not qualify a replacement engine. The first repair slice is
+specified in section 0.6; engine replacement and release remain evidence-gated.
+The subsequent user-approved temporary production latency exception is in
+section 0.7. It permits packaging after local acceptance, not a claim that the
+three-second optimization target or streaming replacement is complete.
+This document owns the feature design and its redesign review. The existing diagram
+describes the earlier architecture, not an implemented streaming redesign.
 See [implementation evidence and remaining gates](live-caption-implementation.md).
+
+## Current repair contract (2026-10-24)
+
+The user's English-first stability request supersedes earlier default-bilingual,
+translation-backlog-stop and panel-heartbeat requirements below. The subsequent
+request explicitly authorizes an optional local recording facility for reproducing
+live reading errors. It does not authorize automatic recording or uploading audio.
+
+| Owner | Current responsibility | Excluded responsibility |
+| --- | --- | --- |
+| Native `CaptionService` | Serialize lifecycle; atomically commit English and publish a bounded live snapshot; scope hypotheses by session and capture generation | Treat panel polling or translation throughput as capture health |
+| Capture/ASR | Existing bounded PCM admission, sample clock, Silero VAD and pinned Whisper CPU helper | Infer genuine repetition from screenshots; silently drop audio or rewrite final words |
+| Translator surface | Claim one durable job at a time only after persistent manual opt-in; dispose its worker on opt-out | Stop capture because pending translations exceed a count |
+| Panel | Read one consistent status/tail projection; retain unchanged row identities; memoize finalized text; recover polling errors | Own audio liveness or retain the complete session in its DOM |
+| Diagnostic recorder | Explicit next-session opt-in; save admitted 16 kHz mono float32 PCM on the native pipe-writer thread | Record by default, run disk IO in the audio callback, upload or sync recordings |
+
+Pattern assessment: reuse the existing native service/SQLite ownership and React
+projection. A bounded read model fixes the snapshot race without a new event bus,
+global store, virtual-list dependency or ASR implementation. Translation remains
+an independent consumer, not a second source of English text. No new model is selected.
+
+Preferences v4 changes `caption.showChinese` from default-on display to explicit
+translation opt-in. Versions 1-3 migrate it to false because they did not record
+processing consent; other preferences are preserved. A new v4 opt-in persists.
+New installations copy English by default. Existing explicit copy-language choices
+remain valid. Both Settings and Caption options update the same preference.
+
+`caption_request` adds `live` (atomic status plus the last 200 finalized segments),
+optional `recordAudio` on `start` (default false), and `recordingsFolder` (opens only
+the native-owned recording directory). No arbitrary filesystem path enters this API.
+Partial text is replaceable, non-durable and sequence-scoped; final commits retain
+genuine repeated words and cannot be overwritten by old events. Session/epoch checks
+exclude late results from a previous run.
+
+Recording is armed only for the next start in Caption options, resets after start,
+and stays explicit in the footer. Pause/resume retains that session's choice but
+opens a new WAV. Files are named `<session UUID>-<capture generation>-<offset>ms.wav`
+under `app_local_data_dir()/live-caption/recordings`, with 0700 directory and 0600
+file permissions. One capture file is capped at two hours (460.8 MB). A recording
+write error or limit stops recording with a visible warning, not recognition.
+The header is checkpointed once a second and finalized on ordinary stop. A crash
+can lose the uncheckpointed suffix; recording is diagnostic, not lossless archival
+capture. Files persist independently of transcript deletion until explicitly removed
+in the recordings folder. They are not encrypted by this feature or sent to Memory.
+
+Model accuracy and 30/60/120-minute native stability are separate acceptance gates.
+Logical-time storage tests, skipped browser timers and repeated short fixtures do
+not satisfy them. Until reviewed audio and reference transcripts exist, WER improvement
+is NOT_SCORED; do not claim the screenshot's recognition errors are repaired.
+
+## 0. Streaming redesign review
+
+### Review scope and evidence
+
+Reviewed baseline: S5-T1, domain model, ownership and invariants, revision T1-r1.
+This is a focused repair of the existing capture/recognition boundary, not a new
+caption product, event bus, translation engine or history database. No production
+model assets, dependencies, CI or release configuration changes belonged to
+the design-only review. The subsequent implementation scope is recorded below.
+
+The earlier feature requirements remain: offline English recognition, bundled
+models, asynchronous Chinese translation, continuous readable subtitles, bilingual
+local history and copy. The user additionally requires Intel first-text improvement
+without sacrificing accuracy, short relevant validation, and meaningful local
+evidence before pushing another candidate to CI. No model is selected by this step.
+
+The [qualification checkpoint](live-caption-parakeet-qualification.md#local-first-redesign-checkpoint-2026-10-20)
+owns historical measurements and test limitations. This section owns proposed
+semantics. Historical failures stay failures; a revised evaluation protocol must
+not retroactively turn them into passes.
+
+| Observed implementation | Why the boundary needs redesign | Evidence class |
+| --- | --- | --- |
+| `native/caption-engine/pcm_frames.h::read_pcm_frames` and `streaming_input.h::StreamingSegmenter::accept` calculate milliseconds separately | Legal packet fragmentation can make recognition end timestamps move backwards; packet size must not change the audio timeline | Source inspected now; deterministic reproduction recorded in the qualification checkpoint |
+| `native/LiveCaptionCapture.swift::convert` uses callback wall time; the microphone tap ignores `AVAudioTime` | Callback scheduling and resampling delay are confused with source sample positions | Source finding; real-device timing acceptance remains open |
+| `src/live_caption/runtime.rs::on_audio` sets a failure flag without immediately closing admission | Later callbacks can follow a dropped frame before supervision stops capture | Source finding; fault-injection proof required |
+| `streaming_runtime.cpp::run_streaming` uses one `failed` flag for admission, output suppression and queue abortion | Overload can discard earlier accepted work; shutdown and recognition failure have different completion rules | Source finding; deterministic lifecycle coverage required |
+| `StreamingRecognizer::finish` destroys the stream; `StreamingSegmenter` finalizes on silence or a 15-second limit | A model stream, an audio endpoint and a durable caption are currently tied together without evidence that all resets preserve accuracy | Source finding, not proof that every reset is harmful |
+| `native_replay.py` and `native_latency_regression.py` report `accuracy: NOT_SCORED`; the short screen has unreviewed reference coverage/timings | Timing passes cannot establish accuracy, and uncertain references cannot qualify a model | Source and historical-artifact findings; not a reason to remove difficult audio |
+
+Paths in the first five rows are relative to `apps/desktop/src-tauri/`; evaluation
+scripts are under `apps/desktop/scripts/caption-evaluation/`.
+
+### T1.1 Domain objects and state owners
+
+These are logical concepts, not instructions to create a class, table, process or
+new protocol field for every row. Reuse existing objects wherever their semantics
+fit. Physical ownership, engine APIs and wire changes are later review steps.
+
+| Concept | Natural owner | Meaning and lifetime |
+| --- | --- | --- |
+| Caption session | Existing native session manager | One user-visible listening/history session; pause/resume can create multiple capture epochs within it |
+| Capture epoch | Session manager with capture adapter | One uninterrupted source/format/clock interval; a restart, device change or known gap cannot silently continue the same epoch |
+| Audio span | Capture adapter and PCM boundary | Source identity, epoch, integer sample range and validated PCM; packet boundaries are transport details |
+| Source-to-session mapping | Capture adapter | Anchors source time to the monotonic session timeline; original clock continuity and resampled sample accounting remain distinct |
+| Admission watermark | Session manager | Last contiguous sample range accepted for processing; closing admission is irreversible for that epoch |
+| Speech activity interval | Existing VAD boundary | Evidence about speech onset/end, not a claim about words, punctuation or permanent model reset |
+| Recognition stream | Existing recognizer adapter | Engine/cache state over declared contiguous input; its lifetime is not automatically one display sentence |
+| Provisional hypothesis | Recognition owner | Replaceable text and revision for an uncommitted audio range; neither durable history nor a translation job |
+| Caption commit | Native result/persistence boundary | An immutable finalized English text unit with identity and source time range; empty completion is not a commit |
+| Saved watermark | Existing history store | Last successfully committed result; recognizing or displaying text does not advance it |
+| Translation job | Existing durable translation queue | Chinese result for a specific committed English unit; pending/failed translation never invalidates that English |
+| Transcript projection | Existing caption view and formatter | Ordered committed text plus the current provisional suffix; continuous display is independent of internal commit boundaries |
+
+Keep separate accounting for capture received, admitted, processed and committed
+coverage. Silence rejected by an explicit VAD policy is not a queue drop. A frame
+lost to capacity or a device discontinuity is not silence. Model lookahead padding
+is synthetic input, never recorded audio or extra session duration.
+
+### T1.2 Time and continuity invariants
+
+**INV-01: Packetization must not change meaning.** For a fixed source epoch, the
+same PCM delivered as 512-sample, irregular or final one-sample packets has the
+same sample coverage and recognition timeline. Canonical positions are integer
+sample offsets. Convert to milliseconds only at defined external boundaries;
+do not add separately rounded packet, frame and utterance durations.
+
+**INV-02: Arrival time is diagnostic, not audio time.** Preserve the source's
+sample/time information where available. The resampler owns a cumulative output
+sample position; source continuity checks detect missing input independently.
+A counter alone must not conceal lost hardware frames. Callback arrival, queue
+wait and inference finish use a monotonic measurement clock and remain distinct
+from audio positions. System wall-clock changes cannot reorder subtitles.
+
+**INV-03: No silent splicing.** Validate epoch and continuity on all frames,
+including gaps aligned to a complete VAD frame. Once a range is missing, later
+audio cannot be presented as contiguous with earlier audio. Any authorized new
+capture epoch has a visible interruption and a new time anchor. If missing
+duration is unknown, record it as unknown instead of inventing a precise interval.
+
+**INV-04: Once admitted, account for every range.** In normal operation, input
+is delivered once in order to the selected recognition path, with declared VAD
+exclusions and bounded context handling. After failure, each pending range is
+either drained successfully or explicitly classified as unprocessed/uncertain.
+There is no silent drop, retry after partial engine consumption, or replay across
+epochs. A model's internal context/lookahead is not duplicated user audio.
+
+### T1.3 Recognition, display and persistence invariants
+
+**INV-05: Three boundaries are independent.** Speech activity, engine stream
+lifetime and durable text commit are separate decisions. A short silence can
+trigger endpoint consideration without requiring destruction of model state.
+A translation or UI boundary cannot reset recognition. Conversely, "continuous"
+does not mean retaining an hour of PCM or unbounded decoder hypotheses.
+
+The recommended direction is cached incremental inference with bounded state,
+not repeated decoding of the complete prefix. Whether a selected engine preserves
+state across an endpoint, resets with a bounded context handoff, or only finalizes
+at an engine-supported endpoint must be proved in T2/T3. Do not assume its API can
+commit a stable prefix or provide accurate token timestamps. If bounded commits
+cannot preserve content and accuracy, that engine/adapter is not accepted.
+
+**INV-06: Fast text is not automatically correct text.** A provisional hypothesis
+can change. Stable-prefix agreement is a display aid, not ground truth. Do not
+fabricate early words, lower decoding quality just to pass first-text timing, or
+add a hidden second recognizer that recreates inference contention. Very short
+speech is a test case, not automatically disposable because it is below a
+minimum-duration constant.
+
+**INV-07: One result has one durable identity.** An accepted final is committed
+once in order, with its translation job atomically queued. Later partials cannot
+rewrite it. Repeated transport delivery is idempotent. If an engine cannot safely
+finalize a prefix yet, it remains provisional rather than being prematurely saved.
+
+**INV-08: Empty completion clears, not saves.** If a stream ends without valid
+final text, clear its provisional display and finish its lifecycle explicitly.
+Never write an empty English row, leave stale text on screen, or translate a
+discarded partial. Distinguish silence, uncertain speech and engine failure in
+diagnostic outcomes without inventing words.
+
+**INV-09: Display stays continuous.** The panel shows continuous English and
+Chinese text, not one timestamp/card per utterance. Internal commits must not
+cause duplicate words or reset the visible transcript. Existing selection,
+auto-follow, history timestamps and copy behavior remain. Copy uses a consistent
+saved snapshot and does not silently include mutable partials.
+
+**INV-10: Translation cannot stall recognition.** Only committed English enters
+the existing asynchronous queue. Translation failure preserves English and exposes
+its own state. Existing bounded translation-backlog safety remains until explicitly
+redesigned; this step does not promise unlimited offline processing capacity.
+
+### T1.4 Lifecycle and completion semantics
+
+Do not implement all states using a single failure flag. At the domain level,
+session intent, audio admission, recognizer health, draining and persistence have
+different meanings. This does not require an additional global store.
+
+Normal lifecycle: prepare -> capture -> close admission -> bounded drain ->
+paused or ended. A failed prepare never starts capture. A failed drain ends in an
+interrupted outcome, not a successful Stop. Capture stopping and all accepted text
+being saved are separate acknowledgements.
+
+| Operation or failure | Required effect and completion |
+| --- | --- |
+| Start | Validate resources and explicit permission; establish an epoch only for the chosen source. Report capture active only after actual source readiness. Duplicate Start reveals the existing session. |
+| Pause | Stop acquisition immediately, close admission and drain already accepted valid input within a bound. Preserve committed text; then mark paused. Translation may continue. Resume is explicit and starts a new epoch in the same session. |
+| Stop / close | Stop acquisition immediately; reject new frames, drain accepted contiguous input, finalize/save valid text, clear the provisional suffix and reap the helper. A timeout marks the unresolved tail explicitly. No hidden recording. |
+| First queue overflow or source gap | Latch admission closed before later callbacks can enqueue. Drain earlier valid contiguous work while the decoder is healthy. Mark the missing/unprocessed tail and require explicit restart/resume; never enlarge queues to conceal insufficient throughput. |
+| Decoder failure, corrupt input or deadline | Stop acquisition and abort affected inference. Retain already validated/persisted results. Do not claim pending audio was recognized or retry consumed audio against changed state. Terminate/reap a hung helper. |
+| Storage failure | Stop acquisition; do not advance the saved watermark. Preserve bounded unsaved text for an explicit recovery action where possible; do not claim it survives a crash. |
+| Late callback or result | Ignore input from a closed epoch. During bounded draining, accept only valid results for that closing epoch's admitted range; after it is sealed, reject late results. Never attach them to a newly resumed epoch. |
+| Crash/reopen | Recover committed text and pending translation under existing storage rules; mark the interrupted session. No automatic listening and no durable raw-audio replay. |
+
+**INV-11: Close admission is not abort everything.** A capacity failure does not
+invalidate earlier completed work. Draining has a finite deadline and cannot
+reopen capture. A decoder failure, by contrast, cannot safely promise to finish
+its queued audio. This distinction applies to capture and helper queues.
+
+**INV-12: Loss must be truthful and private.** Record text/interruption metadata,
+not raw recordings. If an interrupted final represents only a recognized prefix,
+its completeness must be representable in history; do not present it as the
+complete utterance. The later contract review must decide how existing interval/
+error metadata expresses this before allowing interrupted-prefix commits.
+
+Pause draining is a proposed change from the earlier discard-on-pause policy.
+It protects accepted words while still stopping acquisition immediately. It is
+not implemented or approved by retaining the older feature approval.
+
+### T1.5 Evidence rules and remaining decisions
+
+The following distinctions belong to the domain, independently of test tooling:
+
+- First nonempty text, first stable text and correct final text are different
+  observations. Report source onset, VAD onset, recognition output and UI display
+  times separately. Loading time is not silently removed from startup experience.
+- Measure missing speech against an independently reviewed reference set, not
+  only against sequences for which the engine happened to emit something.
+  No-result utterances remain failures/misses, not absent latency rows.
+- Strict WER, documented number normalization and human review of terminology,
+  negation and names are complementary. Do not call spelling differences semantic
+  errors, or hide semantic errors behind aggregate normalization.
+- Freeze a short reviewed meeting set before candidate scoring. Keep uncertain
+  references, overlap and existing failing samples in a visible diagnostic set;
+  moving a sample requires an annotation reason, not an unfavorable model score.
+- Compare baseline and candidate sequentially on the same native host and inputs.
+  Local Intel proof does not establish ARM performance. Missing hardware is an
+  explicit gap; CI may replicate on unavailable hardware only after the available
+  local native path passes, not act as the first experiment.
+- Existing latency/quality targets are not relaxed by this review. The detailed
+  versioned scoring protocol, short-run budget and reproducible acceptance suite
+  belong to T4; no long soak is started or required by T1.
+
+| Review step | State | Scope |
+| --- | --- | --- |
+| T1-r1: domain and invariants | ACCEPTED_FOR_IMPLEMENTATION | User explicitly requested implementation and local tests before committing after reviewing this proposal |
+| T2: architecture and engine decision | NOT_STARTED | Map responsibilities onto existing modules; choose model/cache/endpoint policy from evidence, including bounded-state feasibility |
+| T3: contracts | NOT_STARTED | Sample/time transport, closing-epoch result validation, interrupted-tail representation, protocol/schema compatibility |
+| T4: stages and acceptance | NOT_STARTED | Reviewed short corpus, paired local functional/accuracy/latency gates, architecture gaps and release stop conditions |
+| T5: first-stage detail | NOT_STARTED | Bounded repair scope, exact implementation/test steps and rollback |
+| T6: review and handoff | NOT_STARTED | Consistency check, approved baseline and separate implementation authorization |
+
+The latest user decision authorizes implementation under these principles and
+requires local tests before commit. It does not establish model quality or
+performance. The scope below resolves the internal contracts for the first repair;
+the remaining model decision and replacement qualification are still open.
+
+### 0.6 First repair slice: clock, admission and draining
+
+This slice preserves the production model, decoding parameters, PCM protocol 1,
+history schema, UI and translation implementation. Its original performance
+thresholds were unchanged; the later explicit release exception is recorded below.
+It does not claim to finish the continuous-model-state redesign or cure Intel
+first-text delay by itself.
+
+| Concern | Pattern and owner | Concrete scope |
+| --- | --- | --- |
+| Source clock | Value object in the existing Swift capture adapter | `CaptionAudioClock` checks original sample continuity/rate and counts actual converted output samples. Microphone sample/host timestamps and system presentation timestamps replace repeated callback-arrival timestamps. Invalid/discontinuous sources stop the epoch. |
+| PCM position | Value object and shared parser | `PcmPosition` owns one millisecond epoch anchor plus integer sample offset. Both native recognizers use `read_pcm_frames`; packetization, frame size and EOF tails do not change cue times. No wire/schema change. |
+| Native admission | Existing bounded queue with a sealed ingress | `CaptureIngress` drops its sender at the first queue failure and never reopens. `drain_capture` writes already accepted frames until sender closure; the existing supervisor deadline still terminates a stalled helper. |
+| Candidate decoder | Explicit sequence state inside the existing adapter | `StreamingDecoder` validates order, owns begin/finish/abort transitions and clears abandoned provisional output. Queue admission failure closes/drains; decoder failure aborts. No second ASR or new event bus. |
+| Empty completion | Existing protocol-1 partial-clear representation | Emit empty `partial`, never empty durable `final`. The evaluator records clears separately and never counts them as first text. |
+| Distribution | Existing native build script | Run the Swift clock test alongside native CTest before copying/signing the production helper. Candidate libraries/models remain opt-in and unbundled. |
+
+The current API still finalizes/reset streams at its existing endpoint and maximum
+duration. Changing that requires the engine-specific bounded-context proof discussed
+in T2/T3. The minimum-duration policy also remains unchanged in this repair.
+There is no claim of general accuracy non-regression from the public speech smoke.
+
+Local verification for this slice covers packet fragmentation and aligned gaps,
+one-sample EOF tails, source-clock/format changes, queue closure, preservation of
+completed accepted work, clearing abandoned partials, Rust stop draining, protocol
+validation and actual-helper packetization invariance. Test doubles are lifecycle
+evidence only. Real source permissions, resampler end-of-stream flushing, source
+clock behavior across devices and installed-app acceptance remain separate gates.
+
+Short performance check budget: the existing 120-second public AMI EN2002a prefix,
+native Intel default CPU/thread policy, one paced run, no concurrent compilation
+or inference. Keep output and binary/fixture hashes. This is a targeted regression,
+not the reviewed meeting accuracy set, ARM acceptance or a long soak. If the fixture
+cannot be acquired within the bounded preparation budget, report BLOCKED rather
+than substitute a smaller successful excerpt. A failed latency gate remains failed.
+
+Sections 1-10 below retain the earlier feature baseline and implementation
+checkpoints. Where section 0 proposes a change, that change remains pending rather
+than silently superseding an approved behavior or describing current code.
+
+### 0.7 Temporary production first-text release exception
+
+On 2026-10-20 the user explicitly authorized relaxing the first-text release gate
+to five seconds to obtain a DMG while optimization continues. The authorization
+also narrows this iteration to caption latency and packaging; do not expand it
+into additional session/UI/model redesign.
+
+- Production first nonempty text P95, measured from the existing VAD start:
+  **at most 5.0 seconds**. The optimization target remains **3.0 seconds**.
+- Final text P95 remains at most 4.4 seconds after VAD end. Complete audio delivery,
+  zero overflow/timeouts, memory limits and packaged-helper checks are unchanged.
+- No new recognizer/model is selected. Streaming candidate acceptance retains its
+  three-second limit and existing accuracy gates; the release exception cannot
+  qualify a rejected candidate.
+- Local and CI production scripts import `native_latency_policy.py`. Every new
+  report records policy ID `production-first-text-5s-2026-10-20` and both the release
+  threshold and optimization target. Candidate reports have a different policy ID.
+- Earlier three-second failures remain failures. Execute a fresh bounded local
+  production replay after the policy change; do not relabel historical reports.
+- Release notes must call this a temporary latency allowance, not a completed
+  latency fix. Native ARM/Intel CI and actual bundle/DMG checks still gate artifacts.
+
+### 0.8 Diagnostic alpha packaging exception
+
+On 2026-10-24 the user explicitly authorized **only alpha previews** to package
+when measured first-text P95 exceeds five seconds. The purpose is to obtain a
+DMG with opt-in recording for real-user diagnosis. This is not a latency fix.
+
+- Only an explicit `vMAJOR.MINOR.PATCH-alpha.N` release tag enables the exception.
+  Stable, beta, RC, ordinary branch runs and candidate qualification remain strict.
+- `native_latency_policy.py` owns the decision. The original checks and `status:
+  FAIL` remain unchanged; a separate `releaseDecision` records advisory and blocking
+  checks. Missing, non-finite or otherwise invalid first-text measurements cannot
+  use the exception. Incomplete or unknown check sets fail closed.
+- Complete audio delivery, text production, final latency, memory, process errors,
+  backlog, build, functionality and packaged-helper verification remain blocking.
+- CI emits a warning and a step summary and retains JSON/JSONL/log artifacts.
+  Alpha release notes disclose the exception and unqualified accuracy/stability.
+- Previously failed runs are not rewritten. Published tags are immutable; revised
+  packaging policy uses a new alpha number.
 
 ## 1. Confirmed scope and product outcome
 
@@ -66,8 +409,9 @@ Paths below are relative to `apps/desktop/` unless indicated otherwise.
 | `src/features/vocab/PassageReading.tsx` | Existing clipboard writes report success/failure; caption copying needs a transcript formatter, not document/image serialization |
 | `.github/workflows/release.yml` (repository root) | Existing macOS DMG and two Rust target setup; model and helper architecture verification must join the release gates |
 
-There is no existing Live Caption capture/ASR implementation in these paths. No
-current test result establishes live recognition, mixed-audio handling, or latency.
+This table is the historical pre-implementation inventory. Capture and ASR code
+now exist; section 0 records the current redesign findings. The inventory is not
+evidence of present absence or of completed real-device acceptance.
 
 ## 3. User interaction
 
@@ -371,8 +715,8 @@ gates. Ship exactly the validated English profile, not a model-choice UI.
   require measurement; they are not product promises.
 - If audio processing falls behind the buffer budget, pause capture with a visible
   gap and performance error. Never accumulate hours of audio or silently omit speech.
-  Translation uses a durable queue and one in-flight job; at 60 pending segments
-  pause capture with a backlog message until the user resumes. Keep all committed text.
+  Translation uses a durable queue and one in-flight job only while opted in.
+  Pending translations never stop English capture. Keep all committed text.
 - The helper separates PCM ingestion/VAD from its single model-owning inference
   thread. A partial snapshot is accepted only when inference is idle; it is never
   queued behind previous inference. Finalized audio supersedes queued partials and

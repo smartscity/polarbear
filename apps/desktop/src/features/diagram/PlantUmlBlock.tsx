@@ -26,6 +26,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
   const [svgContent, setSvgContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [actionStatus, setActionStatus] = useState("");
+  const [retry, setRetry] = useState(0);
   const [requestedSource, setRequestedSource] = useState<string | null>(() =>
     hasPlantUmlRemoteRenderApproval(source) ? source : null,
   );
@@ -49,9 +50,10 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
       setSvgContent("");
 
       try {
-        setSvgContent(await renderPlantUmlSvg(source, {
+        const svg = await renderPlantUmlSvg(source, {
           signal: abortController.signal,
-        }));
+        });
+        if (!abortController.signal.aborted) setSvgContent(svg);
       } catch (error) {
         if (!abortController.signal.aborted) {
           setErrorMessage(describePlantUmlRenderError(error, t));
@@ -62,7 +64,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
     void loadDiagram();
 
     return () => abortController.abort();
-  }, [requestedSource, source, t]);
+  }, [requestedSource, source, t, retry]);
 
   const exportPng = async () => {
     const svg = findRenderedSvg(renderTargetRef.current);
@@ -117,6 +119,7 @@ export function PlantUmlBlock({ diagramId, source }: PlantUmlBlockProps) {
           <strong>{t("diagram.plantUmlRenderFailed")}</strong>
           <span>{t("diagram.plantUmlCheckHint")}</span>
           <span>{errorMessage}</span>
+          <button type="button" onClick={() => setRetry((value) => value + 1)}>{t("diagram.retry")}</button>
         </div>
       ) : (
         <div

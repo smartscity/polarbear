@@ -12,6 +12,7 @@ import traceback
 import numpy as np
 
 from process_memory import ProcessMemory
+from native_latency_policy import latency_policy
 from qualification_corpus import digest
 from qualify import offline_control, replay_events, validate_corpus, validate_native_arch
 
@@ -37,10 +38,11 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
     previous_sequence = 0
     first_sequence = 0
     first_delays, final_delays, memory = [], [], []
-    partials = 0
+    partials = partial_clears = 0
 
     async def diagnostics():
-        allowed = {"stage", "availableCpus", "threads", "frames", "computeMs", "audioMs", "queueMs", "cancelled", "result"}
+        allowed = {"stage", "availableCpus", "threads", "frames", "computeMs", "audioMs", "queueMs",
+                   "cancelled", "result", "sequence", "startMs", "endMs", "textEmitted"}
         while line := await process.stderr.readline():
             if not line.startswith(b"caption-metric:"):
                 continue
@@ -53,7 +55,7 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
             emit({"type": "diagnostic", **metric})
 
     async def read():
-        nonlocal stopped, finals, previous_sequence, first_sequence, partials
+        nonlocal stopped, finals, previous_sequence, first_sequence, partials, partial_clears
         while line := await process.stdout.readline():
             event = json.loads(line)
             kind = event.get("type")
@@ -71,16 +73,21 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
                     raise RuntimeError("Invalid caption position")
                 if end > samples_sent * 1000 / 16000 + 64 or sequence <= previous_sequence:
                     raise RuntimeError("Nonmonotonic or future caption")
+                text = event.get("english")
+                if not isinstance(text, str) or (kind == "final" and not text.strip()):
+                    raise RuntimeError("Invalid caption text")
                 now = time.monotonic() - feed_started
-                if sequence > first_sequence:
+                if text.strip() and sequence > first_sequence:
                     first_sequence = sequence
                     first_delays.append(now - start / 1000)
                 if kind == "final":
                     previous_sequence = sequence
                     finals += 1
                     final_delays.append(now - end / 1000)
-                else:
+                elif text.strip():
                     partials += 1
+                else:
+                    partial_clears += 1
                 # Public fixture output stays in the evidence artifact, never a user recording.
                 emit({"type": "caption", "arrivalSeconds": now, "event": event})
             elif kind == "stopped":
@@ -152,6 +159,7 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
     warmed = [row["rssBytes"] for row in memory if row["elapsedSeconds"] >= 60]
     p95 = lambda values: float(np.percentile(values, 95)) if values else None
     return {"audioSeconds": samples_sent / 16000, "frames": frames, "finals": finals, "partials": partials,
+            "partialClears": partial_clears,
             "wallSeconds": time.monotonic() - feed_started, "maxWriteLagSeconds": max_write_lag,
             "firstFromVadStartP95Seconds": p95(first_delays), "finalAfterVadEndP95Seconds": p95(final_delays),
             "sampledPeakProcessTreeRssBytes": max((row["rssBytes"] for row in memory), default=None),
@@ -161,11 +169,12 @@ async def replay(command, audio, seconds, emit, memory_sample, startup_timeout=6
 
 
 def acceptance(result):
+    policy = latency_policy()
     checks = {
         "completeReleaseDuration": result["audioSeconds"] == RELEASE_REPLAY_SECONDS,
         "textProduced": result["finals"] > 0,
-        "firstText": result["firstFromVadStartP95Seconds"] is not None and result["firstFromVadStartP95Seconds"] <= 3,
-        "finalText": result["finalAfterVadEndP95Seconds"] is not None and result["finalAfterVadEndP95Seconds"] <= 4.4,
+        "firstText": result["firstFromVadStartP95Seconds"] is not None and result["firstFromVadStartP95Seconds"] <= policy["firstTextP95Seconds"],
+        "finalText": result["finalAfterVadEndP95Seconds"] is not None and result["finalAfterVadEndP95Seconds"] <= policy["finalAfterVadEndP95Seconds"],
         "memoryPeak": result["sampledPeakProcessTreeRssBytes"] is not None and result["sampledPeakProcessTreeRssBytes"] <= 2 * 1024**3,
         "memoryGrowth": result["warmedMedianRssGrowthBytes"] is not None and result["warmedMedianRssGrowthBytes"] <= 100 * 1024**2,
     }
@@ -180,7 +189,8 @@ def main():
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     args = parser.parse_args()
     validate_native_arch(args.expect_arch)
-    report = {"status": "INCOMPLETE", "profile": "release-15-minute-v1",
+    report = {"status": "INCOMPLETE", "profile": "release-15-minute-v2",
+              "latencyPolicy": latency_policy(),
               "requiredAudioSeconds": RELEASE_REPLAY_SECONDS,
               "machine": platform.machine(), "platform": platform.platform(),
               "microphoneToUi": "NOT_RUN", "chineseTranslation": "NOT_RUN", "accuracy": "NOT_SCORED"}

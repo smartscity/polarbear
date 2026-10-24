@@ -5,6 +5,7 @@ import ScreenCaptureKit
 
 typealias CaptionAudioCallback = @convention(c) (UnsafePointer<Float>?, Int32, UInt64) -> Void
 typealias CaptionStatusCallback = @convention(c) (Int32) -> Void
+private let captionDiscontinuityStatus: Int32 = 11
 
 @available(macOS 13.0, *)
 private final class CaptionCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
@@ -17,7 +18,8 @@ private final class CaptionCapture: NSObject, SCStreamOutput, SCStreamDelegate, 
     private var engine: AVAudioEngine?
     private var tapInstalled = false
     private var observers: [NSObjectProtocol] = []
-    private var origin = ProcessInfo.processInfo.systemUptime
+    private let hostOrigin = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+    private var audioClock = CaptionAudioClock()
     private var converter: AVAudioConverter?
     private let target = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
 
@@ -37,8 +39,10 @@ private final class CaptionCapture: NSObject, SCStreamOutput, SCStreamDelegate, 
                 let input = engine.inputNode
                 let format = input.outputFormat(forBus: 0)
                 guard format.sampleRate > 0, format.channelCount > 0 else { fail(4); return }
-                input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-                    self?.convert(buffer)
+                input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, time in
+                    guard time.isSampleTimeValid, time.isHostTimeValid else { self?.fail(captionDiscontinuityStatus); return }
+                    self?.convert(buffer, sourceSeconds: Double(time.sampleTime) / time.sampleRate,
+                                  hostSeconds: AVAudioTime.seconds(forHostTime: time.hostTime))
                 }
                 tapInstalled = true
                 try engine.start()
@@ -102,12 +106,20 @@ private final class CaptionCapture: NSObject, SCStreamOutput, SCStreamDelegate, 
         DispatchQueue.main.async { self.stop() }
     }
 
-    private func convert(_ buffer: AVAudioPCMBuffer) {
+    private func convert(_ buffer: AVAudioPCMBuffer, sourceSeconds: Double, hostSeconds: Double) {
         lock.lock()
         defer { lock.unlock() }
         guard active else { return }
-        if converter?.inputFormat != buffer.format { converter = AVAudioConverter(from: buffer.format, to: target) }
-        guard let converter else { status(4); return }
+        guard buffer.frameLength > 0 else { return }
+        guard audioClock.acceptInput(startSeconds: sourceSeconds, frameCount: buffer.frameLength,
+                                     sampleRate: buffer.format.sampleRate,
+                                     sessionOffsetSeconds: hostSeconds - hostOrigin) else {
+            active = false
+            status(captionDiscontinuityStatus)
+            return
+        }
+        if converter == nil { converter = AVAudioConverter(from: buffer.format, to: target) }
+        guard let converter, converter.inputFormat == buffer.format else { active = false; status(4); return }
         let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * 16_000 / buffer.format.sampleRate) + 32)
         guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { status(4); return }
         var supplied = false
@@ -119,11 +131,15 @@ private final class CaptionCapture: NSObject, SCStreamOutput, SCStreamDelegate, 
             return buffer
         }
         guard error == nil, let samples = output.floatChannelData?[0] else { status(4); return }
-        let elapsed = UInt64(max(0, (ProcessInfo.processInfo.systemUptime - origin) * 1000))
         var offset = 0
         while offset < Int(output.frameLength) {
             let count = min(512, Int(output.frameLength) - offset)
-            audio(samples.advanced(by: offset), Int32(count), elapsed + UInt64(offset * 1000 / 16_000))
+            guard let timestamp = audioClock.packetTimestamp(frameCount: UInt32(count)) else {
+                active = false
+                status(captionDiscontinuityStatus)
+                return
+            }
+            audio(samples.advanced(by: offset), Int32(count), timestamp)
             offset += count
         }
     }
@@ -148,7 +164,8 @@ private final class CaptionCapture: NSObject, SCStreamOutput, SCStreamDelegate, 
             blockBufferAllocator: nil, blockBufferMemoryAllocator: nil, flags: 0, blockBufferOut: &block)
         guard result == noErr,
               let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: list, deallocator: nil) else { return }
-        convert(buffer)
+        let timestamp = sampleBuffer.presentationTimeStamp.seconds
+        convert(buffer, sourceSeconds: timestamp, hostSeconds: timestamp)
     }
 }
 

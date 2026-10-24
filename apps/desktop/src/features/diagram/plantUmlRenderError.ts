@@ -1,10 +1,12 @@
 import type { Translate } from "../../shared/i18n/translate";
 import { PlantUmlRenderError } from "./plantUmlRenderer";
+import { DiagramBusyError } from "./diagramRenderQueue";
 
 export function describePlantUmlRenderError(
   error: unknown,
   t: Translate,
 ): string {
+  if (error instanceof DiagramBusyError) return t("diagram.renderBusy");
   if (error instanceof PlantUmlRenderError) {
     if (error.kind === "httpStatus") {
       return t("diagram.plantUmlServerStatus", { status: error.status ?? 0 });

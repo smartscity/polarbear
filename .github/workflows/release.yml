@@ -39,6 +39,7 @@ jobs:
     with:
       ref: ${{ inputs.release_tag || github.sha }}
       production_only: true
+      release_tag: ${{ inputs.release_tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
 
   build_macos:
     name: Build macOS DMG
@@ -65,6 +66,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
+          components: clippy,rustfmt
 
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
@@ -84,11 +86,36 @@ jobs:
       - name: Frontend tests
         run: npm --workspace apps/desktop run test
 
+      - name: Install browser test runtimes
+        run: npm exec --workspace apps/desktop -- playwright install chromium webkit
+
+      - name: Desktop behavior gate
+        run: npm --workspace apps/desktop run test:ui
+
+      - name: Bundled offline translation gate
+        run: npm --workspace apps/desktop run test:offline-translation -- --webkit
+
       - name: Native rich document paste
-        run: npm --workspace apps/desktop run test:native-clipboard
+        run: npm --workspace apps/desktop run test:native-clipboard -- test-results/real-mermaid-clipboard.json
+
+      - name: Preserve browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-desktop-browser-test-results
+          path: apps/desktop/test-results
+          if-no-files-found: ignore
 
       - name: Rust format
         run: cargo fmt --all -- --check
+
+      - name: Native correctness and lint gate
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast
+
+      - name: Memory Admin contract
+        run: npm --workspace apps/desktop run memory-contract:check
 
       - name: Resolve release metadata
         id: release_metadata
@@ -232,11 +259,15 @@ jobs:
           TAG="${RELEASE_TAG}"
 
           echo "Uploading $DMG_FILE to release $TAG"
+          NOTES="Polarbear macOS DMG release."
+          if [[ "$APP_VERSION" == *-alpha.* ]]; then
+            NOTES="Diagnostic recording preview. First-text latency above 5 seconds is advisory only for alpha releases; raw measurement failures remain in the workflow artifacts and summary. All other native, build and packaged-helper checks remain blocking. User-speech accuracy and two-hour stability are not qualified. Enable diagnostic audio explicitly in Live Caption before starting a session. Build evidence: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
 
           gh release view "$TAG" >/dev/null 2>&1 || \
             gh release create "$TAG" \
               --title "Polarbear ${APP_VERSION}" \
-              --notes "Polarbear macOS DMG release." \
+              --notes "$NOTES" \
               --draft
 
           if [[ "$APP_VERSION" == *-* ]]; then

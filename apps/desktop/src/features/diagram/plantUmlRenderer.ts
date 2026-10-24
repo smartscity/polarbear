@@ -1,6 +1,9 @@
 import { DIAGRAM_CONFIG } from "./diagramConfig";
 import { plantUmlSvgUrl } from "./plantUmlUrl";
 import { sanitizeDiagramSvg } from "./sanitizeDiagramSvg";
+import { DiagramRenderQueue } from "./diagramRenderQueue";
+
+const renderQueue = new DiagramRenderQueue(DIAGRAM_CONFIG.scheduling);
 
 export type PlantUmlRenderFailureKind =
   | "httpStatus"
@@ -31,6 +34,10 @@ export async function renderPlantUmlSvg(
   source: string,
   options: PlantUmlRenderOptions = {},
 ): Promise<string> {
+  return renderQueue.run(source, () => fetchPlantUmlSvg(source, options), options.signal);
+}
+
+async function fetchPlantUmlSvg(source: string, options: PlantUmlRenderOptions): Promise<string> {
   const abortController = new AbortController();
   let timedOut = false;
   const abortFromCaller = () => abortController.abort();

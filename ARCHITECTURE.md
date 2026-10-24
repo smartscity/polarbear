@@ -343,6 +343,40 @@ Configuration and state are deliberately separate:
 - Workspace settings, when introduced, must be explicit and portable.
 - Current document, selection, scroll position, zoom gesture state, and open dialogs are runtime state, not configuration.
 
+### Desktop Navigation and Settings Ownership
+
+- Every new main window starts in Workspace. Context is an explicit navigation
+  destination, not a saved launch preference. A selected Context tab must not
+  cause the next launch to bypass the editor.
+- `shared/settings/userSettings.ts` owns application preferences. The canonical
+  settings document takes precedence over legacy per-key preferences, including
+  explicit `system` values. Initialization applies preferences without writing
+  resolved defaults back. Storage and local change notifications synchronize
+  mounted views; system theme changes are resolved without changing preference.
+- Context project configuration is read and saved only through `projects.config`
+  and `projects.config_update` in the Memory Engine Admin API. The UI draft is
+  not authoritative: unloaded settings cannot be saved, refresh cannot discard
+  a dirty draft, and an earlier refresh cannot overwrite a newer saved response.
+  Confirmed saves are reloaded on Context remount. No Desktop database access or
+  new project-settings migration is introduced.
+- `features/workspace/recentDocuments.ts` owns a bounded, versioned history of
+  the 20 most recently opened Markdown paths and access times. Successful native
+  opens and loaded tab activations record metadata, not content or permissions.
+  Reopening uses the existing workspace adapter; stale paths stay removable and
+  show an access error. Pinning and automatic relocation are deferred.
+- `shared/ui/SettingsSection.tsx` supplies layout only. Translation preferences
+  remain in the settings store; caption capture state remains native runtime
+  state. Settings never restores an active recording at launch. Audio source
+  and presentation preferences persist independently of recording lifecycle.
+- The current Desktop file-access implementation does not provide security-scoped
+  bookmarks. Recent history does not simulate grants: sandboxed distribution and
+  file relocation require a future native bookmark adapter, not path-based bypasses.
+
+Validation: `navigation-settings.spec.ts` exercises the real App shell and feature
+components with mocked native IPC, including reload, remount, failed writes,
+cross-window preference updates, and narrow light/dark layouts. It does not prove
+native Memory Engine disk durability or macOS permission behavior.
+
 ### Next Migration Gates
 
 1. Add regression coverage around file open/save, tab close with unsaved changes, Cloud Sync, editor input, and global zoom before splitting `App.tsx` or `TyporaLiveEditor.tsx`.

@@ -1,5 +1,6 @@
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
-import { invokeTauri } from "../../shared/tauri/invokeTauri";
+import { hasTauriErrorCode, invokeTauri } from "../../shared/tauri/invokeTauri";
+import { translateCurrent } from "../../shared/i18n/translate";
 
 export type RepositoryProvider = "github" | "gitlab";
 
@@ -55,17 +56,41 @@ export async function connectRepositoryProvider(params: {
   token: string;
   baseUrl?: string;
 }): Promise<RepositoryAccount> {
-  return invokeTauri<RepositoryAccount>(TAURI_COMMANDS.repositoryConnectProvider, {
-    request: params
-  });
+  try {
+    return await invokeTauri<RepositoryAccount>(TAURI_COMMANDS.repositoryConnectProvider, {
+      request: params
+    });
+  } catch (error) {
+    throw localizedIdentityError(error);
+  }
 }
 
 export async function disconnectRepositoryProvider(): Promise<void> {
-  await invokeTauri(TAURI_COMMANDS.repositoryDisconnectProvider);
+  try {
+    await invokeTauri(TAURI_COMMANDS.repositoryDisconnectProvider);
+  } catch (error) {
+    throw localizedIdentityError(error);
+  }
 }
 
 export async function getRepositoryAccount(): Promise<RepositoryAccount | null> {
-  return invokeTauri<RepositoryAccount | null>(TAURI_COMMANDS.repositoryGetAccount);
+  try {
+    return await invokeTauri<RepositoryAccount | null>(TAURI_COMMANDS.repositoryGetAccount);
+  } catch (error) {
+    throw localizedIdentityError(error);
+  }
+}
+
+export function isRepositoryCleanupPending(error: unknown): boolean {
+  return hasTauriErrorCode(error, "repository.secretDeletionFailed") ||
+    (error instanceof Error && hasTauriErrorCode(error.cause, "repository.secretDeletionFailed"));
+}
+
+function localizedIdentityError(error: unknown): unknown {
+  for (const key of ["repository.secretDeletionFailed", "repository.secretReadFailed", "repository.secretWriteFailed"] as const) {
+    if (hasTauriErrorCode(error, key)) return new Error(translateCurrent(key), { cause: error });
+  }
+  return error;
 }
 
 export async function listRepositories(): Promise<RepositoryInfo[]> {

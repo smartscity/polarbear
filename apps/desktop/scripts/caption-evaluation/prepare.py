@@ -20,6 +20,38 @@ MODELS = {
         "files": [f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx" for part in ("encoder", "decoder", "joiner")]
         + ["tokens.txt", "README.md"],
     },
+    "zipformer-gigaspeech": {
+        "repo": "csukuangfj/sherpa-onnx-streaming-zipformer-en-2023-06-21",
+        "revision": "9a65b6ea94c311ca770c2bf895b30f456a22d703",
+        "files": ["encoder-epoch-99-avg-1.int8.onnx", "decoder-epoch-99-avg-1.onnx",
+                  "joiner-epoch-99-avg-1.int8.onnx", "tokens.txt", "README.md"],
+    },
+    "zipformer-gigaspeech-fp32": {
+        "repo": "csukuangfj/sherpa-onnx-streaming-zipformer-en-2023-06-21",
+        "revision": "9a65b6ea94c311ca770c2bf895b30f456a22d703",
+        "files": [f"{part}-epoch-99-avg-1.onnx" for part in ("encoder", "decoder", "joiner")]
+        + ["tokens.txt", "README.md"],
+    },
+    "nemotron-streaming": {
+        "repo": "csukuangfj2/sherpa-onnx-nemotron-speech-streaming-en-0.6b-560ms-int8-2026-04-25",
+        "revision": "52056fdc070914a48dcd68b31b44d6a6f5b85902",
+        "files": ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt", "README.md"],
+        "license": "NVIDIA Open Model License; redistribution requires the agreement and attribution",
+        "licenseUrl": "https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/",
+    },
+}
+
+STREAMING_COMPONENTS = {
+    "zipformer": {part: f"{part}-epoch-99-avg-1-chunk-16-left-128.int8.onnx"
+                  for part in ("encoder", "decoder", "joiner")},
+    "zipformer-gigaspeech": {
+        "encoder": "encoder-epoch-99-avg-1.int8.onnx",
+        "decoder": "decoder-epoch-99-avg-1.onnx",
+        "joiner": "joiner-epoch-99-avg-1.int8.onnx",
+    },
+    "zipformer-gigaspeech-fp32": {part: f"{part}-epoch-99-avg-1.onnx"
+                                 for part in ("encoder", "decoder", "joiner")},
+    "nemotron-streaming": {part: f"{part}.int8.onnx" for part in ("encoder", "decoder", "joiner")},
 }
 
 MODEL_SHA256 = {
@@ -29,22 +61,40 @@ MODEL_SHA256 = {
     "zipformer/encoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx": "563fde436d16cf7607cf408cd6b30909819d03162652ef389c2450ced3f45ac1",
     "zipformer/decoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx": "98da299f471e38bb4e1a8df579b8cc9122d6039576a77e357b3c60f17dd83b02",
     "zipformer/joiner-epoch-99-avg-1-chunk-16-left-128.int8.onnx": "d944208d660d67c8d72cd2acaeac971fa5ceb8c80e76c1968148846fedd6e297",
+    "zipformer-gigaspeech/encoder-epoch-99-avg-1.int8.onnx": "32c98281c7bd8b63e3e142d007251b37f120572e8fdea9a4f5a79ce22b10ec4f",
+    "zipformer-gigaspeech/decoder-epoch-99-avg-1.onnx": "9da02b77cb08826756ec6a88635f35a40374e4164e7c6359121a9145958a6ceb",
+    "zipformer-gigaspeech/joiner-epoch-99-avg-1.int8.onnx": "831477d390e59a61f1b6a6f763b9903e6c6366ff6034f1ddba613be82637122f",
+    "zipformer-gigaspeech-fp32/encoder-epoch-99-avg-1.onnx": "b584884daad8cd4e60a5258e6da11876460089f1c4d3b5a92e19f0f104edb77a",
+    "zipformer-gigaspeech-fp32/decoder-epoch-99-avg-1.onnx": "9da02b77cb08826756ec6a88635f35a40374e4164e7c6359121a9145958a6ceb",
+    "zipformer-gigaspeech-fp32/joiner-epoch-99-avg-1.onnx": "bd5c26ad6a41cbd90c2cfa239c0b55b145af878ce1d79b4739d90f8be93359ba",
+    "nemotron-streaming/encoder.int8.onnx": "7d932213491ad355c6e5576705dc3494731a52af87d7a1b954559340147909d8",
+    "nemotron-streaming/decoder.int8.onnx": "0be9702c2f427a2b6bb241d298e0d3836a558de1f5b9fd3018f1cce6e2b3fa98",
+    "nemotron-streaming/joiner.int8.onnx": "a35eac38a22ebceb04d230ed7afe0d68f446ba6914a036b97f14fece95967e23",
 }
 METADATA_GIT_BLOBS = {
     "parakeet/tokens.txt": "f0742785f6073e80b911964c455b05f3609bf23b",
     "parakeet/README.md": "8f4438d2a6e332f6ec5a107421451e422089d33a",
     "zipformer/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
     "zipformer/README.md": "cb864962f371aa02e5716610cf4afc480b166a16",
+    "zipformer-gigaspeech/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
+    "zipformer-gigaspeech/README.md": "86afdd83874fab34d83100550b208e7c0ceceb54",
+    "zipformer-gigaspeech-fp32/tokens.txt": "b4d1bf82e68de1354f2a3f5fd51094d61d65c77c",
+    "zipformer-gigaspeech-fp32/README.md": "86afdd83874fab34d83100550b208e7c0ceceb54",
+    "nemotron-streaming/tokens.txt": "50918f5e313e1cf846cf77dfd5b4489c9c7f0b76",
+    "nemotron-streaming/README.md": "90194c482dc9c3bca5268a9715be0087b4ddc293",
 }
 
 
 def verify_model(name, path):
+    key = f"{name}/{path.name}"
+    expected = MODEL_SHA256.get(key)
+    expected_blob = METADATA_GIT_BLOBS.get(key)
+    if not expected and not expected_blob:
+        raise ValueError(f"Unpinned model asset: {key}")
     with path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
-    expected = MODEL_SHA256.get(f"{name}/{path.name}")
     if expected and digest != expected:
         raise ValueError(f"Publisher SHA-256 mismatch: {name}/{path.name}")
-    expected_blob = METADATA_GIT_BLOBS.get(f"{name}/{path.name}")
     if expected_blob:
         data = path.read_bytes()
         blob = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
@@ -65,10 +115,8 @@ def main():
         return
     manifest = args.directory / "assets.json"
     evidence = json.loads(manifest.read_text()) if manifest.exists() else []
-    for name in ("zipformer", "parakeet"):
+    for name in (args.model,) if args.model else ("zipformer", "parakeet"):
         model = MODELS[name]
-        if args.model and args.model != name:
-            continue
         directory = args.directory / name
         directory.mkdir(exist_ok=True)
         for filename in model["files"]:

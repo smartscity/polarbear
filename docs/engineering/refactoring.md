@@ -1,0 +1,454 @@
+# Refactoring Report
+
+## Workspace Mutation and Diagram Admission Follow-up
+
+Base: `a2e0b32a899a1fffe73827166687bdeff6abd59e`. This slice keeps the existing
+document-session, renderer, native command and translation-resource boundaries.
+
+| Concern | Decision / owner | Compatibility |
+| --- | --- | --- |
+| Move/rename versus saves, repeated actions and old reads | `WorkspacePathMutations` admits one session path operation; `useDocumentSession` coordinates existing actions and invalidates navigation/read leases. Saves, Save As, close, replacement workspace loads and conflicting path operations report busy rather than racing. | Typing remains allowed during move/rename. No new persistent state or command IDs. Other-workspace document opens remain possible. |
+| Cross-workspace path remapping | Preserve document IDs, buffers, revisions, dirty flags and editor history; change root-qualified relative-path metadata only. | Opaque IDs and same-named documents in another workspace are not rewritten. |
+| UI/native consumers of identity | AppShell receives a separate active path and root-qualified dirty-path projection; image adapters receive the active document root/path rather than opaque ID. | Tab IDs remain stable; renamed documents retain visible dirty markers and place images beside the current Markdown file. |
+| Disk commit followed by failed tree refresh | Apply native acknowledgment immediately; project the moved subtree and update recent-document metadata before fetching the authoritative tree. | A failed refresh reports partial success, not a failed disk mutation or rollback. Recent timestamps remain intact; duplicates collapse through the existing store. |
+| Old tree/revision notifications | Tree requests capture a mutation generation; late missing-file callbacks verify current document identity. | Polling and native command contracts remain unchanged. |
+| Native save versus directory rename | `workspace_io` owns a process-wide read/write lifecycle lock: saves take shared access before resolving their destination; rename/move take exclusive access before resolving source/target. Existing per-file save locks and macOS save coordination remain. | Covers application windows and descendant saves, not uncooperative external processes. Lock order is lifecycle, then per-file, then macOS save coordination. |
+| Destination creation between exists-check and rename | `rename_exclusive` uses OS no-replace publication; no copy/delete fallback. | macOS `RENAME_EXCL`, Linux `RENAME_NOREPLACE`, Windows `MoveFileExW` without replacement. Unsupported filesystems/platforms fail closed. Cross-volume moves remain unsupported. |
+| Renderer-internal task accumulation | Shared `DiagramRenderQueue` policy at each renderer entry, also covering Mermaid validation and clipboard callers. | One active renderer call, at most 16 waiting calls and 1,000,000 retained source code units per renderer. Overload is a retryable localized error; Markdown is retained. |
+| Cache and preview lifecycle | Pending cache has count/source bounds and consumer leases; widget destruction and React effect cleanup cancel ownership. | A shared render is cancelled only when its last cancellable consumer leaves. A cancelled active Mermaid call keeps its slot until the engine actually settles. |
+
+### Boundaries Deliberately Retained
+
+- This is a window-local scheduler, not a Worker or an interruptible Mermaid
+  runtime. One pathological renderer call can still block its own window. The
+  queue bounds admitted work; it does not establish a CPU or render-time SLA.
+- PlantUML remains remote only after the existing explicit source consent. No
+  new network path, model, framework or dependency was introduced.
+- Create/delete/duplicate actions share admission with move/rename. Their full
+  async buffer/projection redesign is not claimed by these move/rename tests.
+  Deletion during subsequent typing and repository sync racing native directory
+  changes still require separate characterization.
+- Markdown links are not automatically rewritten by a path change. Multi-window
+  settings arbitration, hostile ancestor replacement, real Windows/Linux native
+  execution, installed AppKit acceptance and ASR qualification remain explicit.
+- Windows no-replace behavior follows the documented
+  [MoveFileExW flags](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw).
+  Local macOS tests do not claim Windows execution.
+
+### Test-first Record
+
+The initial three browser regressions failed on the original implementation:
+save still wrote the source path during rename/move, and a second path mutation
+reached native IO. The cache cancellation tests then timed out against the old
+cache. New queue/tree-generation APIs initially failed import/member checks;
+those failures specify new contracts, not independently reproduced old races.
+An intermediate browser fixture incorrectly returned the renamed file in every
+workspace; it was corrected to model each root, rather than counted as a product
+failure. Final commands and results are recorded in `verification.md`.
+
+The real-App regression also failed before correcting the consumers: the renamed
+tree item had no dirty marker, and image paste sent `/test::Original.md` instead
+of `Renamed.md`. A temporary missing App destructuring field was caught by both
+typecheck and this regression and fixed before the final verification run.
+
+Final validation also reproduced a protocol-test flake: the Node child process
+was killed by a three-second test-only deadline before its first handshake.
+A deterministic fake-clock regression now separates host bootstrap allowance
+from real-engine latency gates. Only the healthy synthetic protocol fixture
+budget changes; production timeouts and ASR release thresholds are untouched.
+
+Rollback: revert this slice's source/tests without migrating Markdown or settings.
+Already completed filesystem moves are real user actions and must not be reversed
+by a code rollback. Existing recent entries use the unchanged path/time schema.
+
+Date: 2026-10-24. Base `166e231c61dc568876aab8dbebdb6636a2c281ae`;
+implementation `2747dc36d2a0cb559ba7e33415118597c711b96f`.
+
+## Ownership Changes
+
+```text
+App / Memory source navigation
+  -> existing revision-aware reloadDocumentFromDisk
+  -> DocumentReadRequests + Workspace adapter
+  -> native document IO
+
+App / repository UI
+  -> useRepositoryIdentity (workspace generation + update revision)
+  -> existing repositoryApi
+  -> native account and binding storage
+
+TablePreviewWidget
+  -> tableInteractionDom (owned layout frame)
+  -> tableMenuLifecycle (owned portal, focus frame, outside/blur listeners)
+
+Native commands
+  -> workspace_paths (existing path policy)
+  -> existing document save / filesystem implementation
+```
+
+There is no new global store, event bus, state-machine framework, repository
+abstraction, persistence schema, dependency, or alternate editor model.
+
+## Changes and Compatibility
+
+| Files | Before / after | Compatibility |
+| --- | --- | --- |
+| `apps/desktop/src/App.tsx`; `features/repository/useRepositoryIdentity.ts` | App's unguarded refresh moves into an owner-scoped feature hook. Workspace identity and revision invalidate obsolete results; the visible binding clears immediately on workspace change. | Native credentials, bindings and provider APIs unchanged. Account is a projection, not a second credential store. Running native requests are not forcibly aborted; obsolete UI completions are discarded. |
+| `App::openMemorySource`; `tests/browser/navigation-settings.spec.ts` | Direct document/revision writes after IO now reuse the existing guarded reload. | Selection proceeds only after a current reload; concurrent edits retain the existing explicit conflict flow. Close/reopen semantics remain. |
+| `features/editor/table/tableInteractionDom.ts` | Initial layout uses the same cancellable scheduler as later layouts. | No geometry, resize, width persistence, Markdown or transaction rule changed. |
+| `features/editor/table/tableMenuLifecycle.ts`; `components/TyporaLiveEditor.tsx` | Three duplicated delayed listener-registration/cleanup blocks become one feature-local lifecycle; widget destruction closes its portals. | Existing menu contents, commands, focus behavior and positioning retained. Cleanup is idempotent and does not focus a destroyed owner. |
+| `src-tauri/src/workspace_paths.rs`; `main.rs` | Path/name policy moves without algorithm changes, with new characterization tests. | Existing errors, lexical path handling, root aliases and canonical containment preserved. No IPC/persistence change. |
+| `live_caption/runtime_tests.rs`; `runtime.rs` | Unchanged test cases move below a dedicated test-module boundary. | No inference, audio, session, recording, translation, or release threshold change. |
+| `save_regression_tests.rs`; `vocab_bridge.rs`; `vocab_outbox.rs` | Existing fixture unwrap/expect usage receives narrowly scoped allowances consistent with existing tests. | Production lint prohibition retained; no assertion removed or weakened. |
+| `scripts/architecture-graph.mjs`, its Node tests, `package.json` | Adds dependency diagnostics and automatic reverse-boundary/cycle checks to the existing test command. | No new tooling dependency. Current known reader-core alias explicitly resolved. |
+| `.github/workflows/quality.yml`, `release.yml` | Adds all-target native lint and release-local browser/native/translation/contract gates. | Existing alpha-only first-text advisory policy remains unchanged. No runtime or package format change. |
+
+## Test-First Evidence
+
+- Memory concurrent typing regression failed against the old direct-write path,
+  then passed through the existing document reload owner. Closed-source and
+  unchanged-source cases also pass; the closed-source case was protective
+  coverage rather than an independently reproduced old failure.
+- Immediate table disposal retained one RAF before the scheduler fix. Early
+  menu close retained one pointer listener before synchronous registration and
+  cancellable focus. Both now retain zero; mode-switch portal cleanup passes.
+- Path-policy characterization tests passed before and after extraction.
+- Repository hook tests were authored before the extracted module existed; that
+  initial import failure is **not** proof of the old race. The old unguarded
+  completion is established by source inspection; four post-change tests prove
+  the new owner's workspace/error/disconnect behavior.
+- Full Desktop browser and native regression followed the targeted checks.
+  Exact counts, failures and scope are in [verification](verification.md).
+
+## Removed Duplication and Retained Debt
+
+Removed: the competing Memory direct-load/write path, App's repository-refresh
+effect, and three copies of table portal listener lifecycle. No public command,
+setting, locale key, serialized field, native entry point, or data file was
+deleted. No user data migration is needed.
+
+The App, editor and Rust entry files remain large. This change establishes real
+ownership boundaries but does not meet the eventual goal of a composition-only
+App or bootstrap-only main. Repository push/pull orchestration, document session
+composition, table cell editing, and several native DTO/IO responsibilities
+still need independent fault-tested refactors. File-size reduction alone is not
+the acceptance criterion.
+
+No old fallback was removed merely because static search found no caller.
+Feature public-API consolidation is still incomplete; the 21 cross-feature
+edges are visible in the graph report rather than hidden behind a giant barrel.
+
+## Rollback
+
+The implementation commit can be reverted as a unit on a follow-up branch;
+there is no persistent migration to reverse. Do not reset unrelated changes or
+rewrite published history. A rollback would restore the documented Memory and
+table races and must not be presented as a correctness fix. The native path
+module extraction may be reverted separately if necessary without data changes.
+
+## Credential and Navigation Boundary Follow-up
+
+The next slice starts from `ad33ca4` and is implemented in `e1fd7c08b0bd8102e97c0b57764a9f17869b2cf2`. It addresses ENG-09 and the deletion portion
+of ENG-10, without changing account files, bindings, command names or arguments.
+See [verification](verification.md#boundary-hardening-follow-up) for its commit
+identity and measured results.
+
+| Problem | Pattern decision | Implementation owner |
+| --- | --- | --- |
+| Keychain failures need deterministic fault injection and complete cleanup attempts | Reuse the existing `SecretStore` adapter; no new repository framework | `secret_store::delete_repository_secrets_using` attempts both providers and fallback cleanup before deciding success. No rollback restores a deleted credential. |
+| Native rejection must not be mistaken for browser availability | Explicit environment selection in the existing adapter, not exception-driven fallback | `shared/tauri/openExternalUrl.ts` chooses Tauri or browser before launching and consumes UI-action failures with localized feedback. |
+| Native URL validation and launcher outcomes must be independently testable | Small native platform module, not more policy in main | `external_url.rs` validates HTTP(S), host and absence of embedded credentials/control characters; checks Unix launcher exits and uses a URL argument to ShellExecuteW on Windows. |
+
+The disconnect IPC still returns `Result<(), String>`; deletion failures now use
+the existing JSON error-envelope convention with `repository.secretDeletionFailed`.
+The feature adapter maps that code to the active locale. The existing App catch
+path reports failure without clearing identity or announcing success. Partial
+cleanup is not an atomic cross-store transaction; retries remove remaining
+entries and do not restore credentials already removed.
+
+`openExternalUrl` remains a UI action returning `Promise<void>`. All existing
+callers, including the uncommitted Feedback entry, share its error handling.
+Native failures never invoke a browser fallback. Browser mode opens only a new
+noopener/noreferrer target; a null return never redirects the editing window.
+Because noopener can return null even on success, this is not a reliable popup
+blocker detector. Malformed links, non-HTTP(S) schemes, backslashes/control
+characters and embedded credentials are deliberately rejected. URL normalization
+preserves query/fragment semantics. No Markdown content is rewritten.
+
+Windows no longer passes URLs through `cmd /C start`. The isolated FFI adapter
+uses the documented [ShellExecuteW contract](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew).
+Its return-code policy is unit tested; a macOS pass does not establish Windows
+compilation or real browser-association acceptance. No dependency was added.
+
+## Restart-safe Credential Cleanup
+
+This slice starts from `4fe099f`. The old restart path deleted account metadata
+as soon as the active provider's token was missing. After partial disconnect,
+that could hide a remaining credential in another store and remove the retry
+action. A Keychain read error also looked like a missing credential.
+
+| Concern | Pattern decision | Owner |
+| --- | --- | --- |
+| Disconnect spans stores that cannot share a transaction | Persistent intent / forward recovery, not rollback | `repository_identity.rs::DisconnectJournal` owns pending intent and completion ordering. |
+| Reads, reconnects and cleanup must not interleave inside the application | Reuse the native adapter boundary with one process-wide lifecycle mutex | `repository_identity.rs` guards metadata, token acquisition and credential persistence across windows. |
+| The entry file mixes identity rules, persistence and provider HTTP calls | Extract the identity lifecycle, not arbitrary file fragments | DTO, provider validation, metadata access, token access, verified persistence and recovery leave `main.rs`; provider HTTP and push/pull remain there. |
+| Restart errors need a usable action without claiming authentication | Extend the existing feature projection and Command state | `useRepositoryIdentity` exposes cleanup pending; only the existing disconnect command is enabled. Native menu and command resolver share it. |
+
+### Persistence and Completion Contract
+
+`repository-disconnect.pending` is an additive, secret-free intent file in the
+existing application config directory. Its presence means cleanup is incomplete;
+`1\n` identifies the current writer, but even an interrupted empty marker must
+be treated as pending. Non-file markers and filesystem access errors fail closed.
+Existing account JSON fields, binding storage and IPC command signatures remain
+compatible. No credential is copied into the marker.
+
+1. Create and sync intent before touching credentials; sync the parent on Unix.
+2. Attempt GitHub, GitLab and debug-fallback deletion using the existing adapter.
+3. Only after all succeed, remove account metadata and sync its parent.
+4. Remove intent last. Success means all stores and account metadata were cleared.
+
+Every account refresh with pending intent makes one bounded recovery attempt,
+including after metadata has already disappeared. Failure retains intent and
+returns `repository.secretDeletionFailed`; there is no retry timer. Missing
+active credentials in a legacy account also trigger complete cleanup before
+metadata is hidden. An actual read error uses `repository.secretReadFailed` and
+preserves account metadata rather than starting deletion. Release builds still
+never read the debug plaintext fallback. Both messages are localized by the
+existing feature adapter.
+
+Fallback-file cleanup now calls removal directly and accepts only `NotFound` as
+absence. A real inaccessible-directory fixture reproduced the old false-success
+behavior of `exists()`. Debug fallback reads likewise preserve access failures.
+This does not yet change the fallback's creation-time permission policy.
+
+The same marker blocks new token acquisition and reconnect persistence. Existing
+in-flight HTTP requests that already hold a token are not remotely revoked.
+The mutex coordinates windows in the existing single-instance desktop process,
+not independent binaries accessing one config directory. Pending cleanup is not
+an authenticated account; the UI does not persist another copy of that fact.
+Account retrieval and disconnect run on the existing blocking task executor.
+
+### Compatibility and Rollback
+
+No existing data requires bulk migration. Legacy partial cleanup is recoverable
+when account metadata still exists; already orphaned credentials with neither
+metadata nor intent cannot be inferred safely. Recovery retries are idempotent
+and never restore deleted secrets. Complete pending cleanup before downgrading
+to an older binary that does not understand the marker. Do not delete the marker
+to conceal a failed cleanup. Windows durability/Keychain behavior and real OS
+denial prompts still require platform acceptance; directory sync is Unix-only.
+
+This is one core-owner extraction, not completion of all decomposition. Provider
+HTTP, sync orchestration, editor composition and document-session state remain
+separate follow-up slices with their own fault-test requirements.
+
+## Private Credential Publication and Native Repository Ownership
+
+This follow-up starts from `358d0b2`. It changes debug credential-file publication
+and separates the native repository owners; it does not change editor behavior,
+ASR, language resources, binding schemas or public command identifiers.
+
+### Design and Responsibility
+
+| Concern | Owner and decision |
+| --- | --- |
+| Credential file lifecycle | `secret_store/credential_file.rs`, a private filesystem adapter used by the existing Keychain-first store; no general persistence framework. |
+| Crash-safe publication | A fresh exclusive sibling file is private before the first credential byte, then synced and atomically renamed. A failed pre-publication write preserves the old file. |
+| macOS inherited access grants | Empty the temporary file's extended ACL before writing. Mode 0600 alone does not revoke inherited macOS grants. ACL setup failure aborts publication. |
+| Non-POSIX debug builds | Require the system credential store rather than claiming a POSIX mode secures a Windows ACL. Release behavior remains Keychain-only. |
+| DTO and stored binding schema | `repository/model.rs` is the canonical Rust owner, also consumed by `cloud_sync_store.rs`; JSON names and legacy defaults are unchanged. |
+| Sync path and manifest rules | `repository/policy.rs` owns pure filtering, digest, change-count and path mapping. |
+| Local snapshots and outbox | `repository/store.rs` composes existing SQLite operations and filesystem scanning. It does not own credentials. |
+| Provider protocol | `repository/provider.rs` owns GitHub/GitLab HTTP models and requests. Existing timeouts, error strings, incremental compare limits and upload semantics remain unchanged. |
+| Progress delivery | `repository/progress.rs` composes the existing Tauri event and durable run-event append. |
+| Command orchestration | `repository/mod.rs` owns connect/link/status/push/pull/sync execution. Main only registers the same ten command names. |
+| Shared native helpers | `app_paths.rs` owns the existing config directory resolution; unconditional document-byte publication stays in `document_save.rs`, reusing its existing transaction. |
+
+No dependency, alternate credential database, generic Repository trait, global
+event bus or public IPC version was introduced. The private writer deliberately
+does not reuse the document saver: document saving preserves original metadata,
+while a credential must not inherit a legacy file's permissive mode or ACL.
+
+### Security and Recovery Contract
+
+- Existing `repository-secrets.json` and its map keys remain compatible on Unix.
+  Symlink/non-file targets are rejected; atomic replacement never mutates an old
+  hard-linked inode. Reads use `O_NOFOLLOW` and reject nonregular files.
+- Fresh files are created with 0600 before content, including under umask 000.
+  macOS inherited ACL grants are removed before content. Linux relies on POSIX
+  creation-mode masking; Linux runtime acceptance has not been performed here.
+- Normal failure removes unpublished staging. Disconnect also removes precisely
+  named UUID staging files left by a crash, without glob-deleting unrelated files.
+  Any failed deletion remains a failure of the existing durable cleanup journal.
+- A directory-sync failure after rename is reported, but the new credential may
+  already be published. Retry is safe; an error is not a guarantee of rollback.
+- Secure-write failures use `repository.secretWriteFailed` at the native store
+  boundary. The existing connection adapter localizes the code in both resource
+  files and preserves its cause, without exposing raw filesystem diagnostics or
+  acknowledging a completed connection. Unrelated provider errors are unchanged.
+- This is debug-only plaintext hardening, not encryption. It does not revoke
+  historical copies or defeat another process running as the same user/root.
+  The existing identity mutex owns concurrent operations in the single Desktop
+  process. Power-loss and independent-binary concurrent writers are not proven.
+
+### CI Trigger Correction
+
+GitHub returned zero workflow runs for `358d0b20b37f8bbb199e6b4dc6e35442baa13ecc`.
+Quality previously listened only to `main` pushes and PRs, so pushing the current
+`codex/caption-streaming` branch did not mean CI had run. Quality now also listens
+to `codex/**` pushes. Tests protect that trigger, the unchanged native command
+registration and the new contract boundary. No release tag or DMG is implied by
+a branch quality run; release gates and the alpha latency policy are untouched.
+
+The first triggered run also exposed a separate clean-job prerequisite:
+`custom-protocol`, enabled by all-feature Clippy, embeds `frontendDist`. The
+independent native job did not build that directory, although a developer's
+checkout could already contain it. The native job now sets up Node, installs
+locked dependencies and builds the real Desktop frontend before Clippy. A
+test-first workflow ordering assertion protects this dependency; no empty asset
+placeholder, reduced feature set or disabled lint substitutes for the build.
+
+### Verification and Remaining Ownership
+
+New symlink and hard-link tests failed against the previous writer before the
+fix. Five protocol/schema/manifest/scan/HTTP-diagnostic characterization tests
+passed before and after extraction. The inherited-ACL fixture verifies actual
+ACL inheritance rather than relying on a displayed principal name, which may be
+a UUID under sandboxed account lookup. See [verification](verification.md) for
+the final local counts and limits.
+
+The native entry point no longer owns repository protocols or sync algorithms.
+This is not a claim that App's document session, repository dialogs, or editor
+widgets have become composition-only. Those remain independent work, along with
+measured diagram admission policy, cross-window settings contention, license
+ownership and physical-device/packaged acceptance. Reverting publication
+hardening would restore a confirmed secret-exposure path; it is not a safe
+rollback strategy. The module extraction alone needs no data migration.
+
+## App Repository Workflow and Live Editor Ownership
+
+Scope: move the existing repository UI workflow out of App and separate live
+Markdown scanning, decorations and widget behavior from the React editor host.
+Document buffers, save/navigation owners, native repository contracts, table
+commands, table layout history and Markdown persistence retain their owners.
+
+| Responsibility | Owner and contract |
+| --- | --- |
+| Account projection and cleanup recovery | Existing `useRepositoryIdentity`; no second account store. |
+| Repository dialogs, operation status and async actions | Feature workflow hook; App supplies workspace open, save-before-sync and reload-after-download operations. |
+| Repository dialog presentation | Feature dialog host composed from existing dialogs; no duplicate UI. |
+| Preview block source ranges | Pure Markdown scanner; it does not create DOM or execute commands. Ordinary fenced code is opaque to block scanning. |
+| CodeMirror decoration policy | Editor extension; selects source versus widget without owning persisted content. |
+| Table DOM and editing bridge | Existing table feature, reusing command execution, interaction state, menu disposal and layout transactions. |
+| Other block DOM | Editor widgets, reusing asset resolution and block DOM helpers. |
+| React host | Editor instance, props, extension composition, viewport and debug lifecycle. |
+
+| Problem | Pattern decision | Reason |
+| --- | --- | --- |
+| Repository actions and dialogs share feature state | Reuse Hook as a feature facade | Preserve React state and the identity hook; no ViewModel class or global store. |
+| Sync requires document operations | Explicit callback ports | Repository workflow cannot mutate App's document maps or bypass the existing save/reload guards. |
+| Block detection mixed with DOM | Pure scanner plus existing Widget adapter | Test source ranges independently and keep Markdown authoritative. |
+| Variant preview rendering | Existing widget factory | No plugin registry or new event bus for a fixed set of supported blocks. |
+
+Before extraction, browser cases characterize connection failure/retry, empty
+repository results, status failures, mixed block source preservation and table
+portal disposal. A code-fence regression checks that embedded Markdown examples
+cannot become interactive document blocks. Existing save/reload, identity,
+table history, clipboard and diagram suites remain mandatory. No changed IPC,
+data migration, cloud request policy or ASR work is part of this batch.
+
+### Implemented Boundaries and Review
+
+`useRepositoryWorkflow` owns repository UI state and composes the existing
+identity/progress hooks. `RepositoryWorkflowDialogs` renders the existing dialog
+components. App supplies document save/reload and workspace opening callbacks;
+no feature reaches into its document maps. The hook is not a credential store.
+
+`previewBlocks.ts` owns deterministic source ranges and IDs. The existing
+decoration policy is in `liveMarkdownDecorations.ts`; ordinary block DOM is in
+`widgets/blockPreviewWidgets.ts`, and table DOM/editing is in
+`table/tablePreviewWidget.ts`. Table editing still delegates to the existing
+command, layout, clipboard, interaction and menu-lifetime modules. Moved table
+and ordinary block function bodies were compared with the original source and
+are unchanged apart from exports/imports. No alternative Markdown model exists.
+
+The status-read regression exposed a separate obsolete-completion path beyond
+the existing identity hook: an A response reopened a dialog while B was active.
+The workflow now checks a workspace-lifetime token before applying context/status
+reads and their errors. A workspace change releases the old status-query busy
+projection, but does not release an active native sync lock. Current status reads
+also clear their transient busy indicator on completion. This is UI ownership,
+not cancellation or rollback of native IO, and not proof that every connect/link
+mutation race has been qualified.
+
+Review outcome: React composition and CodeMirror/DOM behavior have distinct
+owners without new dependency packages, global stores, event buses or protocol
+versions. App's document-session/zoom coordination and the table widget's internal
+size remain follow-up boundaries; moving code does not prove a performance gain.
+
+## Document Session, Zoom and Table Interaction Ownership
+
+The next slice keeps the current Markdown, IPC, settings and command contracts.
+The document session owns buffers, revisions, tab identity, dirty markers, read
+permissions and save/navigation lifetimes. App consumes snapshots and semantic
+actions; it must not mutate those collections. Workspace file operations remain
+inside this owner because they remap those same identities. Repository and Memory
+features receive explicit document operations, not setters or a second store.
+
+Zoom owns canvas references, transforms, gesture frames, settle timers, native
+subscriptions and scroll locks. It receives the editor reference and a status
+callback; document replacement requests viewport reconciliation through an
+explicit callback. Reset supersedes queued gesture work. Disposing the owner
+must release subscriptions, frames and timers.
+
+Table composition delegates cell input, menus, widths and transaction/focus
+restoration to table-local modules. Commands and layout history retain their
+existing owners. Post-transaction focus queries must be scoped to the originating
+EditorView, never a document-global table offset.
+
+| Problem | Pattern decision | Rationale |
+| --- | --- | --- |
+| Document state transitions spread through App | Feature session facade with semantic actions | One owner of existing state; no parallel global store or ViewModel class. |
+| Gesture and viewport lifetime mixed with document IO | Dedicated React lifecycle hook | Reuse zoom policies and native adapter; explicit editor/status ports. |
+| Table DOM, menus and transactions coupled | Local composition and transaction adapter | Keep command/model pure and scope focus to the owning editor. |
+| Delayed save/close completion | Current-session completion checks | Preserve navigation and newly opened tabs; do not claim cancellation of native writes. |
+
+Test-first acceptance covers delayed Save As across a document switch, closing
+after a new tab opens, Reset while a gesture is queued and duplicate table
+offsets across editor instances. Existing save/reload, table undo/width, menu
+disposal, clipboard and full browser suites remain required. No benchmark,
+new format, data migration, ASR work, tag or release is included in this slice.
+
+### Implementation and Review
+
+- `features/workspace/useDocumentSession.ts` owns document collections, native
+  read/save lifetimes, workspace identity remapping, and create/rename/conflict
+  dialog state. It exposes snapshots and semantic actions, not collection
+  setters. App supplies status, workspace-surface activation, empty-session
+  notification and viewport-reconciliation callbacks. Repository sync and Memory
+  source navigation reuse these actions rather than introducing another store.
+- `features/zoom/useAppZoom.ts` owns canvas transforms and all gesture resources.
+  `editorPointerPosition.ts` contains the existing hit-test fallback. Reset
+  cancels queued gesture frames, settling and scroll-unlock work before applying
+  its transform. Native subscriptions use stable callbacks with current locale;
+  language changes do not reinitialize native WebView zoom. The adapter releases
+  late registrations and contains asynchronous unlisten failures after disposal.
+- `tablePreviewWidget.ts` composes the existing DOM. `tableCellEditing.ts` owns
+  cell input/navigation, `tableWidgetMenus.ts` owns menu presentation,
+  `tableColumnSizing.ts` owns width projection, and `tableWidgetClipboard.ts`
+  owns clipboard representations. `tableWidgetTransactions.ts` is the shared
+  mutation/focus bridge for cell and structural edits. It preserves existing
+  history annotations, scroll restoration and width effects.
+- Table focus restoration captures the originating EditorView before widget
+  replacement, queries only that editor, and stops retrying after document change
+  or teardown. Two editors with identical source offsets no longer compete.
+- Save As updates an inactive document's identity without activating it or
+  replacing the current workspace. Delayed close computes remaining tabs from
+  current session state, preserving documents opened while confirmation was pending.
+
+No protocol, storage migration, formatting policy, table syntax or model engine
+changed. App still coordinates view/editor commands and image insertion. The
+session and zoom hooks remain substantial; further splitting should follow
+tested state ownership, not arbitrary file-size thresholds. Rename/move/delete
+concurrency and measured editor performance remain separate audit work.

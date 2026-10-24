@@ -1,6 +1,8 @@
 import type { ExecuteAppCommand } from "../../shared/commands/appCommandTypes";
 import type { WorkspaceItem } from "../../features/workspace/workspaceModel";
+import type { DocumentOpenResult } from "../../features/workspace/documentNavigation";
 import { FileTree } from "../../features/workspace/components/FileTree";
+import { RecentDocuments } from "../../features/workspace/components/RecentDocuments";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 
 type SidebarProps = {
@@ -18,6 +20,7 @@ type SidebarProps = {
   onRenameCancel: () => void;
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectFile: (fileId: string) => void;
+  onOpenRecent: (path: string) => Promise<DocumentOpenResult>;
   onSelectTreeItem: (itemId: string) => void;
 };
 
@@ -27,6 +30,7 @@ export function Sidebar({
   dirtyFileIds,
   folderRevealRequest,
   sidebarOpen,
+  statusMessage,
   workspaceRoot,
   workspaceItems,
   executeCommand,
@@ -35,6 +39,7 @@ export function Sidebar({
   onRenameCancel,
   onRenameConfirm,
   onSelectFile,
+  onOpenRecent,
   onSelectTreeItem
 }: SidebarProps) {
   const { t } = useI18n();
@@ -58,6 +63,8 @@ export function Sidebar({
         onSelectTreeItem={onSelectTreeItem}
       />
       <div className="sidebar-bottom">
+        {statusMessage && <p className="workspace-status" role="status">{statusMessage}</p>}
+        <RecentDocuments onOpen={onOpenRecent} />
         <span className="workspace-path" title={workspaceRoot}>
           {workspaceRoot || ""}
         </span>

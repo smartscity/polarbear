@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ContextSessionLifetime } from "./contextSessionLifetime";
 import { errorMessage } from "../../../shared/tauri/invokeTauri";
 import type {
   AgentIntegrationStatus,
@@ -54,35 +55,24 @@ export function useContextOsSession(workspaceRoot: string) {
   const [knowledgeSearch, setKnowledgeSearch] = useState<KnowledgeSearchResponse | null>(null);
   const [longMemoryAvailable, setLongMemoryAvailable] = useState(false);
   const searchRequestGateRef = useRef(new KnowledgeSearchRequestGate());
+  const refreshSequence = useRef(0);
+  const configRevision = useRef(0);
+  const lifetime = useMemo(() => new ContextSessionLifetime(workspaceRoot), [workspaceRoot]);
 
   const refresh = useCallback(async () => {
+    const isCurrent = lifetime.current();
+    if (!workspaceRoot || !isCurrent()) return;
+    const sequence = ++refreshSequence.current;
+    const revision = configRevision.current;
     searchRequestGateRef.current.invalidate();
     setKnowledgeSearch(null);
-    if (!workspaceRoot) {
-      setHello(null);
-      setStatus(null);
-      setMemories([]);
-      setMetrics(null);
-      setTokenSavings(null);
-      setConfig(null);
-      setIntegrations([]);
-      setDiagnostics(null);
-      setContextReceipt(null);
-      setSafeToReplaceSession(false);
-      setActiveTaskTitle("");
-      setLatestCheckpointId("");
-      setWorkContext(null);
-      setTasks([]);
-      setKnowledgeSearch(null);
-      setLongMemoryAvailable(false);
-      return;
-    }
-
     setIsLoading(true);
     setError("");
     try {
       await memoryApi.bindWorkspace(workspaceRoot);
+      if (!isCurrent()) return;
       const nextHello = await memoryApi.hello(workspaceRoot);
+      if (!isCurrent()) return;
       const capabilities = negotiateMemoryCapabilities(
         nextHello.apiVersion,
         nextHello.capabilities,
@@ -107,12 +97,13 @@ export function useContextOsSession(workspaceRoot: string) {
         supportsLongMemory ? memoryApi.projectContext(workspaceRoot) : Promise.resolve(null),
         supports("tasks.list") ? memoryApi.listTasks(workspaceRoot) : Promise.resolve({ items: [] }),
       ]);
+      if (!isCurrent() || sequence !== refreshSequence.current) return;
       setHello(nextHello);
       setStatus(nextStatus);
       setMemories(nextMemories.items);
       setMetrics(nextMetrics);
       setTokenSavings(nextSavings);
-      setConfig(nextConfig);
+      if (revision === configRevision.current) setConfig(nextConfig);
       setLastPacket(nextContext.packet);
       setContextReceipt(nextContext.receipt ?? null);
       setSafeToReplaceSession(nextContext.safeToReplaceSession ?? false);
@@ -122,32 +113,61 @@ export function useContextOsSession(workspaceRoot: string) {
       setTasks(nextTasks.items);
       setLongMemoryAvailable(supportsLongMemory);
     } catch (loadError) {
-      setError(errorMessage(loadError));
+      if (isCurrent() && sequence === refreshSequence.current) setError(errorMessage(loadError));
     } finally {
-      setIsLoading(false);
+      if (isCurrent() && sequence === refreshSequence.current) setIsLoading(false);
     }
-  }, [workspaceRoot]);
+  }, [lifetime, workspaceRoot]);
 
   useEffect(() => {
+    const searchRequestGate = searchRequestGateRef.current;
+    lifetime.activate();
+    configRevision.current += 1;
+    setIsLoading(false);
+    setIsMutating(false);
+    setError("");
+    setHello(null);
+    setStatus(null);
+    setMemories([]);
+    setMetrics(null);
+    setTokenSavings(null);
+    setConfig(null);
+    setIntegrations([]);
+    setDiagnostics(null);
+    setLastPacket(null);
+    setPacketExplanation(null);
+    setContextReceipt(null);
+    setSafeToReplaceSession(false);
+    setActiveTaskTitle("");
+    setLatestCheckpointId("");
     setWorkContext(null);
     setTasks([]);
     setKnowledgeSearch(null);
     setLongMemoryAvailable(false);
     void refresh();
-  }, [refresh]);
+    return () => {
+      lifetime.dispose();
+      refreshSequence.current += 1;
+      searchRequestGate.invalidate();
+    };
+  }, [lifetime, refresh]);
 
-  const run = useCallback(async <T,>(action: () => Promise<T>): Promise<T | null> => {
+  const run = useCallback(async <T,>(action: (isCurrent: () => boolean) => Promise<T>): Promise<T | null> => {
+    const operation = lifetime.begin();
+    if (!operation) return null;
     setIsMutating(true);
     setError("");
     try {
-      return await action();
+      const result = await action(operation.isCurrent);
+      return operation.isCurrent() ? result : null;
     } catch (actionError) {
-      setError(errorMessage(actionError));
+      if (operation.isCurrent()) setError(errorMessage(actionError));
       return null;
     } finally {
-      setIsMutating(false);
+      const busy = operation.finish();
+      if (operation.isCurrent()) setIsMutating(busy);
     }
-  }, []);
+  }, [lifetime]);
 
   const inspectPacket = useCallback(async (input: {
     currentRequest: string;
@@ -203,8 +223,12 @@ export function useContextOsSession(workspaceRoot: string) {
   }, [refresh, run, workspaceRoot]);
 
   const updateConfig = useCallback(async (next: ProjectMemoryConfig) => {
+    const revision = ++configRevision.current;
     const nextConfig = await run(() => memoryApi.updateConfig(workspaceRoot, next));
-    if (nextConfig) setConfig(nextConfig);
+    if (revision === configRevision.current) {
+      configRevision.current += 1;
+      if (nextConfig) setConfig(nextConfig);
+    }
     return nextConfig;
   }, [run, workspaceRoot]);
 
@@ -240,7 +264,7 @@ export function useContextOsSession(workspaceRoot: string) {
   }): Promise<KnowledgeCard | null> => {
     const selection = input.documentContext.selection;
     if (!workContext || !selection) return null;
-    const card = await run(async () => {
+    const card = await run(async (isCurrent) => {
       const registered = await memoryApi.registerSource(workspaceRoot, {
         worktreeId: workContext.worktreeId,
         relativePath: input.documentContext.relativePath,
@@ -251,6 +275,7 @@ export function useContextOsSession(workspaceRoot: string) {
         selectedText: selection.text,
         requestId: input.requestIds.register,
       });
+      if (!isCurrent()) return null;
       if (!registered.approvedSection || !registered.observedRevision
         || !selectedEvidenceMatches({ selection, section: registered.approvedSection })) {
         throw new Error("The saved source no longer matches the selected evidence.");

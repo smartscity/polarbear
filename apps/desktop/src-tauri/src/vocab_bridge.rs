@@ -167,6 +167,7 @@ fn decode_response(bytes: &[u8]) -> Result<Value, VocabError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)] // Invalid fixtures must fail tests; production remains deny.
 mod tests {
     use super::decode_response;
     #[test]

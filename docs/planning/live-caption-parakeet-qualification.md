@@ -3,6 +3,91 @@
 Status: PREDECLARED, 2026-10-17. Production replacement is NOT AUTHORIZED by a
 screening pass. Owner: live-caption-engine-evaluation.md.
 
+## Current production release exception (2026-10-20)
+
+The user explicitly approved a temporary five-second production first-text P95
+gate so a DMG can be packaged while further optimization continues. The three-second
+target remains the goal, and candidate qualification is unchanged. This supersedes
+only the production first-text release threshold in the historical sections below,
+not their recorded outcomes, accuracy gates or other limits.
+
+The policy is centralized in
+`apps/desktop/scripts/caption-evaluation/native_latency_policy.py`. Local fixture,
+short native production and optional 15-minute reports include its versioned ID
+and numeric limits. The candidate path still selects the separate three-second
+policy. Missing observations cannot pass either policy.
+
+Before that authorization, a fresh local Intel two-minute AMI EN2002a replay
+failed the original gate: first/final P95 3.301/1.962 seconds, 23 finals, all
+3,750 frames consumed, zero overflow/timeouts and 219,643,904 bytes peak tree RSS.
+Fixture SHA-256:
+`7a87df1dcc217957f6bf183101ab3d01b1d4c8b67766da28d4b3af26c6a99b24`.
+Helper SHA-256:
+`3ddb6f69a4982b8471ff7023ec07ddf75a5ef73232dc18e79dc46e76b5787b60`.
+This failure is retained, not retroactively relabeled as a pass.
+
+A 40-second diagnostic excerpt from source seconds 75-115 reproduced the failed
+three-second limit at 3.052 seconds. Sequence 5's first one-second preview took
+837 ms and emitted no text; its 1.864-second retry took 1,288 ms. Each waited less
+than 0.04 ms in the inference queue. These observations identify repeated prefix
+inference as one actual source of delay; they do not establish that all slow
+sequences have the same cause. The native diagnostic now carries sequence,
+audio interval and a text-emitted boolean, without recognized content in stderr.
+No decoding settings were changed by this instrumentation.
+
+Both runs used the existing bundled model, default four-thread Intel CPU policy
+and OS-level network denial. They are production PCM/VAD/ASR evidence, not microphone,
+UI, translation, reference-scored accuracy or ARM acceptance. New-policy local
+evidence must come from a fresh run; it cannot establish the three-second target.
+
+### Fresh local release verification
+
+After the explicit policy change, the same complete 120-second public fixture
+was replayed again with the rebuilt Intel helper, no competing compilation or
+inference, and OS-enforced network denial:
+
+| Measurement | Result |
+| --- | --- |
+| Policy / result | `production-first-text-5s-2026-10-20` / PASS |
+| First nonempty text P95 from VAD start | 2.086200512 seconds |
+| Final text P95 after VAD end | 1.121801423 seconds |
+| Delivered frames / finalized segments | 3,750 / 23 |
+| Overflow / timeout | 0 / 0 |
+| Maximum feed lag | 0.104456634 seconds |
+| Peak process-tree RSS | 218,861,568 bytes |
+| Warmed memory growth | NOT_MEASURED_SHORT_PROFILE |
+| Helper SHA-256 | `96c2fd2d66695f7dfefb463c4379bc794e5f7e8acf642649a237b7e76b144548` |
+| Fixture SHA-256 | `7a87df1dcc217957f6bf183101ab3d01b1d4c8b67766da28d4b3af26c6a99b24` |
+
+All 23 finalized events, including English and positions, are identical to the
+earlier two-minute run. No model, decoder settings or preview schedule changed
+between them; the observed speed difference is not attributed to the policy
+change or diagnostic fields. Host/run variation remains material. This run
+does not overturn the earlier three-second failure or establish general accuracy.
+Public audio attribution: AMI Corpus, EN2002a Array1-01, source seconds 0-120,
+CC BY 4.0, University of Edinburgh AMI Corpus Mirror.
+
+Local checks completed before commit (2026-10-20/21, Intel macOS):
+
+| Check | Result |
+| --- | --- |
+| Clean native production build and CTest | PASS, 7 tests |
+| Swift source clock tests in the build path | PASS |
+| Actual native JFK, silence, malformed frame and packetization fixtures | PASS; 512, 100/413 and 4,096-sample packets preserve all three final events |
+| Python evaluation regression suite | PASS, 71 tests; fake-model tests are not recognition accuracy evidence |
+| Vitest / Node script tests | PASS, 230 / 24 tests |
+| Typecheck / ESLint / Rust format | PASS |
+| Cargo tests | PASS, 35; one existing real Memory Engine E2E intentionally ignored |
+| Browser regression suite | PASS, 22, including the actual bundled offline translator; capture IPC is mocked |
+| Vite production build | PASS; existing bundle-size warnings remain |
+| Actual microphone/system-capture acceptance | NOT_RUN in this iteration |
+| Native ARM, universal package and mounted DMG | Pending tagged release CI, not locally claimed |
+
+The initial restricted-sandbox Cargo run denied two local Unix socket binds.
+The full suite passed after granting local IPC permission; no code workaround or
+skipped socket test was used. The only ignored test remains the separately
+configured real Memory Engine E2E.
+
 ## Scope and invariants
 
 Compare the pinned Parakeet v2 int8 candidate with the existing Whisper base.en
@@ -277,6 +362,231 @@ does not justify replacing the production recognizer. No candidate was packaged,
 no ARM candidate run was claimed, and no microphone/translation/DMG acceptance
 was performed. A future streaming candidate must preserve useful meeting
 recognition as well as reduce latency; first-text speed alone is insufficient.
+
+### Streaming implementation boundary and short candidate gate
+
+#### Local-first redesign checkpoint (2026-10-20)
+
+The subsequent user instruction initially paused implementation for design review.
+[Live Caption section 0](live-caption.md#0-streaming-redesign-review) owns the
+domain/state/lifecycle semantics. After reviewing T1-r1, the user explicitly
+authorized implementation and required local tests before commit. Section 0.6
+limits the first repair to clocks, admission and draining. This checkpoint retains
+evidence and earlier recommendations; it is not a model promotion or release pass.
+
+The latest instruction supersedes the candidate-push trial loop: inspect and
+redesign the recognition/testing boundary, then establish local functional and
+performance evidence before another CI push. Do not create a release tag or use
+CI as the first execution of a model candidate. Runs already submitted remain
+diagnostic evidence, not permission to replace the production engine.
+
+The existing results identify two distinct problems:
+
+1. The production buffered recognizer repeats prefix work and competes with
+   finalization. The opt-in adapter eliminates that duplicated inference, but
+   passing its queue/unit tests does not demonstrate recognition quality.
+2. The current short screen has not established a trusted accuracy oracle.
+   `4475486-0:7` contains 20 seconds of audio but only three reference tokens
+   (`o v i`); this requires listening and annotation review, not automatic
+   correction from either model's hypothesis. `4481952-0:0` has 59 inferred word
+   timings out of 70. AMI clips include simultaneous speakers. The screen has
+   only four technical-term occurrences. These facts prevent a general
+   accuracy or terminology-quality claim from its aggregate WER. Native replay
+   separately reports `accuracy: NOT_SCORED`, so it does not close this gap.
+
+Do not delete difficult samples, rewrite references from candidate output or
+relax thresholds to obtain a pass. Preserve the original reports. Separate a
+reviewed, immutable acceptance set from the existing diagnostic/stress set.
+Reference review status must be explicit; an unreviewed set is **INCONCLUSIVE**
+for accuracy qualification, even if a model happens to score better.
+
+| Boundary | Revised ownership and acceptance |
+| --- | --- |
+| Capture | Existing Swift capture and framed PCM; preserve sample counts, timestamps, permission errors and explicit overload handling |
+| Streaming ASR | One persistent native model and one decoder owner; process new PCM once, keep bounded cached state and make utterance/stream reset semantics explicit |
+| VAD and finalization | Detect boundaries without losing onset/EOF audio; verify final text as well as timing after pauses and maximum-length splits |
+| Display | Existing partial/final protocol; continuous provisional text must not be mistaken for committed history |
+| Translation/history | Existing asynchronous consumers of committed text; do not let translation block English recognition |
+| Accuracy set | Approximately 3-6 minutes of public or explicitly authorized meeting speech with reviewed text/timings, source hashes, accents and declared terminology; baseline and candidate receive identical PCM |
+| Stress set | Existing overlapping/noisy/inferred-alignment cases remain visible separately; never silently promote their scores into acceptance evidence |
+| Latency | Report model load, speech onset, first displayed nonempty partial, first stable text, finalization, queue delay and compute separately; clip-start delay is not VAD-start delay |
+| Native functional coverage | Speech, silence, short phrases, consecutive utterances, EOF tail, stop/cancel, invalid frames, no duplicated/dropped accepted PCM and no stale partial after finalization |
+| Local performance | Sequential baseline/candidate runs on the same host, fixed thread budget, deny-network sandbox, cold and warm short runs, actual native executable/model fingerprints |
+| CI | Cross-architecture replication of locally verified inputs and executables, followed by packaged-resource verification; not model discovery |
+
+Before any further candidate push:
+
+1. Finish the design review of stream/reset, endpoint and sample-accounting
+   behavior; record concrete failures rather than adding another model by default.
+2. Review and freeze the small acceptance corpus independently of model output.
+   Unknown word timing, incomplete reference coverage and overlap must be
+   disclosed and resolved or retained as diagnostic-only evidence.
+3. Run the actual native helper locally. Unit tests, mocked C APIs, a successful
+   compiler, Python-only inference and a single public speech fixture cannot
+   substitute for paired native meeting accuracy and latency.
+4. Persist reproducible commands, host/CPU/thread facts, hashes, full public
+   fixture transcripts, per-utterance timing, errors and `NOT_RUN` scopes.
+5. Only after those local gates pass, push for native Intel/ARM verification.
+   Missing local hardware must be declared; never describe an Intel result as an
+   ARM test or a hosted result as a local test.
+
+The 3.0-second first-text and 4.4-second finalization thresholds remain unchanged.
+Any new scoring protocol requires an explicit version and independent reference
+review, not retroactive relabeling of failed runs. Full microphone-to-UI,
+translation, saved history and installed-DMG acceptance remain separate checks.
+
+The local source review identified additional integration defects that block
+promotion of the candidate, irrespective of model scores:
+
+| Finding | Evidence and required correction |
+| --- | --- |
+| Fragmented PCM timestamp regression | Locally reproduced against `13b9aff`: ten 512-sample packets, then `100 @ 320 ms` and `413 @ 326 ms`, produce job ends `352, 351, 351 ms`. `pcm_frames.h` and `streaming_input.h` round offsets independently. Establish one anchored cumulative sample clock; verify every packet split and the one-sample EOF tail. |
+| Capture clock mismatch | `LiveCaptionCapture.swift` timestamps callback execution after conversion, while `pcm_frames.h` assumes a nearly exact sample clock. Hardware sample position, delivered sample count and wall-clock/session placement must have explicit ownership; increasing jitter tolerance is not a substitute. |
+| Discontinuity after capture overflow | `runtime.rs::on_audio` marks failure but can admit later callbacks before cancellation; aligned-frame gaps bypass the current partial-frame check. Close admission on the first drop and never concatenate audio across a known missing interval. This source finding still needs a deterministic callback/queue test. |
+| Accepted-final loss on overload | `streaming_runtime.cpp` suppresses output and clears the queue after admission failure, potentially losing previously admitted completed sequences. Distinguish admission stop from decoder failure and specify bounded final draining. Source finding, not yet reproduced. |
+| Stale provisional text | An empty finalized result can close a stream without clearing a prior visible partial. Use the existing nonpersistent partial-clear semantics, not an empty durable final. Source finding, not yet reproduced. |
+
+These issues require a focused boundary redesign, not a replacement GUI, event
+bus, history store or translation service. The capture adapter owns original
+sample continuity; the PCM layer owns one exact integer sample position; VAD owns
+utterance boundaries; the decoder owns model/cache state; the lifecycle controller
+owns admission, final draining and terminal failure. Keep those responsibilities
+testable separately and together.
+
+Local baseline evidence on 2026-10-20:
+
+- Rebuilt the default CPU helper from the verified pinned archive; six default
+  native CTest cases passed. The seven-test opt-in configuration had passed
+  separately, including the fake-C-API adapter test.
+- Ran the actual helper with network denied: public JFK speech, silence and
+  malformed-frame tests passed. This is functional smoke evidence only.
+- Ran the 11-second public JFK sample three times at real-time pace, in separate
+  helper processes, with a fixed three-thread budget on an Intel i7-9750H
+  (12 logical CPUs, 16 GiB RAM). First-from-VAD P95 was `1.701 / 1.684 / 1.804 s`;
+  final-after-VAD P95 was `0.713 / 0.713 / 0.729 s`. Each run produced three finals,
+  no queue overflow and no timeout. This does **not** reproduce the failing
+  meeting cases or qualify the candidate.
+- Local helper SHA-256:
+  `308dccfa28c01b33e1562c21b67b3159dd985c4241a1d02632c0b3759102fac5`.
+  JFK WAV SHA-256:
+  `59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e`.
+- Reviewed meeting accuracy, candidate local native latency, physical microphone
+  capture, ARM local execution, Chinese translation and installed-DMG acceptance
+  remain **NOT_RUN** in this local checkpoint. No new commit, push or tag is
+  justified by these smoke results.
+
+The approved next direction is cached incremental recognition, without reducing
+meeting accuracy to obtain earlier text. The next pinned screening candidate is
+the English LibriSpeech/GigaSpeech streaming model at revision
+`9a65b6ea94c311ca770c2bf895b30f456a22d703`. Its publisher declares Apache-2.0.
+It is an evaluation candidate, not a replacement selected by publication claims.
+Model/token files must match publisher digests before inference; an unpinned
+filename now fails verification rather than being accepted without a checksum.
+
+| Concern | Pattern decision | Ownership and constraint |
+| --- | --- | --- |
+| Incremental model state | Reuse the recognizer adapter boundary | One decoder owns one stream per utterance; no Python runtime in the shipped application |
+| PCM admission | Evolve the existing bounded producer/consumer queue | Every accepted incremental sample is delivered once in order; preview-dropping rules cannot discard streaming audio |
+| Capture and end detection | Reuse the existing pipeline | Swift capture, PCM framing, Silero VAD and sequence timestamps remain authoritative |
+| Finalization and shutdown | Explicit stream lifecycle | Finish, drain and emit final before destroying the stream; preserve overload errors and bounded stop behavior |
+| Accuracy correction | No simultaneous dual-engine pipeline | Do not hide a second CPU-heavy recognizer behind a fast partial or reintroduce final/partial contention |
+| UI, translation and history | Reuse protocol-1 events | No new event bus, storage format, translation service or caption UI |
+
+`streaming_screen.py` freezes first/middle/last annotated segments from the first
+record of each of the eight existing sources. Its 24 clips total at most 480
+seconds of audio, decoded faster than wall time sequentially by the two engines.
+Optional first-clip paced probes total at most 160 seconds. The overall inference
+deadline is five minutes, with per-request deadlines and process-group cleanup.
+There is no hour-long replay in this screen. It rejects worse overall/category
+WER, increased empty clips, lower measured technical-term recall, and missing or
+late paced partials. Source-level results remain visible. A small screen is not
+proof of general non-regression or the production VAD/UI latency contract.
+
+The existing qualification workflow has an isolated `codex/caption-streaming`
+branch trigger and an explicit `streaming_candidate` dispatch input. Only these
+paths run the short candidate screen on native Intel and ARM; normal release
+validation retains its existing production gate. This prevents candidate research
+from being treated as a release pass. Local model transfers hit bounded download
+limits; partial archives were not treated as valid models. Native CI measurements
+and subsequent production integration remain required before a release tag.
+
+#### Measured candidate rejection and native adapter (2026-10-20)
+
+Run [39426069719](https://github.com/smartscity/polarbear/actions/runs/39426069719)
+at `450d94f` completed the same 24-clip screen on native Intel and ARM with
+OS-enforced network denial. Each engine received 371.995 seconds of fixed audio;
+eight paced probes added 157.67 seconds, not an hour-long replay.
+
+| Measurement | Intel | ARM |
+| --- | ---: | ---: |
+| Whisper strict WER | 49.46% | 49.22% |
+| GigaSpeech int8 strict WER | 50.90% | 50.90% |
+| Whisper / candidate empty clips | 0 / 2 | 0 / 2 |
+| Candidate first partial P95 from clip start | 8.876 s | 8.817 s |
+| Replacement decision | NO_REPLACE | NO_REPLACE |
+
+The candidate improves aggregate far-field WER but worsens earnings-call WER.
+Do not claim a general accuracy improvement. The raw clip-start latency includes
+initial nonlexical speech/silence and is not the production VAD-based metric.
+Source references contain overlapping speech and inferred timings; these strict
+scores are a paired diagnostic, not a consumer accuracy percentage.
+
+The controlled run at `09f7544` uses the publisher's 660 ms EOF lookahead instead of the
+prototype's 300 ms and feeds accelerated accuracy clips in the same 80 ms chunks
+as paced inference. A full-precision model from the same pinned revision is added
+to distinguish quantization loss; neither change is presumed to improve results.
+
+The opt-in native candidate now has an executable input path, not just a Python
+wrapper: protocol-1 PCM -> validated frames -> existing Silero VAD -> bounded
+incremental FIFO -> one C API stream -> existing partial/final events. It retains
+short EOF tails, exact-once samples across the 15-second boundary, bounded queue
+admission, explicit failure/abort and stream-before-model destruction. The
+unchanged GUI, translation and history consume the same protocol. The candidate
+is not selected by the application or copied into release resources.
+
+`build_streaming_candidate.py` verifies the pinned C header and builds against the
+evaluation runtime's native libraries. This is an evaluation link, not the final
+redistributable SDK/bundle. Production packaging still requires pinned native
+library provenance, licenses, signing and architecture verification. Native
+176-second PCM/VAD regression uses the unchanged 3.0/4.4-second latency gates and
+an eight-second drain deadline. Accuracy rejection still blocks a release even
+if the native latency gate passes.
+
+#### Cache-aware NeMo candidate
+
+Run [39429191978](https://github.com/smartscity/polarbear/actions/runs/39429191978)
+has rejected the full-precision GigaSpeech candidate on ARM: strict WER was
+51.26% versus Whisper's 49.22%, with two empty clips versus zero. Its native
+176-second replay also failed the unchanged first-text gate. Removing
+quantization and correcting EOF lookahead did not resolve the model's losses;
+this is not a reason to relax the release thresholds.
+
+The next bounded screen evaluates the English-only
+[Nemotron cache-aware streaming model](https://huggingface.co/nvidia/nemotron-speech-streaming-en-0.6b)
+using the publisher's
+[560 ms ONNX export](https://k2-fsa.github.io/sherpa/onnx/nemo/nemotron-streaming.html).
+This is not the previously rejected offline Parakeet TDT checkpoint. The export
+revision is `52056fdc070914a48dcd68b31b44d6a6f5b85902`; all five model/token/metadata
+files are verified against publisher SHA-256 or Git-blob digests. The same frozen
+24 clips, paired baseline, eight paced probes and 176-second native regression
+apply. No candidate-dependent trimming, reference editing or threshold relaxation
+is permitted.
+
+The candidate reuses the existing online C API, incremental FIFO, PCM/VAD path and
+protocol-1 events. Encoder/decoder/joiner/token paths are explicit native argv,
+owned by the pinned evaluation model catalog rather than hardcoded GigaSpeech
+filenames. The pinned upstream NeMo recognizer selects its feature dimension and
+normalization from the model metadata; the adapter does not emulate those
+features. Production resources and the default recognizer remain unchanged.
+
+The upstream model is governed by the
+[NVIDIA Open Model License](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/),
+not Apache-2.0. Its redistribution terms require the agreement and attribution,
+alongside compliance with its other conditions and component notices. This
+evaluation does not establish a redistributable bundle: model provenance, native
+library licensing, signing and offline installed-app acceptance must still be
+verified before inclusion in a DMG. Publisher performance claims are not local
+or CI measurements.
 
 Run 39034261597 on commit 79a010d completed the ARM Parakeet full accuracy pass
 before failing at the first replay RSS sample. Its raw job log identifies

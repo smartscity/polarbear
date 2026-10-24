@@ -6,6 +6,7 @@ export const APP_EVENTS = {
   openFilesRequested: "polarbear-open-files-requested",
   repositorySyncProgress: "repository-sync-progress",
   settingsChanged: "polarbear-settings-changed",
+  recentDocumentsChanged: "polarbear-recent-documents-changed",
   windowCloseRequested: "polarbear-window-close-requested",
 } as const;
 

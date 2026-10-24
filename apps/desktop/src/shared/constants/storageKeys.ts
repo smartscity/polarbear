@@ -8,4 +8,5 @@ export const STORAGE_KEYS = {
   legacySettings: "polarbear.settings.v1",
   legacyTheme: "polarbear.theme",
   settings: "polarbear.settings",
+  recentDocuments: "polarbear.recentDocuments.v1",
 } as const;

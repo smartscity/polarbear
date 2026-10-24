@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { ExecuteAppCommand } from "../../shared/commands/appCommandTypes";
 import type { WorkspaceItem } from "../../features/workspace/workspaceModel";
+import type { DocumentOpenResult } from "../../features/workspace/documentNavigation";
 import type { DocumentStructureItem } from "../../features/editor/documentModel";
 import { Sidebar } from "./Sidebar";
 import { StatusBar } from "./StatusBar";
@@ -9,6 +10,7 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 
 type AppShellProps = {
   activeFileId: string;
+  activeRelativePath: string;
   activeFileName: string;
   characterCount: number;
   children: ReactNode;
@@ -40,6 +42,7 @@ type AppShellProps = {
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectDocumentStructureItem: (position: number) => void;
   onSelectFile: (fileId: string) => void;
+  onOpenRecent: (path: string) => Promise<DocumentOpenResult>;
   onSelectTab: (tabId: string) => void;
   onSelectTreeItem: (itemId: string) => void;
   onSidebarClose: () => void;
@@ -50,6 +53,7 @@ type AppShellProps = {
 
 export function AppShell({
   activeFileId,
+  activeRelativePath,
   activeFileName,
   characterCount,
   children,
@@ -77,6 +81,7 @@ export function AppShell({
   onRenameConfirm,
   onSelectDocumentStructureItem,
   onSelectFile,
+  onOpenRecent,
   onSelectTab,
   onSelectTreeItem,
   onSidebarClose,
@@ -112,7 +117,7 @@ export function AppShell({
           />
         ) : null}
         <Sidebar
-          activeFileId={activeFileId}
+          activeFileId={activeRelativePath}
           collapseVersion={collapseVersion}
           dirtyFileIds={dirtyFileIds}
           folderRevealRequest={folderRevealRequest}
@@ -126,6 +131,7 @@ export function AppShell({
           onRenameCancel={onRenameCancel}
           onRenameConfirm={onRenameConfirm}
           onSelectFile={onSelectFile}
+          onOpenRecent={onOpenRecent}
           onSelectTreeItem={onSelectTreeItem}
         />
         {children}

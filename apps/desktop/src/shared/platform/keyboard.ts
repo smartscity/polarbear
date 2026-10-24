@@ -33,12 +33,16 @@ export function isApplePlatform(platformHint = currentPlatformHint()): boolean {
  * Presents registry accelerators using the modifier names familiar on the
  * current device. Execution remains platform-neutral through CmdOrCtrl.
  */
-export function displayAccelerator(accelerator: string | undefined): string {
+export function displayAccelerator(accelerator: string | undefined, options: { symbols?: boolean; platformHint?: string } = {}): string {
   if (!accelerator) {
     return "";
   }
 
-  const isApple = isApplePlatform();
+  const isApple = isApplePlatform(options.platformHint);
+  if (isApple && options.symbols) {
+    const symbols: Record<string, string> = { CmdOrCtrl: "\u2318", Command: "\u2318", Cmd: "\u2318", Meta: "\u2318", Alt: "\u2325", Option: "\u2325", Shift: "\u21e7", Control: "\u2303", Ctrl: "\u2303" };
+    return accelerator.split("+").map((key) => symbols[key] ?? key).join("");
+  }
   return accelerator
     .replace("CmdOrCtrl", isApple ? "Command" : "Control")
     .replace("Alt", isApple ? "Option" : "Alt");

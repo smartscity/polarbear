@@ -1,11 +1,14 @@
+mod recording;
 mod runtime;
 mod store;
+#[cfg(test)]
+mod tests;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicI64, Ordering},
+        atomic::{AtomicBool, Ordering},
         Mutex,
     },
     time::{Duration, Instant},
@@ -35,11 +38,85 @@ pub struct CaptionService {
     control: Mutex<()>,
     generation: Mutex<i64>,
     exiting: AtomicBool,
-    panel_seen: AtomicI64,
     paused_at: Mutex<Option<Instant>>,
 }
 
+#[derive(Serialize)]
+struct LiveSnapshot {
+    status: runtime::Status,
+    segments: Vec<store::Segment>,
+}
+
 impl CaptionService {
+    fn live_snapshot(&self) -> CaptionResult<LiveSnapshot> {
+        // All final commits acquire status before storage, so the provisional suffix
+        // and durable tail cannot describe different sides of the same commit.
+        let status = self
+            .status
+            .lock()
+            .map_err(|_| CaptionError::new("engineFailed"))?;
+        let segments = match &status.session_id {
+            Some(id) => self.with_store(|db| db.tail(id))?,
+            None => Vec::new(),
+        };
+        Ok(LiveSnapshot {
+            status: status.clone(),
+            segments,
+        })
+    }
+
+    fn accept_partial(&self, session: &str, sequence: i64, english: &str) -> CaptionResult<()> {
+        if sequence <= 0 || english.len() > 16384 {
+            return Err(CaptionError::new("engineProtocol"));
+        }
+        let mut status = self
+            .status
+            .lock()
+            .map_err(|_| CaptionError::new("engineFailed"))?;
+        if status.session_id.as_deref() != Some(session)
+            || sequence / 1_000_000 != status.capture_generation
+        {
+            return Ok(());
+        }
+        if sequence > status.final_sequence && sequence >= status.partial_sequence {
+            status.partial_sequence = sequence;
+            status.partial = english.into();
+        }
+        Ok(())
+    }
+
+    fn accept_final(
+        &self,
+        session: &str,
+        sequence: i64,
+        start: i64,
+        end: i64,
+        english: &str,
+    ) -> CaptionResult<()> {
+        let mut status = self
+            .status
+            .lock()
+            .map_err(|_| CaptionError::new("engineFailed"))?;
+        if status.session_id.as_deref() != Some(session)
+            || sequence / 1_000_000 != status.capture_generation
+        {
+            return Ok(());
+        }
+        if sequence <= status.final_sequence {
+            return Ok(());
+        }
+        let id = status
+            .session_id
+            .as_deref()
+            .ok_or_else(|| CaptionError::new("engineProtocol"))?;
+        self.with_store(|db| db.append(id, sequence, start, end, english))?;
+        status.final_sequence = sequence;
+        if status.partial_sequence <= sequence {
+            status.partial.clear();
+        }
+        Ok(())
+    }
+
     pub fn stop_serialized(&self) -> CaptionResult<()> {
         let _control = self
             .control
@@ -121,11 +198,14 @@ impl CaptionService {
 #[serde(tag = "action", rename_all = "camelCase", deny_unknown_fields)]
 pub enum Request {
     Status,
+    Live,
     Open {
         history: bool,
     },
     Start {
         source: String,
+        #[serde(default, rename = "recordAudio")]
+        record_audio: bool,
         #[serde(default)]
         timezone: String,
     },
@@ -168,10 +248,27 @@ pub enum Request {
     Pin {
         pinned: bool,
     },
+    RecordingsFolder,
     Export {
         text: String,
         format: String,
     },
+}
+
+fn recordings_directory(app: &tauri::AppHandle) -> CaptionResult<std::path::PathBuf> {
+    let directory = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|_| CaptionError::new("recordingsUnavailable"))?
+        .join("live-caption/recordings");
+    std::fs::create_dir_all(&directory).map_err(|_| CaptionError::new("recordingsUnavailable"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700))
+            .map_err(|_| CaptionError::new("recordingsUnavailable"))?;
+    }
+    Ok(directory)
 }
 
 fn open_window(app: &tauri::AppHandle, history: bool) -> CaptionResult<()> {
@@ -230,11 +327,6 @@ pub async fn caption_request(
     window: tauri::WebviewWindow,
     request: Request,
 ) -> CaptionResult<Value> {
-    if window.label() == "live-caption" && matches!(request, Request::Status) {
-        app.state::<CaptionService>()
-            .panel_seen
-            .store(store::now(), Ordering::Release);
-    }
     let worker = window.label() == "caption-translator";
     if worker != matches!(request, Request::Claim | Request::Complete { .. })
         || (!worker && !matches!(window.label(), "main" | "live-caption"))
@@ -250,6 +342,7 @@ fn handle(app: &tauri::AppHandle, request: Request) -> CaptionResult<Value> {
     let service = app.state::<CaptionService>();
     service.initialize(app)?;
     match request {
+        Request::Live => Ok(json!(service.live_snapshot()?)),
         Request::Status => Ok(json!(service
             .status
             .lock()
@@ -259,7 +352,11 @@ fn handle(app: &tauri::AppHandle, request: Request) -> CaptionResult<Value> {
             open_window(app, history)?;
             Ok(Value::Null)
         }
-        Request::Start { source, timezone } => {
+        Request::Start {
+            source,
+            timezone,
+            record_audio,
+        } => {
             store::validate_time_zone(&timezone)?;
             if service.exiting.load(Ordering::Acquire) {
                 return Err(CaptionError::new("invalidRequest"));
@@ -301,10 +398,11 @@ fn handle(app: &tauri::AppHandle, request: Request) -> CaptionResult<Value> {
                 session_id: Some(id.clone()),
                 state: "starting".into(),
                 source: source.clone(),
+                record_audio,
                 view_revision: current.view_revision.wrapping_add(1),
                 ..Default::default()
             };
-            match runtime::launch(app.clone(), id.clone(), source, 0, 0) {
+            match runtime::launch(app.clone(), id.clone(), source, 0, 0, record_audio) {
                 Ok(run) => {
                     *service
                         .run
@@ -364,7 +462,9 @@ fn handle(app: &tauri::AppHandle, request: Request) -> CaptionResult<Value> {
                 status.source.clone(),
                 status.elapsed_ms.saturating_add(pause_duration),
                 *generation,
+                status.record_audio,
             )?;
+            status.capture_generation = *generation;
             status.state = "starting".into();
             status.error = None;
             *service
@@ -439,6 +539,25 @@ fn handle(app: &tauri::AppHandle, request: Request) -> CaptionResult<Value> {
                     .map_err(|_| CaptionError::new("windowFailed"))?;
             }
             Ok(Value::Null)
+        }
+        Request::RecordingsFolder => {
+            let directory = recordings_directory(app)?;
+            #[cfg(target_os = "macos")]
+            {
+                let status = std::process::Command::new("/usr/bin/open")
+                    .arg(directory)
+                    .status()
+                    .map_err(|_| CaptionError::new("recordingsUnavailable"))?;
+                if !status.success() {
+                    return Err(CaptionError::new("recordingsUnavailable"));
+                }
+                Ok(Value::Null)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = directory;
+                Err(CaptionError::new("unsupportedPlatform"))
+            }
         }
         Request::Export { text, format } => {
             use tauri_plugin_dialog::DialogExt;

@@ -1,6 +1,12 @@
 name: Caption Qualification
 
 on:
+  push:
+    branches: [codex/caption-streaming]
+    paths:
+      - "apps/desktop/scripts/caption-evaluation/**"
+      - "apps/desktop/src-tauri/native/caption-engine/**"
+      - ".github/workflows/caption-qualification.yml"
   workflow_call:
     inputs:
       ref:
@@ -9,8 +15,16 @@ on:
       production_only:
         type: boolean
         default: true
+      release_tag:
+        description: "Explicit release tag; only alpha.N makes measured first-text overruns advisory"
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
+      streaming_candidate:
+        description: "Short paired meeting screen for the pinned streaming candidate"
+        type: boolean
+        default: false
       compare_engines:
         description: "Explicit research only: full accuracy corpus and one-hour engine comparison"
         type: boolean
@@ -137,9 +151,100 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+  streaming:
+    name: Short streaming screen (${{ matrix.arch }}, ${{ matrix.candidate }})
+    needs: corpus
+    if: ${{ inputs.streaming_candidate || github.ref == 'refs/heads/codex/caption-streaming' }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-26, arch: arm64, candidate: nemotron-streaming }
+          - { runner: macos-15-intel, arch: x86_64, candidate: nemotron-streaming }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - run: python -m pip install -r apps/desktop/scripts/caption-evaluation/requirements.txt
+      - run: python -m unittest discover -s apps/desktop/scripts/caption-evaluation -p 'test_*.py'
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: corpus-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/caption-corpus
+      - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
+      - uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/models/${{ matrix.candidate }}
+          key: caption-${{ matrix.candidate }}-v1-${{ hashFiles('apps/desktop/scripts/caption-evaluation/prepare.py') }}
+      - name: Fetch and verify pinned streaming evaluation assets
+        timeout-minutes: 5
+        run: python apps/desktop/scripts/caption-evaluation/prepare.py "$RUNNER_TEMP/models" --model "${{ matrix.candidate }}"
+      - name: Build baseline from clean pinned production sources
+        run: |
+          node apps/desktop/scripts/build-caption.mjs
+          BASE=apps/desktop/src-tauri/target/caption-native
+          COMMIT=$(node -p "require('./apps/desktop/src-tauri/resources/caption/manifest.json').engine.commit")
+          SOURCE="$BASE/whisper.cpp-$COMMIT"
+          LIB="$BASE/${{ matrix.arch }}/whisper-build"
+          c++ -std=c++17 -O3 -DNDEBUG -arch "${{ matrix.arch }}" -mmacosx-version-min=13.0 \
+            -I "$SOURCE/include" -I "$SOURCE/ggml/include" -I "$SOURCE/examples" \
+            apps/desktop/scripts/caption-evaluation/whisper-baseline.cpp \
+            "$LIB/src/libwhisper.a" "$LIB/ggml/src/libggml.a" \
+            "$LIB/ggml/src/ggml-blas/libggml-blas.a" \
+            "$LIB/ggml/src/libggml-cpu.a" "$LIB/ggml/src/libggml-base.a" \
+            -framework Accelerate -o "$RUNNER_TEMP/whisper-baseline"
+      - name: Build opt-in native streaming helper
+        id: native
+        run: python apps/desktop/scripts/caption-evaluation/build_streaming_candidate.py "$RUNNER_TEMP/streaming-native"
+      - name: Reject accuracy regressions and missing first text on short meetings
+        id: screen
+        run: |
+          set -o pipefail
+          mkdir -p evidence
+          BASELINE_SHA=$(shasum -a 256 "$RUNNER_TEMP/whisper-baseline" | cut -d ' ' -f 1)
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$(command -v python)" apps/desktop/scripts/caption-evaluation/streaming_screen.py \
+            "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/streaming-${{ matrix.arch }}.json" \
+            --candidate "${{ matrix.candidate }}" --models "$RUNNER_TEMP/models" \
+            --baseline "$RUNNER_TEMP/whisper-baseline" --baseline-sha256 "$BASELINE_SHA" \
+            --whisper-model "$PWD/apps/desktop/src-tauri/resources/caption/ggml-base.en-q5_1.bin" \
+            --corpus-sha256 9b2ba557594ea095eb4d6aee1e60f499a6f29590cf0fd88087ce73de34ddb5fe \
+            --expect-arch "${{ matrix.arch }}" --paced --deadline-seconds 300 \
+            2>&1 | tee evidence/streaming.log
+      - name: Measure the unchanged native first-text gate
+        if: ${{ !cancelled() && steps.native.outcome == 'success' && steps.screen.outcome != 'skipped' }}
+        run: |
+          set -o pipefail
+          cp "$RUNNER_TEMP/streaming-native/streaming-native-provenance.json" evidence/
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$(command -v python)" apps/desktop/scripts/caption-evaluation/native_latency_regression.py \
+            "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/native-streaming-${{ matrix.arch }}.json" \
+            --helper "$RUNNER_TEMP/streaming-native/polarbear-caption-streaming-candidate" \
+            --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
+            --streaming-models "$RUNNER_TEMP/models/${{ matrix.candidate }}" \
+            --streaming-candidate "${{ matrix.candidate }}" \
+            2>&1 | tee evidence/native-streaming.log
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: streaming-screen-${{ matrix.arch }}-${{ matrix.candidate }}
+          path: evidence/
+          retention-days: 30
+          if-no-files-found: warn
+
   production:
     name: Production first-text regression (${{ matrix.arch }})
     needs: corpus
+    if: ${{ !inputs.streaming_candidate && github.ref != 'refs/heads/codex/caption-streaming' }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -171,6 +276,8 @@ jobs:
       - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
       - run: node apps/desktop/scripts/build-caption.mjs
       - name: Replay first-text failures through production VAD and inference queues
+        env:
+          CAPTION_RELEASE_TAG: ${{ inputs.release_tag || '' }}
         run: |
           set -o pipefail
           mkdir -p evidence
@@ -179,6 +286,7 @@ jobs:
             "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/production-${{ matrix.arch }}.json" \
             --helper "$PWD/apps/desktop/src-tauri/resources/caption/polarbear-caption-engine" \
             --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
+            --release-tag "$CAPTION_RELEASE_TAG" \
             2>&1 | tee evidence/production.log
       - uses: actions/upload-artifact@v6
         if: always()

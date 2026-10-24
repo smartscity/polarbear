@@ -1,16 +1,37 @@
 # Live Caption implementation evidence
 
-Date: 2026-10-17. Baseline: `a7894ae`. Owner: [approved design](live-caption.md).
+Initial evidence: 2026-10-17, baseline `a7894ae`. Current repair: 2026-10-24,
+baseline `5fc13de`. Owner: [approved design](live-caption.md).
 Delivery status: **PARTIAL / preview**, not a completed D0-D5 or stable release.
 The design still requires Both mode with proven echo cancellation; it is not
 implemented or exposed by this preview. The initial checks used public fixtures;
 the consented microphone follow-up below is separate from those checks.
 
+## Diagnostic alpha packaging, 2026-10-24
+
+`v0.10.10-alpha.1` points to `f8394cc`. Release run
+[40071296965](https://github.com/smartscity/polarbear/actions/runs/40071296965)
+passed both native fixture jobs and ARM first-text regression, but Intel failed
+only `firstText`; DMG packaging was skipped. This failure remains unchanged.
+
+The user then authorized only alpha first-text overruns to become advisory.
+Design section 0.8 defines the narrow exception. Raw measurement status stays
+`FAIL`; a separate release decision permits diagnostic packaging without claiming
+latency acceptance. Other errors, invalid measurements and failed gates still block.
+
+Local validation of this policy: 78 Python evaluation tests passed, including six
+dependency-free policy tests and CLI report/exit tests for alpha, stable, missing
+measurements, final latency failure and helper backlog. Both workflow YAML files
+parsed; 38 Bash steps passed syntax checks; release input wiring and blocking job
+dependencies were checked. No application code, model, audio queue or threshold
+changed in this packaging-policy update. These tests do not establish user-speech
+WER or long-running stability. A new alpha tag must verify packaging in CI.
+
 ## Implemented ownership
 
 | Boundary | Implementation |
 | --- | --- |
-| Settings, panel, history and copy | `apps/desktop/src/features/caption/`; existing commands, preferences v3, EN/ZH properties and theme tokens |
+| Settings, panel, history and copy | `apps/desktop/src/features/caption/`; existing commands, preferences v4, EN/ZH properties and theme tokens |
 | Window bootstrap | `apps/desktop/caption.html`, `src/main.tsx`; dedicated caption and translator surfaces without mounting the editor |
 | Native session control | `src-tauri/src/live_caption/mod.rs`; serialized start/pause/resume/stop, close/quit cancellation, typed request routing and scoped window labels |
 | Native audio | `src-tauri/native/LiveCaptionCapture.swift`; macOS 13+ ScreenCaptureKit system audio or AVAudioEngine default microphone; older editor deployment target retained |
@@ -24,10 +45,12 @@ ten seconds and stops on overflow rather than silently dropping speech. The help
 uses Silero VAD, provisional English and finalized English. The final segment and
 translation job share a SQLite transaction. The caption translator leases work;
 expired/stale completion cannot replace newer work. English stays available when
-translation fails. No raw audio is written to history or passed to Memory/Vocab.
+translation fails. Translation defaults off. No raw audio is written to history or
+passed to Memory/Vocab. Optional diagnostic WAV files use a separate native-owned directory.
 
 Capture stops on explicit pause/stop, panel/main close, quit, reported device loss,
-sleep/session lock and panel heartbeat loss. Native behavior for these transitions
+sleep/session lock. Panel polling and pending translation counts no longer stop capture.
+Native behavior for these transitions
 still requires real OS acceptance. Acquisition is never restarted by saved settings
 or history recovery. Changing the source in the caption window finalizes the old
 session before starting a new one. Changing a paused session's source stops it
@@ -59,17 +82,94 @@ History path: Tauri `app_local_data_dir()/live-caption/history.sqlite3` (not the
 Workspace and not `memory.db`). Unix directory/file permissions are 0700/0600.
 SQLite WAL, foreign keys and FULL synchronous writes are used. Schema v2 adds
 session timezone; migrations are repeatable. Interrupted sessions remain history.
-There is no transcript TTL, cloud sync, automatic geolocation or audio retention.
+There is no transcript TTL, cloud sync or automatic geolocation. Diagnostic audio
+is retained only after explicit per-session opt-in; users remove it in the recordings folder.
 
 The Copy button snapshots all committed segments, not just the 200-row visible
-tail. Default output is English followed by available Chinese in source order.
+tail. New-installation default output is English; bilingual copy remains optional.
 English-only, Chinese-only and timestamp options persist. Partial recognition is
 never copied. Pending translations are reported after successful clipboard write.
 Clipboard is limited to 8 MiB, export to 64 MiB; oversize data fails explicitly.
 TXT/Markdown/SRT export uses the same formatter and atomic native file writing.
 OS clipboard managers may still synchronize explicitly copied text.
 
-## Executed verification
+## English-first repair and diagnostic recording (2026-10-24)
+
+### Findings and implementation
+
+- `runtime.rs::launch` stopped healthy native capture when the panel had not polled
+  for ten seconds. This explains the displayed `panelUnavailable` condition, not
+  proof of a UI deadlock. Removed that timeout; explicit close/stop/quit and native
+  capture failures retain their stop behavior.
+- The same supervisor stopped after more than 60 untranslated segments. Removed
+  this coupling. English still commits durably; the optional translator owns one lease.
+- `CaptionTranslator` previously ran regardless of the display preference. It now
+  observes shared settings, performs no claims while disabled and disposes pending
+  work on opt-out. Stale completion is suppressed; an abandoned lease expires normally.
+- `CaptionPanel` previously fetched status and tail separately, allowing the same
+  text to appear as both partial and final across a commit. `live_snapshot` and final
+  commit now share status-before-store locking. Sequence and session/epoch checks
+  suppress stale events without removing genuine repeated speech.
+- The live tail was already bounded at 200 rows; it was not an infinite DOM list.
+  New arrays nevertheless triggered rendering and scroll writes every poll. Structural
+  sharing and memoized finalized text remove that idle churn; transient poll errors clear
+  on recovery. Complete history stays in SQLite, not in the visible paragraph.
+- Production still uses whisper.cpp 1.9.5 with quantized `base.en` and Silero v6.2.0,
+  not Apple Speech. The 0.6-second silence endpoint, 15-second hard cut and context-free
+  decoding are plausible accuracy risks, not proven explanations for this user's speech.
+  No ASR model, endpoint or word-deletion heuristic was changed without paired evidence.
+
+### Reproducing a reading error
+
+1. Stop Live Caption. Open Caption options and enable **Save diagnostic audio for
+   the next session** only after obtaining consent. Choose the intended audio source.
+2. Start, reproduce the reading error, then stop. The footer indicates local recording.
+3. Open the recordings folder from Caption options. Preserve the WAV and the matching
+   transcript, plus a manually checked reference for the selected interval. Do not
+   commit private recordings or transcripts to Git.
+4. Replay a bounded interval with the existing bundled production helper:
+
+```sh
+node apps/desktop/scripts/replay-caption-recording.mjs \
+  /absolute/path/session-0-0ms.wav /absolute/path/private-report.json \
+  --start 0 --seconds 60
+```
+
+The tool reads at most 180 seconds, preserves float32 samples, uses structured argv
+and an empty helper environment, and never downloads models. Output is a new 0600
+local JSON file containing private hypotheses, final text and timing evidence.
+The report distinguishes first text from audio-span start and final text after
+audio-span end; neither includes microphone-to-UI latency. WER remains NOT_SCORED
+until compared with a checked reference using the existing evaluation metrics.
+This is a short diagnostic tool, not the 30/60/120-minute qualification runner.
+
+### Acceptance status
+
+This run used Intel macOS and the local checkout. The installed application was
+not replaced. These results do not qualify Apple Silicon or a new ASR model.
+
+| Check | Current result | Boundary |
+| --- | --- | --- |
+| Tests first | Confirmed failing settings assertions and missing projection/service APIs before implementation; float-WAV replay import failed before implementation | Development red/green evidence, not user acceptance |
+| Typecheck / ESLint / frontend build / Rust fmt | PASS | Vite retains its existing large-chunk warning |
+| Vitest / Node tests | 288 / 27 PASS | Includes settings migration, stable projection and exact float replay |
+| Desktop browser suite | 56 PASS | Capture/native menu IPC is mocked; translation test uses the real bundled offline worker |
+| Native tests | 59 PASS, 2 default ignores | Includes 7,200 logical-time commits, private recording files, session/epoch isolation and existing save/socket regressions |
+| Clippy production binary | PASS with `-D warnings` | All-targets invocation still fails on existing test-only unwrap usage outside this repair; not reported as an all-targets pass |
+| Real Intel ASR scheduling | 99 seconds of paced upstream JFK audio, 21 finals, max feed lag 94.1 ms; silence and malformed-input checks PASS | Repeated public fixture, not meeting WER or native microphone/UI |
+| Float-WAV excerpt through the real helper | 11 seconds; first-text-from-audio-start P50/P95/P99 1.543/1.630/1.630 s; final-after-audio-end 0.585/0.631/0.631 s | Three finalized segments only; not statistically representative or microphone-to-screen latency |
+| Long-history UI recovery | PASS for bounded 200-row projection, preserved scroll and recovery after a simulated two-hour timer suspension | Fake browser clock, not elapsed-time native stability |
+| User speech WER, before/after ASR quality | NOT_SCORED | Original reading audio was not recorded; no model or segmentation change was made |
+| 30-minute / 1-hour / 2-hour microphone + native window soak; CPU/RSS growth | NOT_RUN | Required before declaring the user's complete acceptance criterion satisfied |
+| New diagnostic microphone recording / Finder reveal in the installed app | NOT_RUN | Browser control, Rust file format/permissions and offline replay are verified separately |
+
+The first full Rust run was sandbox-blocked for macOS file coordination and local
+sockets; the elevated repeat passed. This was not repaired by weakening save tests.
+The first new recording UI test used an incorrect button name; it was corrected to
+the existing localized `Start capture` / `Stop capture` labels and rerun successfully.
+Original measurements below remain historical and are not evidence for this repair.
+
+## Initial executed verification (2026-10-17)
 
 Environment: Intel macOS 26.5.1, Xcode macOS 26 SDK, Node 26.1.0. Tests do not imply
 that the currently installed `/Applications` app was replaced or tested.

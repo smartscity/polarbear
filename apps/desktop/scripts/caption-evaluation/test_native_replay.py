@@ -72,7 +72,7 @@ print(json.dumps({'type':'stopped'}),flush=True)
             await task
 
     async def test_rejects_duplicate_final_and_nonzero_exit(self):
-        final = "print(json.dumps({'type':'final','sequence':1,'startMs':0,'endMs':100}),flush=True)"
+        final = "print(json.dumps({'type':'final','sequence':1,'startMs':0,'endMs':100,'english':'fixture'}),flush=True)"
         with self.assertRaisesRegex(RuntimeError, "Nonmonotonic"):
             await self.run_helper(READY + "\nsys.stdin.buffer.read()\n" + final + "\n" + final)
         with self.assertRaisesRegex(RuntimeError, "code 7"):
@@ -82,14 +82,27 @@ print(json.dumps({'type':'stopped'}),flush=True)
         with self.assertRaises(ValueError):
             await self.run_helper("print('x'*70000,flush=True)\ntime.sleep(30)")
 
+    async def test_partial_clear_is_not_first_text_or_an_empty_durable_final(self):
+        clear = "print(json.dumps({'type':'partial','sequence':1,'startMs':0,'endMs':100,'english':''}),flush=True)"
+        result, events = await self.run_helper(READY + "\nsys.stdin.buffer.read()\n" + clear +
+                                              "\nprint(json.dumps({'type':'stopped'}),flush=True)")
+        self.assertIsNone(result["firstFromVadStartP95Seconds"])
+        self.assertEqual(result["partials"], 0)
+        self.assertEqual(result["partialClears"], 1)
+        self.assertEqual(result["finals"], 0)
+        self.assertTrue(any(row["type"] == "caption" for row in events))
+        with self.assertRaisesRegex(RuntimeError, "Invalid caption text"):
+            await self.run_helper(READY + "\nsys.stdin.buffer.read()\n" + clear.replace("'partial'", "'final'"))
+
     async def test_preserves_numeric_diagnostics_without_forwarding_arbitrary_stderr(self):
         _, events = await self.run_helper(READY + """
 print('private path or text',file=sys.stderr,flush=True)
-print('caption-metric:'+json.dumps({'stage':'final','computeMs':12,'cancelled':False}),file=sys.stderr,flush=True)
+print('caption-metric:'+json.dumps({'stage':'final','computeMs':12,'cancelled':False,'sequence':1,'textEmitted':False}),file=sys.stderr,flush=True)
 sys.stdin.buffer.read()
 print(json.dumps({'type':'stopped'}),flush=True)
 """)
-        self.assertIn({'type': 'diagnostic', 'stage': 'final', 'computeMs': 12, 'cancelled': False}, events)
+        self.assertIn({'type': 'diagnostic', 'stage': 'final', 'computeMs': 12,
+                       'cancelled': False, 'sequence': 1, 'textEmitted': False}, events)
         self.assertNotIn('private path', json.dumps(events))
 
     async def test_rejects_unexpected_diagnostic_fields(self):
@@ -123,14 +136,14 @@ print(json.dumps({'type':'stopped'}),flush=True)
 
     def test_release_profile_requires_complete_fifteen_minutes_and_original_limits(self):
         self.assertEqual(RELEASE_REPLAY_SECONDS, 900)
-        result = {"audioSeconds": 900, "finals": 1, "firstFromVadStartP95Seconds": 3,
+        result = {"audioSeconds": 900, "finals": 1, "firstFromVadStartP95Seconds": 5,
                   "finalAfterVadEndP95Seconds": 4.4, "sampledPeakProcessTreeRssBytes": 2 * 1024**3,
                   "warmedMedianRssGrowthBytes": 100 * 1024**2}
         self.assertTrue(all(acceptance(result).values()))
         for seconds in (600, 899, 3600):
             self.assertFalse(acceptance({**result, "audioSeconds": seconds})["completeReleaseDuration"])
         for field, value, check in (
-            ("firstFromVadStartP95Seconds", 3.01, "firstText"),
+            ("firstFromVadStartP95Seconds", 5.01, "firstText"),
             ("finalAfterVadEndP95Seconds", 4.41, "finalText"),
             ("sampledPeakProcessTreeRssBytes", 2 * 1024**3 + 1, "memoryPeak"),
             ("warmedMedianRssGrowthBytes", 100 * 1024**2 + 1, "memoryGrowth"),

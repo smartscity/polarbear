@@ -1,4 +1,6 @@
 export const DIAGRAM_CONFIG = {
+  cache: { entries: 32, codeUnits: 4_000_000 },
+  scheduling: { concurrency: 1, pending: 16, codeUnits: 1_000_000 },
   export: {
     background: "#ffffff",
     fallbackHeight: 600,

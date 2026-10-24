@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 import { BergamotWorker } from "../../shared/translation/bergamotWorker";
 import { captionRequest } from "./captionAdapter";
+import { useUserSettings } from "../../shared/settings/useUserSettings";
 
 /** The hidden native window owns this queue consumer, independently of the editor and caption panel. */
 export function CaptionTranslator() {
+  const { caption } = useUserSettings();
   useEffect(() => {
+    if (!caption.showChinese) return;
     let disposed = false;
     let engine: BergamotWorker | undefined;
     let lastWork = Date.now();
@@ -31,6 +34,6 @@ export function CaptionTranslator() {
     };
     timer = setTimeout(() => { void consume(); }, 0);
     return () => { disposed = true; clearTimeout(timer); clearTimeout(deadline); engine?.dispose(); };
-  }, []);
+  }, [caption.showChinese]);
   return null;
 }

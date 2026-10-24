@@ -1,9 +1,46 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_KEYS } from "../constants/storageKeys";
 import {
   DEFAULT_USER_SETTINGS,
   parseUserSettings,
   USER_SETTINGS_VERSION,
+  readUserSettings,
+  updateUserSettings,
 } from "./userSettings";
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("settings persistence", () => {
+  function mockWindow() {
+    const values = new Map<string, string>();
+    vi.stubGlobal("window", { localStorage: { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) }, dispatchEvent: vi.fn() });
+    return values;
+  }
+  it("does not overwrite explicit system preferences with legacy values on restart", () => {
+    const values = mockWindow();
+    values.set(STORAGE_KEYS.legacyLanguage, "zh-CN"); values.set(STORAGE_KEYS.legacyTheme, "dark");
+    expect(readUserSettings().theme).toBe("dark");
+    updateUserSettings({ theme: "system", language: "system", selectionTranslation: false });
+    expect(readUserSettings()).toMatchObject({ theme: "system", language: "system", selectionTranslation: false });
+  });
+  it("preserves caption preferences and keybindings when updating another setting", () => {
+    mockWindow();
+    updateUserSettings({ caption: { ...DEFAULT_USER_SETTINGS.caption, source: "microphone" }, keybindings: { "caption.start": "Mod+Alt+L" } });
+    updateUserSettings({ selectionTranslation: false });
+    expect(readUserSettings()).toMatchObject({ caption: { source: "microphone" }, keybindings: { "caption.start": "Mod+Alt+L" }, selectionTranslation: false });
+  });
+  it("defaults caption translation off and persists a new explicit opt-in", () => {
+    const values = mockWindow();
+    expect(readUserSettings().caption).toMatchObject({ showChinese: false, language: "english" });
+    values.set(STORAGE_KEYS.settings, JSON.stringify({ version: 3, theme: "dark", caption: { showChinese: true, source: "microphone" } }));
+    expect(readUserSettings()).toMatchObject({ theme: "dark", caption: { source: "microphone", showChinese: false } });
+    updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: true } });
+    updateUserSettings({ theme: "light" });
+    expect(readUserSettings().caption.showChinese).toBe(true);
+    updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: false } });
+    expect(readUserSettings().caption.showChinese).toBe(false);
+  });
+});
 
 describe("parseUserSettings", () => {
   it("accepts known commands and removes unknown entries", () => {
@@ -70,7 +107,7 @@ describe("parseUserSettings", () => {
   it("migrates caption preferences without persisting recording state", () => {
     expect(parseUserSettings({ version: 2 }).caption).toEqual(DEFAULT_USER_SETTINGS.caption);
     const settings = parseUserSettings({ version: 3, caption: { source: "microphone", language: "chinese", timestamps: true, active: true } });
-    expect(settings.caption).toEqual({ source: "microphone", language: "chinese", timestamps: true, showChinese: true, pinned: true });
+    expect(settings.caption).toEqual({ source: "microphone", language: "chinese", timestamps: true, showChinese: false, pinned: true });
     expect(parseUserSettings({ version: 3, caption: { source: "remote", language: "invalid" } }).caption).toEqual(DEFAULT_USER_SETTINGS.caption);
   });
 });

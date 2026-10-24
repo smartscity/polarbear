@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible product or build failure without private data.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For security-sensitive problems, follow SECURITY.md instead of posting
+        exploit details here. Never attach credentials, private documents,
+        recordings or user databases. Use a synthetic example when possible.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Include the installed app version or the exact source commit.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS version, CPU architecture, and installed app or development build.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include a small non-private Markdown sample if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Optional error text, workflow link or screenshot. Redact private content and paths.

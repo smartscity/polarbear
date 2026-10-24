@@ -3,15 +3,18 @@
 import argparse
 import asyncio
 import json
+import os
 from pathlib import Path
 import platform
 
 import numpy as np
 
 from native_replay import montage, replay
+from native_latency_policy import latency_policy, release_decision
 from process_memory import ProcessMemory
 from qualification_corpus import digest
 from qualify import offline_control, validate_corpus, validate_native_arch
+from prepare import MODELS, STREAMING_COMPONENTS, verify_model
 
 # Include the preceding final, not just isolated utterances: queue contention is
 # part of the regression. These offsets are frozen from the failed production run.
@@ -28,17 +31,31 @@ def regression_audio(corpus, directory):
         yield silence
 
 
-def acceptance(result):
+def acceptance(result, candidate=False):
+    policy = latency_policy(candidate)
     return {
         "completeRegression": result["audioSeconds"] == SECONDS,
         "textProduced": result["finals"] > 0,
         "firstText": result["firstFromVadStartP95Seconds"] is not None
-        and result["firstFromVadStartP95Seconds"] <= 3,
+        and result["firstFromVadStartP95Seconds"] <= policy["firstTextP95Seconds"],
         "finalText": result["finalAfterVadEndP95Seconds"] is not None
-        and result["finalAfterVadEndP95Seconds"] <= 4.4,
+        and result["finalAfterVadEndP95Seconds"] <= policy["finalAfterVadEndP95Seconds"],
         "memoryPeak": result["sampledPeakProcessTreeRssBytes"] is not None
         and result["sampledPeakProcessTreeRssBytes"] <= 2 * 1024**3,
     }
+
+def native_command(helper, assets, candidate=None, models=None, threads=None):
+    if (candidate is None) != (models is None):
+        raise ValueError("Streaming candidate and model directory must be specified together")
+    components = STREAMING_COMPONENTS[candidate] if candidate else None
+    model_args = ([str((models / filename).resolve()) for filename in (
+        *(components[part] for part in ("encoder", "decoder", "joiner")), "tokens.txt")]
+        if components else [str((assets / "ggml-base.en-q5_1.bin").resolve())])
+    command = [str(helper.resolve()), *model_args,
+               str((assets / "ggml-silero-v6.2.0.bin").resolve()), "--diagnostics"]
+    if threads is not None:
+        command.append(f"--threads={threads}")
+    return command
 
 
 def main():
@@ -49,6 +66,12 @@ def main():
     parser.add_argument("--helper", type=Path, required=True)
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     parser.add_argument("--threads", type=int, choices=range(1, 17))
+    parser.add_argument("--release-tag", default="",
+                        help="Only vMAJOR.MINOR.PATCH-alpha.N allows a measured first-text overrun")
+    parser.add_argument("--streaming-models", type=Path,
+                        help="Explicit candidate directory; never selected by release builds")
+    parser.add_argument("--streaming-candidate", choices=STREAMING_COMPONENTS,
+                        default="zipformer-gigaspeech-fp32")
     args = parser.parse_args()
     validate_native_arch(args.expect_arch)
     corpus = validate_corpus(args.corpus)
@@ -56,33 +79,57 @@ def main():
     for model in manifest["models"]:
         if digest(args.assets / model["file"]) != model["sha256"]:
             raise ValueError("Bundled model checksum mismatch")
-    report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v1",
+    candidate_pins = None
+    if args.streaming_models:
+        candidate_pins = {filename: verify_model(args.streaming_candidate, args.streaming_models / filename)
+                          for filename in MODELS[args.streaming_candidate]["files"]}
+    report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v2",
+              "releaseTag": args.release_tag,
+              "latencyPolicy": latency_policy(candidate=bool(args.streaming_models)),
               "windows": WINDOWS, "requiredAudioSeconds": SECONDS,
               "machine": platform.machine(), "platform": platform.platform(),
               "corpusSha256": digest(args.corpus), "helperSha256": digest(args.helper),
               "license": corpus["license"], "attribution": corpus["attribution"],
               "offlineControl": offline_control(), "memoryGrowth": "NOT_MEASURED_SHORT_PROFILE",
               "microphoneToUi": "NOT_RUN", "chineseTranslation": "NOT_RUN", "accuracy": "NOT_SCORED"}
+    if candidate_pins:
+        report.update({"engine": args.streaming_candidate, "candidatePins": candidate_pins,
+                       "replacement": "NOT_AUTHORIZED"})
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:
         with args.output.with_suffix(".jsonl").open("w") as stream:
             def emit(event):
                 stream.write(json.dumps(event) + "\n")
                 stream.flush()
-            command = [str(args.helper.resolve()),
-                       str((args.assets / "ggml-base.en-q5_1.bin").resolve()),
-                       str((args.assets / "ggml-silero-v6.2.0.bin").resolve()), "--diagnostics"]
-            if args.threads is not None:
-                command.append(f"--threads={args.threads}")
+            command = native_command(args.helper, args.assets,
+                                     args.streaming_candidate if args.streaming_models else None,
+                                     args.streaming_models, args.threads)
             memory = ProcessMemory()
             report["replay"] = asyncio.run(replay(command, regression_audio(corpus, args.corpus.parent),
-                                                  SECONDS, emit, memory.sample))
-            report["checks"] = acceptance(report["replay"])
+                                                  SECONDS, emit, memory.sample,
+                                                  drain_timeout=8 if args.streaming_models else 60))
+            report["checks"] = acceptance(report["replay"], candidate=bool(args.streaming_models))
             report["status"] = "PASS" if all(report["checks"].values()) else "FAIL"
-            if report["status"] != "PASS":
+            report["releaseDecision"] = release_decision(
+                report["checks"], report["replay"]["firstFromVadStartP95Seconds"],
+                args.release_tag, candidate=bool(args.streaming_models))
+            if not report["releaseDecision"]["allowed"]:
                 raise RuntimeError(f"First-text regression failed: {report['checks']}")
+            if report["releaseDecision"]["advisoryChecks"]:
+                print("::warning::Alpha preview only: first-text P95 exceeded 5 seconds. "
+                      "Measurement remains FAIL; packaging is allowed for diagnostic recording. "
+                      "This is not a latency or accuracy qualification.", flush=True)
     finally:
         args.output.write_text(json.dumps(report, indent=2) + "\n")
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with Path(summary).open("a") as stream:
+                stream.write("\n### Native caption latency evidence\n\n```json\n" + json.dumps({
+                    "measurementStatus": report["status"],
+                    "checks": report.get("checks"),
+                    "firstTextP95Seconds": report.get("replay", {}).get("firstFromVadStartP95Seconds"),
+                    "releaseDecision": report.get("releaseDecision"),
+                }, indent=2) + "\n```\n")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - 'codex/**'
 
 permissions:
   contents: read
@@ -64,8 +65,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Setup Node.js for native prerequisites
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build assets embedded by custom-protocol
+        run: npm --workspace apps/desktop run build
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -73,13 +89,11 @@ jobs:
           workspaces: |
             apps/desktop/src-tauri -> target
 
+      - name: Clippy all targets
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
       - name: Run native tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast
-
-      - name: Setup Node.js for clipboard receiver test
-        uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
 
       - name: Native rich document paste
         run: node apps/desktop/scripts/test-native-clipboard.mjs

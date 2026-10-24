@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
-import type { MemoryRecord, MemoryRevision } from "../generated/adminV1";
+import type { MemoryRecord, MemoryRevision, ProjectMemoryConfig } from "../generated/adminV1";
 import {
   CONTEXT_SECTIONS,
   contextOverviewData,
@@ -24,7 +24,12 @@ type ContextWorkspaceProps = {
   onOpenWorkspace: () => void;
 };
 
-export function ContextWorkspace({
+export function ContextWorkspace(props: ContextWorkspaceProps) {
+  // Drafts, selected memories and pending UI actions belong to one project.
+  return <ContextWorkspaceSession key={props.workspaceRoot} {...props} />;
+}
+
+function ContextWorkspaceSession({
   documentContext,
   workspaceRoot,
   onOpenSource,
@@ -370,19 +375,19 @@ function ContextMemory({
 function ContextSettings({ session }: { session: Session }) {
   const { t } = useI18n();
   const { refreshIntegrations } = session;
-  const [captureMode, setCaptureMode] = useState<"off" | "manual" | "summary">("manual");
-  const [retentionDays, setRetentionDays] = useState(30);
-  const [budgetMode, setBudgetMode] = useState<"auto" | "custom">("auto");
-  const [customBudget, setCustomBudget] = useState(2_000);
-
-  useEffect(() => {
-    if (session.config) {
-      setCaptureMode(session.config.captureMode);
-      setRetentionDays(session.config.rawEventRetentionDays);
-      setBudgetMode(session.config.contextBudgetMode);
-      setCustomBudget(session.config.defaultContextBudget);
-    }
-  }, [session.config]);
+  const [draft, setDraft] = useState<ProjectMemoryConfig | null>(null);
+  const config = draft ?? session.config;
+  const captureMode = config?.captureMode ?? "manual";
+  const retentionDays = config?.rawEventRetentionDays ?? 30;
+  const budgetMode = config?.contextBudgetMode ?? "auto";
+  const customBudget = config?.defaultContextBudget ?? 2_000;
+  const change = (patch: Partial<ProjectMemoryConfig>) => { if (config) setDraft({ ...config, ...patch }); };
+  const setCaptureMode = (value: ProjectMemoryConfig["captureMode"]) => change({ captureMode: value });
+  const setRetentionDays = (value: number) => change({ rawEventRetentionDays: value });
+  const setBudgetMode = (value: "auto" | "custom") => change({ contextBudgetMode: value });
+  const setCustomBudget = (value: number) => change({ defaultContextBudget: value });
+  const valid = Number.isInteger(retentionDays) && retentionDays >= 0 && retentionDays <= 30
+    && Number.isInteger(customBudget) && customBudget >= 400 && customBudget <= 12_000;
 
   useEffect(() => {
     void refreshIntegrations();
@@ -390,7 +395,9 @@ function ContextSettings({ session }: { session: Session }) {
 
   return <div className="context-page context-settings-page" aria-busy={session.isLoading || session.isMutating}>
     <PageHeader title={t("context.settings.title")} description={t("context.settings.description")} />
+    {!config && <p role="status">{t("context.settings.unavailable")}</p>}
     <div className="context-settings-content">
+    <fieldset className="context-settings-fields" disabled={!config || session.isLoading || session.isMutating}>
       <ContextSection title={t("context.settings.context")}>
         <div className="context-settings-form">
           <fieldset className="context-budget-options"><legend>{t("context.settings.contextBudgetMode")}</legend>
@@ -405,9 +412,12 @@ function ContextSettings({ session }: { session: Session }) {
           <label>{t("context.settings.captureMode")}<select value={captureMode} onChange={(event) => setCaptureMode(event.target.value as typeof captureMode)}><option value="summary">{t("context.settings.captureAutomatic")}</option><option value="manual">{t("context.settings.captureManual")}</option><option value="off">{t("context.settings.captureOff")}</option></select></label>
           <div className="context-setting-summary"><span>{t("context.settings.rawHistory")}</span><strong>{t("context.settings.days", { count: retentionDays })}</strong></div>
           <p>{t("context.settings.durableMemoryHint")}</p>
-          <button type="button" disabled={session.isMutating || (budgetMode === "custom" && (customBudget < 400 || customBudget > 12_000))} onClick={() => void session.updateConfig({ captureMode, rawEventRetentionDays: retentionDays, contextBudgetMode: budgetMode, defaultContextBudget: customBudget })}>{t("context.settings.save")}</button>
+          <button type="button" disabled={!valid || !draft} onClick={() => {
+            if (config) void session.updateConfig(config).then((saved) => { if (saved) setDraft(null); });
+          }}>{t("context.settings.save")}</button>
         </div>
       </ContextSection>
+    </fieldset>
       <ContextSection title={t("context.settings.connections")}>
         <div className="context-integration-list">{session.integrations.map((integration) => <details className="context-integration-row" key={integration.id}>
           <summary><strong>{integration.name}</strong><span>{integration.status === "CONNECTED" ? t("context.settings.connected") : t("context.settings.needsAttention")}</span></summary>
@@ -425,11 +435,13 @@ function ContextSettings({ session }: { session: Session }) {
         </details>)}</div>
         {session.diagnostics ? <p className="context-subtle">{t("context.settings.diagnosticsResult", { engine: session.diagnostics.engineVersion, api: session.diagnostics.apiVersion })}</p> : null}
       </ContextSection>
+      <fieldset className="context-settings-fields" disabled={!config || session.isLoading || session.isMutating}>
       <details className="context-settings-advanced"><summary>{t("context.settings.advanced")}</summary>
         <label>{t("context.settings.retentionDays")}<input type="number" min="0" max="30" value={retentionDays} onChange={(event) => setRetentionDays(Number(event.target.value))} /><small>{t("context.settings.rawEventsHint")}</small></label>
         <p>{t("context.settings.storageManaged")}</p>
         <p>{t("context.settings.storagePrivacy")}</p>
       </details>
+      </fieldset>
     </div>
   </div>;
 }

@@ -1,8 +1,13 @@
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import type { CaptionSegment } from "./captionAdapter";
+import { memo } from "react";
+
+const FinalEnglish = memo(function FinalEnglish({ segments }: { segments: readonly CaptionSegment[] }) {
+  return segments.map((segment, index) => <span key={segment.id}>{index > 0 ? " " : ""}{segment.english.trim()}</span>);
+});
 
 /** Present recognition chunks as flowing text without changing durable segment boundaries. */
-export function LiveTranscript({ segments, partial, showChinese }: {
+export const LiveTranscript = memo(function LiveTranscript({ segments, partial, showChinese }: {
   segments: readonly CaptionSegment[];
   partial: string;
   showChinese: boolean;
@@ -13,7 +18,7 @@ export function LiveTranscript({ segments, partial, showChinese }: {
   const failed = segments.some(segment => segment.translationStatus === "failed");
   return <div className="caption-live-text">
     <p className="caption-live-english" lang="en">
-      {segments.map((segment, index) => <span key={segment.id}>{index > 0 ? " " : ""}{segment.english.trim()}</span>)}
+      <FinalEnglish segments={segments} />
       {partial && <span className="caption-partial">{segments.length ? " " : ""}{partial.trim()}</span>}
     </p>
     {showChinese && <>
@@ -25,4 +30,4 @@ export function LiveTranscript({ segments, partial, showChinese }: {
       </p>}
     </>}
   </div>;
-}
+});
