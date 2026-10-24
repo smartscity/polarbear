@@ -71,6 +71,81 @@ async function reloadFixture(page: Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
 }
 
+test("repository connection retries a secure write failure and preserves the empty repository state", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(async () => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    let attempts = 0;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "repository_connect_provider") {
+        if (++attempts === 1) return Promise.reject(JSON.stringify({ code: "repository.secretWriteFailed", message: "private diagnostic" }));
+        return Promise.resolve({ provider: "github", login: "connected" });
+      }
+      if (command === "repository_list_repositories") return Promise.resolve([]);
+      return invoke(command, args);
+    };
+    const path = "/src/shared/settings/userSettings.ts";
+    (await import(path)).updateUserSettings({ keybindings: { "repository.connectGithub": "Mod+Alt+Shift+C", "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
+  });
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+D");
+  await expect(page.locator(".workspace-status")).toContainText("Disconnected cloud sync");
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+C");
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("GitHub token", { exact: true }).fill("fixture-only-token");
+  await dialog.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(dialog.getByRole("alert")).not.toContainText("private diagnostic");
+  await expect(dialog.getByRole("alert")).toBeVisible();
+  await expect(dialog.getByLabel("GitHub token", { exact: true })).toHaveValue("fixture-only-token");
+  await dialog.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(dialog).toContainText("No repositories are visible to this token");
+  await expect(dialog).toContainText("connected");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".editor-workspace .cm-content").first()).toContainText("Opened document");
+});
+
+test("repository status failure stays visible and can be retried without changing the document", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(async () => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => command === "repository_get_sync_status"
+      ? Promise.reject(new Error("Fixture status unavailable")) : invoke(command, args);
+    const path = "/src/shared/settings/userSettings.ts";
+    (await import(path)).updateUserSettings({ keybindings: { "repository.viewSyncStatus": "Mod+Alt+Shift+S" } });
+  });
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+S");
+  await expect(page.getByRole("dialog")).toContainText("Fixture status unavailable");
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+S");
+  await expect(page.getByRole("dialog")).toContainText("Fixture status unavailable");
+  await expect(page.locator(".editor-workspace .cm-content").first()).toContainText("Opened document");
+});
+
+test("a repository status response cannot reopen an obsolete workspace dialog", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(async () => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => command === "repository_get_sync_status"
+      ? new Promise((resolve) => { (window as any).__finishStatus = () => resolve({ localChanges: 0, remoteChanged: false, conflicts: [] }); })
+      : invoke(command, args);
+    const path = "/src/shared/settings/userSettings.ts";
+    (await import(path)).updateUserSettings({ keybindings: { "repository.viewSyncStatus": "Mod+Alt+Shift+S" } });
+    const recent = "/src/features/workspace/recentDocuments.ts";
+    (await import(recent)).recentDocumentStore().record("/other/Other.md", 2);
+  });
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+S");
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishStatus)).toBe("function");
+  await page.locator(".recent-documents").getByRole("button", { name: /Other.md/ }).first().click();
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Other.md" })).toHaveCount(1);
+  await page.evaluate(() => (window as any).__finishStatus());
+  await expect(page.getByRole("button", { name: "Sync now", exact: true })).toBeEnabled();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".workspace-status")).toContainText("Other.md");
+});
+
 test("native link failure keeps the document and reports a localized error without browser fallback", async ({ page }) => {
   await reloadFixture(page);
   const errors: string[] = [];

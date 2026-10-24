@@ -117,3 +117,22 @@ not establish whole-product security, Windows acceptance, measured performance,
 or hosted success. App/editor ownership, pending-render pressure, multi-window
 settings contention, licensing decisions and physical-device acceptance remain
 open. No overall completion or speedup is inferred from fewer lines in main.
+
+## App and Editor Ownership Follow-up
+
+Based on `aa936d2`; detailed evidence is in
+[verification](verification.md#app-and-live-editor-ownership-follow-up).
+
+| Metric | Previous verified slice | Current local result |
+| --- | --- | --- |
+| Desktop Vitest / Node | 310 / 33 | 321 / 34, PASS |
+| Desktop browser | 71 | 76, PASS |
+| Native tests | 92 passed / 3 ignored entries | Same suite rerun: 92 passed / 3 ignored entries |
+| App ownership | Repository workflow and dialogs inline | Feature workflow/dialog host; document save/reload callbacks stay with App |
+| Live editor ownership | 3,122-line React/scanner/DOM implementation | 383-line React host with separate pure scanner, decoration policy and feature widgets |
+| Confirmed regressions | Not previously covered | Fenced Markdown examples remain code; old-workspace status reads cannot reopen dialogs |
+| Hosted baseline | Fresh-job prerequisite fix pending | `aa936d2` Quality run passed all four jobs; new commit CI checked separately |
+
+Scores remain unchanged. This slice establishes tested responsibilities, not a
+complete App document-session extraction, whole-product acceptance or measured
+performance improvement. No second store, event bus or command system was added.

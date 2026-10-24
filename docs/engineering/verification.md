@@ -380,3 +380,56 @@ seconds), Rust formatting and `git diff --check`. The existing large frontend
 chunk warning remains. This CI-only follow-up changes no runtime source; the
 92 native and 71 browser cases above are from the preceding implementation
 verification, not a claim that those suites were rerun for a YAML-only edit.
+
+## App and Live Editor Ownership Follow-up
+
+Baseline: `aa936d28540c7bf8c8195cc34d9557b205bd1049`. Its hosted
+[Quality run](https://github.com/smartscity/polarbear/actions/runs/40085277162)
+passed all four jobs. The following evidence is from this implementation run on
+macOS 26.5.1, Intel x86_64, with Node 26.1.0; it is not release or device evidence.
+
+### Test-first Findings
+
+- The fenced-code browser regression failed before the scanner fix: a Markdown
+  table inside an ordinary code fence produced one interactive table widget
+  instead of zero. Images and callouts shared the same scanning problem.
+- Three characterization cases passed before extraction: connection failure and
+  retry, status failure and retry, and mixed-block source/menu lifetime. Initial
+  fixture mistakes (a guessed menu class and connecting an already-connected
+  account) were corrected against the existing UI, not by weakening behavior.
+- A subsequent delayed-status regression failed before its fix: a response for
+  workspace A reopened the status dialog after opening B. The workspace-lifetime
+  guard now rejects that completion and releases only its stale read projection.
+  A selector matching both Settings and Sync was corrected to the exact Sync
+  action. Native mutations are not claimed to be cancelled by this guard.
+- Eleven pure scanner cases cover raw/range preservation, aliases, ordinary and
+  unfinished fences, frontmatter, and deterministic identities. An architecture
+  check protects the new App/workflow and React/scanner/widget boundaries.
+
+### Local Gates
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Desktop Vitest | PASS | 321 tests in 60 files. |
+| Desktop Node tests | PASS | 34 tests, including dependency/ownership guards. |
+| Full Desktop Playwright | PASS | 76 tests, 5.1 minutes; includes save races, external reload, Context persistence, table width/history and real multi-diagram clipboard generation. |
+| Native clipboard receiver | PASS | Actual generated fixture: all three Mermaid image attachments and surrounding text; Unicode, four pasteboard representations, single-image copy and stale-copy protection also pass. This is an AppKit receiver, not Word/Lark acceptance. |
+| Bundled offline translation | PASS | Chromium and WebKit production CSP, sentence/paragraph inference and request cancellation. |
+| Desktop typecheck / lint | PASS | Final source, no lint warnings. |
+| Desktop build | PASS | 28.47 seconds; existing large-chunk warning remains (App chunk 1,693.87 kB, gzip 509.03 kB). |
+| Native Cargo tests | PASS | 92 passed, 3 ignored entries; two child helpers are invoked by parent tests, installed Memory integration remains opt-in. |
+| Clippy | PASS | All targets and all features with warnings denied. |
+| Rust format / Memory contract | PASS | No native contract changes. |
+
+App is reduced from 4,328 committed lines to 3,917 for this slice, and the live
+React editor host from 3,122 to 383. These are ownership measurements, not latency
+or maintainability scores. Unrelated pre-existing Feedback UI edits are excluded
+from this commit. No new dependency, persisted format or migration is introduced.
+
+NOT RUN: installed-app upgrade/restart, real provider account synchronization,
+Windows/Linux/iPhone acceptance, ASR accuracy/endurance and a controlled editor
+performance study. Browser repository tests use the existing Tauri test boundary;
+they do not prove remote provider behavior. Document-session/zoom extraction,
+table widget internal decomposition and other audit items remain explicitly open.
+The post-push CI result must be checked against this commit, not inferred from
+the passing baseline or local cache.

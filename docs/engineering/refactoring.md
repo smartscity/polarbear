@@ -264,3 +264,64 @@ measured diagram admission policy, cross-window settings contention, license
 ownership and physical-device/packaged acceptance. Reverting publication
 hardening would restore a confirmed secret-exposure path; it is not a safe
 rollback strategy. The module extraction alone needs no data migration.
+
+## App Repository Workflow and Live Editor Ownership
+
+Scope: move the existing repository UI workflow out of App and separate live
+Markdown scanning, decorations and widget behavior from the React editor host.
+Document buffers, save/navigation owners, native repository contracts, table
+commands, table layout history and Markdown persistence retain their owners.
+
+| Responsibility | Owner and contract |
+| --- | --- |
+| Account projection and cleanup recovery | Existing `useRepositoryIdentity`; no second account store. |
+| Repository dialogs, operation status and async actions | Feature workflow hook; App supplies workspace open, save-before-sync and reload-after-download operations. |
+| Repository dialog presentation | Feature dialog host composed from existing dialogs; no duplicate UI. |
+| Preview block source ranges | Pure Markdown scanner; it does not create DOM or execute commands. Ordinary fenced code is opaque to block scanning. |
+| CodeMirror decoration policy | Editor extension; selects source versus widget without owning persisted content. |
+| Table DOM and editing bridge | Existing table feature, reusing command execution, interaction state, menu disposal and layout transactions. |
+| Other block DOM | Editor widgets, reusing asset resolution and block DOM helpers. |
+| React host | Editor instance, props, extension composition, viewport and debug lifecycle. |
+
+| Problem | Pattern decision | Reason |
+| --- | --- | --- |
+| Repository actions and dialogs share feature state | Reuse Hook as a feature facade | Preserve React state and the identity hook; no ViewModel class or global store. |
+| Sync requires document operations | Explicit callback ports | Repository workflow cannot mutate App's document maps or bypass the existing save/reload guards. |
+| Block detection mixed with DOM | Pure scanner plus existing Widget adapter | Test source ranges independently and keep Markdown authoritative. |
+| Variant preview rendering | Existing widget factory | No plugin registry or new event bus for a fixed set of supported blocks. |
+
+Before extraction, browser cases characterize connection failure/retry, empty
+repository results, status failures, mixed block source preservation and table
+portal disposal. A code-fence regression checks that embedded Markdown examples
+cannot become interactive document blocks. Existing save/reload, identity,
+table history, clipboard and diagram suites remain mandatory. No changed IPC,
+data migration, cloud request policy or ASR work is part of this batch.
+
+### Implemented Boundaries and Review
+
+`useRepositoryWorkflow` owns repository UI state and composes the existing
+identity/progress hooks. `RepositoryWorkflowDialogs` renders the existing dialog
+components. App supplies document save/reload and workspace opening callbacks;
+no feature reaches into its document maps. The hook is not a credential store.
+
+`previewBlocks.ts` owns deterministic source ranges and IDs. The existing
+decoration policy is in `liveMarkdownDecorations.ts`; ordinary block DOM is in
+`widgets/blockPreviewWidgets.ts`, and table DOM/editing is in
+`table/tablePreviewWidget.ts`. Table editing still delegates to the existing
+command, layout, clipboard, interaction and menu-lifetime modules. Moved table
+and ordinary block function bodies were compared with the original source and
+are unchanged apart from exports/imports. No alternative Markdown model exists.
+
+The status-read regression exposed a separate obsolete-completion path beyond
+the existing identity hook: an A response reopened a dialog while B was active.
+The workflow now checks a workspace-lifetime token before applying context/status
+reads and their errors. A workspace change releases the old status-query busy
+projection, but does not release an active native sync lock. Current status reads
+also clear their transient busy indicator on completion. This is UI ownership,
+not cancellation or rollback of native IO, and not proof that every connect/link
+mutation race has been qualified.
+
+Review outcome: React composition and CodeMirror/DOM behavior have distinct
+owners without new dependency packages, global stores, event buses or protocol
+versions. App's document-session/zoom coordination and the table widget's internal
+size remain follow-up boundaries; moving code does not prove a performance gain.

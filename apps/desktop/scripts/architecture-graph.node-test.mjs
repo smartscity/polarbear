@@ -61,3 +61,15 @@ test("native quality produces frontend assets before checking custom-protocol", 
   assert.ok(install >= 0 && build > install && clippy > build, "The independent native job must build real assets before embedding them");
   assert.ok(setup >= 0 && setup < install);
 });
+
+test("App composes repository workflows and the live editor composes feature extensions", () => {
+  const source = join(root, "apps/desktop/src");
+  const app = readFileSync(join(source, "App.tsx"), "utf8");
+  assert.match(app, /useRepositoryWorkflow\(/);
+  assert.doesNotMatch(app, /connectRepositoryProvider|listRepositories\(|getRepositorySyncStatus\(|const \[repositoryDialog/);
+  const editor = readFileSync(join(source, "features/editor/components/TyporaLiveEditor.tsx"), "utf8");
+  assert.match(editor, /typoraLiveDecorations\(/);
+  assert.doesNotMatch(editor, /extends WidgetType|function collectPreviewBlocks|function applyTableEdit|function buildTyporaDecorations/);
+  const scanner = readFileSync(join(source, "features/editor/markdown/previewBlocks.ts"), "utf8");
+  assert.doesNotMatch(scanner, /from "react"|document\.|window\.|invoke\(|from .*components\//);
+});

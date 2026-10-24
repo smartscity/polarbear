@@ -1,3 +1,5 @@
+import { useRepositoryWorkflow } from "./features/repository/useRepositoryWorkflow";
+import { RepositoryWorkflowDialogs } from "./features/repository/RepositoryWorkflowDialogs";
 import {
   useCallback,
   useEffect,
@@ -74,29 +76,6 @@ import {
   storeTheme,
   type ThemeName,
 } from "./features/theme/themeTokens";
-import {
-  ConnectRepositoryDialog,
-  LinkRepositoryWorkspaceDialog,
-  RepositoryOperationDialog,
-  RepositorySyncStatusDialog,
-} from "./features/repository/RepositoryDialogs";
-import {
-  connectRepositoryProvider,
-  disconnectRepositoryProvider,
-  getRepositoryAccount,
-  getRepositorySyncStatus,
-  getWorkspaceRepositoryBinding,
-  linkWorkspaceToRepository,
-  listRepositories,
-  pullWorkspace,
-  pushWorkspace,
-  repositoryProviderLabel,
-  syncWorkspaceNow,
-  type RepositoryAccount,
-  type RepositoryInfo,
-  type RepositoryProvider,
-  type RepositorySyncStatus,
-} from "./features/repository/repositoryApi";
 import {
   findWorkspaceItem,
   workspaceTreesEqual,
@@ -192,14 +171,10 @@ import {
   readStoredDebugEnabled,
   storeDebugEnabled,
 } from "./shared/debug/debugSettings";
-import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
-import { useRepositoryIdentity } from "./features/repository/useRepositoryIdentity";
-import { isRepositoryCleanupPending } from "./features/repository/repositoryApi";
 import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
 import { setNativeAppZoom } from "./features/zoom/tauriZoomAdapter";
 import { STORAGE_KEYS } from "./shared/constants/storageKeys";
 import { APP_EVENTS } from "./shared/events/appEvents";
-import { errorMessage } from "./shared/tauri/invokeTauri";
 import { PRODUCT_CONFIG } from "./shared/config/productConfig";
 import { useVocabReading } from "./features/vocab/useVocabReading";
 import { SettingsDialog } from "./app/layout/SettingsDialog";
@@ -368,34 +343,10 @@ export function App() {
   const [isInsertTableDialogOpen, setIsInsertTableDialogOpen] = useState(false);
   const [isInsertCodeFenceDialogOpen, setIsInsertCodeFenceDialogOpen] =
     useState(false);
-  const [repositories, setRepositories] = useState<RepositoryInfo[]>([]);
-  const [repositorySyncStatus, setRepositorySyncStatus] =
-    useState<RepositorySyncStatus | null>(null);
-  const [repositoryDialog, setRepositoryDialog] = useState<
-    "connect" | "link" | "status" | "operation" | null
-  >(null);
-  const [repositoryLinkWorkspaceRoot, setRepositoryLinkWorkspaceRoot] =
-    useState("");
-  const [repositoryError, setRepositoryError] = useState("");
-  const [repositoryOperation, setRepositoryOperation] = useState<{
-    title: string;
-    message: string;
-    isBusy: boolean;
-    status: "idle" | "busy" | "success" | "error";
-  }>({
-    title: t("status.cloudSync"),
-    message: "",
-    isBusy: false,
-    status: "idle",
-  });
-  const [isRepositoryBusy, setIsRepositoryBusy] = useState(false);
-  const repositoryBusyRef = useRef(false);
   const quitRequestedRef = useRef(false);
   const dirtyFileIdsRef = useRef(dirtyFileIds);
   const openFileIdsRef = useRef(openFileIds);
   const [statusMessage, setStatusMessage] = useState("");
-  const { repositoryAccount, repositoryBinding, repositoryCleanupPending, markRepositoryCleanupPending, setRepositoryAccount, setRepositoryBinding } =
-    useRepositoryIdentity(workspaceRoot, setStatusMessage);
   const [debugEnabled, setDebugEnabled] = useState(readStoredDebugEnabled);
 
   useEffect(() => {
@@ -578,32 +529,6 @@ export function App() {
     document: activeDocumentRevisionTarget,
     onChanged: reloadDocumentFromDisk,
     onMissing: handleExternalDocumentMissing,
-  });
-
-  const handleRepositorySyncProgress = useCallback((payload: {
-    phase: string;
-    message: string;
-    current?: number | null;
-    total?: number | null;
-  }) => {
-    const count =
-      payload.current != null && payload.total != null && payload.total > 0
-        ? ` (${payload.current}/${payload.total})`
-        : "";
-    setRepositoryOperation((current) => ({
-      ...current,
-      message: `${payload.message}${count} [${payload.phase}]`,
-      isBusy: true,
-      status: "busy",
-    }));
-  }, []);
-  const handleRepositoryProgressError = useEventCallback(() => {
-    setStatusMessage(t("status.syncProgressUnavailable"));
-  });
-  useRepositorySyncProgress({
-    busyRef: repositoryBusyRef,
-    onProgress: handleRepositorySyncProgress,
-    onError: handleRepositoryProgressError,
   });
 
   const markdownContent = documents[activeFileId] ?? "";
@@ -2044,184 +1969,6 @@ export function App() {
     };
   }, [openMarkdownPath]);
 
-  const repositoryErrorMessage = errorMessage;
-
-  const isRepositoryAuthenticationError = (message: string): boolean =>
-    /credentials are missing|connect (github|gitlab).*before|\b(401|403)\b/i.test(
-      message,
-    );
-
-  const showRepositoryOperation = (
-    title: string,
-    message: string,
-    isBusy: boolean,
-  ) => {
-    setRepositoryOperation({
-      title,
-      message,
-      isBusy,
-      status: isBusy ? "busy" : "error",
-    });
-    if (isBusy) {
-      setRepositoryDialog((current) =>
-        current === "operation" ? null : current,
-      );
-    } else {
-      setRepositoryDialog("operation");
-    }
-  };
-
-  const openLinkWorkspaceDialog = async (
-    accountOverride?: RepositoryAccount,
-    workspaceRootOverride?: string,
-  ) => {
-    let targetWorkspaceRoot = workspaceRootOverride || workspaceRoot;
-    setRepositoryError("");
-
-    if (!accountOverride && !repositoryAccount) {
-      setRepositoryLinkWorkspaceRoot(targetWorkspaceRoot);
-      setRepositoryDialog("connect");
-      return;
-    }
-
-    if (!targetWorkspaceRoot) {
-      const selectedFolder = await chooseWorkspaceFolder();
-      if (!selectedFolder) {
-        setStatusMessage(t("status.chooseWorkspaceBeforeCloud"));
-        setRepositoryDialog(null);
-        return;
-      }
-
-      const didOpenWorkspace = await loadWorkspace(selectedFolder);
-      if (!didOpenWorkspace) {
-        setRepositoryDialog(null);
-        return;
-      }
-      targetWorkspaceRoot = selectedFolder;
-    }
-
-    setRepositories([]);
-    setRepositoryLinkWorkspaceRoot(targetWorkspaceRoot);
-    setRepositoryDialog("link");
-    setIsRepositoryBusy(true);
-
-    try {
-      const [repositories, binding] = await Promise.all([
-        listRepositories(),
-        getWorkspaceRepositoryBinding(targetWorkspaceRoot),
-      ]);
-      setRepositories(repositories);
-      setRepositoryBinding(binding);
-      if (repositories.length === 0) {
-        setRepositoryError(t("cloud.noVisibleRepositoriesMessage"));
-      }
-    } catch (error) {
-      const message = repositoryErrorMessage(error);
-      if (isRepositoryAuthenticationError(message)) {
-        setRepositoryAccount(null);
-        setRepositoryBinding(null);
-        setRepositories([]);
-        setRepositoryError(t("cloud.credentialsUnavailable"));
-        setRepositoryDialog("connect");
-      } else {
-        setRepositoryError(message);
-      }
-      setStatusMessage(message);
-    } finally {
-      setIsRepositoryBusy(false);
-    }
-  };
-
-  const connectRepository = async (params: {
-    provider: RepositoryProvider;
-    token: string;
-    baseUrl?: string;
-  }) => {
-    setRepositoryError("");
-    setIsRepositoryBusy(true);
-
-    try {
-      const account = await connectRepositoryProvider(params);
-      setRepositoryAccount(account);
-      setStatusMessage(t("cloud.connectedAsStatus", {
-        account: account.login,
-        provider: repositoryProviderLabel(account.provider),
-      }));
-      await openLinkWorkspaceDialog(account);
-    } catch (error) {
-      const message = repositoryErrorMessage(error);
-      setRepositoryError(message);
-      setRepositoryDialog("connect");
-      setStatusMessage(message);
-    } finally {
-      setIsRepositoryBusy(false);
-    }
-  };
-
-  const disconnectRepositoryAccount = async () => {
-    setIsRepositoryBusy(true);
-
-    try {
-      await disconnectRepositoryProvider();
-      setRepositoryAccount(null);
-      setRepositoryBinding(null);
-      setRepositoryLinkWorkspaceRoot("");
-      setRepositoryError("");
-      setRepositoryDialog(null);
-      setStatusMessage(t("status.cloudDisconnected"));
-    } catch (error) {
-      if (isRepositoryCleanupPending(error)) markRepositoryCleanupPending();
-      const message = repositoryErrorMessage(error);
-      showRepositoryOperation(t("status.cloudSync"), message, false);
-      setStatusMessage(message);
-    } finally {
-      setIsRepositoryBusy(false);
-    }
-  };
-
-  const linkCurrentWorkspace = async (params: {
-    provider: RepositoryProvider;
-    owner: string;
-    repo: string;
-    branch: string;
-    remotePath: string;
-    baseUrl?: string | null;
-  }) => {
-    const syncWorkspaceRoot = repositoryLinkWorkspaceRoot || workspaceRoot;
-    if (!syncWorkspaceRoot) {
-      setStatusMessage(t("status.openWorkspaceBeforeCloud"));
-      return;
-    }
-
-    setRepositoryError("");
-    setIsRepositoryBusy(true);
-
-    try {
-      const binding = await linkWorkspaceToRepository({
-        workspaceRef: syncWorkspaceRoot,
-        ...params,
-      });
-      setRepositoryBinding(binding);
-      setRepositoryLinkWorkspaceRoot("");
-      const status = await getRepositorySyncStatus({
-        workspaceRef: syncWorkspaceRoot,
-        dirty: false,
-      });
-      setRepositorySyncStatus(status);
-      setRepositoryDialog("status");
-      setStatusMessage(t("status.cloudReady", {
-        repository: `${binding.owner}/${binding.repo}`,
-      }));
-    } catch (error) {
-      const message = repositoryErrorMessage(error);
-      setRepositoryError(message);
-      setRepositoryDialog("link");
-      setStatusMessage(message);
-    } finally {
-      setIsRepositoryBusy(false);
-    }
-  };
-
   const dirtyDocumentIdsForWorkspace = useEventCallback((targetWorkspaceRoot: string): string[] =>
     Array.from(dirtyFileIds).filter((fileId) => {
       if (isUntitledDocument(fileId)) {
@@ -2285,138 +2032,21 @@ export function App() {
     return reloadOpenWorkspaceDocuments(targetWorkspaceRoot, items);
   };
 
-  const resolveRepositoryContext = async () => {
-    const account = await getRepositoryAccount();
-    setRepositoryAccount(account);
-    if (!account) {
-      setRepositoryError("");
-      setRepositoryDialog("connect");
-      return null;
-    }
-
-    if (!workspaceRoot) {
-      await openLinkWorkspaceDialog(account);
-      return null;
-    }
-
-    const binding = await getWorkspaceRepositoryBinding(workspaceRoot);
-    setRepositoryBinding(binding);
-    if (!binding) {
-      await openLinkWorkspaceDialog(account, workspaceRoot);
-      return null;
-    }
-
-    return { account, binding, workspaceRoot };
-  };
-
-  const refreshSyncStatus = async () => {
-    showRepositoryOperation(
-      t("status.checkingCloudSyncTitle"),
-      t("status.checkingCloudSyncMessage"),
-      true,
-    );
-    setIsRepositoryBusy(true);
-
-    try {
-      const context = await resolveRepositoryContext();
-      if (!context) {
-        return;
-      }
-      const status = await getRepositorySyncStatus({
-        workspaceRef: context.workspaceRoot,
-        dirty: dirtyDocumentIdsForWorkspace(context.workspaceRoot).length > 0,
-      });
-      setRepositorySyncStatus(status);
-      setRepositoryAccount(status.account ?? null);
-      setRepositoryBinding(status.binding ?? null);
-      setRepositoryDialog("status");
-    } catch (error) {
-      const message = repositoryErrorMessage(error);
-      showRepositoryOperation(t("cloud.statusTitle"), message, false);
-      setStatusMessage(message);
-    } finally {
-      setIsRepositoryBusy(false);
-    }
-  };
-
-  const runRepositorySyncAction = async (action: "pull" | "push" | "sync") => {
-    if (repositoryBusyRef.current) {
-      setStatusMessage(t("status.cloudBusy"));
-      return;
-    }
-    const operation =
-      action === "push"
-        ? { title: t("status.syncUploadingTitle"), message: t("status.syncUploadingMessage") }
-        : action === "pull"
-          ? { title: t("status.syncDownloadingTitle"), message: t("status.syncDownloadingMessage") }
-          : { title: t("status.syncingTitle"), message: t("status.syncingMessage") };
-    showRepositoryOperation(operation.title, operation.message, true);
-    repositoryBusyRef.current = true;
-    setIsRepositoryBusy(true);
-
-    try {
-      const context = await resolveRepositoryContext();
-      if (!context) {
-        return;
-      }
-      showRepositoryOperation(operation.title, operation.message, true);
-      if (!await saveDirtyDocumentsForWorkspace(context.workspaceRoot)) {
-        const message = t("status.syncPausedUnsaved");
-        setRepositoryOperation({ title: operation.title, message, isBusy: false, status: "error" });
-        setStatusMessage((current) => `${message} ${current}`);
-        return;
-      }
-      const params = {
-        workspaceRef: context.workspaceRoot,
-        dirty: false,
-      };
-      const status =
-        action === "pull"
-          ? await pullWorkspace(params)
-          : action === "push"
-            ? await pushWorkspace(params)
-            : await syncWorkspaceNow(params);
-
-      setRepositorySyncStatus(status);
-      setRepositoryAccount(status.account ?? null);
-      setRepositoryBinding(status.binding ?? null);
-      const localConflict = (action === "pull" || action === "sync")
-        ? await reloadWorkspaceAfterDownload(context.workspaceRoot)
-        : false;
-      setRepositoryDialog(status.conflicts.length > 0 ? "status" : null);
-      setRepositoryOperation({
-        title: operation.title,
-        message:
-          localConflict
-            ? t("status.syncReloadPreserved")
-            : status.conflicts.length > 0
-            ? t("status.syncConflicts", { count: status.conflicts.length })
-            : t("status.operationCompleted", { operation: operation.title }),
-        isBusy: false,
-        status: localConflict || status.conflicts.length > 0 ? "error" : "success",
-      });
-      setStatusMessage(
-        localConflict
-          ? t("status.syncReloadPreserved")
-          : status.conflicts.length > 0
-          ? t("status.syncConflicts", { count: status.conflicts.length })
-          : t("status.operationCompleted", { operation: operation.title }),
-      );
-    } catch (error) {
-      const message = repositoryErrorMessage(error);
-      setRepositoryOperation({
-        title: operation.title,
-        message,
-        isBusy: false,
-        status: "error",
-      });
-      setRepositoryDialog(null);
-      setStatusMessage(message);
-    } finally {
-      repositoryBusyRef.current = false;
-      setIsRepositoryBusy(false);
-    }
-  };
+  const repository = useRepositoryWorkflow({
+    workspaceRoot,
+    onStatus: setStatusMessage,
+    openWorkspace: loadWorkspace,
+    documents: {
+      dirtyIds: dirtyDocumentIdsForWorkspace,
+      saveDirty: saveDirtyDocumentsForWorkspace,
+      reload: reloadWorkspaceAfterDownload,
+    },
+  });
+  const {
+    repositoryAccount, repositoryBinding, repositoryCleanupPending, repositoryOperation,
+    isRepositoryBusy, disconnectRepositoryAccount, openLinkWorkspaceDialog,
+    refreshSyncStatus, runRepositorySyncAction,
+  } = repository;
 
   const createUntitledDocument = () => {
     documentNavigation.invalidate();
@@ -4027,7 +3657,7 @@ export function App() {
       }
 
       if (command === "repository.connectGithub") {
-        setRepositoryDialog("connect");
+        repository.openConnectDialog();
         return;
       }
 
@@ -4268,48 +3898,7 @@ export function App() {
           onConfirm={insertCodeFence}
         />
       ) : null}
-      {repositoryDialog === "connect" ? (
-        <ConnectRepositoryDialog
-          errorMessage={repositoryError}
-          isBusy={isRepositoryBusy}
-          onCancel={() => {
-            setRepositoryError("");
-            setRepositoryDialog(null);
-          }}
-          onConnect={(params) => void connectRepository(params)}
-        />
-      ) : null}
-      {repositoryDialog === "link" && repositoryAccount ? (
-        <LinkRepositoryWorkspaceDialog
-          account={repositoryAccount}
-          binding={repositoryBinding}
-          errorMessage={repositoryError}
-          isBusy={isRepositoryBusy}
-          repositories={repositories}
-          workspaceRoot={repositoryLinkWorkspaceRoot || workspaceRoot}
-          onCancel={() => {
-            setRepositoryLinkWorkspaceRoot("");
-            setRepositoryError("");
-            setRepositoryDialog(null);
-          }}
-          onLink={(params) => void linkCurrentWorkspace(params)}
-        />
-      ) : null}
-      {repositoryDialog === "status" && repositorySyncStatus ? (
-        <RepositorySyncStatusDialog
-          status={repositorySyncStatus}
-          onClose={() => setRepositoryDialog(null)}
-          onSync={() => void runRepositorySyncAction("sync")}
-        />
-      ) : null}
-      {repositoryDialog === "operation" ? (
-        <RepositoryOperationDialog
-          isBusy={repositoryOperation.isBusy}
-          message={repositoryOperation.message}
-          title={repositoryOperation.title}
-          onClose={() => setRepositoryDialog(null)}
-        />
-      ) : null}
+      <RepositoryWorkflowDialogs workflow={repository} />
       {externalDocumentChange ? (
         <ExternalFileChangedDialog
           path={externalDocumentChange.relativePath}
