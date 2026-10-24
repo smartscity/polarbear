@@ -199,3 +199,72 @@ These remain local worktree checks, not pristine hosted or installed-app proof.
 
 No caption model, latency gate, document format, database schema, dependency or
 public command name/argument changed. No tag or DMG is implied by these commits.
+
+## Credential Restart Recovery Follow-up
+
+Date: 2026-10-24. Base: `4fe099f`. Implementation and this report are committed
+together. Local Intel/macOS verification only; six unrelated Feedback edits
+remain in the checkout and are excluded from staging.
+
+### Test-first Evidence
+
+- Extracted the previous cleanup sequence into the new lifecycle boundary,
+  without recovery behavior. Five fault tests failed: no durable intent before
+  destructive work, no retained intent after partial failure or metadata failure,
+  and no recovery after metadata removal. This tested the old sequence in an
+  isolated boundary, not a real Keychain interruption.
+- Command-state regression failed because a pending cleanup without an account
+  had no enabled/visible disconnect action.
+- Browser projection regression failed after reload because pending cleanup was
+  absent. The first sandbox attempt could not bind port 1422; the permitted local
+  server run reproduced the behavioral failure.
+- A real temporary directory with mode 000 reproduced fallback deletion falsely
+  succeeding through `Path::exists()`. Permissions were restored and the fixture
+  removed; no user credential file was accessed.
+- Added a parent regression that starts two independent child processes: the
+  first removes a fake GitHub credential and fails GitLab deletion, the second
+  recovers the persisted intent and removes the remaining fixture and metadata.
+  This is real process recreation with fake credentials, not installed-app or
+  system-Keychain acceptance.
+
+### Scope and Manual Acceptance
+
+- Pending cleanup blocks native credential acquisition and reconnect persistence;
+  the UI treats it as unauthenticated but retains the existing disconnect command
+  in the native menu. Failed cleanup never restores a credential.
+- Read failures preserve metadata and use a distinct localized error. Existing
+  account/binding formats and command names remain compatible. The secret-free
+  intent marker is new; rollback guidance is in [refactoring](refactoring.md#restart-safe-credential-cleanup).
+- NOT RUN: real Keychain denial/prompt interaction, Windows/Linux native builds,
+  power-loss durability, installed application restart, live provider requests,
+  new hosted CI/DMG and iPhone acceptance. No benchmark or ASR endurance was run.
+- Remaining limits: debug fallback creation-time permissions; legacy orphaned
+  credentials with neither account metadata nor intent; in-flight HTTP requests
+  already holding credentials; independent binaries sharing one config directory.
+
+On a disposable test account, deny one Keychain deletion, restart, and confirm
+the localized failure plus Cloud Sync disconnect retry remain available. Allow
+access and retry: metadata and intent should disappear only after all credential
+stores clear. Restart again and confirm no authenticated account or recovery
+warning remains. Repeat with the debug fallback directory inaccessible, restoring
+permissions before retry. Do not use production credentials for this exercise.
+
+### Final Local Results
+
+| Check | Result | Scope |
+| --- | --- | --- |
+| Desktop typecheck and lint | PASS | Source and unit-test contracts; no new lint errors. |
+| Desktop unit / Node suites | PASS: 308 tests in 59 files; 30 Node tests | Recovery command policy, native menu retry, error-code localization, existing graph and release guards. |
+| Desktop browser suite | PASS: 71 tests, 2.7 minutes | Includes projection reload and actual-App retry after reload. Native credential IPC is mocked; bundled translator tests use real assets. |
+| Native workspace tests | PASS: 78 passed, 3 ignored entries | Two ignored helpers are executed by their parent tests (save coordination and credential restart). The installed Memory Engine opt-in test remains NOT RUN. |
+| `cargo clippy --all-targets --all-features -- -D warnings` | PASS | Native source and tests. |
+| `cargo fmt --all -- --check` | PASS | Only touched Rust files were formatted. |
+| Desktop production build | PASS: 30.01 s | App chunk 1,692.12 kB / 507.95 kB gzip; existing large-chunk warning retained. Not a benchmark or native DMG build. |
+| Memory contract check | PASS | No contract source changes. |
+| Whitespace and local documentation links | PASS | Task-only staging; unrelated Feedback work retained. |
+
+The first full browser run had 70 passes and one new-test assertion failure:
+successful cleanup removes the status node, so a negative text assertion still
+waiting for that node was invalid. The assertion now checks that the loaded
+editor has no status node. The complete suite above was rerun, not reported from
+the failed run. No product guard or acceptance threshold was relaxed.

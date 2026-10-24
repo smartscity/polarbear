@@ -14,6 +14,13 @@ const defaultContext: CommandRuntimeContext = {
 };
 
 describe("getCommandState", () => {
+  it("allows only cleanup retry while a disconnected account has pending credentials", () => {
+    const context = { ...defaultContext, repositoryCleanupPending: true, repositoryLinked: true };
+    expect(getCommandState("repository.disconnectGithub", context)).toMatchObject({ enabled: true, visible: true });
+    expect(getCommandState("repository.connectGithub", context).enabled).toBe(false);
+    expect(getCommandState("repository.linkWorkspace", context).enabled).toBe(false);
+    expect(getCommandState("repository.syncNow", context).enabled).toBe(false);
+  });
   it("disables document commands when no document is active", () => {
     const context = { ...defaultContext, activeDocumentId: "" };
 

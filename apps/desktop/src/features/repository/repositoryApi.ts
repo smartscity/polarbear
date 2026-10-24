@@ -65,15 +65,28 @@ export async function disconnectRepositoryProvider(): Promise<void> {
   try {
     await invokeTauri(TAURI_COMMANDS.repositoryDisconnectProvider);
   } catch (error) {
-    if (hasTauriErrorCode(error, "repository.secretDeletionFailed")) {
-      throw new Error(translateCurrent("repository.secretDeletionFailed"), { cause: error });
-    }
-    throw error;
+    throw localizedIdentityError(error);
   }
 }
 
 export async function getRepositoryAccount(): Promise<RepositoryAccount | null> {
-  return invokeTauri<RepositoryAccount | null>(TAURI_COMMANDS.repositoryGetAccount);
+  try {
+    return await invokeTauri<RepositoryAccount | null>(TAURI_COMMANDS.repositoryGetAccount);
+  } catch (error) {
+    throw localizedIdentityError(error);
+  }
+}
+
+export function isRepositoryCleanupPending(error: unknown): boolean {
+  return hasTauriErrorCode(error, "repository.secretDeletionFailed") ||
+    (error instanceof Error && hasTauriErrorCode(error.cause, "repository.secretDeletionFailed"));
+}
+
+function localizedIdentityError(error: unknown): unknown {
+  for (const key of ["repository.secretDeletionFailed", "repository.secretReadFailed"] as const) {
+    if (hasTauriErrorCode(error, key)) return new Error(translateCurrent(key), { cause: error });
+  }
+  return error;
 }
 
 export async function listRepositories(): Promise<RepositoryInfo[]> {

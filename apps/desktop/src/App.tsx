@@ -194,6 +194,7 @@ import {
 } from "./shared/debug/debugSettings";
 import { useRepositorySyncProgress } from "./features/repository/useRepositorySyncProgress";
 import { useRepositoryIdentity } from "./features/repository/useRepositoryIdentity";
+import { isRepositoryCleanupPending } from "./features/repository/repositoryApi";
 import { useWorkspaceFileTreeRefresh } from "./features/workspace/useWorkspaceFileTreeRefresh";
 import { setNativeAppZoom } from "./features/zoom/tauriZoomAdapter";
 import { STORAGE_KEYS } from "./shared/constants/storageKeys";
@@ -393,7 +394,7 @@ export function App() {
   const dirtyFileIdsRef = useRef(dirtyFileIds);
   const openFileIdsRef = useRef(openFileIds);
   const [statusMessage, setStatusMessage] = useState("");
-  const { repositoryAccount, repositoryBinding, setRepositoryAccount, setRepositoryBinding } =
+  const { repositoryAccount, repositoryBinding, repositoryCleanupPending, markRepositoryCleanupPending, setRepositoryAccount, setRepositoryBinding } =
     useRepositoryIdentity(workspaceRoot, setStatusMessage);
   const [debugEnabled, setDebugEnabled] = useState(readStoredDebugEnabled);
 
@@ -2169,6 +2170,7 @@ export function App() {
       setRepositoryDialog(null);
       setStatusMessage(t("status.cloudDisconnected"));
     } catch (error) {
+      if (isRepositoryCleanupPending(error)) markRepositoryCleanupPending();
       const message = repositoryErrorMessage(error);
       showRepositoryOperation(t("status.cloudSync"), message, false);
       setStatusMessage(message);
@@ -3718,6 +3720,7 @@ export function App() {
     activeViewMode: viewMode,
     repositoryBusy: isRepositoryBusy,
     repositoryConnected: Boolean(repositoryAccount),
+    repositoryCleanupPending,
     repositoryLinked: Boolean(repositoryBinding),
     selectedTreeItemId,
     sidebarOpen,
@@ -3726,6 +3729,7 @@ export function App() {
   }), [
     activeFileId,
     isRepositoryBusy,
+    repositoryCleanupPending,
     repositoryAccount,
     repositoryBinding,
     selectedTreeItemId,

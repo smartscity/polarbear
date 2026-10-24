@@ -56,3 +56,25 @@ test("reports a current repository refresh failure", async ({ page }) => {
   await page.evaluate(() => (window as any).__identityReads[0].reject(new Error("current failure")));
   await expect(page.locator("output")).toContainText("current failure");
 });
+
+test("restores pending cleanup after reload and keeps authentication unavailable", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, { __TAURI_INTERNALS__: {
+      invoke: async (command: string) => {
+        if (command === "repository_get_account") throw JSON.stringify({
+          code: "repository.secretDeletionFailed", message: "private diagnostic",
+        });
+        return null;
+      },
+    } });
+  });
+  await page.goto("/tests/browser/navigation.html?repository");
+  const pending = () => page.evaluate(() => (window as any).__repositoryIdentity?.repositoryCleanupPending);
+  await expect.poll(pending).toBe(true);
+  await expect(page.locator("output")).toContainText('"account":null,"binding":null');
+  await expect(page.locator("output")).not.toContainText("private diagnostic");
+  await page.reload();
+  await expect.poll(pending).toBe(true);
+  await page.evaluate(() => (window as any).__repositoryIdentity.setRepositoryAccount(null));
+  await expect.poll(pending).toBe(false);
+});

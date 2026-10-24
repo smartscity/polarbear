@@ -76,3 +76,24 @@ The security dimension remains 2: these targeted checks do not establish whole-
 application security or real Windows/Keychain acceptance. No overall numerical
 quality increase or performance improvement is asserted. Remaining scope is
 explicit in [verification](verification.md#boundary-hardening-follow-up).
+
+## Restart Recovery Follow-up Evidence
+
+The slice based on `4fe099f` adds durable cleanup intent, distinct read failures,
+native identity ownership and UI retry after restart. It closes the scoped
+restart gap; it does not complete overall architectural governance.
+
+| Metric | Previous slice | Current local result |
+| --- | --- | --- |
+| Desktop Vitest / Node | 304 / 30 | 308 / 30, PASS |
+| Desktop browser | 69 | 71, PASS after correcting a new-test absent-node assertion |
+| Native Rust | 67 passed / 2 ignored | 78 passed / 3 ignored; two child helpers actually invoked by parent tests |
+| Restart evidence | Same-session deletion retry only | New subprocess consumes persisted intent after partial fake-credential deletion; browser reload retains the retry command |
+| Permission evidence | Injected fallback failure | Real inaccessible-directory fixture reproduces and prevents false deletion acknowledgement |
+| Core decomposition | Identity persistence in main | Account DTO, provider normalization, credential access, persistence and recovery in `repository_identity.rs`; provider HTTP and sync remain in main |
+
+Typecheck, lint, fmt, all-target/all-feature Clippy, build and Memory contract
+checks pass. Security score remains 2; real Keychain/Windows/installed-app and
+power-loss acceptance are not inferred from local fixtures. Debug fallback
+creation permissions and broader core decomposition remain open. Detailed
+limits and commands are in [verification](verification.md#credential-restart-recovery-follow-up).

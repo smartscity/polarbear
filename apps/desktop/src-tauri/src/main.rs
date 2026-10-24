@@ -18,12 +18,17 @@ mod live_caption;
 mod memory_admin;
 mod native_pinch;
 mod reading_native;
+mod repository_identity;
 mod secret_store;
 mod system_open;
 mod vocab_bridge;
 mod vocab_outbox;
 mod workspace_paths;
 
+use repository_identity::{
+    normalize_repository_provider, read_account, read_connected_account, repository_provider_label,
+    repository_token, RepositoryAccountDto,
+};
 use workspace_paths::{normalize_relative_path, validate_entry_name, workspace_path};
 
 type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
@@ -177,17 +182,6 @@ struct LinkWorkspaceRequest {
 struct WorkspaceSyncRequest {
     workspace_ref: String,
     dirty: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct RepositoryAccountDto {
-    provider: String,
-    account_id: String,
-    login: String,
-    avatar_url: Option<String>,
-    base_url: Option<String>,
-    connected_at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -581,41 +575,12 @@ fn app_config_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(path)
 }
 
-fn account_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    Ok(app_config_dir(app)?.join("repository-account.json"))
-}
-
 fn bindings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(app_config_dir(app)?.join("repository-bindings.json"))
 }
 
 fn cloud_sync_database_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(app_config_dir(app)?.join("cloud-sync.sqlite3"))
-}
-
-fn read_account(app: &tauri::AppHandle) -> Result<Option<RepositoryAccountDto>, String> {
-    let path = account_path(app)?;
-    if !path.exists() {
-        return Ok(None);
-    }
-
-    let content = fs::read_to_string(path).map_err(|error| error.to_string())?;
-    serde_json::from_str(&content)
-        .map(Some)
-        .map_err(|error| error.to_string())
-}
-
-fn write_account(app: &tauri::AppHandle, account: &RepositoryAccountDto) -> Result<(), String> {
-    let content = serde_json::to_string_pretty(account).map_err(|error| error.to_string())?;
-    fs::write(account_path(app)?, content).map_err(|error| error.to_string())
-}
-
-fn delete_account(app: &tauri::AppHandle) -> Result<(), String> {
-    let path = account_path(app)?;
-    if path.exists() {
-        fs::remove_file(path).map_err(|error| error.to_string())?;
-    }
-    Ok(())
 }
 
 fn read_bindings(app: &tauri::AppHandle) -> Result<BTreeMap<String, RepositoryBindingDto>, String> {
@@ -657,48 +622,6 @@ fn github_client(token: &str) -> Result<Client, String> {
         })
         .build()
         .map_err(|error| error.to_string())
-}
-
-fn normalize_repository_provider(provider: &str) -> Result<String, String> {
-    match provider.trim().to_ascii_lowercase().as_str() {
-        "github" => Ok("github".to_owned()),
-        "gitlab" => Ok("gitlab".to_owned()),
-        _ => Err("Supported repository providers are GitHub and GitLab.".to_owned()),
-    }
-}
-
-fn repository_provider_label(provider: &str) -> &'static str {
-    match provider {
-        "gitlab" => "GitLab",
-        _ => "GitHub",
-    }
-}
-
-fn repository_token(app: &tauri::AppHandle, provider: &str) -> Result<String, String> {
-    let provider = normalize_repository_provider(provider)?;
-    secret_store::read_repository_secret(app, &provider)?.ok_or_else(|| {
-        format!(
-            "Connect {} before using repository sync.",
-            repository_provider_label(&provider)
-        )
-    })
-}
-
-fn read_connected_account(app: &tauri::AppHandle) -> Result<Option<RepositoryAccountDto>, String> {
-    let Some(account) = read_account(app)? else {
-        return Ok(None);
-    };
-    let provider = normalize_repository_provider(&account.provider)?;
-    let secret = secret_store::read_repository_secret(app, &provider)?;
-    if secret
-        .as_deref()
-        .is_some_and(|token| !token.trim().is_empty())
-    {
-        return Ok(Some(account));
-    }
-
-    delete_account(app)?;
-    Ok(None)
 }
 
 fn normalize_gitlab_base_url(base_url: Option<&str>) -> String {
@@ -1952,6 +1875,7 @@ fn repository_connect_provider_blocking(
     app: tauri::AppHandle,
     request: ConnectRepositoryProviderRequest,
 ) -> Result<RepositoryAccountDto, String> {
+    repository_identity::ensure_available(&app)?;
     let provider = normalize_repository_provider(&request.provider)?;
     let token = request.token.trim();
     if token.is_empty() {
@@ -1968,7 +1892,6 @@ fn repository_connect_provider_blocking(
             &client,
             &format!("{}/user", gitlab_api_base(Some(base_url.as_str()))),
         )?;
-        secret_store::save_repository_secret(&app, &provider, token)?;
         RepositoryAccountDto {
             provider,
             account_id: user.id.to_string(),
@@ -1980,7 +1903,6 @@ fn repository_connect_provider_blocking(
     } else {
         let client = github_client(token)?;
         let user = github_get::<GithubUserResponse>(&client, "https://api.github.com/user")?;
-        secret_store::save_repository_secret(&app, &provider, token)?;
         RepositoryAccountDto {
             provider,
             account_id: user.id.to_string(),
@@ -1991,16 +1913,7 @@ fn repository_connect_provider_blocking(
         }
     };
 
-    let saved_token =
-        secret_store::read_repository_secret(&app, &account.provider)?.ok_or_else(|| {
-            "Cloud Sync could not save the token. Check app storage permissions and try again."
-                .to_owned()
-        })?;
-    if saved_token != token {
-        return Err("Cloud Sync could not verify the saved token.".to_owned());
-    }
-
-    write_account(&app, &account)?;
+    repository_identity::save_account(&app, &account, token)?;
     Ok(account)
 }
 
@@ -2013,14 +1926,15 @@ async fn repository_connect_provider(
 }
 
 #[tauri::command]
-fn repository_disconnect_provider(app: tauri::AppHandle) -> Result<(), String> {
-    secret_store::delete_repository_secrets(&app)?;
-    delete_account(&app)
+async fn repository_disconnect_provider(app: tauri::AppHandle) -> Result<(), String> {
+    run_repository_task(move || repository_identity::disconnect(&app)).await
 }
 
 #[tauri::command]
-fn repository_get_account(app: tauri::AppHandle) -> Result<Option<RepositoryAccountDto>, String> {
-    read_connected_account(&app)
+async fn repository_get_account(
+    app: tauri::AppHandle,
+) -> Result<Option<RepositoryAccountDto>, String> {
+    run_repository_task(move || read_connected_account(&app)).await
 }
 
 fn repository_list_repositories_blocking(

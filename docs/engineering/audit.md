@@ -75,7 +75,7 @@ confirmed P0 catastrophic failure was reproduced in this pass.
 | ENG-07 | P2 / Confirmed | `App`, `TyporaLiveEditor`, `main.rs` still combine several responsibilities | Partial: removed repository refresh ownership and duplicated table portal cleanup. App function remains about 4,057 lines; ImageViewer 690; table controller 435. Further extraction must follow behavioral ownership, not arbitrary file-size limits. |
 | ENG-08 | P2 / Confirmed design limit; resource impact Suspected | `features/diagram/diagramRenderCache.ts::getOrRender` bounds completed entries/code units but not distinct pending render requests | Deduplication and completed-cache bounds remain intact. Queue growth under many unique diagrams has no new measured memory/latency evidence. Add a fixed stress fixture before introducing admission control. OPEN. |
 | ENG-09 | P1 / Confirmed fallback and validation defects; exploitation not reproduced | `shared/tauri/openExternalUrl.ts` treated native rejection as browser availability; native launcher ignored unsuccessful exit status and used Windows command-shell parsing | FIXED in the boundary follow-up: explicit runtime choice, validation on both IPC sides, no current-page navigation, localized failure feedback, checked process status, and direct Windows ShellExecuteW URL dispatch. Browser/native regressions pass; actual Windows handler acceptance remains NOT RUN. See the follow-up in verification. |
-| ENG-10 | P1 / Confirmed by injected failures | `src-tauri/src/secret_store.rs::delete_repository_secrets` ignored both keychain deletion errors | FIXED for deletion acknowledgement: attempt both keychains and fallback cleanup, return a sanitized coded error if any fail, retain the existing account/UI failure path and support idempotent retry. No real credentials were deleted in tests. Debug fallback file-creation permissions and restart recovery after partial deletion remain separate follow-up work. |
+| ENG-10 | P1 / Confirmed by injected failures and a real directory-permission fixture | Credential deletion ignored errors; startup hid account metadata after partial cleanup; `exists()` mistook an inaccessible fallback for absence | FIXED for deletion acknowledgement and restart recovery: `repository_identity.rs` persists intent before deletion, resumes after restart, blocks authentication while pending, and keeps the retry command available. Read failures preserve metadata. Only explicit NotFound counts as absent fallback. Tests use isolated files and fake credentials, including a new process; real Keychain prompts and debug fallback creation permissions remain follow-up work. |
 | ENG-11 | P2 / Suspected | Settings are local persistent values projected into React/native state; cross-window read-modify-write has no stress proof | Existing restart/invalid-setting tests pass. Do not infer multi-writer atomicity from them. No new storage format or speculative global store was added. OPEN. |
 | ENG-12 | P1 / Confirmed verification gap | macOS release lacked Desktop browser, real bundled translation, all-target Clippy/native correctness, and Memory contract checks in its own dependency path | Added blocking steps to `release.yml`; `quality.yml` gains all-target Clippy. Local commands pass. Hosted execution and branch protection are NOT VERIFIED for this revision. |
 | ENG-13 | P2 / Confirmed governance gap | Cargo license declarations exist but root license texts are missing; no root contribution/security guide or issue/PR template existed | Added `CONTRIBUTING.md`, `SECURITY.md`, and evidence-oriented issue/PR templates. License ownership/grant must be resolved by maintainers; no arbitrary copyright/license text added. Private reporting and required checks require GitHub administration. |
@@ -87,12 +87,12 @@ confirmed P0 catastrophic failure was reproduced in this pass.
 | --- | --- | --- |
 | Document | Markdown text plus revision; `DocumentReadRequests`, save acknowledgement and `document_save.rs` transactions | Cooperative macOS writer tests are not proof against every hostile filesystem mutation or unsupported filesystem. |
 | Editor | CodeMirror state/history; table widths are document UI state, not Markdown metadata | Large widget/controller ownership remains; physical IME is not proven by synthetic browser events. |
-| Repository | Native credentials/bindings; feature hook owns only their UI projection | Push/pull state and dialogs remain in App; live provider rate-limit/auth/network fault acceptance not run. |
+| Repository | Native identity owner serializes credential access and persists cleanup intent; feature hook owns only the UI projection, including pending cleanup | Push/pull state and dialogs remain in App; live provider rate-limit/auth/network fault acceptance not run. Already in-flight HTTP requests are not revoked by local cleanup. |
 | Memory | Versioned Admin API, method allowlist, bound workspace, private Unix socket/token, bounded response frame/read timeout and blocking work off the async executor | No direct `memory.db` access added. Real installed Engine opt-in integration remains unrun. Non-Unix transport is not demonstrated. |
 | Caption | Existing native session owns capture/store; frontend observes, translator has separate lifecycle | Mock/helper coverage is not production recognition accuracy or hardware endurance. |
 | Rendered input | Existing Markdown/SVG sanitation and diagram error/consent boundaries retained | Rich browser/native paste fixtures passed, not a complete XSS fuzzing campaign. |
 | Native capabilities | Main and caption windows have separate capabilities; caption command restrictions exist in native handlers | A capability JSON description alone does not prove application-command authorization. No comprehensive IPC fuzzing or Windows audit was performed. |
-| Secrets | Production keychain storage, debug-only fallback, no new diagnostic content logging; deletion failures now block disconnect acknowledgement | Debug file-creation permissions and restart recovery after partial cleanup remain open. Cross-store deletion is not transactional. |
+| Secrets | Production keychain storage, debug-only fallback; durable cleanup intent survives restart and deletion/read failures remain distinct | Debug file-creation permissions and real OS prompt acceptance remain open. Cross-store deletion uses forward recovery, not an atomic transaction. Legacy orphaned credentials without metadata or intent cannot be inferred safely. |
 
 ## Dependency and Cleanup Decisions
 
@@ -109,9 +109,9 @@ fallbacks and historical documentation remain until their retirement is proven.
 
 ## Next Safe Sequence
 
-1. Complete real OS-handler acceptance for the external-navigation correction;
-   separately test debug credential-file creation permissions and recovery after
-   a partially successful credential cleanup followed by process restart.
+1. Complete real OS-handler and Keychain-prompt acceptance; separately harden
+   debug credential-file creation permissions. Restart recovery now has injected
+   faults, real filesystem permission tests and isolated subprocess coverage.
 2. Document session ownership out of App and repository sync out of main: retain
    payloads, revision rules, errors, and fault tests; move one owner per commit.
 3. Fixed small/medium/large/table/diagram document corpus; measure opening,

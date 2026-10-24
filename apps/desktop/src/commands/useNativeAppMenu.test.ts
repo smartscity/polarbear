@@ -47,7 +47,22 @@ vi.mock("@tauri-apps/api/menu", () => {
     } },
   };
 });
-import { useNativeAppMenu } from "./useNativeAppMenu";
+import { repositoryMenuItems, useNativeAppMenu } from "./useNativeAppMenu";
+import type { CommandRuntimeContext } from "./commandState";
+import type { Translate } from "../shared/i18n/I18nProvider";
+
+it("offers a native cleanup retry even when account metadata is absent", () => {
+  const execute = vi.fn();
+  const items = repositoryMenuItems({
+    commandContext: { repositoryCleanupPending: true } as CommandRuntimeContext,
+    executeCommand: execute, repositoryAccount: null, repositoryBinding: null,
+    keybindingOverrides: {}, t: ((key: string) => key) as Translate,
+  });
+  expect(items).toHaveLength(1);
+  expect(items[0].id).toBe("repository.disconnectGithub");
+  items[0].action?.();
+  expect(execute).toHaveBeenCalledWith("repository.disconnectGithub");
+});
 
 function NativeMenuFixture() {
   useNativeAppMenu(vi.fn(), { commandContext: {} as never, repositoryAccount: null, repositoryBinding: null });

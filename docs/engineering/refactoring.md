@@ -118,3 +118,66 @@ Windows no longer passes URLs through `cmd /C start`. The isolated FFI adapter
 uses the documented [ShellExecuteW contract](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew).
 Its return-code policy is unit tested; a macOS pass does not establish Windows
 compilation or real browser-association acceptance. No dependency was added.
+
+## Restart-safe Credential Cleanup
+
+This slice starts from `4fe099f`. The old restart path deleted account metadata
+as soon as the active provider's token was missing. After partial disconnect,
+that could hide a remaining credential in another store and remove the retry
+action. A Keychain read error also looked like a missing credential.
+
+| Concern | Pattern decision | Owner |
+| --- | --- | --- |
+| Disconnect spans stores that cannot share a transaction | Persistent intent / forward recovery, not rollback | `repository_identity.rs::DisconnectJournal` owns pending intent and completion ordering. |
+| Reads, reconnects and cleanup must not interleave inside the application | Reuse the native adapter boundary with one process-wide lifecycle mutex | `repository_identity.rs` guards metadata, token acquisition and credential persistence across windows. |
+| The entry file mixes identity rules, persistence and provider HTTP calls | Extract the identity lifecycle, not arbitrary file fragments | DTO, provider validation, metadata access, token access, verified persistence and recovery leave `main.rs`; provider HTTP and push/pull remain there. |
+| Restart errors need a usable action without claiming authentication | Extend the existing feature projection and Command state | `useRepositoryIdentity` exposes cleanup pending; only the existing disconnect command is enabled. Native menu and command resolver share it. |
+
+### Persistence and Completion Contract
+
+`repository-disconnect.pending` is an additive, secret-free intent file in the
+existing application config directory. Its presence means cleanup is incomplete;
+`1\n` identifies the current writer, but even an interrupted empty marker must
+be treated as pending. Non-file markers and filesystem access errors fail closed.
+Existing account JSON fields, binding storage and IPC command signatures remain
+compatible. No credential is copied into the marker.
+
+1. Create and sync intent before touching credentials; sync the parent on Unix.
+2. Attempt GitHub, GitLab and debug-fallback deletion using the existing adapter.
+3. Only after all succeed, remove account metadata and sync its parent.
+4. Remove intent last. Success means all stores and account metadata were cleared.
+
+Every account refresh with pending intent makes one bounded recovery attempt,
+including after metadata has already disappeared. Failure retains intent and
+returns `repository.secretDeletionFailed`; there is no retry timer. Missing
+active credentials in a legacy account also trigger complete cleanup before
+metadata is hidden. An actual read error uses `repository.secretReadFailed` and
+preserves account metadata rather than starting deletion. Release builds still
+never read the debug plaintext fallback. Both messages are localized by the
+existing feature adapter.
+
+Fallback-file cleanup now calls removal directly and accepts only `NotFound` as
+absence. A real inaccessible-directory fixture reproduced the old false-success
+behavior of `exists()`. Debug fallback reads likewise preserve access failures.
+This does not yet change the fallback's creation-time permission policy.
+
+The same marker blocks new token acquisition and reconnect persistence. Existing
+in-flight HTTP requests that already hold a token are not remotely revoked.
+The mutex coordinates windows in the existing single-instance desktop process,
+not independent binaries accessing one config directory. Pending cleanup is not
+an authenticated account; the UI does not persist another copy of that fact.
+Account retrieval and disconnect run on the existing blocking task executor.
+
+### Compatibility and Rollback
+
+No existing data requires bulk migration. Legacy partial cleanup is recoverable
+when account metadata still exists; already orphaned credentials with neither
+metadata nor intent cannot be inferred safely. Recovery retries are idempotent
+and never restore deleted secrets. Complete pending cleanup before downgrading
+to an older binary that does not understand the marker. Do not delete the marker
+to conceal a failed cleanup. Windows durability/Keychain behavior and real OS
+denial prompts still require platform acceptance; directory sync is Unix-only.
+
+This is one core-owner extraction, not completion of all decomposition. Provider
+HTTP, sync orchestration, editor composition and document-session state remain
+separate follow-up slices with their own fault-test requirements.

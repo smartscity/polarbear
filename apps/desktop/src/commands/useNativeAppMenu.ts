@@ -440,7 +440,7 @@ export function useNativeAppMenu(
   }, [installer, executeCommand, language, state.commandContext, state.repositoryAccount, state.repositoryBinding, t, userSettings.keybindings]);
 }
 
-function repositoryMenuItems(params: {
+export function repositoryMenuItems(params: {
   commandContext: CommandRuntimeContext;
   executeCommand: ExecuteAppCommand;
   repositoryAccount: RepositoryAccount | null;
@@ -458,6 +458,15 @@ function repositoryMenuItems(params: {
   } = params;
   const commandState = (command: AppCommand) =>
     getCommandState(command, commandContext);
+
+  if (commandContext.repositoryCleanupPending) {
+    return [{
+      id: "repository.disconnectGithub",
+      text: titleForCommand("repository.disconnectGithub", t),
+      enabled: commandState("repository.disconnectGithub").enabled,
+      action: () => executeCommand("repository.disconnectGithub"),
+    }];
+  }
 
   if (!repositoryAccount) {
     return [

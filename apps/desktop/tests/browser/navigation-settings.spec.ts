@@ -147,6 +147,40 @@ test("failed credential deletion retains the disconnect command and a successful
   expect(await page.evaluate(() => (window as any).__disconnects)).toBe(2);
 });
 
+test("reloaded application can finish pending cleanup without an authenticated account", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__;
+    const invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "repository_get_account") {
+        return localStorage.getItem("fixture.cleaned") ? Promise.resolve(null) : Promise.reject(JSON.stringify({
+          code: "repository.secretDeletionFailed", message: "private native details",
+        }));
+      }
+      if (command === "repository_disconnect_provider") {
+        localStorage.setItem("fixture.cleaned", "true");
+        return Promise.resolve();
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await expect(page.locator(".workspace-status")).toContainText("Some saved credentials could not be removed");
+  await page.evaluate(async () => {
+    const path = "/src/shared/settings/userSettings.ts";
+    (await import(path)).updateUserSettings({ keybindings: { "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
+  });
+  await page.reload();
+  await expect(page.locator(".workspace-status")).toContainText("Some saved credentials could not be removed");
+  await page.keyboard.press("ControlOrMeta+Alt+Shift+D");
+  await expect(page.locator(".workspace-status")).toContainText("Disconnected cloud sync");
+  expect(await page.evaluate(() => localStorage.getItem("fixture.cleaned"))).toBe("true");
+  await page.reload();
+  await expect(page.locator(".editor-workspace .cm-content").first()).toBeVisible();
+  await expect(page.locator(".workspace-status")).toHaveCount(0);
+});
+
 test("preserves typing during an external reload and offers an explicit conflict choice", async ({ page }) => {
   await reloadFixture(page);
   await page.evaluate(() => { (window as any).__diskVersion = "changed"; });

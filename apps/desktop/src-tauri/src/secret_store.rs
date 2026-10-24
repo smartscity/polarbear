@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 const KEYCHAIN_SERVICE: &str = "dev.polarbear.app";
@@ -49,23 +49,40 @@ pub(crate) fn read_repository_secret(
     provider: &str,
 ) -> Result<Option<String>, String> {
     let key = repository_secret_key(provider);
-    match KeychainSecretStore.get_secret(key) {
-        Ok(Some(secret)) if !secret.trim().is_empty() => {
-            let _ = write_fallback_secrets(app, &BTreeMap::new());
-            return Ok(Some(secret));
+    let result = KeychainSecretStore.get_secret(key);
+    if matches!(&result, Ok(Some(secret)) if !secret.trim().is_empty()) {
+        let _ = write_fallback_secrets(app, &BTreeMap::new());
+    }
+    resolve_secret_read(result, || {
+        #[cfg(debug_assertions)]
+        {
+            Ok(read_fallback_secrets(app)?
+                .remove(key)
+                .filter(|secret| !secret.trim().is_empty()))
         }
-        Ok(_) | Err(_) => {}
-    }
 
-    #[cfg(debug_assertions)]
-    {
-        Ok(read_fallback_secrets(app)?
-            .remove(key)
-            .filter(|secret| !secret.trim().is_empty()))
-    }
+        #[cfg(not(debug_assertions))]
+        Ok(None)
+    })
+}
 
-    #[cfg(not(debug_assertions))]
-    Ok(None)
+fn resolve_secret_read(
+    keychain: Result<Option<String>, String>,
+    fallback: impl FnOnce() -> Result<Option<String>, String>,
+) -> Result<Option<String>, String> {
+    if let Ok(Some(secret)) = &keychain {
+        if !secret.trim().is_empty() {
+            return Ok(Some(secret.clone()));
+        }
+    }
+    match fallback() {
+        Ok(Some(secret)) if !secret.trim().is_empty() => Ok(Some(secret)),
+        Ok(_) if keychain.is_ok() => Ok(None),
+        _ => Err(serde_json::json!({
+            "code": "repository.secretReadFailed",
+            "message": "Cloud Sync could not read saved credentials. Check keychain access and try again."
+        }).to_string()),
+    }
 }
 
 pub(crate) fn save_repository_secret(
@@ -137,10 +154,11 @@ fn fallback_secrets_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 #[cfg(debug_assertions)]
 fn read_fallback_secrets(app: &tauri::AppHandle) -> Result<BTreeMap<String, String>, String> {
     let path = fallback_secrets_path(app)?;
-    if !path.exists() {
-        return Ok(BTreeMap::new());
-    }
-    let content = fs::read_to_string(path).map_err(|error| error.to_string())?;
+    let content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
+        Err(error) => return Err(error.to_string()),
+    };
     serde_json::from_str(&content).map_err(|error| error.to_string())
 }
 
@@ -150,10 +168,7 @@ fn write_fallback_secrets(
 ) -> Result<(), String> {
     let path = fallback_secrets_path(app)?;
     if secrets.is_empty() {
-        if path.exists() {
-            fs::remove_file(path).map_err(|error| error.to_string())?;
-        }
-        return Ok(());
+        return clear_fallback_file(&path);
     }
 
     let content = serde_json::to_string(secrets).map_err(|error| error.to_string())?;
@@ -164,10 +179,53 @@ fn write_fallback_secrets(
     Ok(())
 }
 
+fn clear_fallback_file(path: &Path) -> Result<(), String> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::cell::RefCell;
+
+    #[cfg(unix)]
+    #[test]
+    fn inaccessible_fallback_is_not_acknowledged_as_absent() {
+        let directory =
+            std::env::temp_dir().join(format!("polarbear-secret-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&directory).unwrap();
+        let path = directory.join("repository-secrets.json");
+        fs::write(&path, b"fixture").unwrap();
+        fs::set_permissions(&directory, fs::Permissions::from_mode(0o000)).unwrap();
+        let result = clear_fallback_file(&path);
+        fs::set_permissions(&directory, fs::Permissions::from_mode(0o700)).unwrap();
+        assert!(path.exists());
+        fs::remove_dir_all(directory).unwrap();
+        assert!(
+            result.is_err(),
+            "Denied access must not look like successful deletion"
+        );
+    }
+
+    #[test]
+    fn unavailable_keychain_is_not_reported_as_a_missing_credential() {
+        let result = resolve_secret_read(Err("private OS error".into()), || Ok(None));
+        let error = result.unwrap_err();
+        assert!(error.contains("repository.secretReadFailed"));
+        assert!(!error.contains("private"));
+        assert_eq!(resolve_secret_read(Ok(None), || Ok(None)).unwrap(), None);
+        assert_eq!(
+            resolve_secret_read(Err("locked".into()), || Ok(Some("debug token".into())))
+                .unwrap()
+                .as_deref(),
+            Some("debug token")
+        );
+    }
 
     struct FakeSecrets {
         failures: Vec<&'static str>,
