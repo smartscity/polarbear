@@ -165,6 +165,23 @@ without repetition. It reports hashes, write lag and final latency, not speech
 content. Run old/new helpers sequentially on the same host and model, retain
 failures, and distinguish these diagnostics from a one-hour acceptance run.
 
+## Diagnostic alpha release policy
+
+The release workflow passes its explicit tag to `native_latency_regression.py`
+using `--release-tag`. Only `vMAJOR.MINOR.PATCH-alpha.N` may treat a **measured**
+first-text P95 over five seconds as advisory, under the user's 2026-10-24 approval.
+The report still contains `status: FAIL` and `checks.firstText: false`; the separate
+`releaseDecision` authorizes diagnostic packaging, not performance qualification.
+Missing measurements, other failed checks, helper errors and candidate evaluation
+remain blocking. Stable, RC, beta and untagged runs retain the five-second gate.
+GitHub receives a warning and evidence summary; inspect artifacts before use.
+
+Run the dependency-free policy regression with:
+
+```sh
+python3 -m unittest discover -s apps/desktop/scripts/caption-evaluation -p test_native_release_policy.py
+```
+
 ## Attribution
 
 Recordings and reference transcripts: [LibriSpeech ASR corpus](https://www.openslr.org/12),

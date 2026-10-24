@@ -3,13 +3,14 @@
 import argparse
 import asyncio
 import json
+import os
 from pathlib import Path
 import platform
 
 import numpy as np
 
 from native_replay import montage, replay
-from native_latency_policy import latency_policy
+from native_latency_policy import latency_policy, release_decision
 from process_memory import ProcessMemory
 from qualification_corpus import digest
 from qualify import offline_control, validate_corpus, validate_native_arch
@@ -65,6 +66,8 @@ def main():
     parser.add_argument("--helper", type=Path, required=True)
     parser.add_argument("--expect-arch", choices=("arm64", "x86_64"), required=True)
     parser.add_argument("--threads", type=int, choices=range(1, 17))
+    parser.add_argument("--release-tag", default="",
+                        help="Only vMAJOR.MINOR.PATCH-alpha.N allows a measured first-text overrun")
     parser.add_argument("--streaming-models", type=Path,
                         help="Explicit candidate directory; never selected by release builds")
     parser.add_argument("--streaming-candidate", choices=STREAMING_COMPONENTS,
@@ -81,6 +84,7 @@ def main():
         candidate_pins = {filename: verify_model(args.streaming_candidate, args.streaming_models / filename)
                           for filename in MODELS[args.streaming_candidate]["files"]}
     report = {"status": "INCOMPLETE", "profile": "intel-first-text-regression-v2",
+              "releaseTag": args.release_tag,
               "latencyPolicy": latency_policy(candidate=bool(args.streaming_models)),
               "windows": WINDOWS, "requiredAudioSeconds": SECONDS,
               "machine": platform.machine(), "platform": platform.platform(),
@@ -106,10 +110,26 @@ def main():
                                                   drain_timeout=8 if args.streaming_models else 60))
             report["checks"] = acceptance(report["replay"], candidate=bool(args.streaming_models))
             report["status"] = "PASS" if all(report["checks"].values()) else "FAIL"
-            if report["status"] != "PASS":
+            report["releaseDecision"] = release_decision(
+                report["checks"], report["replay"]["firstFromVadStartP95Seconds"],
+                args.release_tag, candidate=bool(args.streaming_models))
+            if not report["releaseDecision"]["allowed"]:
                 raise RuntimeError(f"First-text regression failed: {report['checks']}")
+            if report["releaseDecision"]["advisoryChecks"]:
+                print("::warning::Alpha preview only: first-text P95 exceeded 5 seconds. "
+                      "Measurement remains FAIL; packaging is allowed for diagnostic recording. "
+                      "This is not a latency or accuracy qualification.", flush=True)
     finally:
         args.output.write_text(json.dumps(report, indent=2) + "\n")
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with Path(summary).open("a") as stream:
+                stream.write("\n### Native caption latency evidence\n\n```json\n" + json.dumps({
+                    "measurementStatus": report["status"],
+                    "checks": report.get("checks"),
+                    "firstTextP95Seconds": report.get("replay", {}).get("firstFromVadStartP95Seconds"),
+                    "releaseDecision": report.get("releaseDecision"),
+                }, indent=2) + "\n```\n")
 
 
 if __name__ == "__main__":

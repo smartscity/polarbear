@@ -15,6 +15,10 @@ on:
       production_only:
         type: boolean
         default: true
+      release_tag:
+        description: "Explicit release tag; only alpha.N makes measured first-text overruns advisory"
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       streaming_candidate:
@@ -272,6 +276,8 @@ jobs:
       - run: python apps/desktop/scripts/caption-evaluation/qualification_corpus.py "$RUNNER_TEMP/caption-corpus" --merge
       - run: node apps/desktop/scripts/build-caption.mjs
       - name: Replay first-text failures through production VAD and inference queues
+        env:
+          CAPTION_RELEASE_TAG: ${{ inputs.release_tag || '' }}
         run: |
           set -o pipefail
           mkdir -p evidence
@@ -280,6 +286,7 @@ jobs:
             "$RUNNER_TEMP/caption-corpus/corpus-all.json" "evidence/production-${{ matrix.arch }}.json" \
             --helper "$PWD/apps/desktop/src-tauri/resources/caption/polarbear-caption-engine" \
             --assets "$PWD/apps/desktop/src-tauri/resources/caption" --expect-arch "${{ matrix.arch }}" \
+            --release-tag "$CAPTION_RELEASE_TAG" \
             2>&1 | tee evidence/production.log
       - uses: actions/upload-artifact@v6
         if: always()

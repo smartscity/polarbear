@@ -7,6 +7,26 @@ The design still requires Both mode with proven echo cancellation; it is not
 implemented or exposed by this preview. The initial checks used public fixtures;
 the consented microphone follow-up below is separate from those checks.
 
+## Diagnostic alpha packaging, 2026-10-24
+
+`v0.10.10-alpha.1` points to `f8394cc`. Release run
+[40071296965](https://github.com/smartscity/polarbear/actions/runs/40071296965)
+passed both native fixture jobs and ARM first-text regression, but Intel failed
+only `firstText`; DMG packaging was skipped. This failure remains unchanged.
+
+The user then authorized only alpha first-text overruns to become advisory.
+Design section 0.8 defines the narrow exception. Raw measurement status stays
+`FAIL`; a separate release decision permits diagnostic packaging without claiming
+latency acceptance. Other errors, invalid measurements and failed gates still block.
+
+Local validation of this policy: 78 Python evaluation tests passed, including six
+dependency-free policy tests and CLI report/exit tests for alpha, stable, missing
+measurements, final latency failure and helper backlog. Both workflow YAML files
+parsed; 38 Bash steps passed syntax checks; release input wiring and blocking job
+dependencies were checked. No application code, model, audio queue or threshold
+changed in this packaging-policy update. These tests do not establish user-speech
+WER or long-running stability. A new alpha tag must verify packaging in CI.
+
 ## Implemented ownership
 
 | Boundary | Implementation |

@@ -331,6 +331,25 @@ into additional session/UI/model redesign.
 - Release notes must call this a temporary latency allowance, not a completed
   latency fix. Native ARM/Intel CI and actual bundle/DMG checks still gate artifacts.
 
+### 0.8 Diagnostic alpha packaging exception
+
+On 2026-10-24 the user explicitly authorized **only alpha previews** to package
+when measured first-text P95 exceeds five seconds. The purpose is to obtain a
+DMG with opt-in recording for real-user diagnosis. This is not a latency fix.
+
+- Only an explicit `vMAJOR.MINOR.PATCH-alpha.N` release tag enables the exception.
+  Stable, beta, RC, ordinary branch runs and candidate qualification remain strict.
+- `native_latency_policy.py` owns the decision. The original checks and `status:
+  FAIL` remain unchanged; a separate `releaseDecision` records advisory and blocking
+  checks. Missing, non-finite or otherwise invalid first-text measurements cannot
+  use the exception. Incomplete or unknown check sets fail closed.
+- Complete audio delivery, text production, final latency, memory, process errors,
+  backlog, build, functionality and packaged-helper verification remain blocking.
+- CI emits a warning and a step summary and retains JSON/JSONL/log artifacts.
+  Alpha release notes disclose the exception and unqualified accuracy/stability.
+- Previously failed runs are not rewritten. Published tags are immutable; revised
+  packaging policy uses a new alpha number.
+
 ## 1. Confirmed scope and product outcome
 
 The user confirmed English-only speech recognition, offline Chinese translation,
