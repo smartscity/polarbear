@@ -15,6 +15,7 @@ struct Fixture {
     lose_response: bool,
     fail_checkpoint: bool,
     edit_during_download: bool,
+    checkpoints: Vec<bool>,
 }
 impl Fixture {
     fn new(local: &[u8], remote: &[u8]) -> Self {
@@ -31,6 +32,7 @@ impl Fixture {
             lose_response: false,
             fail_checkpoint: false,
             edit_during_download: false,
+            checkpoints: Vec::new(),
         }
     }
     fn run(&mut self) -> Result<super::sync_coordinator::SyncOutcome, String> {
@@ -60,7 +62,7 @@ impl Drop for Fixture {
     }
 }
 impl SyncIo for Fixture {
-    fn read_local(&mut self, path: &str) -> Result<Vec<u8>, String> {
+    fn read_local(&mut self, path: &str, _: usize) -> Result<Vec<u8>, String> {
         fs::read(self.root.join(path)).map_err(|e| e.to_string())
     }
     fn read_remote(&mut self, commit: &str, path: &str) -> Result<Vec<u8>, String> {
@@ -105,11 +107,12 @@ impl SyncIo for Fixture {
         }
         Ok(self.head.clone())
     }
-    fn checkpoint(&mut self, baseline: &Manifest, _: &str) -> Result<(), String> {
+    fn checkpoint(&mut self, baseline: &Manifest, _: &str, complete: bool) -> Result<(), String> {
         if self.fail_checkpoint {
             return Err("checkpoint unavailable".into());
         }
         self.baseline = baseline.clone();
+        self.checkpoints.push(complete);
         Ok(())
     }
 }
@@ -230,4 +233,13 @@ fn mixed_download_and_upload_checkpoint_only_acknowledged_versions() {
     assert_eq!(f.publications, 1);
     assert_eq!(f.baseline["note.md"], content_digest(b"R"));
     assert_eq!(f.baseline["local.md"], content_digest(b"local"));
+    assert_eq!(f.checkpoints, [false, true]);
+}
+
+#[test]
+fn oversized_atomic_publication_is_rejected_without_advancing_the_baseline() {
+    let mut f = Fixture::new(&vec![b'L'; 65 * 1024 * 1024], b"B");
+    assert!(f.run().is_err());
+    assert_eq!(f.publications, 0);
+    assert_eq!(f.baseline["note.md"], content_digest(b"B"));
 }

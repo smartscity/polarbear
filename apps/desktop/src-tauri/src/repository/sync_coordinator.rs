@@ -4,8 +4,11 @@ use super::{
 };
 use std::collections::BTreeMap;
 
+const MAX_PUBLICATION_BYTES: usize = 64 * 1024 * 1024;
+const MAX_PUBLICATION_FILES: usize = 10_000;
+
 pub(super) trait SyncIo {
-    fn read_local(&mut self, path: &str) -> Result<Vec<u8>, String>;
+    fn read_local(&mut self, path: &str, limit: usize) -> Result<Vec<u8>, String>;
     fn read_remote(&mut self, commit: &str, path: &str) -> Result<Vec<u8>, String>;
     fn apply_local(
         &mut self,
@@ -18,7 +21,12 @@ pub(super) trait SyncIo {
         commit: &str,
         changes: &BTreeMap<String, Option<Vec<u8>>>,
     ) -> Result<String, String>;
-    fn checkpoint(&mut self, baseline: &Manifest, commit: &str) -> Result<(), String>;
+    fn checkpoint(
+        &mut self,
+        baseline: &Manifest,
+        commit: &str,
+        complete: bool,
+    ) -> Result<(), String>;
 }
 
 pub(super) struct SyncOutcome {
@@ -56,6 +64,7 @@ pub(super) fn synchronize(
 
     let mut acknowledged = baseline.clone();
     let mut uploads = BTreeMap::new();
+    let mut remaining_bytes = MAX_PUBLICATION_BYTES;
     for (path, action) in actions {
         match action {
             Action::Converged => set_digest(&mut acknowledged, &path, remote.get(&path)),
@@ -75,11 +84,20 @@ pub(super) fn synchronize(
                     content.as_deref(),
                 )?;
                 set_digest(&mut acknowledged, &path, remote.get(&path));
-                io.checkpoint(&acknowledged, remote_commit)?;
+                io.checkpoint(&acknowledged, remote_commit, false)?;
             }
             Action::Upload if upload => {
+                if uploads.len() == MAX_PUBLICATION_FILES {
+                    return Err(
+                        "Sync publication exceeds 10000 files; no upload was submitted.".into(),
+                    );
+                }
                 let content = if let Some(expected) = local.get(&path) {
-                    let bytes = io.read_local(&path)?;
+                    let bytes = io.read_local(&path, remaining_bytes)?;
+                    if bytes.len() > remaining_bytes {
+                        return Err("Sync publication exceeds 64 MiB; no upload was submitted. Reduce the pending batch before retrying.".into());
+                    }
+                    remaining_bytes -= bytes.len();
                     if content_digest(&bytes) != *expected {
                         return Err("Local file changed during sync; retry after saving.".into());
                     }
@@ -102,7 +120,7 @@ pub(super) fn synchronize(
         }
         commit
     };
-    io.checkpoint(&acknowledged, &committed)?;
+    io.checkpoint(&acknowledged, &committed, true)?;
     Ok(SyncOutcome {
         conflicts: Vec::new(),
     })

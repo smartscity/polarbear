@@ -26,6 +26,7 @@ use provider::{
 use std::{
     collections::BTreeMap,
     fs,
+    io::Read,
     sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -417,9 +418,13 @@ struct NativeSync<'a> {
 }
 
 impl sync_coordinator::SyncIo for NativeSync<'_> {
-    fn read_local(&mut self, path: &str) -> Result<Vec<u8>, String> {
-        fs::read(workspace_path(&self.binding.workspace_ref, path)?)
-            .map_err(|error| error.to_string())
+    fn read_local(&mut self, path: &str, limit: usize) -> Result<Vec<u8>, String> {
+        let _access = crate::workspace_io::document_access().map_err(|error| error.to_string())?;
+        let mut bytes = Vec::new();
+        fs::File::open(workspace_path(&self.binding.workspace_ref, path)?)
+            .and_then(|file| file.take(limit as u64 + 1).read_to_end(&mut bytes))
+            .map_err(|error| error.to_string())?;
+        Ok(bytes)
     }
     fn read_remote(&mut self, commit: &str, path: &str) -> Result<Vec<u8>, String> {
         let mut frozen = self.binding.clone();
@@ -446,11 +451,19 @@ impl sync_coordinator::SyncIo for NativeSync<'_> {
     ) -> Result<String, String> {
         conditional_publish::publish(self.app, &self.binding, commit, self.remote, changes)
     }
-    fn checkpoint(&mut self, baseline: &sync_plan::Manifest, commit: &str) -> Result<(), String> {
+    fn checkpoint(
+        &mut self,
+        baseline: &sync_plan::Manifest,
+        commit: &str,
+        complete: bool,
+    ) -> Result<(), String> {
         let mut next = self.binding.clone();
         next.manifest = baseline.clone();
-        next.last_sync_commit_sha = Some(commit.into());
-        next.last_sync_at = Some(now_unix_seconds());
+        // A partial download must not advertise that the whole remote head is synchronized.
+        next.last_sync_commit_sha = complete.then(|| commit.into());
+        if complete {
+            next.last_sync_at = Some(now_unix_seconds());
+        }
         next.has_synced = true;
         let mut bindings = read_bindings(self.app)?;
         bindings.insert(next.workspace_ref.clone(), next.clone());
