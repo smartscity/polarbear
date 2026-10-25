@@ -102,6 +102,9 @@ jobs:
       - name: Native rich document paste
         if: runner.os == 'macOS'
         run: node apps/desktop/scripts/test-native-clipboard.mjs
+      - name: Native custom-origin settings arbitration
+        if: runner.os == 'macOS'
+        run: npm --workspace apps/desktop run test:native-settings
 
   desktop-browser:
     name: Desktop editor and clipboard
@@ -116,6 +119,8 @@ jobs:
       - run: npm exec --workspace apps/desktop -- playwright install chromium webkit
       - name: Bundled offline translation with production CSP
         run: npm --workspace apps/desktop run test:offline-translation -- --webkit
+      - name: Cross-window settings and layout in WebKit
+        run: npm --workspace apps/desktop run test:ui -- settings-concurrency.spec.ts workspace-layout.spec.ts --browser webkit
       - run: npm --workspace apps/desktop run test:ui
       - name: Paste actual Mermaid images into a native rich text receiver
         run: npm --workspace apps/desktop run test:native-clipboard -- test-results/real-mermaid-clipboard.json

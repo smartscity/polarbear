@@ -703,17 +703,11 @@ export function App() {
         return;
       }
 
-      if (command === "theme.light") {
-        storeTheme("light");
-        setThemeName("light");
-        setStatusMessage(t("status.themeChanged", { theme: t("menu.light") }));
-        return;
-      }
-
-      if (command === "theme.dark") {
-        storeTheme("dark");
-        setThemeName("dark");
-        setStatusMessage(t("status.themeChanged", { theme: t("menu.dark") }));
+      if (command === "theme.light" || command === "theme.dark") {
+        const theme = command === "theme.light" ? "light" : "dark";
+        void storeTheme(theme)
+          .then(() => setStatusMessage(t("status.themeChanged", { theme: t(`menu.${theme}`) })))
+          .catch(() => setStatusMessage(t("settings.saveFailed")));
         return;
       }
 

@@ -2,6 +2,7 @@ use super::{
     model::{RepositoryBindingDto, RepositoryInfoDto},
     policy::{content_digest, github_content_url, relative_sync_path, remote_path_for},
     progress::emit_repository_sync_progress,
+    response_limits::{self, EnumerationBudget},
 };
 use crate::repository_identity::{normalize_repository_provider, repository_token};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
@@ -127,14 +128,13 @@ pub(super) fn github_get<T: for<'de> Deserialize<'de>>(
     client: &Client,
     url: &str,
 ) -> Result<T, String> {
-    client
+    let response = client
         .get(url)
         .send()
         .map_err(|error| error.to_string())?
         .error_for_status()
-        .map_err(|error| error.to_string())?
-        .json::<T>()
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    response_limits::json(response, response_limits::JSON_BYTES)
 }
 
 pub(super) fn github_api_error(response: reqwest::blocking::Response, operation: &str) -> String {
@@ -145,12 +145,16 @@ pub(super) fn github_api_error(response: reqwest::blocking::Response, operation:
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let body = response.text().unwrap_or_default();
-    let github_message = serde_json::from_str::<serde_json::Value>(&body)
-        .ok()
-        .and_then(|json| json.get("message")?.as_str().map(str::to_owned))
-        .filter(|message| !message.trim().is_empty())
-        .unwrap_or_else(|| status.to_string());
+    let github_message =
+        match response_limits::json::<serde_json::Value>(response, response_limits::ERROR_BYTES) {
+            Ok(json) => json
+                .get("message")
+                .and_then(|value| value.as_str())
+                .filter(|message| !message.trim().is_empty())
+                .map(str::to_owned)
+                .unwrap_or_else(|| status.to_string()),
+            Err(error) => format!("{status}; {error}"),
+        };
     let request_suffix = if request_id.is_empty() {
         String::new()
     } else {
@@ -212,14 +216,7 @@ pub(super) fn gitlab_get<T: for<'de> Deserialize<'de>>(
     client: &Client,
     url: &str,
 ) -> Result<T, String> {
-    client
-        .get(url)
-        .send()
-        .map_err(|error| error.to_string())?
-        .error_for_status()
-        .map_err(|error| error.to_string())?
-        .json::<T>()
-        .map_err(|error| error.to_string())
+    github_get(client, url)
 }
 
 pub(super) fn branch_head_sha(
@@ -269,13 +266,19 @@ pub(super) fn provider_branch_head_sha(
 pub(super) fn github_repositories(client: &Client) -> Result<Vec<RepositoryInfoDto>, String> {
     let mut page = 1;
     let mut repositories = Vec::new();
+    let mut budget = EnumerationBudget::default();
 
     loop {
-        let repos = github_get::<Vec<GithubRepoResponse>>(
-            client,
-            &format!("https://api.github.com/user/repos?per_page=100&sort=updated&page={page}"),
-        )?;
+        let response = client
+            .get(format!(
+                "https://api.github.com/user/repos?per_page=100&sort=updated&page={page}"
+            ))
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| error.to_string())?;
+        let repos: Vec<GithubRepoResponse> = budget.read_page(response)?;
         let repo_count = repos.len();
+        budget.admit_entries(repo_count)?;
         repositories.extend(repos.into_iter().map(|repo| RepositoryInfoDto {
             provider: "github".to_owned(),
             owner: repo.owner.login,
@@ -305,6 +308,7 @@ pub(super) fn gitlab_repositories(
             gitlab_api_base(base_url)
         ),
     )?;
+    EnumerationBudget::default().admit_entries(projects.len())?;
 
     Ok(projects
         .into_iter()
@@ -331,16 +335,23 @@ pub(super) fn github_download_file(
     binding: &RepositoryBindingDto,
     relative_path: &str,
 ) -> Result<Vec<u8>, String> {
-    let content = client
+    let response = client
         .get(github_content_url(binding, relative_path))
         .query(&[("ref", binding.branch.as_str())])
         .send()
         .map_err(|error| error.to_string())?
         .error_for_status()
-        .map_err(|error| error.to_string())?
-        .json::<GithubContentResponse>()
         .map_err(|error| error.to_string())?;
+    let content: GithubContentResponse =
+        response_limits::json(response, response_limits::CONTENT_JSON_BYTES)?;
 
+    decode_github_content(content, response_limits::FILE_BYTES)
+}
+
+pub(super) fn decode_github_content(
+    content: GithubContentResponse,
+    limit: usize,
+) -> Result<Vec<u8>, String> {
     if content.encoding.as_deref() != Some("base64") {
         return Err("GitHub returned unsupported file encoding.".to_owned());
     }
@@ -349,7 +360,14 @@ pub(super) fn github_download_file(
         .content
         .ok_or_else(|| "GitHub content response did not include content.".to_owned())?
         .replace('\n', "");
-    BASE64.decode(encoded).map_err(|error| error.to_string())
+    if encoded.len() > limit.div_ceil(3) * 4 {
+        return Err("Decoded provider file exceeds the size limit.".into());
+    }
+    let decoded = BASE64.decode(encoded).map_err(|error| error.to_string())?;
+    if decoded.len() > limit {
+        return Err("Decoded provider file exceeds the size limit.".into());
+    }
+    Ok(decoded)
 }
 
 pub(super) fn github_remote_files(
@@ -371,6 +389,7 @@ pub(super) fn github_remote_files(
         urlencoding::encode(&binding.branch)
     );
     let tree = github_get::<GithubTreeResponse>(client, &url)?;
+    EnumerationBudget::default().admit_entries(tree.tree.len())?;
     if tree.truncated {
         return Err(
             "GitHub returned an incomplete tree; sync stopped without deleting files.".into(),
@@ -411,6 +430,7 @@ pub(super) fn gitlab_remote_file_paths(
 ) -> Result<Vec<String>, String> {
     let mut page = 1;
     let mut paths = Vec::new();
+    let mut budget = EnumerationBudget::default();
 
     loop {
         let page_string = page.to_string();
@@ -437,9 +457,8 @@ pub(super) fn gitlab_remote_file_paths(
             .and_then(|value| value.to_str().ok())
             .map(str::to_owned)
             .unwrap_or_default();
-        let items = response
-            .json::<Vec<GitlabTreeItemResponse>>()
-            .map_err(|error| error.to_string())?;
+        let items: Vec<GitlabTreeItemResponse> = budget.read_page(response)?;
+        budget.admit_entries(items.len())?;
 
         for item in items {
             if item.item_type != "blob" {
@@ -450,12 +469,10 @@ pub(super) fn gitlab_remote_file_paths(
             }
         }
 
-        if next_page.is_empty() {
+        let Some(next) = response_limits::next_page(page, &next_page)? else {
             break;
-        }
-        page = next_page
-            .parse::<i32>()
-            .map_err(|error| error.to_string())?;
+        };
+        page = next;
     }
 
     Ok(paths)
@@ -472,16 +489,14 @@ pub(super) fn gitlab_download_file(
         gitlab_project_id(binding),
         gitlab_file_id(&remote_path_for(binding, relative_path))
     );
-    client
+    let response = client
         .get(&url)
         .query(&[("ref", binding.branch.as_str())])
         .send()
         .map_err(|error| error.to_string())?
         .error_for_status()
-        .map_err(|error| error.to_string())?
-        .bytes()
-        .map(|bytes| bytes.to_vec())
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    response_limits::bytes(response, response_limits::FILE_BYTES)
 }
 
 pub(super) fn gitlab_remote_files(

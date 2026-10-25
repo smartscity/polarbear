@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { updateUserSettings } from "../settings/userSettings";
+import { initializeUserSettings, updateUserSettings } from "../settings/userSettings";
 import { APP_EVENTS } from "../events/appEvents";
 import {
   initialLanguage,
@@ -42,6 +42,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const refreshLanguage = () => setLanguageState(initialLanguage());
     window.addEventListener(APP_EVENTS.settingsChanged, refreshLanguage);
     window.addEventListener("storage", refreshLanguage);
+    void initializeUserSettings().then(refreshLanguage).catch(() => {
+      // A failed migration leaves legacy preferences readable, without writing defaults.
+    });
     return () => {
       window.removeEventListener(APP_EVENTS.settingsChanged, refreshLanguage);
       window.removeEventListener("storage", refreshLanguage);
@@ -54,11 +57,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [language]);
 
   const setLanguage = useCallback((nextLanguage: AppLanguage) => {
-    try {
-      updateUserSettings({ language: nextLanguage });
-    } catch {
+    void updateUserSettings({ language: nextLanguage }).catch(() => {
       // Keep the active session switch working even if persistence is blocked.
-    }
+    });
     setLanguageState(nextLanguage);
   }, []);
 

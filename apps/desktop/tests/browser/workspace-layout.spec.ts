@@ -95,7 +95,7 @@ test("keeps the opposite compressed sidebar stable when committing a resize", as
 test("keeps a failed persistence edit usable across unrelated settings events", async ({ page }) => {
   await start(page);
   await page.evaluate(() => {
-    Storage.prototype.setItem = () => { throw new DOMException("Storage full", "QuotaExceededError"); };
+    IDBObjectStore.prototype.put = () => { throw new DOMException("Storage full", "QuotaExceededError"); };
   });
   await drag(page, "left", 64);
   await expect(page.locator(".workspace-separator.left")).toHaveAttribute("aria-valuenow", "304");
@@ -174,7 +174,7 @@ test("shows long navigation labels, four sidebar states, settings and mixed reso
   for (const theme of ["light", "dark"]) {
     await page.evaluate(async (theme) => { const path = "/src/features/theme/themeTokens.ts"; (await import(path)).applyThemeTokens(theme); }, theme);
     for (const [leftOpen, rightOpen] of [[true, true], [false, true], [false, false], [true, false]]) {
-      await page.evaluate(async (layout) => { const path = "/src/shared/settings/userSettings.ts"; (await import(path)).updateUserSettings({ layout: { leftWidth: 280, rightWidth: 240, ...layout } }); }, { leftOpen, rightOpen });
+      await page.evaluate(async (layout) => { const path = "/src/shared/settings/userSettings.ts"; await (await import(path)).updateUserSettings({ layout: { leftWidth: 280, rightWidth: 240, ...layout } }); }, { leftOpen, rightOpen });
       await expect(page.locator("#workspace-sidebar")).toHaveAttribute("aria-hidden", String(!leftOpen));
       await expect(page.locator("#workspace-outline")).toHaveAttribute("aria-hidden", String(!rightOpen));
       await expect.poll(() => page.locator(".main-layout").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);

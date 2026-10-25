@@ -183,7 +183,8 @@ test("automatically translates settled selections without stealing focus and per
   await page.screenshot({ path: "test-results/bundled-offline-translation.png" });
   await card.getByRole("button", { name: "Copy translation" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("switch", { name: /Selection translation/ }).uncheck();
+  await page.getByRole("switch", { name: /Selection translation/ }).click();
+  await expect(page.getByRole("switch", { name: /Selection translation/ })).not.toBeChecked();
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await selectText(page, ".markdown-preview-segment p:first-child", "attractive");
   await expect(card).toHaveCount(0);

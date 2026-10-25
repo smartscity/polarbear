@@ -10,7 +10,7 @@ Hosted CI is verified separately against that exact pushed SHA.
 | Dimension | Weight | Baseline | Current | Evidence and residual deduction |
 | --- | ---: | ---: | ---: | --- |
 | Architecture and module boundaries | 20% | 8.2 | 8.8 | Shared document completion, pure sync plan/effect boundary and parser-owned resource slots; layout preferences/effective geometry have separate owners. Session/zoom remain substantial and whole-app runtime dependency tracing is not complete. |
-| Maintainability | 20% | 8.0 | 8.8 | Duplicate save paths and conflicting preview scanners replaced; typed layout migration and source CSS cleanup. No parallel store/framework. Settings concurrency and further session decomposition remain bounded future work. |
+| Maintainability | 20% | 8.0 | 8.8 | Duplicate save paths and conflicting preview scanners replaced; typed layout migration and source CSS cleanup. Settings use transactional leaf patches with one durable authority and a legacy import, without a new framework. Further session decomposition remains bounded future work. |
 | Correctness and data safety | 25% | 6.5 | 8.8 | Behavioral red/green save/quit/parser/layout/batch regressions, native conditional writes, frozen provider HTTP tests and transactional digest migration. Actual provider account writes and installed-app quit/upgrade acceptance are NOT RUN. |
 | Tests and CI | 20% | 7.0 | 8.4 | Unit/native/browser/translation/clipboard/iOS checks and reproducible baseline/current probes; Windows native matrix added. Native GUI/platform evidence and enforced branch checks remain missing. Workflow configuration is not passing hosted evidence. |
 | Security and dependencies | 10% | 6.5 | 8.2 | Fresh npm/RustSec reports, compatible updates repair eight Rust vulnerabilities and two unsound warnings; one npm Low advisory and ten Rust warnings retain scoped deferrals. No blanket clean-security claim; yanked check not run. |
@@ -27,6 +27,10 @@ Even passing hosted CI does not turn unexecuted GUI/provider checks into PASS.
 
 The entry-completion follow-up adds 15 browser regressions, native staged-save and
 creation-admission tests, and root-qualified recovery without increasing this score.
+The response/settings follow-up adds bounded provider reads/enumeration and
+cross-context settings arbitration with failure/reload coverage. This closes
+those confirmed code defects, but does not substitute for installed GUI/provider
+acceptance or increase the fixed score on the basis of test counts alone.
 The earlier path-contract commit `3c39b33` has actual green macOS/Windows native
 and browser execution in Quality run 40184586892. This replaces the earlier lack
 of hosted Windows evidence for that commit, not installed Windows GUI acceptance

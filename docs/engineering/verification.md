@@ -1,5 +1,88 @@
 # Engineering Verification
 
+## Response Bounds and Settings Merge: 2026-10-25
+
+Baseline: `f68680d37f4f470ffdb6b641cb4a6fed87fc0217`, branch
+`codex/engineering-workspace-quality`. Local checks retain the six pre-existing
+Feedback edits, which are excluded from this commit. Exact pushed-SHA CI is a
+separate delivery gate; previous green runs do not qualify this source.
+
+### Red / Green Evidence
+
+- Before production edits, three settings unit cases failed: nested patches lost
+  previous fields, writes read outside arbitration, and missing lock support still
+  wrote. A real two-window browser case also failed while the origin lock was held.
+- Three native provider cases failed against old code: a chunked JSON body over
+  16 MiB was accepted, oversized declared file content only produced a decoding
+  error, and oversized error bodies had no size diagnostic. An initial fixture
+  field typo was corrected and all three behavioral failures reconfirmed before
+  the reader implementation changed.
+- Additional coverage checks empty/exact/oversized responses with Content-Length,
+  chunked and EOF framing; truncated streams; invalid JSON; base64 padding and
+  decoded limits; cumulative enumeration bytes/pages/entries; non-advancing pages;
+  oversized commit acknowledgments retaining unknown-outcome semantics; rejected
+  downloads preserving local bytes and checkpoints.
+- Settings tests cover nested merges, default-binding restoration, disabled
+  bindings, same-key ordering, immutable submitted intent, failed reads/writes,
+  missing locking, actual lock timeout, closed-owner recovery, two-window reload,
+  and capture not restarting after failed source persistence.
+
+### Executed Locally
+
+Intel macOS 26.5.1, Node 26.1.0, Rust 1.96.0. No production provider credentials
+or user document/audio content is used by these fixtures.
+
+| Check | Result | Scope |
+| --- | --- | --- |
+| Desktop typecheck / lint / contract check | PASS | Existing strict rules and generated Memory Admin contract. |
+| Desktop test | PASS | 361 Vitest tests in 66 files; 40 Node script tests. |
+| Desktop test:ui | PASS | Complete final run: 129 cases, 3.4 minutes. |
+| Settings/layout test:ui --browser webkit | PASS | 12 cases including atomic import, failure, hydration, merge/reload, timeout/owner-close recovery and drawer focus. |
+| `npm --workspace apps/desktop run test:native-settings` | PASS | Three successful independent runs of production transactions in real WKWebViews under `tauri://localhost`, 200 contended writes each plus a newly opened observer in isolated nonpersistent storage. Not installed-app GUI acceptance. |
+| Cargo test --locked | PASS | 134 passed; four existing opt-in fixtures ignored, not counted as PASS. |
+| Cargo fmt --all -- --check | PASS | Repository formatting unchanged outside scoped files. |
+| macOS Clippy --all-targets --all-features --locked -- -D warnings | PASS | Production and test configurations. |
+| cargo xwin clippy for x86_64-pc-windows-msvc, same flags | PASS | Real Windows target compilation; not local Windows execution. |
+| Desktop build | PASS | Existing large-chunk warning remains. |
+| Bundled offline translation --webkit | PASS | Actual Chromium/WebKit model inference and cancellation with production CSP. |
+| Native clipboard with generated Mermaid fixture | PASS | Three real diagram attachments, surrounding text and stale-copy protection. |
+
+The first full browser run exposed three synchronous checkbox-action assumptions
+after writes became asynchronous. The tests now click and explicitly await the
+acknowledged state; reload and actual feature assertions remain. All three focused
+cases passed before the final full run. Test-only Rust lint findings were repaired;
+production warning gates were not relaxed.
+After the transactional import landed, the legacy-installation fixture also had
+to seed old values before startup, not after the new database already existed.
+Its system-preference and cross-window assertions were retained; the focused case
+passed before repeating the complete 129-case suite successfully.
+
+The initial Web-Lock/localStorage repair passed browser tests but failed repeated
+native WKWebView contention: a fresh observer also read 99 + 99 after 200 updates.
+This was not notification latency. Persistence now uses an IndexedDB transaction,
+with a one-time legacy import; the native fixture bundles the actual production
+module. It checks both writers and a fresh observer with bounded read-only
+convergence, never repeats a write or repairs a failed count, and requires exact
+100 + 100 results. It does not assert control over OS renderer allocation.
+Expanded WebKit layout coverage also exposed focus restoration depending on
+pointer clicks focusing buttons. The drawer now restores its explicit trigger;
+the original assertion remains unchanged.
+
+### Boundaries and Manual Acceptance
+
+- Installed-app multi-window settings/upgrade and Windows GUI remain NOT RUN;
+  Windows native execution is delegated to exact-SHA hosted Quality, not inferred
+  from local cross-compilation. Separate storage partitions and older versions
+  bypassing the new write protocol are not covered.
+- Actual authorized GitHub/GitLab account transfers are NOT RUN. Local HTTP tests
+  prove response handling, not a provider's live service limits or availability.
+- Open two app windows, change audio source in one and translation/layout in the
+  other, then reopen both: all distinct settings must remain. Repeat with storage
+  denied: the error must remain visible and capture must not start implicitly.
+- Large-file hashing performance, scoped dependency advisories and partial
+  recursive-copy/delete recovery remain separate audit items. No merge, tag,
+  release or >9 score is implied by this delivery.
+
 ## Entry Completion Follow-up: 2026-10-25
 
 Baseline: `3c39b338e74a04947bdae766cf7bf423418065d3`, branch

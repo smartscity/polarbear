@@ -50,8 +50,7 @@ export function CaptionSettings() {
     {shortcut && <SettingsRow label={t("settings.shortcut")}><kbd>{shortcut}</kbd></SettingsRow>}
     <SettingsRow label={t("caption.showChinese")}>
       <input className="settings-toggle" type="checkbox" role="switch" aria-label={t("caption.showChinese")} checked={caption.showChinese} onChange={event => {
-        try { updateUserSettings({ caption: { ...caption, showChinese: event.target.checked } }); setError(""); }
-        catch { setError("settings.saveFailed"); }
+        void updateUserSettings({ caption: { showChinese: event.target.checked } }).then(() => setError("")).catch(() => setError("settings.saveFailed"));
       }} />
     </SettingsRow>
     <CaptionSourceSelect source={active && (status.source === "system" || status.source === "microphone") ? status.source : caption.source} disabled={!status || Boolean(active) || busy || status.state === "stopping"} onChange={(source) => run(() => changeCaptionSource(source))} />

@@ -172,8 +172,8 @@ export function readStoredTheme(): ThemeName {
     : "light";
 }
 
-export function storeTheme(themeName: ThemeName): void {
-  updateUserSettings({ theme: themeName });
+export async function storeTheme(themeName: ThemeName): Promise<void> {
+  await updateUserSettings({ theme: themeName });
 }
 
 function toKebabCase(value: string): string {

@@ -3,6 +3,7 @@ pub(crate) mod model;
 pub(crate) mod policy;
 mod progress;
 mod provider;
+mod response_limits;
 pub(crate) mod store;
 mod sync_coordinator;
 mod sync_plan;
@@ -354,6 +355,8 @@ pub(crate) async fn repository_sync_now(
 mod characterization_tests;
 #[cfg(test)]
 mod conditional_publish_tests;
+#[cfg(test)]
+mod provider_response_tests;
 #[cfg(test)]
 mod sync_tests;
 

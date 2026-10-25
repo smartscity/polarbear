@@ -10,7 +10,7 @@ export async function changeCaptionSource(source: CaptionSource) {
     // Finish the old transcript before opening a session with a different source.
     await captionRequest({ action: "stop" });
   }
-  updateUserSettings({ caption: { ...readUserSettings().caption, source } });
+  await updateUserSettings({ caption: { source } });
   if (active && status.source !== source && status.state !== "paused") {
     await captionRequest({ action: "start", source, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
   }

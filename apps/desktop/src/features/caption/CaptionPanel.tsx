@@ -117,19 +117,19 @@ export function CaptionPanel() {
       <small>{t("caption.recordAudioHelp")}</small>
       <button type="button" onClick={() => perform(() => captionRequest({ action: "recordingsFolder" }))}>{t("caption.recordingsFolder")}</button>
       {button("caption.pin", <Pin size={18} fill={preferences.pinned ? "currentColor" : "none"} />, () => {
-        try { updateUserSettings({ caption: { ...preferences, pinned: !preferences.pinned } }); } catch (reason) { fail(reason); }
+        void updateUserSettings({ caption: { pinned: !preferences.pinned } }).catch(() => setError("settings.saveFailed"));
       })}
       <label><input type="checkbox" checked={preferences.showChinese} onChange={(event) => {
-        try { updateUserSettings({ caption: { ...preferences, showChinese: event.target.checked } }); } catch (reason) { fail(reason); }
+        void updateUserSettings({ caption: { showChinese: event.target.checked } }).catch(() => setError("settings.saveFailed"));
       }} />{t("caption.showChinese")}</label>
       <label>{t("caption.copyLanguage")} <select value={preferences.language} onChange={(event) => {
         const language = event.target.value;
         if (language === "english" || language === "chinese" || language === "bilingual") {
-          try { updateUserSettings({ caption: { ...preferences, language } }); } catch (reason) { fail(reason); }
+          void updateUserSettings({ caption: { language } }).catch(() => setError("settings.saveFailed"));
         }
       }}>{["bilingual", "english", "chinese"].map((value) => <option key={value} value={value}>{t(`caption.${value}`)}</option>)}</select></label>
       <label><input type="checkbox" checked={preferences.timestamps} onChange={(event) => {
-        try { updateUserSettings({ caption: { ...preferences, timestamps: event.target.checked } }); } catch (reason) { fail(reason); }
+        void updateUserSettings({ caption: { timestamps: event.target.checked } }).catch(() => setError("settings.saveFailed"));
       }} />{t("caption.timestamps")}</label>
       <label>{t("caption.export")}<select value={format} onChange={(event) => { const value = event.target.value; if (value === "txt" || value === "md" || value === "srt") setFormat(value); }}>
         <option value="txt">TXT</option><option value="md">Markdown</option><option value="srt">SRT</option>

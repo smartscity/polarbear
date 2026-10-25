@@ -15,8 +15,8 @@ test("activates captions from the editor and keeps the settings hint aligned wit
   await page.waitForFunction(() => "__quality" in window);
   await page.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
-    const { readUserSettings, updateUserSettings } = await import(path);
-    updateUserSettings({ caption: { ...readUserSettings().caption, source: "microphone" } });
+    const { updateUserSettings } = await import(path);
+    await updateUserSettings({ caption: { source: "microphone" } });
   });
   await page.locator(".cm-content").click();
   const before = await page.locator(".cm-content").innerText();
@@ -34,7 +34,7 @@ test("activates captions from the editor and keeps the settings hint aligned wit
   await page.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
     const { updateUserSettings } = await import(path);
-    updateUserSettings({ keybindings: { "caption.start": "Mod+Shift+J" } });
+    await updateUserSettings({ keybindings: { "caption.start": "Mod+Shift+J" } });
   });
   await expect(hint).toHaveText(primary === "Meta" ? "\u21e7\u2318J" : "Shift+Control+J");
   await page.keyboard.press(`${primary}+Shift+j`);
@@ -42,7 +42,7 @@ test("activates captions from the editor and keeps the settings hint aligned wit
   await page.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
     const { updateUserSettings } = await import(path);
-    updateUserSettings({ keybindings: { "caption.start": null } });
+    await updateUserSettings({ keybindings: { "caption.start": null } });
   });
   await expect(hint).toHaveCount(0);
   await page.keyboard.press(`${primary}+Alt+l`);

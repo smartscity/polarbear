@@ -2,6 +2,7 @@ use super::{
     model::RepositoryBindingDto,
     policy::remote_path_for,
     provider::{github_client, gitlab_api_base, gitlab_client, gitlab_file_id, gitlab_project_id},
+    response_limits,
     sync_plan::Manifest,
 };
 use crate::repository_identity::repository_token;
@@ -59,7 +60,7 @@ fn commit_response(
         }
         return Err(format!("Conditional sync publication rejected ({}). Remote changes were not overwritten; retry Sync to compare versions.", response.status()));
     }
-    response.json().map_err(|_| "Sync publication outcome is unknown: acknowledgment could not be decoded. Retry Sync to reconcile.".to_owned())
+    response_limits::json(response, response_limits::JSON_BYTES).map_err(|error| format!("Sync publication outcome is unknown: acknowledgment could not be decoded ({error}). Retry Sync to reconcile."))
 }
 
 pub(super) fn github_publish(
@@ -109,7 +110,7 @@ pub(super) fn gitlab_publish(
         let remote_path = remote_path_for(binding, path);
         let mut action = json!({"action": if bytes.is_none() {"delete"} else if remote.contains_key(path) {"update"} else {"create"}, "file_path": remote_path});
         if remote.contains_key(path) {
-            let metadata: Value = client
+            let response = client
                 .get(format!(
                     "{project_endpoint}/repository/files/{}",
                     gitlab_file_id(&remote_path)
@@ -118,9 +119,9 @@ pub(super) fn gitlab_publish(
                 .send()
                 .map_err(|error| error.to_string())?
                 .error_for_status()
-                .map_err(|error| error.to_string())?
-                .json()
                 .map_err(|error| error.to_string())?;
+            let metadata: Value =
+                response_limits::json(response, response_limits::CONTENT_JSON_BYTES)?;
             let last = metadata
                 .get("last_commit_id")
                 .and_then(Value::as_str)

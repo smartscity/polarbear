@@ -50,7 +50,7 @@ it("finishes system capture before explicitly starting microphone capture", asyn
   await changeCaptionSource("microphone");
   expect(vi.mocked(captionRequest).mock.calls.map(([request]) => request.action)).toEqual(["status", "stop", "start"]);
   expect(captionRequest).toHaveBeenLastCalledWith({ action: "start", source: "microphone", timezone: expect.any(String) });
-  expect(updateUserSettings).toHaveBeenCalledWith({ caption: { ...DEFAULT_USER_SETTINGS.caption, source: "microphone" } });
+  expect(updateUserSettings).toHaveBeenCalledWith({ caption: { source: "microphone" } });
 });
 
 it.each(["idle", "stopped", "failed", "paused"])("does not start recording implicitly from %s", async (state) => {
@@ -76,4 +76,10 @@ it("reports microphone startup failure without restarting the previous capture",
   await expect(changeCaptionSource("microphone")).rejects.toThrow("microphone denied");
   expect(captionRequest).toHaveBeenCalledTimes(3);
   expect(updateUserSettings).toHaveBeenCalled();
+});
+
+it("waits for settings acknowledgment and does not start capture after a persistence failure", async () => {
+  vi.mocked(updateUserSettings).mockRejectedValueOnce(new Error("Storage full"));
+  await expect(changeCaptionSource("microphone")).rejects.toThrow("Storage full");
+  expect(vi.mocked(captionRequest).mock.calls.map(([request]) => request.action)).toEqual(["status", "stop"]);
 });

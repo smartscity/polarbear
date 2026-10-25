@@ -16,6 +16,7 @@ struct Fixture {
     fail_checkpoint: bool,
     edit_during_download: bool,
     checkpoints: Vec<bool>,
+    remote_error: Option<String>,
 }
 impl Fixture {
     fn new(local: &[u8], remote: &[u8]) -> Self {
@@ -33,6 +34,7 @@ impl Fixture {
             fail_checkpoint: false,
             edit_during_download: false,
             checkpoints: Vec::new(),
+            remote_error: None,
         }
     }
     fn run(&mut self) -> Result<super::sync_coordinator::SyncOutcome, String> {
@@ -67,6 +69,9 @@ impl SyncIo for Fixture {
     }
     fn read_remote(&mut self, commit: &str, path: &str) -> Result<Vec<u8>, String> {
         assert_eq!(commit, "frozen-head");
+        if let Some(error) = &self.remote_error {
+            return Err(error.clone());
+        }
         if self.edit_during_download {
             fs::write(self.root.join(path), b"new local edit").unwrap();
         }
@@ -115,6 +120,17 @@ impl SyncIo for Fixture {
         self.checkpoints.push(complete);
         Ok(())
     }
+}
+
+#[test]
+fn rejected_download_does_not_publish_replace_local_bytes_or_advance_checkpoint() {
+    let mut fixture = Fixture::new(b"B", b"R");
+    fixture.remote_error = Some("Provider response exceeds the size limit.".into());
+    assert!(fixture.run().is_err());
+    assert_eq!(fs::read(fixture.root.join("note.md")).unwrap(), b"B");
+    assert_eq!(fixture.baseline["note.md"], content_digest(b"B"));
+    assert!(fixture.checkpoints.is_empty());
+    assert_eq!(fixture.publications, 0);
 }
 
 #[test]

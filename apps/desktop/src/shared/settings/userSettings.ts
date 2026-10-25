@@ -1,7 +1,7 @@
 import { isAppCommandId } from "../commands/appCommandIds";
 import type { AppCommand } from "../commands/appCommandTypes";
 import { STORAGE_KEYS } from "../constants/storageKeys";
-import { APP_EVENTS } from "../events/appEvents";
+import { cachedSettings, commitSettings, initializeSettings } from "./settingsDatabase";
 import { DEFAULT_LAYOUT, parseLayoutPreferences, type LayoutPreferences } from "./layoutPreferences";
 
 export const USER_SETTINGS_VERSION = 5;
@@ -41,37 +41,59 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 
 export function readUserSettings(): UserSettings {
   try {
-    const current = window.localStorage.getItem(STORAGE_KEYS.settings);
-    if (current !== null) return parseUserSettings(JSON.parse(current));
-    const serialized = window.localStorage.getItem(STORAGE_KEYS.legacySettings);
-    if (!serialized) {
-      return settingsFromLegacyPreferences(DEFAULT_USER_SETTINGS);
-    }
-    return settingsFromLegacyPreferences(parseUserSettings(JSON.parse(serialized)));
+    const cached = cachedSettings();
+    return cached === undefined ? readStoredSettings() : parseUserSettings(cached);
   } catch {
     return DEFAULT_USER_SETTINGS;
   }
 }
 
-export function writeUserSettings(settings: UserSettings): void {
-  const validatedSettings = parseUserSettings(settings);
-  window.localStorage.setItem(
-    STORAGE_KEYS.settings,
-    JSON.stringify(validatedSettings),
-  );
-  window.dispatchEvent(new CustomEvent(APP_EVENTS.settingsChanged));
+function readStoredSettings(): UserSettings {
+  const current = window.localStorage.getItem(STORAGE_KEYS.settings);
+  if (current !== null) return parseUserSettings(JSON.parse(current));
+  const serialized = window.localStorage.getItem(STORAGE_KEYS.legacySettings);
+  if (!serialized) {
+    return settingsFromLegacyPreferences(DEFAULT_USER_SETTINGS);
+  }
+  return settingsFromLegacyPreferences(parseUserSettings(JSON.parse(serialized)));
 }
 
-export function updateUserSettings(
-  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme" | "selectionTranslation" | "caption" | "layout">>,
-): UserSettings {
-  const nextSettings = parseUserSettings({
-    ...readUserSettings(),
-    ...update,
-    version: USER_SETTINGS_VERSION,
-  });
-  writeUserSettings(nextSettings);
-  return nextSettings;
+export function initializeUserSettings(): Promise<void> {
+  return initializeSettings(readStoredSettings);
+}
+
+export type UserSettingsPatch = Partial<Pick<UserSettings, "language" | "theme" | "selectionTranslation">> & {
+  caption?: Partial<CaptionPreferences>;
+  layout?: Partial<LayoutPreferences>;
+  // null disables a binding; undefined removes the override and restores its default.
+  keybindings?: KeybindingOverrides;
+};
+
+const SETTINGS_LOCK_TIMEOUT_MS = 5_000;
+
+export async function updateUserSettings(update: UserSettingsPatch): Promise<UserSettings> {
+  const patch = structuredClone(update);
+  if (!navigator.locks) throw new Error("Cross-window settings locking is unavailable.");
+  const abort = new AbortController();
+  const timeout = setTimeout(() => abort.abort(), SETTINGS_LOCK_TIMEOUT_MS);
+  try {
+    // Bound admission separately from the IndexedDB transaction that owns merging.
+    return await navigator.locks.request(STORAGE_KEYS.settings, { mode: "exclusive", signal: abort.signal }, async () => {
+      const committed = await commitSettings(readStoredSettings, value => {
+        const current = parseUserSettings(value);
+        return parseUserSettings({
+          ...current, ...patch,
+          caption: { ...current.caption, ...patch.caption },
+          layout: { ...current.layout, ...patch.layout },
+          keybindings: { ...current.keybindings, ...patch.keybindings },
+          version: USER_SETTINGS_VERSION,
+        });
+      });
+      return parseUserSettings(committed);
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function parseUserSettings(value: unknown): UserSettings {

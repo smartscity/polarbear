@@ -50,8 +50,8 @@ async function initialize(page: Page, history = false) {
 async function enableTranslation(page: Page) {
   await page.evaluate(async () => {
     const modulePath = "/src/shared/settings/userSettings.ts";
-    const { readUserSettings, updateUserSettings } = await import(modulePath);
-    updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: true, language: "bilingual" } });
+    const { updateUserSettings } = await import(modulePath);
+    await updateUserSettings({ caption: { showChinese: true, language: "bilingual" } });
   });
 }
 
@@ -134,7 +134,7 @@ test("updates caption language and system theme without reopening the window", a
   await page.evaluate(async () => {
     const modulePath = "/src/shared/settings/userSettings.ts";
     const { updateUserSettings } = await import(modulePath);
-    updateUserSettings({ language: "zh-CN" });
+    await updateUserSettings({ language: "zh-CN" });
   });
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   await page.emulateMedia({ colorScheme: "dark" });
@@ -171,12 +171,14 @@ test("defaults to English and persists translation opt-in across reloads", async
   await page.getByRole("button", { name: "Caption options" }).click();
   const toggle = page.getByRole("checkbox", { name: "Translate into Chinese (offline)" });
   await expect(toggle).not.toBeChecked();
-  await toggle.check();
+  await toggle.click();
+  await expect(toggle).toBeChecked();
   await expect(page.locator(".caption-chinese")).toBeVisible();
   await page.reload();
   await expect(page.locator(".caption-chinese")).toBeVisible();
   await page.getByRole("button", { name: "Caption options" }).click();
-  await toggle.uncheck();
+  await toggle.click();
+  await expect(toggle).not.toBeChecked();
   await expect(page.locator(".caption-chinese")).toHaveCount(0);
 });
 
@@ -210,8 +212,8 @@ for (const delayedMount of [false, true]) test(`does not claim translation work 
   }).toBeGreaterThan(0);
   await page.evaluate(async () => {
     const modulePath = "/src/shared/settings/userSettings.ts";
-    const { readUserSettings, updateUserSettings } = await import(modulePath);
-    updateUserSettings({ caption: { ...readUserSettings().caption, showChinese: false } });
+    const { updateUserSettings } = await import(modulePath);
+    await updateUserSettings({ caption: { showChinese: false } });
   });
   await expect.poll(async () => {
     const before = await claims();

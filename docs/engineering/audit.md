@@ -1,5 +1,24 @@
 # Engineering Audit
 
+## Response and Settings Follow-up: 2026-10-25
+
+Baseline: `f68680d37f4f470ffdb6b641cb4a6fed87fc0217`.
+
+| Finding | Reproduction | Repair |
+| --- | --- | --- |
+| P1: unbounded provider response allocation | A chunked JSON response larger than 16 MiB was accepted; an oversized declared download produced only a decoding error | Central bounded reader checks declared and actual bytes, metadata and base64 decoded sizes; pagination has cumulative limits. Error bodies and publication acknowledgments use the same boundary. |
+| P1: cross-context settings lost updates | Baseline bypassed arbitration; a lock-only repair still lost updates under real WKWebViews, including a fresh observer | Atomic IndexedDB read/merge/write with leaf patches, bounded admission and explicit failure. The cache is not authoritative. |
+| P1: stale nested UI snapshots replace unrelated fields | Caption and layout controls submitted cached full groups | Send only changed fields; layout retains generation-qualified optimistic changes during async persistence. |
+
+The settings payload remains v5. An idempotent transactional import preserves the
+legacy precedence order and never overwrites an existing database record. Different
+fields merge; same-field writes follow transaction order. Tests include actual
+Chromium/WebKit contention, import/reload, lock timeout and closed-owner recovery.
+The native fixture executes production persistence under `tauri://localhost`.
+Native response tests use local HTTP fixtures, not hosted provider accounts.
+See verification for executed results; installed WebView/GUI acceptance remains
+separate from browser-engine coverage.
+
 ## Entry Lifecycle Follow-up: 2026-10-25
 
 Baseline `3c39b338e74a04947bdae766cf7bf423418065d3` has a verified green hosted
@@ -17,8 +36,7 @@ their exact-commit evidence belongs in verification and the delivery report.
 | P1: sync enqueue failure reported as disk failure | Post-commit queue writes return a generic operation error | Add the existing typed sync warning to delete/duplicate acknowledgements and display it without losing the local projection. |
 
 Remaining work is not hidden by these repairs: recursive copy/delete can partially
-complete on filesystem failure; downloads/provider enumeration still need bounded
-response policy; settings cross-process merge and native GUI/provider acceptance
+complete on filesystem failure; native GUI/provider acceptance
 remain open. Security deferrals and the measured hashing regression remain in the
 fixed scorecard. Branch delivery must not be described as mainline release.
 
@@ -148,7 +166,7 @@ confirmed P0 catastrophic failure was reproduced in this pass.
 | ENG-08 | P2 / Confirmed design limit; resource impact Suspected | `features/diagram/diagramRenderCache.ts::getOrRender` bounds completed entries/code units but not distinct pending render requests | Deduplication and completed-cache bounds remain intact. Queue growth under many unique diagrams has no new measured memory/latency evidence. Add a fixed stress fixture before introducing admission control. OPEN. |
 | ENG-09 | P1 / Confirmed fallback and validation defects; exploitation not reproduced | `shared/tauri/openExternalUrl.ts` treated native rejection as browser availability; native launcher ignored unsuccessful exit status and used Windows command-shell parsing | FIXED in the boundary follow-up: explicit runtime choice, validation on both IPC sides, no current-page navigation, localized failure feedback, checked process status, and direct Windows ShellExecuteW URL dispatch. Browser/native regressions pass; actual Windows handler acceptance remains NOT RUN. See the follow-up in verification. |
 | ENG-10 | P1 / Confirmed by fault injection and real filesystem fixtures | Credential cleanup hid partial failures; debug creation wrote before chmod and followed links | FIXED for scoped deletion/restart/publication paths: durable intent and private atomic publication; mode 0600 and macOS ACL removal before secret bytes; no symlink reads/writes; old hard links never receive new secrets. Disconnect cleans precisely named crash staging files and reports partial failure. Real Keychain/Windows prompts, power-loss and hostile same-user processes are not covered. |
-| ENG-11 | P2 / Suspected | Settings are local persistent values projected into React/native state; cross-window read-modify-write has no stress proof | Existing restart/invalid-setting tests pass. Do not infer multi-writer atomicity from them. No new storage format or speculative global store was added. OPEN. |
+| ENG-11 | P1 / Confirmed by cross-window and native WebView regressions | localStorage read/modify/write lost nested fields; a lock-only repair still observed stale native replicas | FIXED within the same-origin storage partition: transactional v5 patches, atomic legacy import, revision-qualified projections and explicit failure. Chromium/WebKit and native custom-origin contention are tested. Installed-app upgrade/permission acceptance remains NOT RUN. |
 | ENG-12 | P1 / Confirmed verification gap | Release lacked independent critical gates; Quality's main/PR-only triggers skipped engineering branch pushes | Release blocking checks retained; Quality also listens to `codex/**` after GitHub confirmed zero runs for `358d0b2`. Trigger/registration regression tests added. Hosted execution is reported separately from local results; branch protection remains NOT VERIFIED. |
 | ENG-13 | P2 / Confirmed governance gap | Cargo license declarations exist but root license texts are missing; no root contribution/security guide or issue/PR template existed | Added `CONTRIBUTING.md`, `SECURITY.md`, and evidence-oriented issue/PR templates. License ownership/grant must be resolved by maintainers; no arbitrary copyright/license text added. Private reporting and required checks require GitHub administration. |
 | ENG-14 | P2 / Not Reproduced in this pass | Real microphone ASR accuracy, physical-device behavior, and two-hour caption continuity | Existing mocked/fake-helper tests and historical release evidence do not prove these outcomes. No ASR model, latency threshold, or recording behavior changed. OPEN acceptance work. |

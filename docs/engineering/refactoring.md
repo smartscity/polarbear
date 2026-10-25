@@ -1,5 +1,37 @@
 # Refactoring Report
 
+## Provider Bounds and Settings Arbitration: 2026-10-25
+
+Baseline: `f68680d37f4f470ffdb6b641cb4a6fed87fc0217`.
+
+| Problem | Pattern / decision | Owner and invariant |
+| --- | --- | --- |
+| Provider bodies buffered without admission | Reuse provider adapter; one bounded-response policy | `response_limits` checks actual and declared bytes before parsing, with separate metadata/content/error limits. No independent downloader or new dependency. |
+| Pagination retains unbounded metadata | Small enumeration budget object | One budget owns cumulative bytes, entries and page count; failure never returns a partial tree as complete. |
+| Cross-window read/modify/write loses preferences | Transactional persistence behind the existing typed patch API | IndexedDB owns atomic read/merge/write; Web Locks bound admission. Native WebView regression disproved lock-only localStorage safety. No new dependency or read-cache authority. |
+| Cached caption/layout groups overwrite unrelated intent | Leaf patches and generation-qualified optimistic layout | UI submits only the fields it changed; acknowledged generations clear their own overlays. Persistence errors retain usable layout and report failure. |
+
+All settings mutation callers handle the asynchronous acknowledgment. Theme
+commands, translation switches and caption controls do not claim persistence
+before it succeeds. Audio source changes do not restart capture after a failed
+preference write. Language selection retains its existing session-only fallback.
+Web Locks are required for mutation; unsupported or timed-out lock acquisition
+does not silently use an unsafe read/modify/write. Legacy nonparticipating
+application versions are not made concurrent-safe by this change.
+
+The existing v1-v5 document is imported once, inside the transaction, only if no
+database record exists. The database is then authoritative; legacy keys remain
+untouched, not dual-written. A monotonic revision guards in-memory projections;
+BroadcastChannel carries invalidations only. Focus/reopen refreshes the authority.
+Rollback can read legacy settings but cannot recover subsequent DB-only edits.
+The native regression bundles the actual production transaction module and checks
+200 concurrent updates across two WKWebViews plus a fresh observer.
+
+The first regressions failed against the baseline before production edits. This
+slice does not solve large-file hashing performance, installed-app acceptance,
+recursive filesystem rollback or authorize main merge/release. Earlier sections
+below describe historical snapshots; the owning current contract is ARCHITECTURE.
+
 ## Entry Mutation Completion: 2026-10-25
 
 Baseline: `3c39b338e74a04947bdae766cf7bf423418065d3`. This follow-up completes
@@ -53,9 +85,9 @@ content, a drawer, focus restoration and the existing localized controls.
 Migration accepts v1-v4, defaults missing layout fields, clamps corrupt widths,
 and preserves explicit v4 caption-translation consent. A failed layout write
 remains usable in memory; unrelated settings notifications do not resurrect the
-unchanged disk value. Cross-process concurrent settings merge remains a separate
-unverified contract. Reset Layout is one existing-registry command shared by
-Settings and the native View menu. No secondary command bus or settings store.
+unchanged disk value. The later transactional-settings follow-up above supersedes
+this slice's unverified cross-process merge boundary. Reset Layout is one
+existing-registry command shared by Settings and the native View menu.
 
 The theme and original grid/tab/status/editor CSS are edited at their source.
 Fixed 260/224px tracks, forced 860px live-editor content and a duplicate dark-only

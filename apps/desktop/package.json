@@ -10,6 +10,7 @@
     "caption:build": "node scripts/build-caption.mjs",
     "typecheck": "tsc --noEmit",
     "test:native-clipboard": "node scripts/test-native-clipboard.mjs",
+    "test:native-settings": "node scripts/test-settings-webview.mjs",
     "test:translation-assets": "node --input-type=module -e \"import('./scripts/bundled-translation-assets.mjs').then(m => m.verifyTranslationAssets())\"",
     "test:offline-translation": "node scripts/test-bundled-translation.mjs",
     "test:ui": "playwright test",

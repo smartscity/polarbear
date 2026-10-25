@@ -114,7 +114,9 @@ export function AppShell({
   useLayoutEffect(() => { setDrawer(null); }, [layout.width]);
   useLayoutEffect(() => {
     if (!drawerVisible) return;
-    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // WebKit does not focus buttons on pointer clicks. Restore the actual
+    // drawer trigger instead of whichever editor control happened to be active.
+    previousFocus.current = shell.current?.querySelector<HTMLElement>(`[data-sidebar-toggle="${drawerVisible}"]`) ?? null;
     shell.current?.querySelector<HTMLElement>(".workspace-drawer-close")?.focus({ preventScroll: true });
     return () => { previousFocus.current?.focus({ preventScroll: true }); };
   }, [drawerVisible]);

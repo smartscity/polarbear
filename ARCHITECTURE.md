@@ -265,6 +265,20 @@ excluded directories before descent. Performance is a separate measurement gate;
 publication memory remains proportional to changed content and API size limits
 can reject a large batch without advancing its baseline.
 
+`repository/response_limits` bounds every provider response before JSON parsing
+or base64 decoding. File bytes are capped at 64 MiB; JSON metadata at 16 MiB;
+content-bearing JSON at 96 MiB (base64 plus framing); error bodies at 64 KiB.
+The reader checks both advertised length and actual streamed bytes, including
+chunked/lengthless responses, reading at most limit + 1 bytes. GitHub decoded
+content also has the 64 MiB cap. Enumeration admits at most 10,000 entries,
+100 pages and 64 MiB of cumulative response bytes; non-advancing pagination and
+truncated trees fail closed, never return an apparently complete partial tree.
+These are application safety limits, not provider promises or total-transfer
+bandwidth limits. Files are read sequentially, not retained as one download batch.
+An oversized commit acknowledgment remains an unknown publication outcome. A
+rejected download cannot apply that file or checkpoint it; prior acknowledged
+files keep their existing per-file checkpoints.
+
 Provider contracts: [GitHub conditional commit](https://docs.github.com/en/graphql/reference/commits#createcommitonbranchinput),
 [GitLab batch commit](https://docs.gitlab.com/api/commits/#create-a-commit).
 Local protocol tests do not establish actual hosted-service acceptance.
@@ -435,11 +449,33 @@ Configuration and state are deliberately separate:
 - Every new main window starts in Workspace. Context is an explicit navigation
   destination, not a saved launch preference. A selected Context tab must not
   cause the next launch to bypass the editor.
-- `shared/settings/userSettings.ts` owns application preferences. The canonical
-  settings document takes precedence over legacy per-key preferences, including
-  explicit `system` values. Initialization applies preferences without writing
-  resolved defaults back. Storage and local change notifications synchronize
-  mounted views; system theme changes are resolved without changing preference.
+- `shared/settings/userSettings.ts` owns the validated v5 application preferences.
+  `settingsDatabase.ts` owns their sole durable authority: the `preferences` store
+  in the same-origin `polarbear.settings` IndexedDB database. Initialization imports
+  existing localStorage v1-v5 settings only when the database record is absent,
+  preserving canonical-document precedence over legacy per-key values, including
+  explicit `system`. Legacy keys remain untouched for rollback; after import they
+  are not a second write target. Downgrading does not inherit newer DB-only edits.
+  Main/caption surfaces hydrate this authority before deriving initial UI state.
+- Settings mutations submit leaf-level intent through asynchronous
+  `updateUserSettings`, not cached whole-group snapshots. One same-origin Web Lock
+  named by the canonical storage key bounds admission; an IndexedDB readwrite
+  transaction atomically reads, merges and persists across participating WebViews
+  in the same storage partition. A lock alone did not make native localStorage
+  replica reads coherent. Different fields merge; the last transaction for the
+  same field wins. Keybinding `null` disables, while `undefined`
+  removes an override. Callers must await or handle rejection; success is emitted
+  only after the transaction completes. A five-second lock acquisition
+  timeout, unavailable Web Locks, or failed storage read/write rejects without an
+  unsafe fallback. Database open/upgrade is also bounded to five seconds. Closing
+  a holder releases its browser-owned lock and aborts uncommitted transactions.
+  A revision-qualified cache is a read projection, never a write base. Broadcast
+  invalidations trigger coalesced database reads; focus/pageshow recover missed
+  notifications. Legacy application versions and separate storage partitions are
+  outside this guarantee. Read-only UI can retain legacy values after storage
+  failure; explicit writes reject rather than overwriting unreadable settings.
+  Layout keeps per-field optimistic edits while pending or failed, clearing only
+  acknowledged generations so unrelated events cannot erase a newer local drag.
 - Context project configuration is read and saved only through `projects.config`
   and `projects.config_update` in the Memory Engine Admin API. The UI draft is
   not authoritative: unloaded settings cannot be saved, refresh cannot discard

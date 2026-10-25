@@ -216,7 +216,7 @@ test("reset cancels a queued zoom gesture and keeps the header inside the viewpo
   await expect(page.locator(".app-zoom-canvas")).toBeVisible();
   await page.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ keybindings: { "view.resetZoom": "Mod+Alt+0" } });
+    await (await import(path)).updateUserSettings({ keybindings: { "view.resetZoom": "Mod+Alt+0" } });
   });
   await page.evaluate(() => {
     const target = document.querySelector(".app-zoom-canvas")!;
@@ -276,7 +276,7 @@ test("repository connection retries a secure write failure and preserves the emp
       return invoke(command, args);
     };
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ keybindings: { "repository.connectGithub": "Mod+Alt+Shift+C", "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
+    await (await import(path)).updateUserSettings({ keybindings: { "repository.connectGithub": "Mod+Alt+Shift+C", "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
   });
   await page.keyboard.press("ControlOrMeta+Alt+Shift+D");
   await expect(page.locator(".workspace-status")).toContainText("Disconnected cloud sync");
@@ -303,7 +303,7 @@ test("repository status failure stays visible and can be retried without changin
     runtime.invoke = (command: string, args: any) => command === "repository_get_sync_status"
       ? Promise.reject(new Error("Fixture status unavailable")) : invoke(command, args);
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ keybindings: { "repository.viewSyncStatus": "Mod+Alt+Shift+S" } });
+    await (await import(path)).updateUserSettings({ keybindings: { "repository.viewSyncStatus": "Mod+Alt+Shift+S" } });
   });
   await page.keyboard.press("ControlOrMeta+Alt+Shift+S");
   await expect(page.getByRole("dialog")).toContainText("Fixture status unavailable");
@@ -322,7 +322,7 @@ test("a repository status response cannot reopen an obsolete workspace dialog", 
       ? new Promise((resolve) => { (window as any).__finishStatus = () => resolve({ localChanges: 0, remoteChanged: false, conflicts: [] }); })
       : invoke(command, args);
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ keybindings: { "repository.viewSyncStatus": "Mod+Alt+Shift+S" } });
+    await (await import(path)).updateUserSettings({ keybindings: { "repository.viewSyncStatus": "Mod+Alt+Shift+S" } });
     const recent = "/src/features/workspace/recentDocuments.ts";
     (await import(recent)).recentDocumentStore().record("/other/Other.md", 2);
   });
@@ -404,7 +404,7 @@ test("failed credential deletion retains the disconnect command and a successful
       return invoke(command, args);
     };
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ keybindings: { "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
+    await (await import(path)).updateUserSettings({ keybindings: { "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
   });
   await page.locator(".editor-workspace .cm-content").first().click();
   await page.keyboard.press("ControlOrMeta+Alt+Shift+D");
@@ -438,7 +438,7 @@ test("reloaded application can finish pending cleanup without an authenticated a
   await expect(page.locator(".workspace-status")).toContainText("Some saved credentials could not be removed");
   await page.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ keybindings: { "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
+    await (await import(path)).updateUserSettings({ keybindings: { "repository.disconnectGithub": "Mod+Alt+Shift+D" } });
   });
   await page.reload();
   await expect(page.locator(".workspace-status")).toContainText("Some saved credentials could not be removed");
@@ -890,7 +890,8 @@ test("keeps settings aligned, persisted and synchronized with caption state in b
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Settings", exact: true });
   const translation = dialog.getByRole("switch", { name: "Selection translation" });
-  await translation.uncheck();
+  await translation.click();
+  await expect(translation).not.toBeChecked();
   const source = dialog.getByRole("combobox", { name: "Audio source" });
   await expect(source).toBeEnabled(); await source.selectOption("microphone");
   const caption = dialog.getByRole("switch", { name: "Enable Live Caption" });
@@ -913,7 +914,7 @@ test("keeps settings aligned, persisted and synchronized with caption state in b
       await page.screenshot({ path: `test-results/settings-${theme}-${width}.png` });
     }
   }
-  await page.evaluate(async () => { const path = "/src/shared/settings/userSettings.ts"; (await import(path)).updateUserSettings({ language: "zh-CN" }); });
+  await page.evaluate(async () => { const path = "/src/shared/settings/userSettings.ts"; await (await import(path)).updateUserSettings({ language: "zh-CN" }); });
   const localized = page.getByRole("dialog", { name: "设置", exact: true });
   await expect(localized.getByRole("switch", { name: "开启实时字幕" })).toBeVisible();
   expect(await localized.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
@@ -921,12 +922,13 @@ test("keeps settings aligned, persisted and synchronized with caption state in b
 });
 
 test("does not replace system preferences on startup and receives changes from another window", async ({ page, context }) => {
-  await nativeFixture(page); await page.goto("/");
-  await page.evaluate(() => {
+  await nativeFixture(page);
+  // Seed the old installation before the one-time transactional import runs.
+  await page.addInitScript(() => {
     localStorage.setItem("polarbear.settings", JSON.stringify({ version: 3, theme: "system", language: "system", selectionTranslation: false }));
     localStorage.setItem("polarbear.theme", "dark"); localStorage.setItem("polarbear-language", "zh-CN");
   });
-  await page.reload();
+  await page.goto("/");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const translation = page.getByRole("switch", { name: "Selection translation" });
   await expect(translation).not.toBeChecked();
@@ -935,7 +937,7 @@ test("does not replace system preferences on startup and receives changes from a
   await nativeFixture(other); await other.goto("/");
   await other.evaluate(async () => {
     const path = "/src/shared/settings/userSettings.ts";
-    (await import(path)).updateUserSettings({ selectionTranslation: true });
+    await (await import(path)).updateUserSettings({ selectionTranslation: true });
   });
   await expect(translation).toBeChecked();
   await other.close();

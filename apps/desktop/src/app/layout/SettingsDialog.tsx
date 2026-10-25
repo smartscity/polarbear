@@ -18,7 +18,7 @@ export function SettingsDialog({ onClose, onResetLayout }: { onClose: () => void
     <SettingsSection title={t("settings.general")}>
     <SettingsRow label={t("settings.selectionTranslation")} description={t("settings.selectionTranslationDescription")}>
       <input className="settings-toggle" type="checkbox" role="switch" aria-label={t("settings.selectionTranslation")} checked={settings.selectionTranslation} onChange={(event) => {
-        try { updateUserSettings({ selectionTranslation: event.target.checked }); setFailed(false); } catch { setFailed(true); }
+        void updateUserSettings({ selectionTranslation: event.target.checked }).then(() => setFailed(false)).catch(() => setFailed(true));
       }} />
     </SettingsRow>
     {onResetLayout && <div className="settings-action"><button onClick={onResetLayout}><RotateCcw size={16} />{t("layout.reset")}</button></div>}
