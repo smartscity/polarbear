@@ -2,14 +2,14 @@ use super::{CaptionError, CaptionResult};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 #[cfg(target_os = "macos")]
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::{
     io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
     process::{Child, Command, Stdio},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
-        mpsc, Arc, Mutex,
+        mpsc, Arc,
     },
     time::{Duration, Instant},
 };

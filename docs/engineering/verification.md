@@ -240,6 +240,10 @@ and after the dependency update; 352 Vitest and 39 Node checks passed again.
 A sandboxed test attempt failed because sockets and macOS file
 coordination were denied; the authorized OS-capable rerun passed, without changing
 assertions. The final pushed SHA must still be checked after these changes.
+The next run at `3ff6bf6d` exposed one remaining macOS-only `Mutex` import in
+Windows Clippy. It is now gated with the capture singleton; the same 115 native
+tests, formatting and all-target Clippy passed locally again. This intermediate
+failure is retained rather than presented as a passing Windows run.
 
 **NOT RUN:** installed-app open/edit/save/close/reopen/quit smoke; actual remote
 provider writes; native Windows GUI/permissions acceptance; physical iPhone/IME/
