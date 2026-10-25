@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { X, RotateCcw } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
 import { updateUserSettings } from "../../shared/settings/userSettings";
 import { CaptionSettings } from "../../features/caption/CaptionSettings";
 import { SettingsSection, SettingsRow } from "../../shared/ui/SettingsSection";
 
-export function SettingsDialog({ onClose }: { onClose: () => void }) {
+export function SettingsDialog({ onClose, onResetLayout }: { onClose: () => void; onResetLayout?: () => void }) {
   const { t } = useI18n();
   const settings = useUserSettings();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -21,6 +21,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         try { updateUserSettings({ selectionTranslation: event.target.checked }); setFailed(false); } catch { setFailed(true); }
       }} />
     </SettingsRow>
+    {onResetLayout && <div className="settings-action"><button onClick={onResetLayout}><RotateCcw size={16} />{t("layout.reset")}</button></div>}
     </SettingsSection>
     <CaptionSettings />
     <SettingsSection title={t("settings.privacy")}><p className="settings-description">{t("settings.privacyDescription")}</p></SettingsSection>

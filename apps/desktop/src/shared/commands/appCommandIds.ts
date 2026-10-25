@@ -106,6 +106,7 @@ export const APP_COMMANDS = {
   viewSourceCode: "view.sourceCode",
   viewSplit: "view.split",
   viewToggleSidebar: "view.toggleSidebar",
+  viewResetLayout: "view.resetLayout",
   viewZoomIn: "view.zoomIn",
   viewZoomOut: "view.zoomOut",
   workspaceCollapseAll: "workspace.collapseAll",

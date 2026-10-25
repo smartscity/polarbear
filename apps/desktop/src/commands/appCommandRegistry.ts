@@ -376,6 +376,7 @@ export const appCommandRegistry: Record<AppCommand, CommandDefinition> = {
     titleKey: "menu.toggleSidebar",
     shortcut: { key: "l", shiftKey: true, command: "view.toggleSidebar" },
   },
+  "view.resetLayout": { titleKey: "layout.reset" },
   "view.sourceCode": {
     titleKey: "menu.sourceMode",
     shortcut: { key: "e", shiftKey: true, command: "view.sourceCode" },

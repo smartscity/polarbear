@@ -378,6 +378,7 @@ export function useNativeAppMenu(
                 previewModeItem,
                 { item: "Separator" },
                 sidebarItem,
+                { id: "view.resetLayout", text: commandTitle("view.resetLayout"), action: () => executeCommand("view.resetLayout") },
                 {
                   id: "caption.start",
                   text: commandTitle("caption.start"),

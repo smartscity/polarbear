@@ -5,7 +5,7 @@ import { useI18n } from "../../shared/i18n/I18nProvider";
 import { PRODUCT_CONFIG } from "../../shared/config/productConfig";
 import { displayAccelerator } from "../../shared/platform/keyboard";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
-import { Settings2 } from "lucide-react";
+import { Settings2, Github } from "lucide-react";
 
 type StatusBarProps = {
   activeFileName: string;
@@ -87,12 +87,14 @@ export function StatusBar({
         </button>
         <a
           className="designer-credit"
+          title={PRODUCT_CONFIG.copyright}
+          aria-label={PRODUCT_CONFIG.copyright}
           href={PRODUCT_CONFIG.repositoryUrl}
           onClick={openProjectLink}
           target="_blank"
           rel="noreferrer"
         >
-          {PRODUCT_CONFIG.copyright}
+          <Github size={14} aria-hidden="true" />
         </a>
         <select
           className="status-language-select"

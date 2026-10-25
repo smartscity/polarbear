@@ -43,6 +43,17 @@ describe("settings persistence", () => {
 });
 
 describe("parseUserSettings", () => {
+  it("restores independent layout preferences without losing version 4 translation consent", () => {
+    expect(parseUserSettings({ version: 4, theme: "dark", selectionTranslation: false,
+      caption: { showChinese: true, source: "microphone" },
+      layout: { leftWidth: 320, rightWidth: 280, leftOpen: false, rightOpen: true },
+      keybindings: { "file.save": "Mod+Alt+S" },
+    })).toMatchObject({ theme: "dark", selectionTranslation: false,
+      caption: { showChinese: true, source: "microphone" },
+      layout: { leftWidth: 320, rightWidth: 280, leftOpen: false, rightOpen: true },
+      keybindings: { "file.save": "Mod+Alt+S" },
+    });
+  });
   it("accepts known commands and removes unknown entries", () => {
     expect(parseUserSettings({
       version: USER_SETTINGS_VERSION,
@@ -53,6 +64,7 @@ describe("parseUserSettings", () => {
       }
     })).toEqual({
       caption: DEFAULT_USER_SETTINGS.caption,
+      layout: DEFAULT_USER_SETTINGS.layout,
       selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "system",
@@ -72,6 +84,7 @@ describe("parseUserSettings", () => {
       keybindings: {},
     })).toEqual({
       caption: DEFAULT_USER_SETTINGS.caption,
+      layout: DEFAULT_USER_SETTINGS.layout,
       selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "zh-CN",
@@ -86,6 +99,7 @@ describe("parseUserSettings", () => {
       keybindings: { "file.save": "Mod+S" },
     })).toEqual({
       caption: DEFAULT_USER_SETTINGS.caption,
+      layout: DEFAULT_USER_SETTINGS.layout,
       selectionTranslation: true,
       version: USER_SETTINGS_VERSION,
       language: "system",

@@ -1,4 +1,5 @@
 import { useI18n } from "../../shared/i18n/I18nProvider";
+import { X, Plus, PanelLeft, ListTree } from "lucide-react";
 
 type TopBarProps = {
   activeTabId: string;
@@ -52,7 +53,7 @@ export function TopBar({
                 aria-label={t("top.closeTab", { name: tab.name })}
                 onClick={() => onCloseTab(tab.id)}
               >
-                <CloseIcon />
+                <X size={14} />
               </button>
             </div>
           )) : (
@@ -65,66 +66,33 @@ export function TopBar({
           aria-label={t("top.newTab")}
           onClick={onNewTab}
         >
-          +
+          <Plus size={16} />
         </button>
         <div className="window-view-controls" aria-label={t("top.viewToggles")}>
           <button
             type="button"
             className={`window-view-button ${isDocumentStructureOpen ? "active" : ""}`}
             aria-label={t("top.structure")}
+            data-sidebar-toggle="right"
             aria-pressed={isDocumentStructureOpen}
             title={t("top.structure")}
             onClick={onToggleDocumentStructure}
           >
-            <StructureIcon />
+            <ListTree size={16} />
           </button>
           <button
             type="button"
             className={`window-view-button ${isSidebarOpen ? "active" : ""}`}
             aria-label={t("top.fileTree")}
+            data-sidebar-toggle="left"
             aria-pressed={isSidebarOpen}
             title={t("top.fileTree")}
             onClick={onToggleSidebar}
           >
-            <FileTreePanelIcon />
+            <PanelLeft size={16} />
           </button>
         </div>
       </nav>
     </header>
-  );
-}
-
-function CloseIcon() {
-  return (
-    // <svg aria-hidden="true" viewBox="0 0 12 12">
-    //   <path d="M3.1 3.1 8.9 8.9M8.9 3.1 3.1 8.9" />
-    // </svg>
-    <svg aria-hidden="true" viewBox="0 0 12 12">
-      <path
-          d="M3.25 3.25L8.75 8.75M8.75 3.25L3.25 8.75"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StructureIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 18 18">
-      <path d="M4 4.5h2M8 4.5h6M4 9h2M8 9h6M4 13.5h2M8 13.5h6" />
-    </svg>
-  );
-}
-
-function FileTreePanelIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 18 18">
-      <path d="M3.5 3.5h11v11h-11z" />
-      <path d="M10.5 3.5v11" />
-    </svg>
   );
 }

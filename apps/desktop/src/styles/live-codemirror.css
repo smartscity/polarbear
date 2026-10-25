@@ -25,12 +25,12 @@ body,
 .typora-live-editor-pane {
   flex: 1 1 auto;
   min-width: 0;
-  --typora-live-base-content-width: 860px;
+  --typora-live-base-content-width: 760px;
   --typora-live-content-width: var(--typora-live-base-content-width);
   --typora-live-content-padding-top: 48px;
-  --typora-live-content-padding-x: 56px;
+  --typora-live-content-padding-x: 28px;
   --typora-live-content-padding-bottom: 72px;
-  --typora-live-font-size: 17px;
+  --typora-live-font-size: 16px;
   --typora-live-code-font-size: 14px;
   --typora-live-h1-size: 34px;
   --typora-live-h2-size: 28px;
@@ -141,12 +141,12 @@ body,
 }
 
 .typora-live-editor-pane .cm-content {
-  width: var(--typora-live-content-width);
-  min-width: var(--typora-live-content-width);
-  max-width: none;
+  width: min(100%, calc(var(--typora-live-content-width) + 2 * var(--typora-live-content-padding-x)));
+  min-width: 0;
+  max-width: 100%;
   min-height: 100%;
   overflow-anchor: none;
-  box-sizing: content-box;
+  box-sizing: border-box;
   margin: 0 auto;
   padding: var(--typora-live-content-padding-top) var(--typora-live-content-padding-x) var(--typora-live-content-padding-bottom);
   caret-color: var(--color-text-primary, #2f3437);
@@ -1456,8 +1456,6 @@ body,
 
 @media (max-width: 768px) {
   .typora-live-editor-pane .cm-content {
-    width: var(--typora-live-content-width);
-    min-width: var(--typora-live-content-width);
     padding: 28px 20px 56px;
   }
 }

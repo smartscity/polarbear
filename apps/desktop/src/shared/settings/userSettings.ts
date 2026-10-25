@@ -2,8 +2,9 @@ import { isAppCommandId } from "../commands/appCommandIds";
 import type { AppCommand } from "../commands/appCommandTypes";
 import { STORAGE_KEYS } from "../constants/storageKeys";
 import { APP_EVENTS } from "../events/appEvents";
+import { DEFAULT_LAYOUT, parseLayoutPreferences, type LayoutPreferences } from "./layoutPreferences";
 
-export const USER_SETTINGS_VERSION = 4;
+export const USER_SETTINGS_VERSION = 5;
 
 export type CaptionPreferences = {
   source: "system" | "microphone";
@@ -25,6 +26,7 @@ export type UserSettings = {
   selectionTranslation: boolean;
   caption: CaptionPreferences;
   keybindings: KeybindingOverrides;
+  layout: LayoutPreferences;
 };
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
@@ -33,6 +35,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   theme: "system",
   selectionTranslation: true,
   caption: DEFAULT_CAPTION,
+  layout: DEFAULT_LAYOUT,
   keybindings: {}
 };
 
@@ -60,7 +63,7 @@ export function writeUserSettings(settings: UserSettings): void {
 }
 
 export function updateUserSettings(
-  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme" | "selectionTranslation" | "caption">>,
+  update: Partial<Pick<UserSettings, "keybindings" | "language" | "theme" | "selectionTranslation" | "caption" | "layout">>,
 ): UserSettings {
   const nextSettings = parseUserSettings({
     ...readUserSettings(),
@@ -72,7 +75,7 @@ export function updateUserSettings(
 }
 
 export function parseUserSettings(value: unknown): UserSettings {
-  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== USER_SETTINGS_VERSION)) {
+  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4 && value.version !== USER_SETTINGS_VERSION)) {
     return DEFAULT_USER_SETTINGS;
   }
 
@@ -93,7 +96,8 @@ export function parseUserSettings(value: unknown): UserSettings {
     language: isLanguagePreference(value.language) ? value.language : "system",
     theme: isThemePreference(value.theme) ? value.theme : "system",
     selectionTranslation: typeof value.selectionTranslation === "boolean" ? value.selectionTranslation : true,
-    caption: parseCaption(value.caption, value.version === USER_SETTINGS_VERSION),
+    caption: parseCaption(value.caption, value.version === 4 || value.version === USER_SETTINGS_VERSION),
+    layout: parseLayoutPreferences(value.layout),
     keybindings
   };
 }

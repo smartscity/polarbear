@@ -63,8 +63,8 @@ const sharedTypography = {
 
 const sharedRadius = {
   small: "5px",
-  medium: "8px",
-  large: "10px"
+  medium: "6px",
+  large: "8px"
 };
 
 const sharedSpacing = {
@@ -80,11 +80,11 @@ export const themeTokens: Record<ThemeName, ThemeTokens> = {
     colors: {
       appBackground: "#ffffff",
       editorBackground: "#ffffff",
-      sidebarBackground: "#f7f7f7",
+      sidebarBackground: "#f7f7f5",
       previewBackground: "#ffffff",
-      textPrimary: "#2f3437",
-      textSecondary: "#5f666d",
-      textMuted: "#8a8f98",
+      textPrimary: "#252525",
+      textSecondary: "#626262",
+      textMuted: "#707070",
       border: "#e5e7eb",
       divider: "#eceff3",
       selectionBackground: "#dbeafe",
@@ -109,18 +109,18 @@ export const themeTokens: Record<ThemeName, ThemeTokens> = {
   dark: {
     name: "dark",
     colors: {
-      appBackground: "#0f1115",
-      editorBackground: "#151922",
-      sidebarBackground: "#11141a",
-      previewBackground: "#151922",
+      appBackground: "#1c1d1f",
+      editorBackground: "#1c1d1f",
+      sidebarBackground: "#232426",
+      previewBackground: "#1c1d1f",
       textPrimary: "#e6e8ee",
       textSecondary: "#aeb4c0",
       textMuted: "#7d8594",
-      border: "#2a3040",
-      divider: "#202634",
+      border: "#3b3d40",
+      divider: "#323437",
       selectionBackground: "#1f4f7a",
-      hoverBackground: "#1a202b",
-      activeBackground: "#1d2633",
+      hoverBackground: "#303235",
+      activeBackground: "#373a3e",
       accent: "#5aa9ff",
       accentText: "#06111f",
       codeBackground: "#10141c",

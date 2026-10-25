@@ -9,6 +9,7 @@ import { InsertTableDialog } from "./features/editor/components/InsertTableDialo
 import { MarkdownPreview } from "./features/editor/components/MarkdownPreview";
 import { TyporaLiveEditor } from "./features/editor/components/TyporaLiveEditor";
 import { AppShell } from "./app/layout/AppShell";
+import { useLayoutPreferences } from "./app/layout/useLayoutPreferences";
 import { ActivityRail, type AppSurface } from "./app/layout/ActivityRail";
 import { AboutPolarbearDialog } from "./app/layout/AboutPolarbearDialog";
 import { CreateItemDialog } from "./features/workspace/components/CreateItemDialog";
@@ -50,8 +51,6 @@ export function App() {
   const [themeName, setThemeName] = useState<ThemeName>(() =>
     readStoredTheme(),
   );
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isDocumentStructureOpen, setIsDocumentStructureOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [activeSurface, setActiveSurface] = useState<AppSurface>("workspace");
@@ -61,6 +60,11 @@ export function App() {
   const [isInsertCodeFenceDialogOpen, setIsInsertCodeFenceDialogOpen] =
     useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const layout = useLayoutPreferences(() => setStatusMessage(t("layout.storageFailed")));
+  const sidebarOpen = layout.preferences.leftOpen;
+  const isDocumentStructureOpen = layout.preferences.rightOpen;
+  const setSidebarOpen = layout.setLeftOpen;
+  const setIsDocumentStructureOpen = layout.setRightOpen;
   const [debugEnabled, setDebugEnabled] = useState(readStoredDebugEnabled);
 
   const { zoomViewportRef, zoomCanvasSizeRef, zoomCanvasRef, appZoomCanvasSizeStyle,
@@ -645,6 +649,11 @@ export function App() {
         return;
       }
 
+      if (command === "view.resetLayout") {
+        layout.reset();
+        return;
+      }
+
       if (command === "view.fileTree") {
         if (!workspaceRoot) {
           void openWorkspace();
@@ -792,6 +801,9 @@ export function App() {
             />
             {activeSurface === "workspace" ? <AppShell
               activeFileId={activeFileId}
+              layoutPreferences={layout.preferences}
+              onLayoutChange={layout.update}
+              splitView={viewMode === "split"}
               activeRelativePath={activeRelativePath}
               activeFileName={activeFileName}
               characterCount={markdownContent.length}
@@ -941,7 +953,7 @@ export function App() {
       {isAboutDialogOpen ? (
         <AboutPolarbearDialog onClose={() => setIsAboutDialogOpen(false)} />
       ) : null}
-      {isSettingsDialogOpen && <SettingsDialog onClose={() => setIsSettingsDialogOpen(false)} />}
+      {isSettingsDialogOpen && <SettingsDialog onResetLayout={() => executeCommand("view.resetLayout")} onClose={() => setIsSettingsDialogOpen(false)} />}
     </>
   );
 }
