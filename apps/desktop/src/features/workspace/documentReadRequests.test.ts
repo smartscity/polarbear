@@ -5,6 +5,18 @@ const document: DocumentReadSnapshot = {
   content: "original", revision: "1", workspaceRoot: "/project", relativePath: "a.md",
 };
 
+it("keeps save identity across edits but invalidates it synchronously on close and reopen", () => {
+  const requests = new DocumentReadRequests();
+  requests.reconcile(new Map([["a", document]]));
+  const identity = requests.captureIdentity("a");
+  requests.reconcile(new Map([["a", { ...document, content: "new edit" }]]));
+  expect(identity?.()).toBe(true);
+  requests.close("a");
+  requests.reconcile(new Map([["a", document]]));
+  expect(identity?.()).toBe(false);
+  expect(requests.captureIdentity("a")?.()).toBe(true);
+});
+
 it("accepts unchanged reads and isolates concurrent documents and windows", () => {
   const requests = new DocumentReadRequests();
   const otherWindow = new DocumentReadRequests();

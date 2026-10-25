@@ -1,5 +1,26 @@
 # Refactoring Report
 
+## Document Completion Protocol: 2026-10-25
+
+The document session remains the owner of buffers, identity and dirty state.
+`saveTab(id, saveAs)` is now the single ordinary/Save As/close/quit save entry.
+The former second Save As implementation is removed. Native write acknowledgments
+commit identity and revision before best-effort directory refresh. Refresh failure
+reports a saved-file warning rather than undoing the acknowledged identity.
+
+`DocumentReadRequests` also issues non-mutating lifetime checks for saves; edits
+do not invalidate save identity, but close/reopen and path changes do. Close is
+serialized per document and cannot remove a document while its write is pending.
+The existing native dialog adapter exposes Save / Discard Changes / Cancel.
+Only the explicit discard result permits closing without a save.
+
+Quit reuses `saveWorkspaceDocuments` against current session state, including
+Save As identity changes. Earlier-document edits and new documents abort quit.
+Only after this check does a synchronous final phase make the workspace inert,
+invalidate pending navigation and reject editing before calling native quit.
+Failures release the phase and the reentrancy guard. Native atomic write and
+permission/revision behavior is unchanged in this stage.
+
 ## Workspace Mutation and Diagram Admission Follow-up
 
 Base: `a2e0b32a899a1fffe73827166687bdeff6abd59e`. This slice keeps the existing

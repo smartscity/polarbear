@@ -61,6 +61,16 @@ export class DocumentReadRequests {
     if (session) session.request = null;
   }
 
+  /** A save may acknowledge an older edit, but never a different document lifetime. */
+  captureIdentity(id: string): (() => boolean) | null {
+    const session = this.sessions.get(id);
+    return session ? () => this.sessions.get(id) === session : null;
+  }
+
+  close(id: string): void {
+    this.sessions.delete(id);
+  }
+
   clear(): void {
     this.sessions.clear();
   }

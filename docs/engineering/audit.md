@@ -1,5 +1,31 @@
 # Engineering Audit
 
+## Current Follow-up: 2026-10-25
+
+Baseline `dc5e11e3c78283b55f6b004d73df8f4df2883c98`, isolated engineering branch.
+The fixed evaluation contract is in [scorecard](scorecard.md#fixed-acceptance-contract-2026-10-25).
+
+- **P0, reproduced:** `useDocumentSession.requestAppQuit` saves its initial dirty
+  list and quits after A is edited while B saves. The real-App browser regression
+  observed a `quit_app` invocation with A still dirty.
+- **P0, reproduced:** boolean `ask` conflates cancellation and explicit discard
+  in `closeTab`; returning Cancel removed the dirty document.
+- **P1, reproduced:** both Save As implementations await the directory before
+  acknowledging a successful write. A directory error left the committed file
+  represented as a dirty Untitled tab.
+- **P0, confirmed by inspection, remediation pending:** repository pull skips
+  divergent local changes but returns no conflict; push obtains fresh content
+  SHAs and may replace remote work. Downloads read mutable branch content.
+- **P1, confirmed by inspection, remediation pending:** sync digests encode the
+  entire content; excluded directories are traversed before filtering files.
+- **P1, confirmed by inspection, remediation pending:** preview image regex runs
+  inside ordinary code fences. Fixed-grid sidebars have no shared resize owner
+  or persisted width preferences.
+
+The first three findings now have targeted green browser regressions; full
+cross-platform and final-checkout acceptance is tracked separately. This section
+does not supersede earlier dated evidence or imply whole-audit completion.
+
 Date: 2026-10-24. Baseline: `166e231c61dc568876aab8dbebdb6636a2c281ae`.
 Implementation: `2747dc36d2a0cb559ba7e33415118597c711b96f`.
 Boundary follow-up: `e1fd7c08b0bd8102e97c0b57764a9f17869b2cf2` (ENG-09/ENG-10).

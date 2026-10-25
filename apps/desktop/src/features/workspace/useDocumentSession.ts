@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { type CreateItemType } from "../../features/workspace/components/CreateItemDialog";
@@ -19,6 +20,7 @@ import { useWorkspaceFileTreeRefresh } from "../../features/workspace/useWorkspa
 import { APP_EVENTS } from "../../shared/events/appEvents";
 import { recentDocumentStore, documentHistoryPath } from "../../features/workspace/recentDocuments";
 import type { Dispatch, SetStateAction } from "react";
+import { confirmDocumentClose } from "./tauriWorkspaceAdapter";
 
 const initialWorkspace: WorkspaceItem[] = [];
 
@@ -58,9 +60,13 @@ export function useDocumentSession({
   const [documentReads] = useState(() => new DocumentReadRequests());
   useEffect(() => () => documentNavigation.invalidate(), [documentNavigation]);
   const savesInProgressRef = useRef(new Set<string>());
+  const closesInProgressRef = useRef(new Set<string>());
+  const closingRef = useRef(false);
+  const [sessionClosing, setSessionClosing] = useState(false);
   const [pathMutations] = useState(() => new WorkspacePathMutations());
   const treeReadPermission = useCallback(() => pathMutations.readPermission(), [pathMutations]);
   const rejectDuringPathMutation = () => {
+    if (closingRef.current) return true;
     if (!pathMutations.isBusy()) return false;
     setStatusMessage(t("status.workspaceOperationBusy"));
     return true;
@@ -89,7 +95,7 @@ export function useDocumentSession({
   useLayoutEffect(() => {
     const snapshots = new Map<string, DocumentReadSnapshot>();
     for (const fileId of openFileIds) {
-      if (documents[fileId] === undefined || isUntitledDocument(fileId)) continue;
+      if (documents[fileId] === undefined) continue;
       snapshots.set(fileId, {
         content: documents[fileId],
         revision: documentRevisions[fileId] ?? "",
@@ -120,11 +126,11 @@ export function useDocumentSession({
   const activeFileIdRef = useRef(activeFileId);
   useLayoutEffect(() => { activeFileIdRef.current = activeFileId; }, [activeFileId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     dirtyFileIdsRef.current = dirtyFileIds;
   }, [dirtyFileIds]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     openFileIdsRef.current = openFileIds;
   }, [openFileIds]);
 
@@ -362,6 +368,7 @@ export function useDocumentSession({
 
 
   const updateActiveDocument = (value: string) => {
+    if (closingRef.current) return;
     if (!activeFileId) {
       setStatusMessage(t("status.selectDocumentBeforeWriting"));
       return;
@@ -631,6 +638,7 @@ export function useDocumentSession({
 
 
   const createUntitledDocument = () => {
+    if (closingRef.current) return;
     documentNavigation.invalidate();
     const nextUntitledNumber = untitledCounter + 1;
     const baseTitle = t("top.untitled");
@@ -765,13 +773,15 @@ export function useDocumentSession({
   };
 
 
-  const performSaveTab = async (fileId: string): Promise<string | null> => {
-    const content = documents[fileId] ?? "";
+  const performSaveTab = async (fileId: string, saveAs = false): Promise<string | null> => {
+    const isSameDocument = documentReads.captureIdentity(fileId);
+    const content = getCurrentDocument(fileId);
+    if (!isSameDocument || content === undefined) return null;
     const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
     const tabItem = findWorkspaceItem(workspaceItems, relativePath);
     const tabName = tabItem?.name ?? documentTitles[fileId] ?? fileNameOf(relativePath);
 
-    if (isUntitledDocument(fileId)) {
+    if (saveAs || isUntitledDocument(fileId)) {
       const selectedPath = await chooseMarkdownSavePath(
         deriveDefaultMarkdownFileName(content, tabName, t("top.untitled")),
       );
@@ -779,6 +789,7 @@ export function useDocumentSession({
         setStatusMessage(t("status.saveCancelled"));
         return null;
       }
+      if (!isSameDocument()) return null;
 
       const markdownFilePath = ensureMarkdownFilePath(selectedPath);
       const saved = await writeMarkdownFile({
@@ -794,19 +805,16 @@ export function useDocumentSession({
         relativePath,
         workspaceRoot: workspacePath,
       });
-      const items = await listWorkspaceFiles(workspacePath);
+      if (!isSameDocument()) return null;
       const currentContent = getCurrentDocument(fileId);
       if (currentContent === undefined) return null;
       const stillDirty = currentContent !== content;
 
+      flushSync(() => {
       if (activeFileIdRef.current === fileId) {
         setWorkspaceRoot(workspacePath);
-        setWorkspaceItems(items);
+        setWorkspaceItems(workspaceItemsByRoot[workspacePath] ?? []);
       }
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspacePath]: items,
-      }));
       setDocuments((currentDocuments) => {
         const nextDocuments = { ...currentDocuments };
         delete nextDocuments[fileId];
@@ -853,9 +861,18 @@ export function useDocumentSession({
         if (stillDirty) nextDirtyFileIds.add(nextDocumentId);
         return nextDirtyFileIds;
       });
+      });
       lastSavedFileIdRef.current = nextDocumentId;
       setStatusMessage(t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: relativePath }));
-      return stillDirty ? null : nextDocumentId;
+      const isSavedDocument = documentReads.captureIdentity(nextDocumentId);
+      try {
+        const items = await listWorkspaceFiles(workspacePath);
+        setWorkspaceItemsByRoot((current) => ({ ...current, [workspacePath]: items }));
+        if (workspaceRootRef.current === workspacePath) setWorkspaceItems(items);
+      } catch {
+        setStatusMessage(t("status.savedTreeRefreshFailed", { path: relativePath }));
+      }
+      return isSavedDocument?.() && getCurrentDocument(nextDocumentId) === content ? nextDocumentId : null;
     }
 
     const tabWorkspaceRoot = documentWorkspaceRootForId(
@@ -879,6 +896,7 @@ export function useDocumentSession({
         expectedRevision: documentRevisions[fileId],
       });
     } catch (error) {
+      if (!isSameDocument()) return null;
       reportDocumentSaveError(error, {
         fileId,
         relativePath: tabRelativePath,
@@ -886,9 +904,11 @@ export function useDocumentSession({
       });
       return null;
     }
+    if (!isSameDocument()) return null;
     const currentContent = getCurrentDocument(fileId);
     if (currentContent === undefined) return null;
     const stillDirty = currentContent !== content;
+    flushSync(() => {
     setDocumentRevisions((currentRevisions) => ({
       ...currentRevisions,
       [fileId]: saved.revision,
@@ -899,18 +919,19 @@ export function useDocumentSession({
       else nextDirtyFileIds.delete(fileId);
       return nextDirtyFileIds;
     });
+    });
     lastSavedFileIdRef.current = fileId;
     const message = t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: tabRelativePath });
     setStatusMessage(saved.warning ? `${message} ${t("status.savedSyncQueueUnavailable")}` : message);
     return stillDirty ? null : fileId;
   };
 
-  const saveTab = useEventCallback(async (fileId: string): Promise<string | null> => {
+  const saveTab = useEventCallback(async (fileId: string, saveAs: boolean = false): Promise<string | null> => {
     if (rejectDuringPathMutation()) return null;
     if (savesInProgressRef.current.has(fileId)) return null;
     savesInProgressRef.current.add(fileId);
     try {
-      return await performSaveTab(fileId);
+      return await performSaveTab(fileId, saveAs);
     } catch (error) {
       reportDocumentSaveError(error, {
         fileId,
@@ -925,6 +946,11 @@ export function useDocumentSession({
 
   const closeTab = async (fileId: string) => {
     if (rejectDuringPathMutation()) return;
+    if (savesInProgressRef.current.has(fileId) || closesInProgressRef.current.has(fileId)) return;
+    const isSameDocument = documentReads.captureIdentity(fileId);
+    if (!isSameDocument) return;
+    closesInProgressRef.current.add(fileId);
+    try {
     documentNavigation.invalidate();
     if (!fileId) {
       return;
@@ -935,12 +961,10 @@ export function useDocumentSession({
     let fileIdToClose = fileId;
 
     if (dirtyFileIds.has(fileId)) {
-      const shouldSave = await ask(t("dialog.saveBeforeClosing", { name: tabName }), {
-        kind: "warning",
-        title: t("dialog.closeTabTitle"),
-      });
+      const choice = await confirmDocumentClose(t("dialog.saveBeforeClosing", { name: tabName }), t("dialog.closeTabTitle"));
+      if (choice === "cancel" || !isSameDocument()) return;
 
-      if (shouldSave) {
+      if (choice === "save") {
         lastSavedFileIdRef.current = null;
         let savedFileId: string | null;
         try {
@@ -958,6 +982,8 @@ export function useDocumentSession({
     }
 
     if (rejectDuringPathMutation()) return;
+    documentReads.close(fileId);
+    documentReads.close(fileIdToClose);
     const currentTabIds = openFileIdsRef.current;
     const closeIndex = Math.max(
       0,
@@ -1025,6 +1051,9 @@ export function useDocumentSession({
     }
 
     setStatusMessage(t("status.closedPath", { path: tabName }));
+    } finally {
+      closesInProgressRef.current.delete(fileId);
+    }
   };
 
   const requestAppQuit = useEventCallback(async () => {
@@ -1035,29 +1064,32 @@ export function useDocumentSession({
     quitRequestedRef.current = true;
 
     try {
-      const dirtyDocumentIds = openFileIds.filter((fileId) => dirtyFileIds.has(fileId));
+      const dirtyDocumentIds = openFileIdsRef.current.filter((fileId) => dirtyFileIdsRef.current.has(fileId));
       if (dirtyDocumentIds.length > 0) {
-        const shouldSave = await ask(t("dialog.saveBeforeQuitting"), {
-          kind: "warning",
-          title: t("dialog.quitTitle"),
-        });
-
-        if (shouldSave) {
-          for (const fileId of dirtyDocumentIds) {
-            const savedFileId = await saveTab(fileId);
-            if (!savedFileId) {
-              quitRequestedRef.current = false;
-              return;
-            }
-          }
+        const choice = await confirmDocumentClose(t("dialog.saveBeforeQuitting"), t("dialog.quitTitle"));
+        if (choice === "cancel") return;
+        if (choice === "save" && !await saveWorkspaceDocuments({
+          getDirtyDocumentIds: () => openFileIdsRef.current.filter((id) => dirtyFileIdsRef.current.has(id)),
+          getContent: getCurrentDocument,
+          saveDocument: saveTab,
+        })) {
+          setStatusMessage(t("status.quitPausedUnsaved"));
+          return;
         }
       }
 
-      if (rejectDuringPathMutation()) { quitRequestedRef.current = false; return; }
+      if (rejectDuringPathMutation() || savesInProgressRef.current.size || closesInProgressRef.current.size) return;
+      // Commit a non-interactive final phase before crossing the asynchronous native quit boundary.
+      closingRef.current = true;
+      documentNavigation.invalidate();
+      flushSync(() => setSessionClosing(true));
       await quitApp();
     } catch (error) {
-      quitRequestedRef.current = false;
       setStatusMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      closingRef.current = false;
+      setSessionClosing(false);
+      quitRequestedRef.current = false;
     }
   });
 
@@ -1095,104 +1127,11 @@ export function useDocumentSession({
   };
 
   const saveActiveFileAs = async (): Promise<boolean> => {
-    if (rejectDuringPathMutation()) return false;
     if (!activeFileId) {
       setStatusMessage(t("status.selectDocumentBeforeSave"));
       return false;
     }
-
-    if (savesInProgressRef.current.has(activeFileId)) return false;
-    savesInProgressRef.current.add(activeFileId);
-    try {
-      const defaultFileName = deriveDefaultMarkdownFileName(
-        markdownContent,
-        activeFileName,
-        t("top.untitled"),
-      );
-      const selectedPath = await chooseMarkdownSavePath(defaultFileName);
-
-      if (!selectedPath) {
-        setStatusMessage(t("status.saveCancelled"));
-        return false;
-      }
-
-      const markdownFilePath = ensureMarkdownFilePath(selectedPath);
-      const saved = await writeMarkdownFile({
-        filePath: markdownFilePath,
-        markdownContent,
-      });
-
-      const workspacePath = parentPathOf(markdownFilePath);
-      const relativePath = fileNameOf(markdownFilePath);
-      const nextDocumentId = makeWorkspaceDocumentId({
-        currentDocumentIds: new Set([...openFileIds, ...Object.keys(documents)].filter((id) => id !== activeFileId)),
-        currentWorkspaceRoot: workspacePath,
-        relativePath,
-        workspaceRoot: workspacePath,
-      });
-      const items = await listWorkspaceFiles(workspacePath);
-      const currentContent = getCurrentDocument(activeFileId);
-      if (currentContent === undefined) return false;
-      const stillDirty = currentContent !== markdownContent;
-
-      if (activeFileIdRef.current === activeFileId) {
-        setWorkspaceRoot(workspacePath);
-        setWorkspaceItems(items);
-      }
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspacePath]: items,
-      }));
-      setDocuments((currentDocuments) => {
-        const nextDocuments = { ...currentDocuments };
-        delete nextDocuments[activeFileId];
-        nextDocuments[nextDocumentId] = currentDocuments[activeFileId] ?? currentContent;
-        return nextDocuments;
-      });
-      setDocumentRevisions((currentRevisions) => {
-        const nextRevisions = { ...currentRevisions };
-        delete nextRevisions[activeFileId];
-        nextRevisions[nextDocumentId] = saved.revision;
-        return nextRevisions;
-      });
-      setDocumentTitles((currentTitles) => {
-        const nextTitles = { ...currentTitles };
-        delete nextTitles[activeFileId];
-        return nextTitles;
-      });
-      setActiveFileId((current) => current === activeFileId ? nextDocumentId : current);
-      setOpenFileIds((currentFileIds) =>
-        currentFileIds.map((fileId) => fileId === activeFileId ? nextDocumentId : fileId),
-      );
-      if (activeFileIdRef.current === activeFileId) setSelectedTreeItemId(relativePath);
-      setDocumentWorkspaceRoots((currentRoots) => {
-        const nextRoots = { ...currentRoots };
-        delete nextRoots[activeFileId];
-        nextRoots[nextDocumentId] = workspacePath;
-        return nextRoots;
-      });
-      setDocumentRelativePaths((currentPaths) => {
-        const nextPaths = { ...currentPaths };
-        delete nextPaths[activeFileId];
-        nextPaths[nextDocumentId] = relativePath;
-        return nextPaths;
-      });
-      setDirtyFileIds((currentDirtyFileIds) => {
-        const nextDirtyFileIds = new Set(currentDirtyFileIds);
-        nextDirtyFileIds.delete(activeFileId);
-        if (stillDirty) nextDirtyFileIds.add(nextDocumentId);
-        return nextDirtyFileIds;
-      });
-      lastSavedFileIdRef.current = nextDocumentId;
-      setStatusMessage(t(stillDirty ? "status.savedEarlierVersion" : "status.savedPath", { path: relativePath }));
-      return !stillDirty;
-    } catch (error) {
-      const failureKey = workspaceSaveFailureKey(error);
-      setStatusMessage(failureKey ? t(failureKey, { path: activeFileName }) : error instanceof Error ? error.message : String(error));
-      return false;
-    } finally {
-      savesInProgressRef.current.delete(activeFileId);
-    }
+    return (await saveTab(activeFileId, true)) !== null;
   };
 
   const saveDeletedExternalDocumentAs = async () => {
@@ -1609,7 +1548,7 @@ export function useDocumentSession({
     activeDocumentRoot, activeFileName, isDirty, openTabs, collapseVersion, folderRevealRequest,
     selectedTreeItemId, createItemType, createDefaultName, renameItemId, externalDocumentChange,
     loadWorkspace, openWorkspace, openMarkdownPath, openFile, createUntitledDocument, selectFile,
-    activateTab, updateActiveDocument, saveTab, saveActiveFile, saveActiveFileAs, closeTab, requestAppQuit,
+    activateTab, updateActiveDocument, saveTab, saveActiveFile, saveActiveFileAs, closeTab, requestAppQuit, sessionClosing,
     dirtyDocumentIdsForWorkspace, saveDirtyDocumentsForWorkspace, reloadWorkspaceAfterDownload,
     reloadDocumentFromDisk, reloadExternalDocumentFromDisk, keepEditingExternalDocument, saveDeletedExternalDocumentAs,
     openCreateDialog, confirmCreateItem, startRename, confirmRename, deleteWorkspaceItem,

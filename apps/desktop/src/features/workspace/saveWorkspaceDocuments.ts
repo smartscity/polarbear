@@ -1,7 +1,7 @@
 type WorkspaceSaveSession = {
   getDirtyDocumentIds: () => string[];
   getContent: (id: string) => string | undefined;
-  saveDocument: (id: string) => Promise<boolean>;
+  saveDocument: (id: string) => Promise<boolean | string | null>;
 };
 
 /** Gate repository IO on completed document saves, without owning editor state. */
@@ -9,8 +9,10 @@ export async function saveWorkspaceDocuments(session: WorkspaceSaveSession): Pro
   const savedContents = new Map<string, string>();
   for (const id of session.getDirtyDocumentIds()) {
     const content = session.getContent(id);
-    if (content === undefined || !await session.saveDocument(id)) return false;
-    savedContents.set(id, content);
+    if (content === undefined) return false;
+    const saved = await session.saveDocument(id);
+    if (!saved) return false;
+    savedContents.set(typeof saved === "string" ? saved : id, content);
   }
   // Earlier documents may change while later saves are pending. React can also
   // still expose an old dirty marker for an already committed snapshot.

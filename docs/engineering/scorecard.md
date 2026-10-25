@@ -1,5 +1,37 @@
 # Engineering Quality Scorecard
 
+## Fixed Acceptance Contract: 2026-10-25
+
+Base: `dc5e11e3c78283b55f6b004d73df8f4df2883c98`. Branch:
+`codex/engineering-workspace-quality`. Earlier maturity tables below are dated
+historical records, not a conversion to this ten-point product rubric.
+
+| Dimension | Weight | Required evidence |
+| --- | ---: | --- |
+| Architecture and module boundaries | 20% | Document completion ownership, pure sync planning, provider boundaries, one layout lifecycle; no reverse dependency regressions. |
+| Maintainability | 20% | Shared save protocol, typed layout preferences, canonical parser/resource ownership and removal of duplicate implementations. |
+| Correctness and data safety | 25% | Behavioral red/green save/quit races; frozen remote snapshots and conditional writes; transactional digest migration; layout preserves editor state. |
+| Tests and CI | 20% | Unit, native temporary-filesystem, browser and final-SHA required CI results, with explicit platform limitations. |
+| Security and dependencies | 10% | Fresh npm/Cargo advisory analysis, resource boundaries, canonical permissions and no unanalyzed High/Critical findings. |
+| Documentation and open-source governance | 5% | Synchronized architecture/contracts, factual README/license statements and reproducible evidence. |
+
+Each dimension uses 9-10 only when its key acceptance has executed successfully;
+8-8.9 denotes substantive implementation with material evidence gaps; below 8
+denotes unresolved core behavior or missing core guarantees. Weighted sum uses
+the weights above unchanged. A score above 9 additionally requires all confirmed
+P0/P1 data-safety defects closed, correctness at least 9, no unanalyzed severe
+advisories and passing required CI at the final SHA. NOT RUN and BLOCKED are not
+PASS. No aggregate or provisional 9.x claim is made while implementation is open.
+
+Performance acceptance uses fixed small/1 MB/10 MB/multi-diagram/sync fixtures,
+same-machine repeated baseline/final runs and retained raw observations. A P95
+increase over both 10% and 20 ms, or stable RSS growth over 15%, requires analysis.
+Test counts, file sizes and line-count reduction are not performance evidence.
+
+This work preserves the pre-existing Feedback edits in App, ActivityRail,
+productConfig, both locales and memory.css. It does not authorize a main merge,
+release, tag or repository-permission change.
+
 ## Workspace Mutation and Diagram Admission Follow-up
 
 Based on `a2e0b32`; detailed current-checkout evidence is in

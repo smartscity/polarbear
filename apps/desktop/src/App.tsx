@@ -77,7 +77,7 @@ export function App() {
     activeFileName, isDirty, openTabs, collapseVersion, folderRevealRequest,
     selectedTreeItemId, createItemType, createDefaultName, renameItemId, externalDocumentChange,
     loadWorkspace, openWorkspace, openMarkdownPath, openFile, createUntitledDocument, selectFile,
-    activateTab, updateActiveDocument, saveActiveFile, saveActiveFileAs, closeTab, requestAppQuit,
+    activateTab, updateActiveDocument, saveActiveFile, saveActiveFileAs, closeTab, requestAppQuit, sessionClosing,
     dirtyDocumentIdsForWorkspace, saveDirtyDocumentsForWorkspace, reloadWorkspaceAfterDownload,
     reloadDocumentFromDisk, reloadExternalDocumentFromDisk, keepEditingExternalDocument, saveDeletedExternalDocumentAs,
     openCreateDialog, confirmCreateItem, startRename, confirmRename, deleteWorkspaceItem,
@@ -772,7 +772,7 @@ export function App() {
   return (
     <>
       {vocab.controls()}
-      <div ref={zoomViewportRef} className="app-zoom-viewport">
+      <div ref={zoomViewportRef} className="app-zoom-viewport" inert={sessionClosing}>
         <div
           ref={zoomCanvasSizeRef}
           className="app-zoom-canvas-size"

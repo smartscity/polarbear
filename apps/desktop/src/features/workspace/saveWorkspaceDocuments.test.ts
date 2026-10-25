@@ -13,6 +13,22 @@ function fixture() {
 }
 
 describe("workspace save preflight", () => {
+  it("checks the committed identity after Save As and rejects subsequent edits", async () => {
+    for (const changed of [false, true]) {
+      const state = fixture();
+      state.dirty.delete("b");
+      const result = await saveWorkspaceDocuments({
+        ...state,
+        saveDocument: async () => {
+          state.contents.delete("a"); state.dirty.delete("a");
+          state.contents.set("saved.md", changed ? "new edit" : "first");
+          state.dirty.add("saved.md");
+          return "saved.md";
+        },
+      });
+      expect(result).toBe(!changed);
+    }
+  });
   it("saves through the document owner and does not mutate buffers itself", async () => {
     const state = fixture();
     expect(await saveWorkspaceDocuments(state)).toBe(true);

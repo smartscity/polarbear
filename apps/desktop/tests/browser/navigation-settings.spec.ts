@@ -71,6 +71,96 @@ async function reloadFixture(page: Page) {
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
 }
 
+test("Save As commits the new identity even when refreshing its directory fails", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/saved/Committed.md");
+      if (command === "write_markdown_file") return Promise.resolve({ revision: "committed" });
+      if (command === "list_workspace_files" && args.workspaceRoot === "/saved") return Promise.reject(new Error("Directory unavailable"));
+      if (command === "save_markdown_file") (window as any).__subsequentSave = args;
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("durable draft");
+  await page.keyboard.press("ControlOrMeta+Shift+s");
+  await expect(page.locator(".window-tab.active")).toContainText("Committed.md");
+  await expect(page.locator(".workspace-status")).toContainText(/saved.*refresh/i);
+  await editor.click(); await page.keyboard.type(" next");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__subsequentSave?.expectedRevision)).toBe("committed");
+});
+
+test("cancelling a dirty tab confirmation does not discard the document", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => command === "plugin:dialog|message"
+      ? Promise.resolve("Cancel") : invoke(command, args);
+  });
+  await page.goto("/");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("unsaved text");
+  await page.getByRole("button", { name: "Close Untitled", exact: true }).click();
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+  await expect(editor).toContainText("unsaved text");
+});
+
+for (const edit of ["earlier document", "new document"]) test(`quit preserves edits to a ${edit} while a later save is pending`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|message") return Promise.resolve("Yes");
+      if (command === "save_markdown_file") {
+        if (args.relativePath === "B.md") return new Promise((resolve) => { (window as any).__finishB = () => resolve({ revision: "saved-b" }); });
+        return Promise.resolve({ revision: "saved-a" });
+      }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const path = "/src/features/workspace/recentDocuments.ts", { recentDocumentStore } = await import(path);
+    recentDocumentStore().record("/test/A.md", 1);
+    recentDocumentStore().record("/test/B.md", 2);
+  });
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  for (const name of ["A.md", "B.md"]) {
+    await page.locator(".recent-documents").getByRole("button", { name: new RegExp(name) }).first().click();
+    await editor.click(); await page.keyboard.type(" draft");
+  }
+  await page.keyboard.press("ControlOrMeta+q");
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishB)).toBe("function");
+  await page.keyboard.press("ControlOrMeta+q");
+  if (edit === "new document") await page.keyboard.press("ControlOrMeta+n");
+  else await page.locator(".window-tab-title").filter({ hasText: "A.md" }).click();
+  await editor.click(); await page.keyboard.type(" latest unsaved");
+  await page.evaluate(() => (window as any).__finishB());
+  await expect(page.locator(".window-tab.active .window-tab-dirty")).toHaveCount(1);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => (window as any).__navigationCalls.filter((call: any) => call.command === "quit_app"))).toEqual([]);
+  expect(await page.evaluate(() => (window as any).__navigationCalls.filter((call: any) => call.command === "plugin:dialog|message").length)).toBeLessThanOrEqual(1);
+});
+
+for (const choice of ["Cancel", "No"]) test(`quit honors the explicit ${choice} choice without saving`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript((choice) => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => command === "plugin:dialog|message" ? Promise.resolve(choice) : invoke(command, args);
+  }, choice);
+  await page.goto("/");
+  await page.locator(".editor-workspace .cm-content").first().click();
+  await page.keyboard.type("unsaved text");
+  await page.keyboard.press("ControlOrMeta+q");
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => (window as any).__navigationCalls.filter((call: any) => call.command === "quit_app").length)).toBe(choice === "No" ? 1 : 0);
+  await expect(page.locator(".window-tab-dirty")).toHaveCount(1);
+});
+
 test("renaming keeps file-tree dirty state and image writes on the current path", async ({ page }) => {
   await nativeFixture(page);
   await page.addInitScript(() => {

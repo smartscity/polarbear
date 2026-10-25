@@ -1,5 +1,34 @@
 # Engineering Verification
 
+## Document Completion Stage: 2026-10-25
+
+Baseline `dc5e11e3c78283b55f6b004d73df8f4df2883c98`; Intel macOS, Node 26.1.0,
+Rust 1.96.0. Existing Feedback changes were present before this stage and are
+excluded from its commit. Initial lockfile SHA256 values:
+
+- package-lock: `1ad58d74b4d20ffa83920d7c58d5882d8e06f8606c366294efd92941638ca00e`
+- Cargo.lock: `49a061d97ee17d29eb9f8040f0f34739b2f39d73e608931bd582650b0dc5342a`
+- iOS Cargo.lock: `9f242c5b7374458430559f9172cbbd5ad35ce345ef96565f1f2176fa1f9edea3`
+
+Three new real-App/mock-IPC browser regressions failed behavioral assertions on
+old production: committed Save As stayed Untitled, Cancel removed a dirty tab,
+and quit reached native IO after an earlier document was edited during another
+save. No missing-import or compilation failure is counted as reproduction.
+
+After the implementation, desktop typecheck and ESLint passed; `npm --workspace
+apps/desktop run test` passed 340 Vitest and 39 Node tests; the complete
+`navigation-settings.spec.ts` passed 47 browser cases. These cover ordinary and
+Save As concurrent typing, rejected saves, external conflicts, newer tabs,
+new edits during quit, repeated quit, explicit discard/cancel and tree failures.
+An intermediate test used the status bar instead of the existing workspace
+status region; its selector was corrected without removing the warning assertion.
+An initially incorrect npm argument forwarded Vitest file names to the later
+Node runner and failed; the unmodified full command was rerun successfully.
+
+This is browser/native-adapter-boundary evidence, not installed Tauri or Windows
+acceptance. Native IO, final-checkout CI, dependency audit and controlled
+performance remain separate gates for the overall task. No tag or release is made.
+
 ## Intel Preview Admission Regression
 
 Base: `b10d736`. Release `40103182055` failed first-text P95 at 5.232 seconds

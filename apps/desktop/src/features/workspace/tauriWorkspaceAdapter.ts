@@ -1,4 +1,4 @@
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { message, open, save } from "@tauri-apps/plugin-dialog";
 import type { WorkspaceItem } from "./workspaceModel";
 import { translateCurrent } from "../../shared/i18n/translate";
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
@@ -131,6 +131,17 @@ export async function chooseMarkdownSavePath(
   });
 
   return typeof selectedPath === "string" ? selectedPath : null;
+}
+
+export async function confirmDocumentClose(prompt: string, title: string): Promise<"save" | "discard" | "cancel"> {
+  const yes = translateCurrent("menu.save");
+  const no = translateCurrent("dialog.discardChanges");
+  const result = await message(prompt, {
+    title, kind: "warning", buttons: { yes, no, cancel: translateCurrent("common.cancel") },
+  });
+  if (result === yes || result === "Yes") return "save";
+  if (result === no || result === "No") return "discard";
+  return "cancel";
 }
 
 export async function listWorkspaceFiles(
