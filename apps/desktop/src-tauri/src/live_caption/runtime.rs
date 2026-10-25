@@ -1,13 +1,15 @@
 use super::{CaptionError, CaptionResult};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+#[cfg(target_os = "macos")]
+use std::sync::OnceLock;
 use std::{
     io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
     process::{Child, Command, Stdio},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
-        mpsc, Arc, Mutex, OnceLock,
+        mpsc, Arc, Mutex,
     },
     time::{Duration, Instant},
 };
@@ -19,6 +21,7 @@ const AUDIO_QUEUE_FULL: i32 = 9;
 const ENGINE_PIPE_CLOSED: i32 = 10;
 const AUDIO_DISCONTINUITY: i32 = 11;
 const MAX_EVENT_BYTES: usize = 65536;
+#[cfg(target_os = "macos")]
 static AUDIO: OnceLock<Mutex<Option<CaptureIngress>>> = OnceLock::new();
 static CAPTURE_READY: AtomicBool = AtomicBool::new(false);
 static CAPTURE_ERROR: AtomicI32 = AtomicI32::new(0);
@@ -52,11 +55,13 @@ fn write_frame(output: &mut impl Write, frame: &Frame) -> std::io::Result<()> {
     output.flush()
 }
 
+#[cfg(any(target_os = "macos", test))]
 struct CaptureIngress {
     sender: Option<mpsc::SyncSender<Frame>>,
     failure: Option<i32>,
 }
 
+#[cfg(any(target_os = "macos", test))]
 impl CaptureIngress {
     fn new(sender: mpsc::SyncSender<Frame>) -> Self {
         Self {
@@ -202,6 +207,7 @@ extern "C" {
     fn polarbear_caption_capture_stop();
 }
 
+#[cfg(target_os = "macos")]
 extern "C" fn on_audio(samples: *const f32, count: i32, at: u64) {
     if CAPTURE_ERROR.load(Ordering::Acquire) != 0 {
         return;
@@ -237,6 +243,7 @@ extern "C" fn on_audio(samples: *const f32, count: i32, at: u64) {
     }
 }
 
+#[cfg(target_os = "macos")]
 extern "C" fn on_status(status: i32) {
     if status == 1 {
         CAPTURE_READY.store(true, Ordering::Release);
@@ -250,6 +257,7 @@ pub fn stop_capture() {
     unsafe {
         polarbear_caption_capture_stop();
     }
+    #[cfg(target_os = "macos")]
     if let Ok(mut sender) = AUDIO.get_or_init(|| Mutex::new(None)).lock() {
         *sender = None;
     }
@@ -331,6 +339,7 @@ pub fn launch(
     record_audio: bool,
 ) -> CaptionResult<Run> {
     if !cfg!(target_os = "macos") {
+        let _ = source;
         return Err(CaptionError::new("unsupportedPlatform"));
     }
     let directory = assets(&app)?;
@@ -369,6 +378,9 @@ pub fn launch(
     CAPTURE_READY.store(false, Ordering::Release);
     CAPTURE_ERROR.store(0, Ordering::Release);
     RECORDING_FAILED.store(false, Ordering::Release);
+    #[cfg(not(target_os = "macos"))]
+    drop(sender);
+    #[cfg(target_os = "macos")]
     if let Ok(mut slot) = AUDIO.get_or_init(|| Mutex::new(None)).lock() {
         *slot = Some(CaptureIngress::new(sender));
     }

@@ -35,8 +35,14 @@ The fixed evaluation contract is in [scorecard](scorecard.md#fixed-acceptance-co
 - **Security, fresh scan:** the original lock has 1 Critical, 10 High, 4 Moderate
   and 1 Low advisory entries. Targeted compatible updates leave 2 Low entries
   (one KaTeX advisory and its Mermaid parent), with a scoped, expiring exception
-  documented in verification. Cargo advisory scanning is BLOCKED by tool download
-  failure, not treated as a clean Rust dependency report.
+  documented in verification. The subsequently unblocked RustSec scan found eight
+  vulnerabilities; compatible lockfile updates repair all eight plus two unsound
+  warnings. Ten other unmaintained/GLib warnings remain explicitly scoped in
+  verification, not suppressed or presented as a clean security certification.
+- **Platform boundary, reproduced in hosted CI:** Windows Clippy exposed Unix-only
+  Memory helpers and macOS-only capture/pinch code compiled on unsupported targets.
+  The follow-up gates those implementations without disabling the Windows job,
+  removing portable queue tests, or adding blanket warning allowances.
 
 The first three findings have targeted green browser regressions. Repository
 sync now uses frozen snapshots, conditional publication and conditional local IO.

@@ -1,20 +1,38 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+#[cfg(unix)]
+use serde::Deserialize;
+use serde::Serialize;
+use serde_json::Value;
+#[cfg(unix)]
+use serde_json::{json, Map};
+#[cfg(unix)]
 use std::env;
+#[cfg(unix)]
 use std::ffi::OsString;
 use std::fs;
+#[cfg(unix)]
 use std::io::{BufRead, BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
+#[cfg(unix)]
 use std::process::{Command, Stdio};
+#[cfg(unix)]
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+#[cfg(unix)]
 use std::thread;
+#[cfg(unix)]
 use std::time::Duration;
 
+#[cfg(unix)]
 const API_VERSION: &str = "1.8";
+#[cfg(unix)]
 const MAX_FRAME_BYTES: u64 = 1024 * 1024;
+#[cfg(unix)]
 include!(concat!(env!("OUT_DIR"), "/runtime_descriptor_contract.rs"));
+#[cfg(unix)]
 static REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+#[cfg(unix)]
 const ALLOWED_METHODS: &[&str] = &[
     "system.hello",
     "projects.status",
@@ -90,6 +108,7 @@ impl MemoryAdminState {
         Ok(canonical)
     }
 
+    #[cfg(unix)]
     fn authorize(&self, workspace_root: &str) -> Result<String, String> {
         let canonical = canonical_memory_workspace(workspace_root)?;
         let current = self.current_workspace.lock().map_err(|_| {
@@ -115,6 +134,7 @@ struct MemoryAdminError {
     message: String,
 }
 
+#[cfg(unix)]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RuntimeDescriptor {
@@ -122,6 +142,7 @@ struct RuntimeDescriptor {
     runtime: RuntimeLaunch,
 }
 
+#[cfg(unix)]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RuntimeLaunch {
@@ -129,6 +150,7 @@ struct RuntimeLaunch {
     cli_entrypoint: PathBuf,
 }
 
+#[cfg(unix)]
 struct MemoryServiceLaunch {
     executable: PathBuf,
     arguments: Vec<OsString>,
@@ -144,6 +166,7 @@ fn error(code: &'static str, message: impl Into<String>) -> String {
     })
 }
 
+#[cfg(unix)]
 fn data_root() -> Result<PathBuf, String> {
     if let Ok(path) = env::var("POLARBEAR_MEMORY_DATA_DIR") {
         return Ok(PathBuf::from(path));
@@ -168,6 +191,7 @@ fn data_root() -> Result<PathBuf, String> {
     ))
 }
 
+#[cfg(unix)]
 fn service_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
     let directory = data_root()?.join("service");
     Ok((
@@ -177,16 +201,19 @@ fn service_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
     ))
 }
 
+#[cfg(unix)]
 fn runtime_descriptor_path(data_root: &Path) -> PathBuf {
     RUNTIME_DESCRIPTOR_RELATIVE_PATH
         .iter()
         .fold(data_root.to_path_buf(), |path, part| path.join(part))
 }
 
+#[cfg(unix)]
 fn descriptor_recovery_message(reason: &str) -> String {
     format!("{reason} Run `polarbear-memory install` to repair Polarbear Memory.")
 }
 
+#[cfg(unix)]
 fn validate_runtime_executable(path: &Path) -> Result<(), String> {
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
@@ -221,6 +248,7 @@ fn validate_runtime_executable(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(unix)]
 fn validate_cli_entrypoint(path: &Path) -> Result<(), String> {
     if !path.is_absolute() {
         return Err(error(
@@ -244,6 +272,7 @@ fn validate_cli_entrypoint(path: &Path) -> Result<(), String> {
     }
 }
 
+#[cfg(unix)]
 fn managed_service_launch(data_root: &Path) -> Result<MemoryServiceLaunch, String> {
     let descriptor_path = runtime_descriptor_path(data_root);
     let source = fs::read_to_string(&descriptor_path).map_err(|_| {
@@ -278,6 +307,7 @@ fn managed_service_launch(data_root: &Path) -> Result<MemoryServiceLaunch, Strin
     })
 }
 
+#[cfg(unix)]
 fn override_service_launch(command: OsString) -> Result<MemoryServiceLaunch, String> {
     let executable = PathBuf::from(command);
     if !executable.is_absolute() {
@@ -293,6 +323,7 @@ fn override_service_launch(command: OsString) -> Result<MemoryServiceLaunch, Str
     })
 }
 
+#[cfg(unix)]
 fn resolve_service_launch(
     data_root: &Path,
     override_command: Option<OsString>,
@@ -969,7 +1000,7 @@ pub async fn memory_admin_request(
     }
     #[cfg(not(unix))]
     {
-        let _ = (workspace_root, method, params);
+        let _ = (state, workspace_root, method, params);
         Err(error(
             "MEMORY_PLATFORM_UNSUPPORTED",
             "MVP4 requires a Unix-domain socket platform.",

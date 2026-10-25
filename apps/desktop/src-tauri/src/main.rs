@@ -1213,10 +1213,11 @@ fn main() -> tauri::Result<()> {
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
+    #[cfg(unix)]
+    use super::resolve_markdown_asset_path;
     use super::{
         create_markdown_file, create_workspace_directory, get_markdown_file_revision,
-        list_workspace_files, load_markdown_file, rename_entry, resolve_markdown_asset_path,
-        save_markdown_file_content,
+        list_workspace_files, load_markdown_file, rename_entry, save_markdown_file_content,
     };
     use std::fs;
 

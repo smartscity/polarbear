@@ -80,13 +80,52 @@ or sooner on any new prototype-pollution finding, renderer configuration change
 or compatible upstream patch. Moving to Mermaid 12/KaTeX 0.18 is a separate
 compatibility change, not an untested forced upgrade.
 
-Rust advisory scan: **BLOCKED**. `cargo audit` was absent; a pinned/locked
-isolated installation failed repeatedly downloading cargo-audit 0.22.2 from
-static.crates.io with timeouts. Cargo.lock and Cargo package versions are unchanged.
-Successful Cargo tests
-and Clippy are not substitutes for a current RustSec scan.
+Rust advisory scan was initially **BLOCKED** by crates.io tool-download timeouts.
+It subsequently ran using the official cargo-audit 0.22.2 macOS binary, verified
+against release SHA-256 `847831323de932155b226ab60ee4a180e13e5d007a019f0d4b7b4d89a6de2ab2`.
+Its built-in database fetch stalled and was terminated; a separate shallow clone
+of the official RustSec database succeeded at
+`21d909e4c8bd4e14c7aea58bf980c881a0053ab1` (2026-10-24).
+Reproduction: `cargo audit --db PATH_TO_THAT_CHECKOUT --no-fetch --no-yanked --json`.
+The JSON database timestamp fields are null in no-fetch mode; the database commit
+above supplies provenance. Yanked-package checking is **NOT RUN**, not clean.
+`cargo-baseline.json` records eight vulnerability findings and twelve warnings.
+Targeted updates within existing Cargo.toml constraints produce zero vulnerability
+findings and ten remaining warnings in `cargo-current.json`; the default command
+exits zero but a deny-warnings policy would still fail. No advisory was ignored.
+The updated Cargo.lock SHA-256 is
+`bcdc4899cd18e93f750d65ef54b871c1bf4ebbf6001d201b9535601db9378a34`.
+
+| Locked package (before -> after) | RustSec advisory | Scope, trigger and disposition |
+| --- | --- | --- |
+| h2 0.4.14 -> 0.4.20 | 2026-0258 | reqwest/hyper HTTP/2; an untrusted peer can queue empty DATA frames. Production repository HTTP is reachable; upgraded. |
+| plist 1.9.0 -> 1.10.3; quick-xml 0.39.4 -> 0.42.0 | 2026-0194, 2026-0195 | Tauri/codegen/utils -> plist; XML namespace allocation and duplicate-attribute CPU exhaustion. The inspected plist reader uses plain Reader, not NsReader, and no direct application XML parser was found. Upgraded through plist rather than forcing an incompatible transitive version. |
+| rustls 0.23.40 -> 0.23.46 | 2026-0285, 2026-0346, 2026-0348, 2026-0349 | reqwest optional rustls transport in the all-platform lock: encryption-boundary validation, session Debug secret exposure, Brotli allocation and key-exchange downgrade. Current macOS/Windows default cargo trees do not activate rustls; future TLS features must not inherit vulnerable versions. Upgraded all four. |
+| rustls-webpki 0.103.13 -> 0.103.16 | 2026-0382 | rustls certificate verification may accept distrusted intermediates; same feature-dependent scope, upgraded. |
+| anyhow 1.0.102 -> 1.0.104 | 2026-0190 (unsound) | Tauri/build error handling; context plus downcast_mut can violate borrow rules. No application call found, upgraded rather than relying on that absence. |
+| tokio 1.52.3 -> 1.54.1 | 2026-0386 (unsound) | Tauri/reqwest runtime; Unix AsyncFd constructors permit invalid/closed descriptors. No direct application AsyncFd use found; upgraded because dependencies also use the runtime. |
+
+Remaining warnings are retained, not suppressed: proc-macro-error 1.0.4
+(2024-0370, GTK macro tooling), unic-char-property/range/common/ucd-ident/ucd-version
+0.9.0 (2025-0081/0075/0080/0100/0098, Tauri-utils -> urlpattern), and
+zbus_names 4.3.4, zvariant/derive 5.15.0 (2026-0371/0370/0372, Linux single-instance
+D-Bus dependencies) are unmaintained. glib 0.18.5 has 2024-0429 unsound
+VariantStrIter handling in the Linux GTK/WebKit dependency graph. These are not
+all harmless tooling: URL matching is runtime infrastructure, and Linux GLib
+needs upstream-compatible remediation and native acceptance before Linux release.
+Do not force GTK or D-Bus major versions into Tauri's current graph. Maintainers
+must review these scoped deferrals by **2026-11-24**, or earlier on a supported
+Linux release, Tauri upgrade or newly reachable affected API. This is not a
+whole-product security approval.
 
 ### Performance Evidence and Reproduction
+
+The retained native performance runs precede the final advisory-driven Cargo
+lockfile update. The hash/scan/save implementation is unchanged, but these runs
+are not a final-lockfile performance certification. The observed hash regression
+remains open; do not treat a dependency rebuild or functional test as a new timing
+measurement. Browser production source and npm lockfile are unchanged by that
+native follow-up.
 
 The browser runner is `apps/desktop/scripts/measure-editor.mjs ROOT OUTPUT LABEL`.
 The baseline was an isolated git archive of the baseline SHA with its original
@@ -178,7 +217,7 @@ and dependency reports plus representative screenshots are retained above.
 | Browser performance thresholds | PASS | Repeated matched fixtures did not reproduce initial threshold spikes; small sample and host variability remain explicit. No speedup claimed. |
 | Native scan/hash performance threshold | FAIL | Confirmed optimized 10 MiB attachment scan regression; raw data and rejected backend experiment retained. Correctness/security checks were not weakened. |
 | Full / production npm audit | FAIL | Command returns nonzero for two Low entries (one underlying scoped KaTeX advisory plus parent). Zero High/Critical/Moderate; all findings analyzed above. |
-| RustSec advisory scan | BLOCKED | Isolated cargo-audit installation could not download its package; no clean Rust risk claim. |
+| RustSec advisory scan | PASS with warnings | Fresh pinned database: eight vulnerability findings repaired; ten unmaintained/unsound warnings retained and analyzed. Default audit exits zero; deny-warnings would fail. Yanked check NOT RUN. |
 | Hosted macOS / Windows CI | NOT RUN at record creation | Must query the exact final pushed SHA; local checks and YAML changes do not count as hosted execution. |
 | Installed Tauri / real provider / native Windows GUI | NOT RUN | Requires available GUI automation/manual acceptance and authorized disposable provider repository. |
 
@@ -189,6 +228,18 @@ and Windows. Windows AppKit clipboard parity is not implied; that job remains
 macOS-only. Browser tests cover actual React/CodeMirror with controlled native
 responses. Native tests use real temporary filesystem operations and controlled
 HTTP provider servers, not authorized GitHub/GitLab account writes.
+
+The first hosted run at `9e3ca529` ([40180534462](https://github.com/smartscity/polarbear/actions/runs/40180534462))
+passed frontend, macOS native, browser/clipboard and formatting jobs. Windows
+Clippy failed on Unix-only Memory transport imports/helpers and macOS-only audio
+callbacks/pinch events; its native tests did not execute. The follow-up compiles
+these implementations only on their actual platforms while retaining portable
+capture queue tests and explicit unsupported-platform errors. It does not disable
+Windows or relax warnings. Local Clippy and 115 native tests passed both before
+and after the dependency update; 352 Vitest and 39 Node checks passed again.
+A sandboxed test attempt failed because sockets and macOS file
+coordination were denied; the authorized OS-capable rerun passed, without changing
+assertions. The final pushed SHA must still be checked after these changes.
 
 **NOT RUN:** installed-app open/edit/save/close/reopen/quit smoke; actual remote
 provider writes; native Windows GUI/permissions acceptance; physical iPhone/IME/

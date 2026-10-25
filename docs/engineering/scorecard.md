@@ -13,7 +13,7 @@ Hosted CI is verified separately against that exact pushed SHA.
 | Maintainability | 20% | 8.0 | 8.8 | Duplicate save paths and conflicting preview scanners replaced; typed layout migration and source CSS cleanup. No parallel store/framework. Settings concurrency and further session decomposition remain bounded future work. |
 | Correctness and data safety | 25% | 6.5 | 8.8 | Behavioral red/green save/quit/parser/layout/batch regressions, native conditional writes, frozen provider HTTP tests and transactional digest migration. Actual provider account writes and installed-app quit/upgrade acceptance are NOT RUN. |
 | Tests and CI | 20% | 7.0 | 8.4 | Unit/native/browser/translation/clipboard/iOS checks and reproducible baseline/current probes; Windows native matrix added. Native GUI/platform evidence and enforced branch checks remain missing. Workflow configuration is not passing hosted evidence. |
-| Security and dependencies | 10% | 6.5 | 8.2 | Fresh full/production npm reports, compatible upgrades remove severe findings, bounded publication; one underlying Low advisory has scoped expiry. Fresh RustSec scan is BLOCKED, not clean. |
+| Security and dependencies | 10% | 6.5 | 8.2 | Fresh npm/RustSec reports, compatible updates repair eight Rust vulnerabilities and two unsound warnings; one npm Low advisory and ten Rust warnings retain scoped deferrals. No blanket clean-security claim; yanked check not run. |
 | Documentation and open-source governance | 5% | 7.5 | 9.0 | Existing records updated, factual README and existing dual-license texts completed, retained raw observations and explicit boundaries. Repository-rule changes require maintainer action. |
 
 Baseline weighted sum: `8.2*.20 + 8.0*.20 + 6.5*.25 + 7.0*.20 + 6.5*.10 + 7.5*.05 = 7.29` (rounded).
@@ -25,7 +25,7 @@ are missing. The Rust advisory scan and final-SHA hosted result are separate
 gates. No gate, test assertion or privacy rule was relaxed to obtain this score.
 Even passing hosted CI does not turn unexecuted GUI/provider checks into PASS.
 
-Minimum remaining evidence: a current RustSec scan; disposable authorized provider
+Minimum remaining evidence: upstream warning remediation; disposable authorized provider
 concurrency acceptance; installed macOS open/edit/save/close/reopen and quit-race
 smoke; native Windows matrix result and relevant GUI/permission acceptance.
 Performance repeats did not establish a repeatable browser threshold regression,

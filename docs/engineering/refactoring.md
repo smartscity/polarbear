@@ -1,5 +1,16 @@
 # Refactoring Report
 
+## Native Platform Boundary Follow-up: 2026-10-25
+
+Memory workspace binding remains portable, but its current Admin transport uses
+Unix-domain sockets. Runtime descriptor resolution, socket authorization and
+transport helpers are compiled only on Unix; the public command keeps its typed
+unsupported-platform error elsewhere. This is not a Windows transport implementation.
+Live Caption's FFI callbacks, capture singleton and pinch event belong to macOS.
+The bounded capture ingress remains available to platform-independent unit tests.
+No callback stub reports success for an unavailable capture provider. Windows
+native Clippy is a real matrix check, not a macOS preprocessor simulation.
+
 ## Preview and Workspace Layout: 2026-10-25
 
 The existing MarkdownIt renderer owns fence/image semantics. It emits one HTML

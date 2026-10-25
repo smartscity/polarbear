@@ -1,5 +1,7 @@
 #![allow(clippy::unwrap_used)]
 
+#[cfg(unix)]
+use super::store::scan_sync_files;
 use super::{
     model::RepositoryBindingDto,
     policy::{
@@ -7,7 +9,6 @@ use super::{
         remote_manifest_changed,
     },
     provider::{gitlab_file_id, gitlab_project_path, normalize_gitlab_base_url},
-    store::scan_sync_files,
 };
 use reqwest::blocking::Client;
 use std::{collections::BTreeMap, fs, time::Duration};
