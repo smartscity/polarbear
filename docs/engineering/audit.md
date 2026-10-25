@@ -13,16 +13,18 @@ The fixed evaluation contract is in [scorecard](scorecard.md#fixed-acceptance-co
 - **P1, reproduced:** both Save As implementations await the directory before
   acknowledging a successful write. A directory error left the committed file
   represented as a dirty Untitled tab.
-- **P0, confirmed by inspection, remediation pending:** repository pull skips
+- **P0, locally remediated:** repository pull previously skipped
   divergent local changes but returns no conflict; push obtains fresh content
   SHAs and may replace remote work. Downloads read mutable branch content.
-- **P1, confirmed by inspection, remediation pending:** sync digests encode the
+- **P1, migrated with rollback coverage:** sync digests previously encoded the
   entire content; excluded directories are traversed before filtering files.
 - **P1, confirmed by inspection, remediation pending:** preview image regex runs
   inside ordinary code fences. Fixed-grid sidebars have no shared resize owner
   or persisted width preferences.
 
-The first three findings now have targeted green browser regressions; full
+The first three findings have targeted green browser regressions. Repository
+sync now uses frozen snapshots, conditional publication and conditional local IO.
+Real GitHub/GitLab write acceptance remains NOT RUN. Full
 cross-platform and final-checkout acceptance is tracked separately. This section
 does not supersede earlier dated evidence or imply whole-audit completion.
 

@@ -1,13 +1,12 @@
 use super::{
     model::RepositoryBindingDto,
-    policy::{allowed_sync_file, content_digest},
+    policy::{allowed_sync_file, excluded_sync_path, stream_digest},
 };
 use crate::{app_paths::app_config_dir, cloud_sync_store};
 use std::{
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
-    time::UNIX_EPOCH,
 };
 
 type LocalSnapshot = (BTreeMap<String, PathBuf>, BTreeMap<String, String>);
@@ -49,6 +48,10 @@ pub(crate) fn scan_sync_files(
     for entry_result in fs::read_dir(current).map_err(|error| error.to_string())? {
         let entry = entry_result.map_err(|error| error.to_string())?;
         let path = entry.path();
+        let relative = path.strip_prefix(root).map_err(|error| error.to_string())?;
+        if excluded_sync_path(relative) {
+            continue;
+        }
         if entry
             .file_type()
             .map_err(|error| error.to_string())?
@@ -59,7 +62,7 @@ pub(crate) fn scan_sync_files(
 
         if path.is_dir() {
             files.extend(scan_sync_files(root, &path)?);
-        } else if allowed_sync_file(&path) {
+        } else if allowed_sync_file(relative) {
             let relative_path = path
                 .strip_prefix(root)
                 .map_err(|error| error.to_string())?
@@ -73,8 +76,8 @@ pub(crate) fn scan_sync_files(
 }
 
 pub(crate) fn file_digest(path: &Path) -> Result<String, String> {
-    let bytes = fs::read(path).map_err(|error| error.to_string())?;
-    Ok(content_digest(&bytes))
+    stream_digest(fs::File::open(path).map_err(|error| error.to_string())?)
+        .map_err(|error| error.to_string())
 }
 
 pub(crate) fn local_manifest(
@@ -85,43 +88,16 @@ pub(crate) fn local_manifest(
 }
 
 pub(crate) fn local_snapshot(
-    app: &tauri::AppHandle,
+    _app: &tauri::AppHandle,
     workspace_root: &str,
 ) -> Result<LocalSnapshot, String> {
     let root = PathBuf::from(workspace_root);
     let files = scan_sync_files(&root, &root)?;
-    let database_path = cloud_sync_database_path(app)?;
-    let cached_files = cloud_sync_store::read_local_file_cache(&database_path, workspace_root)?;
-    let mut manifest = BTreeMap::new();
-    let mut cache_entries = Vec::with_capacity(files.len());
-
-    for (relative_path, path) in &files {
-        let metadata = fs::metadata(path).map_err(|error| error.to_string())?;
-        let size = i64::try_from(metadata.len()).unwrap_or(i64::MAX);
-        let modified_ns = metadata
-            .modified()
-            .ok()
-            .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
-            .map(|duration| i64::try_from(duration.as_nanos()).unwrap_or(i64::MAX))
-            .unwrap_or_default();
-        let cached_digest = cached_files
-            .get(relative_path)
-            .filter(|cached| cached.size == size && cached.modified_ns == modified_ns)
-            .map(|cached| cached.digest.clone());
-        let digest = match cached_digest {
-            Some(digest) => digest,
-            None => file_digest(path)?,
-        };
-        manifest.insert(relative_path.clone(), digest.clone());
-        cache_entries.push(cloud_sync_store::LocalFileCacheEntry {
-            relative_path: relative_path.clone(),
-            size,
-            modified_ns,
-            digest,
-        });
-    }
-    cloud_sync_store::replace_local_file_cache(&database_path, workspace_root, &cache_entries)?;
-
+    // Size and mtime are not content versions: external writers can preserve both.
+    let manifest = files
+        .iter()
+        .map(|(path, file)| Ok((path.clone(), file_digest(file)?)))
+        .collect::<Result<BTreeMap<_, _>, String>>()?;
     Ok((files, manifest))
 }
 

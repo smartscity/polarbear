@@ -4,21 +4,46 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
-#[derive(Clone)]
-pub(super) struct LocalFileCacheEntry {
-    pub relative_path: String,
-    pub size: i64,
-    pub modified_ns: i64,
-    pub digest: String,
-}
-
 pub(super) fn load_bindings(
     database_path: &Path,
     legacy_json_path: &Path,
 ) -> Result<BTreeMap<String, RepositoryBindingDto>, String> {
     let mut connection = open(database_path)?;
     migrate_legacy_bindings(&mut connection, legacy_json_path)?;
+    migrate_content_digests(&mut connection)?;
     load_bindings_from_connection(&connection)
+}
+
+fn migrate_content_digests(connection: &mut Connection) -> Result<(), String> {
+    let transaction = connection.transaction().map_err(to_string)?;
+    let baselines = {
+        let mut statement = transaction.prepare(
+            "SELECT workspace_ref, relative_path, remote_digest FROM sync_file_state WHERE remote_digest IS NOT NULL",
+        ).map_err(to_string)?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })
+            .map_err(to_string)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(to_string)?;
+        rows
+    };
+    for (workspace, path, old) in baselines {
+        let digest = crate::repository::policy::migrate_digest(&old)?;
+        if digest != old {
+            transaction.execute("UPDATE sync_file_state SET remote_digest = ?1 WHERE workspace_ref = ?2 AND relative_path = ?3",
+                params![digest, workspace, path]).map_err(to_string)?;
+        }
+    }
+    // Derived caches may be rebuilt; the common baseline above must retain its original content.
+    transaction.execute("UPDATE sync_file_state SET local_digest = NULL, local_size = NULL, local_modified_ns = NULL WHERE local_digest NOT LIKE 'sha256:v1:%'", [])
+        .map_err(to_string)?;
+    transaction.commit().map_err(to_string)
 }
 
 pub(super) fn replace_bindings(
@@ -28,86 +53,6 @@ pub(super) fn replace_bindings(
     let mut connection = open(database_path)?;
     let transaction = connection.transaction().map_err(to_string)?;
     replace_bindings_in_transaction(&transaction, bindings)?;
-    transaction.commit().map_err(to_string)
-}
-
-pub(super) fn read_local_file_cache(
-    database_path: &Path,
-    workspace_ref: &str,
-) -> Result<BTreeMap<String, LocalFileCacheEntry>, String> {
-    let connection = open(database_path)?;
-    let mut statement = connection
-        .prepare(
-            "SELECT relative_path, local_size, local_modified_ns, local_digest
-             FROM sync_file_state
-             WHERE workspace_ref = ?1 AND local_digest IS NOT NULL",
-        )
-        .map_err(to_string)?;
-    let entries = statement
-        .query_map(params![workspace_ref], |row| {
-            let relative_path = row.get::<_, String>(0)?;
-            Ok((
-                relative_path.clone(),
-                LocalFileCacheEntry {
-                    relative_path,
-                    size: row.get(1)?,
-                    modified_ns: row.get(2)?,
-                    digest: row.get(3)?,
-                },
-            ))
-        })
-        .map_err(to_string)?
-        .collect::<Result<BTreeMap<_, _>, _>>()
-        .map_err(to_string)?;
-    Ok(entries)
-}
-
-pub(super) fn replace_local_file_cache(
-    database_path: &Path,
-    workspace_ref: &str,
-    entries: &[LocalFileCacheEntry],
-) -> Result<(), String> {
-    let mut connection = open(database_path)?;
-    let transaction = connection.transaction().map_err(to_string)?;
-    transaction
-        .execute(
-            "UPDATE sync_file_state
-             SET local_size = NULL, local_modified_ns = NULL, local_digest = NULL
-             WHERE workspace_ref = ?1",
-            params![workspace_ref],
-        )
-        .map_err(to_string)?;
-    for entry in entries {
-        transaction
-            .execute(
-                "INSERT INTO sync_file_state (
-                    workspace_ref, relative_path, local_size, local_modified_ns,
-                    local_digest, updated_at
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, unixepoch())
-                 ON CONFLICT(workspace_ref, relative_path) DO UPDATE SET
-                    local_size = excluded.local_size,
-                    local_modified_ns = excluded.local_modified_ns,
-                    local_digest = excluded.local_digest,
-                    updated_at = excluded.updated_at",
-                params![
-                    workspace_ref,
-                    entry.relative_path,
-                    entry.size,
-                    entry.modified_ns,
-                    entry.digest
-                ],
-            )
-            .map_err(to_string)?;
-    }
-    transaction
-        .execute(
-            "DELETE FROM sync_file_state
-             WHERE workspace_ref = ?1
-               AND local_digest IS NULL
-               AND remote_digest IS NULL",
-            params![workspace_ref],
-        )
-        .map_err(to_string)?;
     transaction.commit().map_err(to_string)
 }
 
@@ -158,6 +103,7 @@ pub(super) fn queue_outbox_path(
     Ok(())
 }
 
+#[cfg(test)]
 pub(super) fn read_outbox(
     database_path: &Path,
     workspace_ref: &str,
@@ -178,17 +124,6 @@ pub(super) fn read_outbox(
         .collect::<Result<BTreeMap<_, _>, _>>()
         .map_err(to_string)?;
     Ok(operations)
-}
-
-pub(super) fn clear_outbox(database_path: &Path, workspace_ref: &str) -> Result<(), String> {
-    let connection = open(database_path)?;
-    connection
-        .execute(
-            "DELETE FROM sync_outbox WHERE workspace_ref = ?1",
-            params![workspace_ref],
-        )
-        .map_err(to_string)?;
-    Ok(())
 }
 
 pub(super) fn begin_sync_run(

@@ -30,6 +30,15 @@ pub(crate) fn save(
     target: SaveTarget,
 ) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
     let _access = crate::workspace_io::document_access().map_err(save_error)?;
+    with_document_lock(path, |resolved| {
+        save_coordinated(resolved, content, expected_revision, target)
+    })
+}
+
+fn with_document_lock<T>(
+    path: &Path,
+    action: impl FnOnce(&Path) -> Result<T, WorkspaceSaveError>,
+) -> Result<T, WorkspaceSaveError> {
     let parent = path
         .parent()
         .ok_or_else(|| WorkspaceSaveError::unexpected("Missing parent directory."))?;
@@ -43,9 +52,59 @@ pub(crate) fn save(
     let _guard = locks[hash.finish() as usize % LOCK_STRIPES]
         .lock()
         .map_err(|_| WorkspaceSaveError::unexpected("Document save lock is unavailable."))?;
-    coordinate(&path, |resolved| {
-        save_coordinated(resolved, content, expected_revision, target)
+    coordinate(&path, action)
+}
+
+pub(crate) fn apply_sync_change(
+    workspace: &str,
+    relative_path: &str,
+    expected_digest: Option<&str>,
+    content: Option<&[u8]>,
+) -> Result<(), String> {
+    let _access = crate::workspace_io::document_access().map_err(|error| error.to_string())?;
+    let path = crate::workspace_paths::workspace_path(workspace, relative_path)?;
+    if expected_digest.is_none() && content.is_some() {
+        let parent = path.parent().ok_or("Missing sync destination parent.")?;
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    with_document_lock(&path, |resolved| {
+        let before = snapshot(resolved)?;
+        let actual = before
+            .as_ref()
+            .map(|snapshot| crate::repository::policy::content_digest(&snapshot.content));
+        if actual.as_deref() != expected_digest {
+            return Err(WorkspaceSaveError::document_changed());
+        }
+        if let Some(content) = content {
+            let revision = before
+                .as_ref()
+                .map(|snapshot| content_revision(&snapshot.content));
+            save_coordinated(
+                resolved,
+                content,
+                revision.as_deref(),
+                if before.is_some() {
+                    SaveTarget::Existing
+                } else {
+                    SaveTarget::CreateNew
+                },
+            )?;
+        } else if let Some(before) = before {
+            let latest = snapshot(resolved)?.ok_or_else(WorkspaceSaveError::document_missing)?;
+            if !unchanged(&before, &latest) {
+                return Err(WorkspaceSaveError::document_changed());
+            }
+            fs::remove_file(resolved).map_err(save_error)?;
+            #[cfg(unix)]
+            if let Some(parent) = resolved.parent() {
+                File::open(parent)
+                    .and_then(|directory| directory.sync_all())
+                    .map_err(save_error)?;
+            }
+        }
+        Ok(())
     })
+    .map_err(|error| error.message)
 }
 
 pub(crate) fn save_error(error: io::Error) -> WorkspaceSaveError {

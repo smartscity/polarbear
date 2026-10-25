@@ -6,7 +6,7 @@ use super::{
         content_digest, github_content_url, manifest_change_count, relative_sync_path,
         remote_manifest_changed,
     },
-    provider::{github_put, gitlab_file_id, gitlab_project_path, normalize_gitlab_base_url},
+    provider::{gitlab_file_id, gitlab_project_path, normalize_gitlab_base_url},
     store::scan_sync_files,
 };
 use reqwest::blocking::Client;
@@ -83,7 +83,132 @@ fn manifests_count_additions_changes_and_deletions_once() {
     assert_eq!(manifest_change_count(&after, &before), 3);
     assert!(remote_manifest_changed(&after, &before));
     assert!(!remote_manifest_changed(&before, &before));
-    assert_eq!(content_digest(b"abc"), "3:YWJj");
+    assert_ne!(content_digest(b"abc"), content_digest(b"abd"));
+}
+
+#[test]
+fn sync_digest_is_versioned_fixed_size_and_does_not_embed_document_content() {
+    assert_eq!(
+        content_digest(b"abc"),
+        "sha256:v1:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+    let empty = content_digest(b"");
+    assert_eq!(
+        empty,
+        "sha256:v1:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+    assert_eq!(
+        content_digest(&vec![42; 8 * 1024 * 1024]).len(),
+        empty.len()
+    );
+    assert_ne!(
+        content_digest("中文".as_bytes()),
+        content_digest("字词".as_bytes())
+    );
+}
+
+#[test]
+fn legacy_baseline_migration_preserves_original_bytes_and_outbox() {
+    let root = std::env::temp_dir().join(format!("polarbear-digest-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&root).unwrap();
+    let database = root.join("sync.sqlite3");
+    let mut original = binding();
+    original.manifest.insert("note.md".into(), "3:YWJj".into());
+    crate::cloud_sync_store::replace_bindings(
+        &database,
+        &BTreeMap::from([(original.workspace_ref.clone(), original.clone())]),
+    )
+    .unwrap();
+    crate::cloud_sync_store::queue_outbox_path(
+        &database,
+        &original.workspace_ref,
+        "note.md",
+        "upload",
+    )
+    .unwrap();
+    fs::write(root.join("note.md"), "different current local content").unwrap();
+    for _ in 0..2 {
+        let bindings =
+            crate::cloud_sync_store::load_bindings(&database, &root.join("absent.json")).unwrap();
+        assert_eq!(
+            bindings[&original.workspace_ref].manifest["note.md"],
+            "sha256:v1:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert_eq!(
+            crate::cloud_sync_store::read_outbox(&database, &original.workspace_ref).unwrap()
+                ["note.md"],
+            "upload"
+        );
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn invalid_baseline_rolls_back_migration_and_can_recover_on_restart() {
+    let root = std::env::temp_dir().join(format!("polarbear-digest-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(&root).unwrap();
+    let database = root.join("sync.sqlite3");
+    let mut original = binding();
+    original.manifest = BTreeMap::from([
+        ("a.md".into(), "3:YWJj".into()),
+        ("b.md".into(), "4:YWJj".into()),
+    ]);
+    crate::cloud_sync_store::replace_bindings(
+        &database,
+        &BTreeMap::from([(original.workspace_ref.clone(), original.clone())]),
+    )
+    .unwrap();
+    assert!(crate::cloud_sync_store::load_bindings(&database, &root.join("absent.json")).is_err());
+    let connection = rusqlite::Connection::open(&database).unwrap();
+    let first: String = connection
+        .query_row(
+            "SELECT remote_digest FROM sync_file_state WHERE relative_path='a.md'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(first, "3:YWJj");
+    connection
+        .execute(
+            "UPDATE sync_file_state SET remote_digest='3:YWJj' WHERE relative_path='b.md'",
+            [],
+        )
+        .unwrap();
+    drop(connection);
+    let recovered =
+        crate::cloud_sync_store::load_bindings(&database, &root.join("absent.json")).unwrap();
+    assert!(recovered[&original.workspace_ref]
+        .manifest
+        .values()
+        .all(|digest| digest == &content_digest(b"abc")));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn streamed_digests_match_memory_digests_for_empty_unicode_and_large_files() {
+    for bytes in [
+        Vec::new(),
+        "Unicode 中文\n".as_bytes().to_vec(),
+        vec![91; 8 * 1024 * 1024],
+    ] {
+        assert_eq!(
+            super::policy::stream_digest(std::io::Cursor::new(&bytes)).unwrap(),
+            content_digest(&bytes)
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn excluded_directories_are_not_entered_even_when_unreadable() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = std::env::temp_dir().join(format!("polarbear-scan-{}", uuid::Uuid::new_v4()));
+    fs::create_dir_all(root.join("node_modules")).unwrap();
+    fs::set_permissions(root.join("node_modules"), fs::Permissions::from_mode(0o0)).unwrap();
+    let result = scan_sync_files(&root, &root);
+    fs::set_permissions(root.join("node_modules"), fs::Permissions::from_mode(0o700)).unwrap();
+    fs::remove_dir_all(root).unwrap();
+    assert!(result.unwrap().is_empty());
 }
 
 #[cfg(unix)]
@@ -113,7 +238,7 @@ fn provider_http_errors_preserve_authentication_and_permission_diagnostics() {
             let (mut stream, _) = listener.accept().unwrap();
             let mut request = [0; 4096];
             let size = stream.read(&mut request).unwrap();
-            assert!(String::from_utf8_lossy(&request[..size]).starts_with("PUT /contents"));
+            assert!(String::from_utf8_lossy(&request[..size]).starts_with("POST /contents"));
             let body = r#"{"message":"fixture rejection"}"#;
             write!(stream, "HTTP/1.1 {status} Rejected\r\nContent-Length: {}\r\nConnection: close\r\nx-github-request-id: fixture\r\n\r\n{body}", body.len()).unwrap();
         });
@@ -122,10 +247,12 @@ fn provider_http_errors_preserve_authentication_and_permission_diagnostics() {
             .timeout(Duration::from_secs(5))
             .build()
             .unwrap();
-        let error = github_put::<_, serde_json::Value>(
+        let error = super::conditional_publish::github_publish(
             &client,
             &format!("http://{address}/contents"),
-            &serde_json::json!({"content": "fixture"}),
+            &binding(),
+            "expected-head",
+            &BTreeMap::from([("note.md".into(), Some(b"fixture".to_vec()))]),
         )
         .unwrap_err();
         server.join().unwrap();

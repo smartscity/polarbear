@@ -1,37 +1,37 @@
+mod conditional_publish;
 pub(crate) mod model;
 pub(crate) mod policy;
 mod progress;
 mod provider;
 pub(crate) mod store;
+mod sync_coordinator;
+mod sync_plan;
 
 use crate::repository_identity::{
     normalize_repository_provider, read_account, read_connected_account, repository_provider_label,
     repository_token, RepositoryAccountDto,
 };
-use crate::{
-    cloud_sync_store, document_save::atomic_write, repository_identity,
-    workspace_paths::workspace_path,
-};
+use crate::{cloud_sync_store, repository_identity, workspace_paths::workspace_path};
 use model::{
     ConnectRepositoryProviderRequest, LinkWorkspaceRequest, RepositoryBindingDto,
     RepositoryInfoDto, RepositorySyncStatusDto, WorkspaceSyncRequest,
 };
-use policy::{content_digest, manifest_change_count, remote_manifest_changed};
+use policy::{manifest_change_count, remote_manifest_changed};
 use progress::emit_repository_sync_progress;
 use provider::{
     github_client, github_get, github_repositories, gitlab_api_base, gitlab_client, gitlab_get,
     gitlab_repositories, normalize_gitlab_base_url, provider_branch_head_sha,
-    provider_download_file, provider_push_workspace_files, provider_remote_changes_since,
-    provider_remote_files, GithubUserResponse, GitlabUserResponse,
+    provider_download_file, provider_remote_files, GithubUserResponse, GitlabUserResponse,
 };
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     fs,
+    sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
 use store::{
-    cloud_sync_database_path, local_manifest, local_snapshot, read_binding, read_bindings,
-    update_sync_outbox, write_bindings,
+    cloud_sync_database_path, local_manifest, read_binding, read_bindings, update_sync_outbox,
+    write_bindings,
 };
 
 fn now_unix_seconds() -> i64 {
@@ -46,9 +46,19 @@ where
     T: Send + 'static,
     F: FnOnce() -> Result<T, String> + Send + 'static,
 {
-    tauri::async_runtime::spawn_blocking(task)
+    tauri::async_runtime::spawn_blocking(move || with_repository_operation(task))
         .await
         .map_err(|error| format!("Cloud Sync background task failed: {error}"))?
+}
+
+fn with_repository_operation<T>(task: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    // The store has one active run and whole-binding transactions. Admission must
+    // match those scopes until persistence and progress become independently scoped.
+    static OPERATIONS: Mutex<()> = Mutex::new(());
+    let _lease = OPERATIONS
+        .try_lock()
+        .map_err(|_| "Cloud Sync is busy; wait for the current operation.".to_owned())?;
+    task()
 }
 
 fn run_tracked_repository_operation<T, F>(
@@ -191,7 +201,9 @@ fn repository_link_workspace_blocking(
         manifest: BTreeMap::new(),
     };
     let head_sha = provider_branch_head_sha(&app, &binding)?;
-    let remote_manifest = provider_remote_files(&app, &binding)?;
+    let mut frozen = binding.clone();
+    frozen.branch = head_sha.clone();
+    let remote_manifest = provider_remote_files(&app, &frozen)?;
     binding.last_sync_commit_sha = Some(head_sha);
     binding.last_sync_at = None;
     binding.manifest = remote_manifest;
@@ -271,142 +283,9 @@ pub(crate) async fn repository_get_sync_status(
 fn repository_push_workspace_blocking(
     app: tauri::AppHandle,
     request: WorkspaceSyncRequest,
-    remote_already_checked: bool,
+    _remote_already_checked: bool,
 ) -> Result<RepositorySyncStatusDto, String> {
-    if request.dirty {
-        return Err("Save current document before pushing.".to_owned());
-    }
-
-    let mut binding = read_binding(&app, &request.workspace_ref)?
-        .ok_or_else(|| "Link this workspace to a repository before pushing.".to_owned())?;
-    let had_synced = binding.has_synced;
-    let queued_operations =
-        cloud_sync_store::read_outbox(&cloud_sync_database_path(&app)?, &binding.workspace_ref)?;
-    let checked_remote_head = if remote_already_checked {
-        None
-    } else {
-        emit_repository_sync_progress(
-            &app,
-            "check-remote",
-            "Checking whether the remote branch changed...",
-            None,
-            None,
-        );
-        let remote_head = provider_branch_head_sha(&app, &binding)?;
-        if binding.last_sync_commit_sha.as_deref() != Some(remote_head.as_str()) {
-            emit_repository_sync_progress(
-                &app,
-                "remote-changed",
-                "Remote changed; merging untouched files before uploading local changes...",
-                None,
-                None,
-            );
-            repository_pull_workspace_internal(
-                app.clone(),
-                WorkspaceSyncRequest {
-                    workspace_ref: request.workspace_ref.clone(),
-                    dirty: request.dirty,
-                },
-                false,
-                Some(remote_head),
-            )?;
-            return repository_push_workspace_blocking(app, request, true);
-        }
-        Some(remote_head)
-    };
-    emit_repository_sync_progress(
-        &app,
-        "scan-local",
-        "Scanning local workspace for changes...",
-        None,
-        None,
-    );
-    let (mut files, local_manifest) = local_snapshot(&app, &binding.workspace_ref)?;
-    emit_repository_sync_progress(
-        &app,
-        "scan-local-complete",
-        format!("Found {} local sync file(s).", local_manifest.len()),
-        Some(local_manifest.len()),
-        Some(local_manifest.len()),
-    );
-    let remote_files_before_push = binding.manifest.clone();
-
-    files.retain(|path, _| remote_files_before_push.get(path) != local_manifest.get(path));
-    let deleted_paths = binding
-        .manifest
-        .keys()
-        .filter(|path| {
-            !local_manifest.contains_key(*path)
-                && remote_files_before_push.contains_key(*path)
-                && (binding.has_synced
-                    || queued_operations.get(*path).map(String::as_str) == Some("delete"))
-        })
-        .cloned()
-        .collect::<Vec<_>>();
-    let remote_changed = !had_synced
-        && remote_files_before_push
-            .keys()
-            .any(|path| !local_manifest.contains_key(path));
-    update_sync_outbox(&app, &binding, &local_manifest)?;
-
-    if files.is_empty() && deleted_paths.is_empty() {
-        emit_repository_sync_progress(
-            &app,
-            "up-to-date",
-            "No local changes need to be uploaded.",
-            Some(0),
-            Some(0),
-        );
-        if let Some(remote_head) = checked_remote_head {
-            binding.last_sync_commit_sha = Some(remote_head);
-        }
-        binding.last_sync_at = Some(now_unix_seconds());
-        binding.has_synced = had_synced || !remote_changed;
-        binding.manifest = local_manifest;
-        let mut bindings = read_bindings(&app)?;
-        bindings.insert(binding.workspace_ref.clone(), binding.clone());
-        write_bindings(&app, &bindings)?;
-        cloud_sync_store::clear_outbox(&cloud_sync_database_path(&app)?, &binding.workspace_ref)?;
-        return Ok(RepositorySyncStatusDto {
-            account: read_connected_account(&app)?,
-            binding: Some(binding),
-            local_changes: 0,
-            remote_changed,
-            conflicts: Vec::new(),
-        });
-    }
-
-    provider_push_workspace_files(
-        &app,
-        &binding,
-        &files,
-        &deleted_paths,
-        &remote_files_before_push,
-    )?;
-
-    emit_repository_sync_progress(
-        &app,
-        "save-state",
-        "Saving the new sync state...",
-        None,
-        None,
-    );
-    binding.last_sync_commit_sha = Some(provider_branch_head_sha(&app, &binding)?);
-    binding.last_sync_at = Some(now_unix_seconds());
-    binding.has_synced = had_synced || !remote_changed;
-    binding.manifest = local_manifest;
-    let mut bindings = read_bindings(&app)?;
-    bindings.insert(binding.workspace_ref.clone(), binding.clone());
-    write_bindings(&app, &bindings)?;
-    cloud_sync_store::clear_outbox(&cloud_sync_database_path(&app)?, &binding.workspace_ref)?;
-
-    Ok(RepositorySyncStatusDto {
-        account: read_connected_account(&app)?,
-        binding: Some(binding),
-        local_changes: 0,
-        remote_changed,
-        conflicts: Vec::new(),
-    })
+    synchronize_workspace(app, request, true, false)
 }
 
 #[tauri::command]
@@ -428,144 +307,9 @@ fn repository_pull_workspace_internal(
     app: tauri::AppHandle,
     request: WorkspaceSyncRequest,
     force_remote: bool,
-    known_remote_head: Option<String>,
+    _known_remote_head: Option<String>,
 ) -> Result<RepositorySyncStatusDto, String> {
-    if request.dirty {
-        return Err("Save current document before pulling.".to_owned());
-    }
-
-    let mut binding = read_binding(&app, &request.workspace_ref)?
-        .ok_or_else(|| "Link this workspace to a repository before pulling.".to_owned())?;
-    emit_repository_sync_progress(
-        &app,
-        "scan-local",
-        "Scanning local workspace before merging...",
-        None,
-        None,
-    );
-    let local_manifest_before_pull = local_manifest(&app, &binding.workspace_ref)?;
-    update_sync_outbox(&app, &binding, &local_manifest_before_pull)?;
-    emit_repository_sync_progress(
-        &app,
-        "scan-local-complete",
-        format!(
-            "Found {} local sync file(s).",
-            local_manifest_before_pull.len()
-        ),
-        Some(local_manifest_before_pull.len()),
-        Some(local_manifest_before_pull.len()),
-    );
-    emit_repository_sync_progress(
-        &app,
-        "read-remote",
-        "Comparing remote commits for changed files...",
-        None,
-        None,
-    );
-    let remote_head = match known_remote_head {
-        Some(remote_head) => remote_head,
-        None => provider_branch_head_sha(&app, &binding)?,
-    };
-    let remote_changes = provider_remote_changes_since(&app, &binding, &remote_head)?;
-    let mut remote_manifest = binding.manifest.clone();
-    for relative_path in &remote_changes.deleted_paths {
-        remote_manifest.remove(relative_path);
-    }
-    for relative_path in &remote_changes.changed_paths {
-        remote_manifest
-            .entry(relative_path.clone())
-            .or_insert_with(|| "remote-file-needs-refresh".to_owned());
-    }
-    let mut current_remote_paths = remote_manifest.keys().cloned().collect::<BTreeSet<_>>();
-    current_remote_paths.extend(remote_changes.changed_paths.iter().cloned());
-
-    let paths_to_consider = if force_remote {
-        current_remote_paths
-            .iter()
-            .chain(local_manifest_before_pull.keys())
-            .cloned()
-            .collect::<BTreeSet<_>>()
-    } else if !binding.has_synced {
-        current_remote_paths
-            .iter()
-            .chain(remote_changes.deleted_paths.iter())
-            .cloned()
-            .collect::<BTreeSet<_>>()
-    } else {
-        remote_changes
-            .changed_paths
-            .iter()
-            .chain(remote_changes.deleted_paths.iter())
-            .cloned()
-            .collect::<BTreeSet<_>>()
-    };
-
-    let changed_remote_total = paths_to_consider.len();
-    let mut changed_index = 0;
-    for relative_path in paths_to_consider {
-        let baseline_digest = binding.manifest.get(&relative_path);
-        let local_digest = local_manifest_before_pull.get(&relative_path);
-        let remote_exists = current_remote_paths.contains(&relative_path);
-        let remote_changed = remote_changes.changed_paths.contains(&relative_path);
-        let remote_deleted = remote_changes.deleted_paths.contains(&relative_path);
-        let local_changed = local_digest != baseline_digest;
-        let should_apply_remote = if force_remote {
-            remote_exists && (remote_changed || local_digest != remote_manifest.get(&relative_path))
-        } else if !binding.has_synced {
-            remote_exists && local_digest.is_none()
-        } else {
-            remote_changed && !local_changed
-        };
-        let should_delete_local = if force_remote {
-            local_digest.is_some() && !remote_exists
-        } else {
-            remote_deleted && !local_changed && local_digest.is_some()
-        };
-
-        if !should_apply_remote && !should_delete_local {
-            continue;
-        }
-
-        changed_index += 1;
-        emit_repository_sync_progress(
-            &app,
-            "apply-remote",
-            format!("Applying remote change: {relative_path}"),
-            Some(changed_index),
-            Some(changed_remote_total),
-        );
-
-        let destination = workspace_path(&binding.workspace_ref, &relative_path)?;
-        if should_apply_remote {
-            let content = provider_download_file(&app, &binding, &relative_path)?;
-            if let Some(parent) = destination.parent() {
-                fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-            }
-            remote_manifest.insert(relative_path, content_digest(&content));
-            atomic_write(&destination, &content)?;
-        } else if destination.exists() {
-            fs::remove_file(destination).map_err(|error| error.to_string())?;
-        }
-    }
-
-    binding.last_sync_commit_sha = Some(remote_head);
-    binding.last_sync_at = Some(now_unix_seconds());
-    binding.has_synced = true;
-    binding.manifest = remote_manifest;
-    let local_manifest_after_pull = local_manifest(&app, &binding.workspace_ref)?;
-    let local_changes = manifest_change_count(&local_manifest_after_pull, &binding.manifest);
-    update_sync_outbox(&app, &binding, &local_manifest_after_pull)?;
-    let mut bindings = read_bindings(&app)?;
-    bindings.insert(binding.workspace_ref.clone(), binding.clone());
-    write_bindings(&app, &bindings)?;
-
-    Ok(RepositorySyncStatusDto {
-        account: read_connected_account(&app)?,
-        binding: Some(binding),
-        local_changes,
-        remote_changed: false,
-        conflicts: Vec::new(),
-    })
+    synchronize_workspace(app, request, false, force_remote)
 }
 
 #[tauri::command]
@@ -587,97 +331,7 @@ fn repository_sync_now_blocking(
     app: tauri::AppHandle,
     request: WorkspaceSyncRequest,
 ) -> Result<RepositorySyncStatusDto, String> {
-    emit_repository_sync_progress(
-        &app,
-        "check-remote",
-        "Checking whether the remote branch changed...",
-        None,
-        None,
-    );
-    let mut binding = read_binding(&app, &request.workspace_ref)?
-        .ok_or_else(|| "Link this workspace to a repository before syncing.".to_owned())?;
-    let remote_head = provider_branch_head_sha(&app, &binding)?;
-    if binding.last_sync_commit_sha.as_deref() == Some(remote_head.as_str()) {
-        emit_repository_sync_progress(
-            &app,
-            "remote-unchanged",
-            "Remote branch is unchanged; skipping the full download scan.",
-            None,
-            None,
-        );
-        if !binding.has_synced {
-            emit_repository_sync_progress(
-                &app,
-                "initial-merge",
-                "Preparing the initial workspace merge...",
-                None,
-                None,
-            );
-            let local_manifest_before_sync = local_manifest(&app, &binding.workspace_ref)?;
-            emit_repository_sync_progress(
-                &app,
-                "scan-local-complete",
-                format!(
-                    "Found {} local sync file(s).",
-                    local_manifest_before_sync.len()
-                ),
-                Some(local_manifest_before_sync.len()),
-                Some(local_manifest_before_sync.len()),
-            );
-            let missing_remote_paths = binding
-                .manifest
-                .keys()
-                .filter(|path| !local_manifest_before_sync.contains_key(*path))
-                .cloned()
-                .collect::<Vec<_>>();
-            let missing_remote_total = missing_remote_paths.len();
-            for (download_index, relative_path) in missing_remote_paths.iter().enumerate() {
-                emit_repository_sync_progress(
-                    &app,
-                    "download",
-                    format!("Downloading remote file: {relative_path}"),
-                    Some(download_index + 1),
-                    Some(missing_remote_total),
-                );
-                let content = provider_download_file(&app, &binding, relative_path)?;
-                let destination = workspace_path(&binding.workspace_ref, relative_path)?;
-                if let Some(parent) = destination.parent() {
-                    fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-                }
-                atomic_write(&destination, &content)?;
-            }
-
-            binding.has_synced = true;
-            let mut bindings = read_bindings(&app)?;
-            bindings.insert(binding.workspace_ref.clone(), binding);
-            write_bindings(&app, &bindings)?;
-        }
-        return repository_push_workspace_blocking(app, request, true);
-    }
-
-    emit_repository_sync_progress(
-        &app,
-        "remote-changed",
-        "Remote branch changed; starting a safe merge...",
-        None,
-        None,
-    );
-
-    let pull_status = repository_pull_workspace_internal(
-        app.clone(),
-        WorkspaceSyncRequest {
-            workspace_ref: request.workspace_ref.clone(),
-            dirty: request.dirty,
-        },
-        false,
-        Some(remote_head),
-    )?;
-
-    if !pull_status.conflicts.is_empty() {
-        return Ok(pull_status);
-    }
-
-    repository_push_workspace_blocking(app, request, true)
+    synchronize_workspace(app, request, true, false)
 }
 
 #[tauri::command]
@@ -697,3 +351,111 @@ pub(crate) async fn repository_sync_now(
 
 #[cfg(test)]
 mod characterization_tests;
+#[cfg(test)]
+mod conditional_publish_tests;
+#[cfg(test)]
+mod sync_tests;
+
+fn synchronize_workspace(
+    app: tauri::AppHandle,
+    request: WorkspaceSyncRequest,
+    upload: bool,
+    discard_local: bool,
+) -> Result<RepositorySyncStatusDto, String> {
+    if request.dirty {
+        return Err("Save current document before syncing.".into());
+    }
+    let binding =
+        read_binding(&app, &request.workspace_ref)?.ok_or("Link this workspace before syncing.")?;
+    let baseline = if binding.has_synced {
+        binding.manifest.clone()
+    } else {
+        BTreeMap::new()
+    };
+    emit_repository_sync_progress(
+        &app,
+        "scan-local",
+        "Scanning local workspace...",
+        None,
+        None,
+    );
+    let local = local_manifest(&app, &binding.workspace_ref)?;
+    update_sync_outbox(&app, &binding, &local)?;
+    let head = provider_branch_head_sha(&app, &binding)?;
+    let mut frozen = binding.clone();
+    frozen.branch = head.clone();
+    let remote = provider_remote_files(&app, &frozen)?;
+    let mut io = NativeSync {
+        app: &app,
+        binding,
+        remote: &remote,
+    };
+    let outcome = sync_coordinator::synchronize(
+        &mut io,
+        &baseline,
+        &local,
+        &remote,
+        &head,
+        upload,
+        discard_local,
+    )?;
+    let current = local_manifest(&app, &io.binding.workspace_ref)?;
+    update_sync_outbox(&app, &io.binding, &current)?;
+    Ok(RepositorySyncStatusDto {
+        account: read_connected_account(&app)?,
+        local_changes: manifest_change_count(&current, &io.binding.manifest),
+        binding: Some(io.binding),
+        remote_changed: !outcome.conflicts.is_empty(),
+        conflicts: outcome.conflicts,
+    })
+}
+
+struct NativeSync<'a> {
+    app: &'a tauri::AppHandle,
+    binding: RepositoryBindingDto,
+    remote: &'a sync_plan::Manifest,
+}
+
+impl sync_coordinator::SyncIo for NativeSync<'_> {
+    fn read_local(&mut self, path: &str) -> Result<Vec<u8>, String> {
+        fs::read(workspace_path(&self.binding.workspace_ref, path)?)
+            .map_err(|error| error.to_string())
+    }
+    fn read_remote(&mut self, commit: &str, path: &str) -> Result<Vec<u8>, String> {
+        let mut frozen = self.binding.clone();
+        frozen.branch = commit.into();
+        provider_download_file(self.app, &frozen, path)
+    }
+    fn apply_local(
+        &mut self,
+        path: &str,
+        expected: Option<&str>,
+        content: Option<&[u8]>,
+    ) -> Result<(), String> {
+        crate::document_save::apply_sync_change(
+            &self.binding.workspace_ref,
+            path,
+            expected,
+            content,
+        )
+    }
+    fn publish(
+        &mut self,
+        commit: &str,
+        changes: &BTreeMap<String, Option<Vec<u8>>>,
+    ) -> Result<String, String> {
+        conditional_publish::publish(self.app, &self.binding, commit, self.remote, changes)
+    }
+    fn checkpoint(&mut self, baseline: &sync_plan::Manifest, commit: &str) -> Result<(), String> {
+        let mut next = self.binding.clone();
+        next.manifest = baseline.clone();
+        next.last_sync_commit_sha = Some(commit.into());
+        next.last_sync_at = Some(now_unix_seconds());
+        next.has_synced = true;
+        let mut bindings = read_bindings(self.app)?;
+        bindings.insert(next.workspace_ref.clone(), next.clone());
+        write_bindings(self.app, &bindings)?;
+        self.binding = next;
+        Ok(())
+    }
+}

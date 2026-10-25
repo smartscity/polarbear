@@ -1,6 +1,6 @@
 use crate::repository_identity::RepositoryAccountDto;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -65,10 +65,4 @@ pub(crate) struct RepositorySyncStatusDto {
     pub(crate) local_changes: usize,
     pub(crate) remote_changed: bool,
     pub(crate) conflicts: Vec<String>,
-}
-
-#[derive(Default)]
-pub(crate) struct RemoteChangeSet {
-    pub(crate) changed_paths: BTreeSet<String>,
-    pub(crate) deleted_paths: BTreeSet<String>,
 }

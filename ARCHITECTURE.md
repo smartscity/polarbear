@@ -161,7 +161,7 @@ Platform rules:
 - Keep UI responsive for desktop and mobile screen sizes.
 - Keep macOS-only APIs isolated in platform modules such as `native_pinch.rs`.
 - Put platform-specific frontend behavior behind feature adapters.
-- Keep GitHub and GitLab sync on provider REST APIs so it does not require a local Git executable.
+- Keep GitHub and GitLab sync on authenticated provider APIs so it does not require a local Git executable.
 - Treat local file access as an adapter capability; the iPhone reader uses sandboxed document access.
 - Keep Mermaid rendering in the WebView layer; the iPhone reader reuses the pure rendering modules.
 - Do not use dynamic native library loading for MVP plugins.
@@ -225,13 +225,34 @@ Mermaid rendering should remain in the WebView layer rather than platform-native
 
 1. The user configures a GitHub or GitLab repository and branch.
 2. Polarbear reads the provider token through the Rust `secret_store` module.
-3. The sync service lists Markdown files through the selected provider's REST API.
-4. The user opens and edits a Markdown document.
-5. Polarbear prepares an update request with a commit message such as `docs: update {file_path}`.
-6. The sync service commits the update back to the selected provider.
-7. Errors are returned as structured, UI-safe messages.
+3. Freeze the remote commit and enumerate content at that commit.
+4. `sync_plan` compares the common baseline, fresh local manifest and frozen remote
+   snapshot, including deletions. Divergent paths stop ordinary sync before writes.
+5. Downloads compare the planned local digest under the document IO/coordination
+   lock before replacing or deleting a file.
+6. GitHub uses GraphQL `createCommitOnBranch.expectedHeadOid` for a conditional
+   multi-file commit. GitLab uses a batch commit with affected files' `last_commit_id`
+   read at the frozen commit. This is a file-level guard, not whole-branch CAS.
+7. Only acknowledged bytes advance the baseline. Unknown responses leave the old
+   baseline intact; retry compares snapshots rather than blindly uploading. Each
+   successful download is checkpointed independently.
 
-The sync flow avoids shelling out to local Git because provider REST API access is portable and easier to constrain.
+`sync_coordinator` owns these rules; `SyncIo` separates provider/storage effects.
+Native repository admission serializes operations because persistence/progress
+currently has one active run and whole-binding writes. Busy requests fail explicitly.
+Neither provider force-updates a branch or fetches a fresh version to bypass conflict.
+
+Digests use `sha256:v1:<64 lowercase hex digits>`. Legacy baselines migrate from
+their encoded original bytes in one transaction, never from current local/remote
+content. Derived caches may be invalidated; outbox entries are retained. This is
+not secure erasure of SQLite pages/WAL. Local scans hash file bytes and prune
+excluded directories before descent. Performance is a separate measurement gate;
+publication memory remains proportional to changed content and API size limits
+can reject a large batch without advancing its baseline.
+
+Provider contracts: [GitHub conditional commit](https://docs.github.com/en/graphql/reference/commits#createcommitonbranchinput),
+[GitLab batch commit](https://docs.gitlab.com/api/commits/#create-a-commit).
+Local protocol tests do not establish actual hosted-service acceptance.
 
 ## Memory Engine Boundary
 

@@ -1,20 +1,13 @@
 use super::{
-    model::{RemoteChangeSet, RepositoryBindingDto, RepositoryInfoDto},
-    policy::{
-        allowed_sync_file, content_digest, github_content_url, relative_sync_path, remote_path_for,
-    },
+    model::{RepositoryBindingDto, RepositoryInfoDto},
+    policy::{content_digest, github_content_url, relative_sync_path, remote_path_for},
     progress::emit_repository_sync_progress,
 };
 use crate::repository_identity::{normalize_repository_provider, repository_token};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    fs,
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use serde::Deserialize;
+use std::{collections::BTreeMap, time::Duration};
 
 #[derive(Debug, Deserialize)]
 pub(super) struct GithubUserResponse {
@@ -49,7 +42,6 @@ pub(super) struct GithubCommitRef {
 
 #[derive(Debug, Deserialize)]
 pub(super) struct GithubContentResponse {
-    pub(super) sha: String,
     pub(super) content: Option<String>,
     pub(super) encoding: Option<String>,
 }
@@ -57,6 +49,8 @@ pub(super) struct GithubContentResponse {
 #[derive(Debug, Deserialize)]
 pub(super) struct GithubTreeResponse {
     pub(super) tree: Vec<GithubTreeItemResponse>,
+    #[serde(default)]
+    pub(super) truncated: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,35 +58,6 @@ pub(super) struct GithubTreeItemResponse {
     pub(super) path: String,
     #[serde(rename = "type")]
     pub(super) item_type: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct GithubCompareResponse {
-    #[serde(default)]
-    pub(super) files: Vec<GithubCompareFileResponse>,
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct GithubCompareFileResponse {
-    pub(super) filename: String,
-    pub(super) status: String,
-    pub(super) previous_filename: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct GithubPutContentRequest<'a> {
-    pub(super) message: &'a str,
-    pub(super) content: String,
-    pub(super) branch: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) sha: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct GithubDeleteContentRequest<'a> {
-    pub(super) message: &'a str,
-    pub(super) branch: &'a str,
-    pub(super) sha: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,41 +90,6 @@ pub(super) struct GitlabTreeItemResponse {
     pub(super) path: String,
     #[serde(rename = "type")]
     pub(super) item_type: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct GitlabCompareResponse {
-    #[serde(default)]
-    pub(super) diffs: Vec<GitlabCompareDiffResponse>,
-    #[serde(default)]
-    pub(super) compare_timeout: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct GitlabCompareDiffResponse {
-    pub(super) old_path: String,
-    pub(super) new_path: String,
-    #[serde(default)]
-    pub(super) renamed_file: bool,
-    #[serde(default)]
-    pub(super) deleted_file: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct GitlabCommitRequest<'a> {
-    pub(super) branch: &'a str,
-    pub(super) commit_message: &'a str,
-    pub(super) actions: Vec<GitlabCommitAction>,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct GitlabCommitAction {
-    pub(super) action: String,
-    pub(super) file_path: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) content: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) encoding: Option<String>,
 }
 
 pub(super) fn github_client(token: &str) -> Result<Client, String> {
@@ -239,38 +169,6 @@ pub(super) fn github_api_error(response: reqwest::blocking::Response, operation:
     }
 
     format!("GitHub could not {operation}: {github_message} ({status}).{request_suffix}")
-}
-
-pub(super) fn github_put<T: Serialize, R: for<'de> Deserialize<'de>>(
-    client: &Client,
-    url: &str,
-    body: &T,
-) -> Result<R, String> {
-    let response = client
-        .put(url)
-        .json(body)
-        .send()
-        .map_err(|error| error.to_string())?;
-    if !response.status().is_success() {
-        return Err(github_api_error(response, "upload repository contents"));
-    }
-    response.json::<R>().map_err(|error| error.to_string())
-}
-
-pub(super) fn github_delete<T: Serialize, R: for<'de> Deserialize<'de>>(
-    client: &Client,
-    url: &str,
-    body: &T,
-) -> Result<R, String> {
-    let response = client
-        .delete(url)
-        .json(body)
-        .send()
-        .map_err(|error| error.to_string())?;
-    if !response.status().is_success() {
-        return Err(github_api_error(response, "delete repository contents"));
-    }
-    response.json::<R>().map_err(|error| error.to_string())
 }
 
 pub(super) fn gitlab_client(token: &str) -> Result<Client, String> {
@@ -428,31 +326,6 @@ pub(super) fn gitlab_repositories(
         .collect())
 }
 
-pub(super) fn github_content_sha(
-    client: &Client,
-    binding: &RepositoryBindingDto,
-    relative_path: &str,
-) -> Result<Option<String>, String> {
-    let response = client
-        .get(github_content_url(binding, relative_path))
-        .query(&[("ref", binding.branch.as_str())])
-        .send()
-        .map_err(|error| error.to_string())?;
-
-    if response.status() == reqwest::StatusCode::NOT_FOUND {
-        return Ok(None);
-    }
-
-    Ok(Some(
-        response
-            .error_for_status()
-            .map_err(|error| error.to_string())?
-            .json::<GithubContentResponse>()
-            .map_err(|error| error.to_string())?
-            .sha,
-    ))
-}
-
 pub(super) fn github_download_file(
     client: &Client,
     binding: &RepositoryBindingDto,
@@ -498,7 +371,11 @@ pub(super) fn github_remote_files(
         urlencoding::encode(&binding.branch)
     );
     let tree = github_get::<GithubTreeResponse>(client, &url)?;
-    let remote_root = binding.remote_path.trim_matches('/');
+    if tree.truncated {
+        return Err(
+            "GitHub returned an incomplete tree; sync stopped without deleting files.".into(),
+        );
+    }
     let mut files = BTreeMap::new();
     let mut remote_paths = Vec::new();
 
@@ -507,15 +384,7 @@ pub(super) fn github_remote_files(
             continue;
         }
 
-        let relative_path = if remote_root.is_empty() {
-            item.path
-        } else if let Some(path) = item.path.strip_prefix(&format!("{remote_root}/")) {
-            path.to_owned()
-        } else {
-            continue;
-        };
-
-        if allowed_sync_file(Path::new(&relative_path)) {
+        if let Some(relative_path) = relative_sync_path(binding, &item.path) {
             remote_paths.push(relative_path);
         }
     }
@@ -536,104 +405,12 @@ pub(super) fn github_remote_files(
     Ok(files)
 }
 
-pub(super) fn github_remote_files_since(
-    app: &tauri::AppHandle,
-    client: &Client,
-    binding: &RepositoryBindingDto,
-    base_sha: &str,
-    head_sha: &str,
-) -> Result<RemoteChangeSet, String> {
-    emit_repository_sync_progress(
-        app,
-        "remote-compare",
-        "Asking GitHub which remote files changed...",
-        None,
-        None,
-    );
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/compare/{}...{}",
-        binding.owner,
-        binding.repo,
-        urlencoding::encode(base_sha),
-        urlencoding::encode(head_sha)
-    );
-    let comparison = github_get::<GithubCompareResponse>(client, &url).map_err(|error| {
-        format!("GitHub could not compare the last synced commit with the current branch: {error}")
-    })?;
-
-    if comparison.files.len() >= 300 {
-        return Err(
-            "GitHub returned at least 300 changed files, so the incremental comparison is incomplete. Sync a smaller set of remote commits before trying again. Polarbear did not fall back to a full repository scan."
-                .to_owned(),
-        );
-    }
-
-    let relevant_files = comparison
-        .files
-        .into_iter()
-        .filter(|file| {
-            relative_sync_path(binding, &file.filename).is_some()
-                || file
-                    .previous_filename
-                    .as_deref()
-                    .and_then(|path| relative_sync_path(binding, path))
-                    .is_some()
-        })
-        .collect::<Vec<_>>();
-    let mut changes = RemoteChangeSet::default();
-    let total = relevant_files.len();
-    for (index, file) in relevant_files.into_iter().enumerate() {
-        emit_repository_sync_progress(
-            app,
-            "remote-diff",
-            format!("Processing remote change: {}", file.filename),
-            Some(index + 1),
-            Some(total),
-        );
-
-        if let Some(previous_path) = file.previous_filename.as_deref() {
-            if let Some(relative_path) = relative_sync_path(binding, previous_path) {
-                changes.deleted_paths.insert(relative_path);
-            }
-        }
-
-        let Some(relative_path) = relative_sync_path(binding, &file.filename) else {
-            continue;
-        };
-        if file.status == "removed" {
-            changes.deleted_paths.insert(relative_path);
-            continue;
-        }
-        changes.changed_paths.insert(relative_path);
-    }
-
-    Ok(changes)
-}
-
-pub(super) fn github_delete_file(
-    client: &Client,
-    binding: &RepositoryBindingDto,
-    relative_path: &str,
-) -> Result<(), String> {
-    if let Some(sha) = github_content_sha(client, binding, relative_path)? {
-        let body = GithubDeleteContentRequest {
-            message: "Delete notes from Polarbear",
-            branch: &binding.branch,
-            sha,
-        };
-        let _: serde_json::Value =
-            github_delete(client, &github_content_url(binding, relative_path), &body)?;
-    }
-    Ok(())
-}
-
 pub(super) fn gitlab_remote_file_paths(
     client: &Client,
     binding: &RepositoryBindingDto,
 ) -> Result<Vec<String>, String> {
     let mut page = 1;
     let mut paths = Vec::new();
-    let remote_root = binding.remote_path.trim_matches('/');
 
     loop {
         let page_string = page.to_string();
@@ -668,14 +445,7 @@ pub(super) fn gitlab_remote_file_paths(
             if item.item_type != "blob" {
                 continue;
             }
-            let relative_path = if remote_root.is_empty() {
-                item.path
-            } else if let Some(path) = item.path.strip_prefix(&format!("{remote_root}/")) {
-                path.to_owned()
-            } else {
-                continue;
-            };
-            if allowed_sync_file(Path::new(&relative_path)) {
+            if let Some(relative_path) = relative_sync_path(binding, &item.path) {
                 paths.push(relative_path);
             }
         }
@@ -736,82 +506,6 @@ pub(super) fn gitlab_remote_files(
     Ok(files)
 }
 
-pub(super) fn gitlab_remote_files_since(
-    app: &tauri::AppHandle,
-    client: &Client,
-    binding: &RepositoryBindingDto,
-    base_sha: &str,
-    head_sha: &str,
-) -> Result<RemoteChangeSet, String> {
-    emit_repository_sync_progress(
-        app,
-        "remote-compare",
-        "Asking GitLab which remote files changed...",
-        None,
-        None,
-    );
-    let url = format!(
-        "{}/projects/{}/repository/compare",
-        gitlab_api_base(binding.base_url.as_deref()),
-        gitlab_project_id(binding)
-    );
-    let comparison = client
-        .get(url)
-        .query(&[("from", base_sha), ("to", head_sha), ("straight", "true")])
-        .send()
-        .map_err(|error| error.to_string())?
-        .error_for_status()
-        .map_err(|error| error.to_string())?
-        .json::<GitlabCompareResponse>()
-        .map_err(|error| error.to_string())?;
-
-    if comparison.compare_timeout {
-        return Err(
-            "GitLab timed out while comparing remote commits. Polarbear did not fall back to a full repository scan. Try syncing a smaller set of remote commits."
-                .to_owned(),
-        );
-    }
-
-    let relevant_diffs = comparison
-        .diffs
-        .into_iter()
-        .filter(|diff| {
-            relative_sync_path(binding, &diff.old_path).is_some()
-                || relative_sync_path(binding, &diff.new_path).is_some()
-        })
-        .collect::<Vec<_>>();
-    let mut changes = RemoteChangeSet::default();
-    let total = relevant_diffs.len();
-    for (index, diff) in relevant_diffs.into_iter().enumerate() {
-        emit_repository_sync_progress(
-            app,
-            "remote-diff",
-            format!("Processing remote change: {}", diff.new_path),
-            Some(index + 1),
-            Some(total),
-        );
-
-        if diff.renamed_file || diff.deleted_file || diff.old_path != diff.new_path {
-            if let Some(relative_path) = relative_sync_path(binding, &diff.old_path) {
-                changes.deleted_paths.insert(relative_path);
-            }
-        }
-        if diff.deleted_file {
-            if let Some(relative_path) = relative_sync_path(binding, &diff.new_path) {
-                changes.deleted_paths.insert(relative_path);
-            }
-            continue;
-        }
-
-        let Some(relative_path) = relative_sync_path(binding, &diff.new_path) else {
-            continue;
-        };
-        changes.changed_paths.insert(relative_path);
-    }
-
-    Ok(changes)
-}
-
 pub(super) fn provider_remote_files(
     app: &tauri::AppHandle,
     binding: &RepositoryBindingDto,
@@ -826,35 +520,6 @@ pub(super) fn provider_remote_files(
             let token = repository_token(app, "github")?;
             let client = github_client(&token)?;
             github_remote_files(app, &client, binding)
-        }
-    }
-}
-
-pub(super) fn provider_remote_changes_since(
-    app: &tauri::AppHandle,
-    binding: &RepositoryBindingDto,
-    remote_head: &str,
-) -> Result<RemoteChangeSet, String> {
-    let Some(base_sha) = binding.last_sync_commit_sha.as_deref() else {
-        return Err(
-            "Cloud Sync has no baseline commit for an incremental comparison. Open Sync Settings and link the workspace again."
-                .to_owned(),
-        );
-    };
-    if base_sha == remote_head {
-        return Ok(RemoteChangeSet::default());
-    }
-
-    match normalize_repository_provider(&binding.provider)?.as_str() {
-        "gitlab" => {
-            let token = repository_token(app, "gitlab")?;
-            let client = gitlab_client(&token)?;
-            gitlab_remote_files_since(app, &client, binding, base_sha, remote_head)
-        }
-        _ => {
-            let token = repository_token(app, "github")?;
-            let client = github_client(&token)?;
-            github_remote_files_since(app, &client, binding, base_sha, remote_head)
         }
     }
 }
@@ -874,134 +539,6 @@ pub(super) fn provider_download_file(
             let token = repository_token(app, "github")?;
             let client = github_client(&token)?;
             github_download_file(&client, binding, relative_path)
-        }
-    }
-}
-
-pub(super) fn provider_push_workspace_files(
-    app: &tauri::AppHandle,
-    binding: &RepositoryBindingDto,
-    files: &BTreeMap<String, PathBuf>,
-    deleted_paths: &[String],
-    remote_files_before_push: &BTreeMap<String, String>,
-) -> Result<(), String> {
-    match normalize_repository_provider(&binding.provider)?.as_str() {
-        "gitlab" => {
-            let token = repository_token(app, "gitlab")?;
-            let client = gitlab_client(&token)?;
-            let mut actions = Vec::new();
-            let upload_total = files.len() + deleted_paths.len();
-            let mut upload_index = 0;
-
-            for (relative_path, path) in files {
-                upload_index += 1;
-                emit_repository_sync_progress(
-                    app,
-                    "prepare-upload",
-                    format!("Preparing upload: {relative_path}"),
-                    Some(upload_index),
-                    Some(upload_total),
-                );
-                let bytes = fs::read(path).map_err(|error| error.to_string())?;
-                actions.push(GitlabCommitAction {
-                    action: if remote_files_before_push.contains_key(relative_path) {
-                        "update".to_owned()
-                    } else {
-                        "create".to_owned()
-                    },
-                    file_path: remote_path_for(binding, relative_path),
-                    content: Some(BASE64.encode(bytes)),
-                    encoding: Some("base64".to_owned()),
-                });
-            }
-
-            for relative_path in deleted_paths {
-                upload_index += 1;
-                emit_repository_sync_progress(
-                    app,
-                    "prepare-upload",
-                    format!("Preparing remote deletion: {relative_path}"),
-                    Some(upload_index),
-                    Some(upload_total),
-                );
-                actions.push(GitlabCommitAction {
-                    action: "delete".to_owned(),
-                    file_path: remote_path_for(binding, relative_path),
-                    content: None,
-                    encoding: None,
-                });
-            }
-
-            if actions.is_empty() {
-                return Ok(());
-            }
-
-            let body = GitlabCommitRequest {
-                branch: &binding.branch,
-                commit_message: "Sync notes from Polarbear",
-                actions,
-            };
-            let url = format!(
-                "{}/projects/{}/repository/commits",
-                gitlab_api_base(binding.base_url.as_deref()),
-                gitlab_project_id(binding)
-            );
-            emit_repository_sync_progress(
-                app,
-                "upload",
-                format!("Sending {upload_total} change(s) to GitLab..."),
-                Some(upload_total),
-                Some(upload_total),
-            );
-            let _: serde_json::Value = client
-                .post(url)
-                .json(&body)
-                .send()
-                .map_err(|error| error.to_string())?
-                .error_for_status()
-                .map_err(|error| error.to_string())?
-                .json()
-                .map_err(|error| error.to_string())?;
-            Ok(())
-        }
-        _ => {
-            let token = repository_token(app, "github")?;
-            let client = github_client(&token)?;
-            let upload_total = files.len() + deleted_paths.len();
-            let mut upload_index = 0;
-            for (relative_path, path) in files {
-                upload_index += 1;
-                emit_repository_sync_progress(
-                    app,
-                    "upload",
-                    format!("Uploading to GitHub: {relative_path}"),
-                    Some(upload_index),
-                    Some(upload_total),
-                );
-                let bytes = fs::read(path).map_err(|error| error.to_string())?;
-                let content_sha = github_content_sha(&client, binding, relative_path)?;
-                let body = GithubPutContentRequest {
-                    message: "Update notes from Polarbear",
-                    content: BASE64.encode(bytes),
-                    branch: &binding.branch,
-                    sha: content_sha,
-                };
-                let _: serde_json::Value =
-                    github_put(&client, &github_content_url(binding, relative_path), &body)?;
-            }
-
-            for relative_path in deleted_paths {
-                upload_index += 1;
-                emit_repository_sync_progress(
-                    app,
-                    "upload",
-                    format!("Deleting from GitHub: {relative_path}"),
-                    Some(upload_index),
-                    Some(upload_total),
-                );
-                github_delete_file(&client, binding, relative_path)?;
-            }
-            Ok(())
         }
     }
 }

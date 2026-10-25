@@ -1,5 +1,20 @@
 # Refactoring Report
 
+## Conditional Sync Ownership: 2026-10-25
+
+`repository/sync_plan` owns pure three-way comparison including deletion;
+`sync_coordinator` owns acknowledgment/recovery; `conditional_publish` owns provider
+version preconditions. The unsafe per-file upload path that fetched a fresh SHA
+before overwrite is removed. Native admission matches whole-binding store ownership.
+`document_save::apply_sync_change` resolves paths after acquiring workspace access,
+then shares per-document coordination with normal saves.
+
+Baselines migrate from legacy original bytes transactionally. Manifest hashing
+streams current content instead of trusting size/mtime; excluded directories are
+pruned before recursion. Provider tree filtering shares one path policy; truncated
+GitHub trees fail closed. A pure planner plus IO adapter and an operation lease
+are sufficient here; no event bus, parallel sync implementation or retry queue.
+
 ## Document Completion Protocol: 2026-10-25
 
 The document session remains the owner of buffers, identity and dirty state.

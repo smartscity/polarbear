@@ -1,5 +1,25 @@
 # Engineering Verification
 
+## Conditional Sync Stage: 2026-10-25
+
+On the Intel/macOS toolchain below, `cargo test -p polarbear-desktop` passed
+**113 tests**, with **3 ignored environment fixtures**. Native Clippy with
+`--all-targets -- -D warnings` passed. Only changed Rust files were formatted.
+
+The repository subset covers 22 planner/coordinator/digest/HTTP tests: divergent
+real files, edit during download, conditional creation/deletion, checkpoint failure,
+lost response, later remote edits after an unknown response, mixed transfers,
+operation overlap, frozen GitHub head, GitLab per-file versions, authentication,
+digest conversion/rollback/restart, Unicode, empty/large content and excluded paths.
+Local HTTP tests initially lacked sandbox loopback access, then passed with that
+capability. No actual provider repository was modified.
+
+Two digest/migration assertions failed on old production before the digest change.
+New coordinator tests exercise production effects but are not claimed as old-version
+failing tests. Temporary filesystem tests do not prove safety against uncooperative
+external ancestor replacement between system calls. Windows and hosted-provider
+write acceptance are NOT RUN. The overall fixed score gate remains open.
+
 ## Document Completion Stage: 2026-10-25
 
 Baseline `dc5e11e3c78283b55f6b004d73df8f4df2883c98`; Intel macOS, Node 26.1.0,
