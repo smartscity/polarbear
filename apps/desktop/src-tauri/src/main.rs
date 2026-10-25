@@ -32,7 +32,9 @@ use repository::{
     policy::allowed_sync_file,
     store::{cloud_sync_database_path, read_binding, scan_sync_files},
 };
-use workspace_paths::{normalize_relative_path, validate_entry_name, workspace_path};
+use workspace_paths::{
+    normalize_relative_path, relative_path_for_wire, validate_entry_name, workspace_path,
+};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -233,17 +235,17 @@ fn asset_response(
     markdown_relative_path: &str,
 ) -> Result<AssetWriteResponseDto, String> {
     let root = PathBuf::from(workspace_root);
-    let asset_relative_path = asset_path
-        .strip_prefix(root)
-        .map_err(|error| error.to_string())?
-        .to_string_lossy()
-        .to_string();
+    let asset_relative_path = relative_path_for_wire(
+        asset_path
+            .strip_prefix(root)
+            .map_err(|error| error.to_string())?,
+    );
     let markdown_parent = markdown_parent_relative_path(markdown_relative_path)?;
-    let path_for_markdown = asset_path
-        .strip_prefix(PathBuf::from(workspace_root).join(markdown_parent))
-        .map_err(|error| error.to_string())?
-        .to_string_lossy()
-        .replace('\\', "/");
+    let path_for_markdown = relative_path_for_wire(
+        asset_path
+            .strip_prefix(PathBuf::from(workspace_root).join(markdown_parent))
+            .map_err(|error| error.to_string())?,
+    );
 
     Ok(AssetWriteResponseDto {
         asset_relative_path,
@@ -336,11 +338,8 @@ fn list_directory(root: &Path, current_path: &Path) -> Result<Vec<WorkspaceItemD
         {
             continue;
         }
-        let relative_path = path
-            .strip_prefix(root)
-            .map_err(|error| error.to_string())?
-            .to_string_lossy()
-            .to_string();
+        let relative_path =
+            relative_path_for_wire(path.strip_prefix(root).map_err(|error| error.to_string())?);
 
         if path.is_dir() {
             items.push(WorkspaceItemDto {
@@ -439,6 +438,9 @@ fn save_markdown_file(
     markdown_content: String,
     expected_revision: Option<String>,
 ) -> Result<MarkdownSaveResponseDto, WorkspaceSaveError> {
+    let relative_path = relative_path_for_wire(
+        &normalize_relative_path(&relative_path).map_err(WorkspaceSaveError::unexpected)?,
+    );
     save_markdown_file_with_outbox(
         &workspace_root,
         &relative_path,
@@ -583,6 +585,7 @@ fn delete_workspace_entry(
     workspace_root: String,
     relative_path: String,
 ) -> Result<DeleteEntryResponseDto, String> {
+    let relative_path = relative_path_for_wire(&normalize_relative_path(&relative_path)?);
     if relative_path.trim().is_empty() {
         return Err("Workspace root cannot be deleted.".to_owned());
     }
@@ -648,11 +651,11 @@ fn duplicate_workspace_entry(
     copy_workspace_entry_recursive(&source_path, &destination)?;
 
     let root = PathBuf::from(&workspace_root);
-    let new_relative_path = destination
-        .strip_prefix(&root)
-        .map_err(|error| error.to_string())?
-        .to_string_lossy()
-        .replace('\\', "/");
+    let new_relative_path = relative_path_for_wire(
+        destination
+            .strip_prefix(&root)
+            .map_err(|error| error.to_string())?,
+    );
     if read_binding(&app, &workspace_root)?.is_some() {
         let database_path = cloud_sync_database_path(&app)?;
         let duplicated_files = if destination.is_dir() {
@@ -737,6 +740,8 @@ fn rename_entry(
     new_name: String,
 ) -> Result<RenameEntryResponseDto, String> {
     let _mutation = workspace_io::path_mutation().map_err(|error| error.to_string())?;
+    let source_relative_path =
+        relative_path_for_wire(&normalize_relative_path(&source_relative_path)?);
     validate_entry_name(&new_name)?;
 
     let source_path = workspace_path(&workspace_root, &source_relative_path)?;
@@ -773,11 +778,11 @@ fn rename_entry(
         .map_err(|error| error.to_string())?;
 
     let root = PathBuf::from(workspace_root);
-    let new_relative_path = destination_path
-        .strip_prefix(root)
-        .map_err(|error| error.to_string())?
-        .to_string_lossy()
-        .to_string();
+    let new_relative_path = relative_path_for_wire(
+        destination_path
+            .strip_prefix(root)
+            .map_err(|error| error.to_string())?,
+    );
 
     Ok(RenameEntryResponseDto {
         old_relative_path: source_relative_path,
@@ -801,11 +806,10 @@ fn open_markdown_file(file_path: String) -> Result<OpenMarkdownFileDto, String> 
         .parent()
         .ok_or_else(|| "Selected file does not have a parent directory.".to_owned())?
         .to_path_buf();
-    let relative_path = path
-        .strip_prefix(&workspace_root)
-        .map_err(|error| error.to_string())?
-        .to_string_lossy()
-        .to_string();
+    let relative_path = relative_path_for_wire(
+        path.strip_prefix(&workspace_root)
+            .map_err(|error| error.to_string())?,
+    );
     let document = read_markdown_document(&path)?;
     let tree = list_directory(&workspace_root, &workspace_root)?;
 
@@ -888,6 +892,8 @@ fn move_entry(
     target_parent_relative_path: Option<String>,
 ) -> Result<RenameEntryResponseDto, String> {
     let _mutation = workspace_io::path_mutation().map_err(|error| error.to_string())?;
+    let source_relative_path =
+        relative_path_for_wire(&normalize_relative_path(&source_relative_path)?);
     let workspace_root_path = PathBuf::from(&workspace_root)
         .canonicalize()
         .map_err(|error| error.to_string())?;
@@ -935,11 +941,11 @@ fn move_entry(
     workspace_io::rename_exclusive(&source_path, &destination_path)
         .map_err(|error| error.to_string())?;
 
-    let new_relative_path = destination_path
-        .strip_prefix(workspace_root_path)
-        .map_err(|error| error.to_string())?
-        .to_string_lossy()
-        .to_string();
+    let new_relative_path = relative_path_for_wire(
+        destination_path
+            .strip_prefix(workspace_root_path)
+            .map_err(|error| error.to_string())?,
+    );
 
     Ok(RenameEntryResponseDto {
         old_relative_path: source_relative_path,
@@ -1339,6 +1345,60 @@ mod tests {
         assert!(source
             .markdown_content
             .contains("Start writing in Polarbear"));
+    }
+
+    #[test]
+    fn nested_mutations_and_tree_ids_share_the_relative_path_protocol() {
+        let root = test_workspace_root("nested-path-protocol");
+        super::create_workspace_directory(root.clone(), "docs/nested".to_owned())
+            .expect("nested folder");
+        super::create_workspace_directory(root.clone(), "archive".to_owned())
+            .expect("target folder");
+        super::create_markdown_file(root.clone(), "docs/nested/hello.md".to_owned())
+            .expect("document");
+        let input = std::path::Path::new("docs").join("nested").join("hello.md");
+        let renamed = super::rename_entry(
+            root.clone(),
+            input.to_string_lossy().into_owned(),
+            "world".to_owned(),
+        )
+        .expect("rename file");
+        assert_eq!(renamed.old_relative_path, "docs/nested/hello.md");
+        assert_eq!(renamed.new_relative_path, "docs/nested/world.md");
+        let folder =
+            super::rename_entry(root.clone(), "docs/nested".to_owned(), "renamed".to_owned())
+                .expect("rename folder");
+        assert_eq!(folder.new_relative_path, "docs/renamed");
+        let moved = super::move_entry(
+            root.clone(),
+            "docs/renamed".to_owned(),
+            Some("archive".to_owned()),
+        )
+        .expect("move folder");
+        assert_eq!(moved.old_relative_path, "docs/renamed");
+        assert_eq!(moved.new_relative_path, "archive/renamed");
+        let tree = super::list_workspace_files(root.clone()).expect("tree");
+        let target = tree
+            .iter()
+            .find(|item| item.id == "archive")
+            .expect("target node");
+        let folder = &target.children.as_ref().expect("folder children")[0];
+        assert_eq!(folder.id, "archive/renamed");
+        assert_eq!(
+            folder.children.as_ref().expect("file children")[0].id,
+            "archive/renamed/world.md"
+        );
+        let files =
+            super::scan_sync_files(std::path::Path::new(&root), std::path::Path::new(&root))
+                .expect("sync keys");
+        assert_eq!(
+            files.keys().map(String::as_str).collect::<Vec<_>>(),
+            vec!["archive/renamed/world.md"]
+        );
+        assert!(
+            super::load_markdown_file(root.clone(), "archive/renamed/world.md".to_owned()).is_ok()
+        );
+        fs::remove_dir_all(root).expect("remove fixture");
     }
 
     #[cfg(unix)]

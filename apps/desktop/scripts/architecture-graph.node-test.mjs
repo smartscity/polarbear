@@ -36,6 +36,16 @@ test("quality runs on engineering branch pushes without requiring a release tag"
   assert.match(triggers, /push:\s+branches:\s+- main\s+- ["']codex\/\*\*["']/);
 });
 
+test("local native verification compiles Windows production and test configurations before a push", () => {
+  const desktop = JSON.parse(readFileSync(join(root, "apps/desktop/package.json"), "utf8"));
+  const command = desktop.scripts["check:native:windows"] ?? "";
+  assert.match(command, /^npm run build && cargo xwin clippy /);
+  for (const argument of ["--manifest-path src-tauri/Cargo.toml", "--target x86_64-pc-windows-msvc", "--all-targets", "--all-features", "--locked", "-- -D warnings"]) {
+    assert.ok(command.includes(argument), `Windows pre-push compilation must retain ${argument}`);
+  }
+  assert.doesNotMatch(command, /--fix|--allow|\|\|/);
+});
+
 test("native repository contracts and providers do not depend on entry-point internals", () => {
   const native = join(root, "apps/desktop/src-tauri/src");
   const main = readFileSync(join(native, "main.rs"), "utf8");

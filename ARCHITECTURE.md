@@ -283,6 +283,31 @@ Local-first behavior must account for both desktop file systems and iOS sandbox 
 - Tauri commands adapt platform file access into document operations.
 - Shared Markdown logic must not assume arbitrary absolute paths are available on every target.
 
+### Workspace Path Wire Contract
+
+Workspace-relative DTO paths and tree node IDs use `/` on every desktop platform.
+`workspace_paths::relative_path_for_wire` owns serialization after relative-path
+validation or `strip_prefix`; disk access continues to use `Path`/`PathBuf` and
+the existing traversal, symlink, exclusive-rename and save coordination checks.
+Rename/move return both old and new logical paths in this form. Listing,
+duplication, opened-document relative paths and asset responses use the same
+boundary. Save/delete normalize validated native input before writing new outbox
+keys. The frontend consumes that contract without its own platform-specific
+rename implementation.
+
+Workspace roots, absolute document paths, drive letters, UNC paths and system-open
+arguments are native values, not workspace-relative IDs. File URLs continue to
+use `Url::to_file_path`; conversion failure is not retried as a literal filename.
+Tests construct file URLs with `Url::from_file_path` for their actual platform.
+
+Existing Windows backslash inputs remain accepted by the native path validator.
+Open buffers and tree projections are session-local and are rebuilt using the
+corrected DTOs; existing recent-document parsing already accepts Windows paths.
+Sync scan keys already use `/`, so no bulk manifest, database, root or recent-path
+migration is introduced. Historical outbox entries are not rewritten by this
+change. Literal backslashes in Unix filenames are not Windows separators; general
+support for those names across all existing frontend/sync code is not certified.
+
 ## Secret Management
 
 Secrets must be isolated behind `secret_store`.

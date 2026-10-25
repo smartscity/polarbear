@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import windowsPaths from "../fixtures/workspace-relative-paths.json" with { type: "json" };
+import { STORAGE_KEYS } from "../../src/shared/constants/storageKeys";
 
 async function fixture(page: Page) {
   await page.addInitScript(() => {
@@ -106,3 +108,85 @@ test("a pending save excludes rename and a dirty opaque ID is checked by path", 
   expect(await page.evaluate(() => (window as any).__calls.some((call: any) => call.command === "move_entry"))).toBe(false);
   await page.evaluate(() => (window as any).__finishSave());
 });
+
+for (const action of ["rename", "move"] as const) {
+  for (const failRefresh of [false, true]) {
+  test(`${action} maps Windows wire paths through nested documents, selection, tree and recents (refresh failure: ${failRefresh})`, async ({ page }) => {
+    const from = windowsPaths.paths[0].wire;
+    const to = windowsPaths.paths[action === "rename" ? 1 : 2].wire;
+    const root = windowsPaths.workspaceRoot;
+    await page.addInitScript(({ root, from, to }) => {
+      const state = window as any;
+      state.__calls = [];
+      const tree = (path: string) => {
+        const [parent, folder] = path.split("/");
+        return [{ id: parent, name: parent, itemType: "folder", children: [
+          { id: path, name: folder, itemType: "folder", children: [
+            { id: `${path}/first.md`, name: "first.md", itemType: "file" },
+            { id: `${path}/deeper`, name: "deeper", itemType: "folder", children: [
+              { id: `${path}/deeper/second.md`, name: "second.md", itemType: "file" },
+            ] },
+          ] },
+        ] }, ...(parent === "archive" ? [] : [{ id: "archive", name: "archive", itemType: "folder", children: [] }])];
+      };
+      state.__TAURI_INTERNALS__ = {
+        transformCallback: () => 1,
+        metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
+        invoke: async (command: string, args: any = {}) => {
+          state.__calls.push({ command, args });
+          if (command === "take_pending_open_files") return [];
+          if (command === "list_workspace_files") {
+            if (state.__failRefresh) throw new Error("Tree refresh failed");
+            return tree(state.__moved ? to : from);
+          }
+          if (command === "load_markdown_file") return { markdownContent: `# ${args.relativePath}`, revision: "original" };
+          if (command === "rename_entry" || command === "move_entry") return new Promise((resolve) => {
+            if (args.workspaceRoot !== root || args.sourceRelativePath !== from) throw new Error("Path contract mismatch");
+            state.__finishMutation = () => { state.__moved = true; resolve({ oldRelativePath: from, newRelativePath: to }); };
+          });
+          return null;
+        },
+      };
+    }, { root, from, to });
+    await page.goto("/tests/browser/navigation.html?documents");
+    await expect.poll(() => page.evaluate(() => Boolean((window as any).__documents))).toBe(true);
+    await page.evaluate((root) => (window as any).__documents.loadWorkspace(root), root);
+    await expect.poll(() => page.evaluate(() => (window as any).__documents.activeRelativePath)).toBe(`${from}/first.md`);
+    await page.evaluate((path) => (window as any).__documents.selectFile(path), `${from}/deeper/second.md`);
+    await expect.poll(() => page.evaluate(() => (window as any).__documents.activeRelativePath)).toBe(`${from}/deeper/second.md`);
+    const before = await page.evaluate(() => {
+      const s = (window as any).__documents;
+      return { active: s.activeFileId, ids: s.openFileIds, revisions: s.documentRevisions };
+    });
+    await page.evaluate(({ action, from, failRefresh }) => {
+      const state = window as any, s = state.__documents;
+      state.__failRefresh = failRefresh;
+      void (action === "rename" ? s.confirmRename({ id: from }, "renamed") : s.moveWorkspaceEntry(from, "archive"));
+    }, { action, from, failRefresh });
+    await expect.poll(() => page.evaluate(() => typeof (window as any).__finishMutation)).toBe("function");
+    await page.evaluate(() => (window as any).__documents.updateActiveDocument("Unsaved text during directory mutation"));
+    await page.evaluate(() => (window as any).__finishMutation());
+    await expect.poll(() => page.evaluate(() => (window as any).__documents.activeRelativePath)).toBe(`${to}/deeper/second.md`);
+    const after = await page.evaluate(() => {
+      const s = (window as any).__documents;
+      return { active: s.activeFileId, ids: s.openFileIds, revisions: s.documentRevisions,
+        root: s.workspaceRoot, paths: s.documentRelativePaths, selected: s.selectedTreeItemId,
+        text: s.markdownContent, dirty: [...s.dirtyFileIds], tree: s.workspaceItems };
+    });
+    expect(after.active).toBe(before.active);
+    expect(after.ids).toEqual(before.ids);
+    expect(after.revisions).toEqual(before.revisions);
+    expect(after.root).toBe(root);
+    expect(after.selected).toBe(`${to}/deeper/second.md`);
+    expect(after.paths).toEqual({ [before.ids[0]]: `${to}/first.md`, [before.ids[1]]: `${to}/deeper/second.md` });
+    expect(after.text).toBe("Unsaved text during directory mutation");
+    expect(after.dirty).toEqual([before.active]);
+    expect(JSON.stringify(after.tree)).toContain(`${to}/deeper/second.md`);
+    expect(JSON.stringify(after.tree)).not.toContain(`${from}/`);
+    const recent = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "[]"), STORAGE_KEYS.recentDocuments);
+    expect(recent.map((item: { path: string }) => item.path).sort()).toEqual([
+      `${root.replaceAll("\\", "/")}/${to}/first.md`, `${root.replaceAll("\\", "/")}/${to}/deeper/second.md`,
+    ].sort());
+  });
+  }
+}

@@ -14,6 +14,7 @@
     "test:offline-translation": "node scripts/test-bundled-translation.mjs",
     "test:ui": "playwright test",
     "lint": "eslint src",
+    "check:native:windows": "npm run build && cargo xwin clippy --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --all-targets --all-features --locked -- -D warnings",
     "memory-contract:generate": "node scripts/generate-memory-admin-contract.mjs",
     "memory-contract:check": "node scripts/generate-memory-admin-contract.mjs --check",
     "memory-m1:fixtures:check": "node scripts/validate-memory-m1-fixtures.mjs",

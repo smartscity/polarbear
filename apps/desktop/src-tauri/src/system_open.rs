@@ -100,23 +100,27 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn extracts_markdown_files_from_gui_launch_arguments() {
+    fn extracts_markdown_files_from_gui_launch_arguments() -> Result<(), String> {
+        let root = if cfg!(windows) {
+            PathBuf::from(r"C:\Users\example")
+        } else {
+            PathBuf::from("/Users/example")
+        };
+        let readme = root.join("My Notes/readme.md");
+        let notes = root.join("notes.MARKDOWN");
+        let guide = root.join("Shared Notes/guide.md");
+        let guide_url = tauri::Url::from_file_path(&guide).map_err(|_| "Invalid fixture path")?;
+        assert!(guide_url.as_str().contains("Shared%20Notes"));
         let paths = markdown_paths_from_args([
             "polarbear".to_owned(),
-            "/Users/example/My Notes/readme.md".to_owned(),
-            "/Users/example/notes.MARKDOWN".to_owned(),
-            "file:///Users/example/Shared%20Notes/guide.md".to_owned(),
-            "/Users/example/image.png".to_owned(),
+            readme.to_string_lossy().into_owned(),
+            notes.to_string_lossy().into_owned(),
+            guide_url.into(),
+            root.join("image.png").to_string_lossy().into_owned(),
         ]);
 
-        assert_eq!(
-            paths,
-            vec![
-                PathBuf::from("/Users/example/My Notes/readme.md"),
-                PathBuf::from("/Users/example/notes.MARKDOWN"),
-                PathBuf::from("/Users/example/Shared Notes/guide.md"),
-            ]
-        );
+        assert_eq!(paths, vec![readme, notes, guide]);
+        Ok(())
     }
 
     #[test]
@@ -128,5 +132,59 @@ mod tests {
         ]);
 
         assert_eq!(paths, vec![PathBuf::from("document.md")]);
+    }
+
+    #[test]
+    fn local_file_urls_round_trip_reserved_characters_and_unicode() -> Result<(), String> {
+        let root = if cfg!(windows) {
+            PathBuf::from(r"C:\Users\example")
+        } else {
+            PathBuf::from("/Users/example")
+        };
+        let expected: Vec<_> = ["My Notes/readme.Md", "中文/100% # notes.MarkDown"]
+            .into_iter()
+            .map(|name| root.join(name))
+            .collect();
+        let mut arguments = vec!["polarbear".to_owned()];
+        for path in &expected {
+            arguments.push(
+                tauri::Url::from_file_path(path)
+                    .map_err(|_| "Invalid fixture path")?
+                    .to_string(),
+            );
+        }
+        arguments.extend(
+            [
+                "--inspect",
+                "-psn_0_123",
+                "image.png",
+                "file://[invalid]/broken.md",
+            ]
+            .map(str::to_owned),
+        );
+        arguments.push(
+            tauri::Url::from_file_path(root.join("image.png"))
+                .map_err(|_| "Invalid non-Markdown fixture path")?
+                .to_string(),
+        );
+        assert_eq!(markdown_paths_from_args(arguments), expected);
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_drive_and_unc_file_urls_preserve_native_paths() -> Result<(), String> {
+        for path in [
+            PathBuf::from(r"D:\Notes\100% # 中文.md"),
+            PathBuf::from(r"\\server\share\My Notes\guide.MARKDOWN"),
+        ] {
+            let url =
+                tauri::Url::from_file_path(&path).map_err(|_| "Invalid Windows fixture path")?;
+            assert_eq!(
+                markdown_paths_from_args(["polarbear".to_owned(), url.to_string()]),
+                vec![path]
+            );
+        }
+        Ok(())
     }
 }

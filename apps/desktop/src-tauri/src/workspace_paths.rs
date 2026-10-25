@@ -1,6 +1,15 @@
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+// Use only after relative-path validation or strip_prefix; this does not authorize access.
+pub(crate) fn relative_path_for_wire(path: &Path) -> String {
+    serialize_relative_path(&path.to_string_lossy(), std::path::MAIN_SEPARATOR)
+}
+
+fn serialize_relative_path(path: &str, native_separator: char) -> String {
+    path.replace(native_separator, "/")
+}
+
 pub(crate) fn normalize_relative_path(relative_path: &str) -> Result<PathBuf, String> {
     let path = Path::new(relative_path);
 
@@ -78,4 +87,51 @@ pub(crate) fn validate_entry_name(name: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod wire_tests {
+    use super::{relative_path_for_wire, serialize_relative_path};
+    use std::path::Path;
+
+    #[test]
+    fn relative_path_wire_format_is_independent_of_native_separators() {
+        assert_eq!(
+            serialize_relative_path(r"docs\world.md", '\\'),
+            "docs/world.md"
+        );
+        assert_eq!(
+            serialize_relative_path("docs/world.md", '/'),
+            "docs/world.md"
+        );
+        assert_eq!(
+            serialize_relative_path(r"docs/literal\name.md", '/'),
+            r"docs/literal\name.md"
+        );
+        assert_eq!(
+            relative_path_for_wire(&Path::new("docs").join("world.md")),
+            "docs/world.md"
+        );
+    }
+
+    #[test]
+    fn windows_wire_fixture_matches_the_frontend_mutation_contract() -> Result<(), serde_json::Error>
+    {
+        #[derive(serde::Deserialize)]
+        struct FixturePath {
+            native: String,
+            wire: String,
+        }
+        #[derive(serde::Deserialize)]
+        struct Fixture {
+            paths: Vec<FixturePath>,
+        }
+        let fixture: Fixture = serde_json::from_str(include_str!(
+            "../../tests/fixtures/workspace-relative-paths.json"
+        ))?;
+        for path in fixture.paths {
+            assert_eq!(serialize_relative_path(&path.native, '\\'), path.wire);
+        }
+        Ok(())
+    }
 }

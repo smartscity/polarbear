@@ -1,0 +1,8 @@
+{
+  "workspaceRoot": "C:\\Users\\example\\My Notes",
+  "paths": [
+    { "native": "docs\\nested", "wire": "docs/nested" },
+    { "native": "docs\\renamed", "wire": "docs/renamed" },
+    { "native": "archive\\nested", "wire": "archive/nested" }
+  ]
+}

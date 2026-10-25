@@ -245,6 +245,77 @@ Windows Clippy. It is now gated with the capture singleton; the same 115 native
 tests, formatting and all-target Clippy passed locally again. This intermediate
 failure is retained rather than presented as a passing Windows run.
 
+### Windows Path Contract Follow-up
+
+Baseline: `d79de09b22da40c0b8aaff3d0cfd99ab98241ede`, run
+[40182592844](https://github.com/smartscity/polarbear/actions/runs/40182592844).
+Its Windows Clippy passed, but native execution had **82 passed, 2 failed,
+2 ignored**. Other jobs passed. The two failures have different owners:
+
+- `system_open::tests::extracts_markdown_files_from_gui_launch_arguments` used
+  a Unix-only file URL on Windows. Only its fixture changes: native absolute
+  paths are converted with `Url::from_file_path` and compared as `PathBuf`.
+  Production parsing is unchanged; invalid URLs do not fall back to filenames.
+  Additional cases cover spaces, Unicode, `%`, `#`, case-insensitive extensions,
+  non-Markdown inputs, flags and malformed URLs. Drive/UNC coverage is compiled
+  on Windows and must actually execute there before being called verified.
+- `workspace_commands_rename_files_and_directories` exposed a production protocol
+  defect: Windows serialized `docs\\world.md` where the frontend requires
+  `docs/world.md`. The assertion is retained. A single boundary helper now
+  serializes logical relative paths for rename/move/tree/duplicate/open/assets;
+  validated old input and new save/delete outbox keys use the same convention.
+  Root/absolute paths and the file URL parser are not normalized by this helper.
+
+Local test-first evidence: the extracted pre-fix serializer failed the explicit
+Windows-separator assertion (`docs\\world.md` versus `docs/world.md`), then
+passed after conversion. A shared JSON fixture is checked by Rust serialization
+and consumed as canonical wire values by the real React document-session browser
+tests. The browser does not invent its own replacement algorithm. Four new cases
+cover nested directory rename/move with successful/failed tree refresh, stable
+tab IDs, revisions, edits made while mutation is pending, dirty state, selection,
+tree descendants and recent records. Native tests use real temporary files and
+compare nested mutation responses, tree IDs and sync keys.
+
+Before this follow-up, the old `3ff6bf6d` snapshot was archived into an isolated
+temporary directory and compiled locally for `x86_64-pc-windows-msvc`; it failed
+with the exact CI `unused import: Mutex` diagnostic. `d79de09b` passed that same
+target check. `check:native:windows` now builds embedded frontend assets and runs
+`cargo xwin clippy --all-targets --all-features --locked -- -D warnings`. Its
+configuration guard failed before the script existed and passed afterwards.
+This is real target compilation, not a spoofed `cfg(windows)` on a macOS standard
+library. It is not Windows binary execution. Local tools: Intel macOS 26.5.1,
+Rust 1.96.0, cargo-xwin, LLVM and cached Windows SDK/CRT; Node 26.1.0.
+
+Intermediate attempts remain explicit: one unqualified `--exact` test filter ran
+zero tests and was replaced with the fully qualified name before claiming RED;
+macOS coordination was sandbox-denied and rerun with OS access; the first native
+fixture used `target`, an intentionally excluded sync directory, and was corrected
+to `archive`; Playwright required the JSON import attribute; local Windows Clippy
+caught new fixture `expect()` calls, which now propagate errors instead of adding
+lint exemptions. None of these intermediate failures was pushed as a new CI trial.
+
+No persistent-data migration is performed. Sync scanning already emits slash
+keys; existing session projections reload from the corrected native boundary and
+recent-document parsing already accepts Windows input. Historical outbox entries
+are not rewritten. General Unix literal-backslash filename support remains outside
+this certification. Traversal/symlink/exclusive-rename/save-race checks are retained.
+Final hosted results must be associated with the commit containing this follow-up;
+the failed baseline is not evidence for its replacement. Windows native GUI
+rename/move of dirty open documents remains **NOT RUN**.
+
+| Follow-up local gate | Result | Scope |
+| --- | --- | --- |
+| macOS native tests | PASS | 119 passed, 4 existing ignored entries; includes both original failing cases and new path fixtures. |
+| macOS Clippy / Rust format | PASS | All targets/features, warnings denied; no new lint exemptions. |
+| Windows target pre-push command | PASS | Frontend production build plus all-target/all-feature MSVC Clippy; Rust 1.96.0, not Windows execution. |
+| Desktop unit / Node tests | PASS | 352 Vitest cases and 40 Node cases, including the pre-push command contract. |
+| Workspace mutation browser tests | PASS | 9 cases, including four new Windows wire-path scenarios; native IO is mocked. |
+| Desktop TypeScript / ESLint | PASS | Existing rules unchanged. |
+| Final-SHA Windows execution | PENDING | Must query the follow-up branch run after push; baseline Windows runtime failed. |
+
+The production frontend build retains its pre-existing large-chunk warning.
+No new performance, installed-app or provider-write acceptance is claimed here.
+
 **NOT RUN:** installed-app open/edit/save/close/reopen/quit smoke; actual remote
 provider writes; native Windows GUI/permissions acceptance; physical iPhone/IME/
 trackpad; new DMG; ASR accuracy/endurance. Native CUA is unavailable in this

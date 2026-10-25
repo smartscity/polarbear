@@ -39,6 +39,24 @@ cargo test --no-fail-fast
 node apps/desktop/scripts/architecture-graph.mjs
 ```
 
+Before pushing native changes from macOS, also run the actual Windows-target
+compile/lint regression, not just host Clippy:
+
+```sh
+npm --workspace apps/desktop run check:native:windows
+```
+
+This builds frontend assets needed by `custom-protocol`, then checks Windows
+production and test configurations with all features and warnings denied. It
+requires the installed `x86_64-pc-windows-msvc` Rust target, cargo-xwin, LLVM tools
+on PATH, and the Windows SDK/CRT cache managed by cargo-xwin. Missing prerequisites
+or any compile failure block the local check; do not silently skip the target or
+fall back to macOS. On Windows itself, use the native Clippy/test commands above.
+Cross-compilation catches target-only imports and type errors, but does not run
+Windows tests or prove WebView2, dialogs, permissions, or GUI behavior. Those
+still need the Windows CI/runtime acceptance. Reproduce an old target-only
+failure in an isolated checkout before claiming that the new check prevents it.
+
 Run only one Desktop Playwright invocation at a time: invocations share the
 server port and output directory. The iPhone workflow adds its own checks.
 Production Rust denies `unwrap`/`expect`; fixture-only allowances are scoped to
