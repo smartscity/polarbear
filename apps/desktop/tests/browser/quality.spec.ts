@@ -31,6 +31,28 @@ async function setSource(page: Page, text: string, mode: "live" | "source" | "pr
   if (mode !== "preview") await expect.poll(() => page.evaluate(() => (window as unknown as { __quality: { source: () => string } }).__quality.source())).toBe(text);
 }
 
+test("preview preserves literal code and renders nested diagrams without breaking Markdown structure", async ({ page }) => {
+  await initialize(page);
+  await setSource(page, "# Boundaries\n\n```text\n![private](private.png)\n```\n\n`![literal](code.png)`\n\n> - Diagram\n>\n>   ~~~mermaid\n>   graph LR\n>   A-->B\n>   ~~~\n\n| Image | Text |\n| --- | --- |\n| ![local](assets/a.png) | after |\n", "preview");
+  await expect(page.locator(".markdown-preview pre code.language-text")).toHaveText("![private](private.png)\n");
+  await expect(page.locator(".markdown-preview blockquote li svg").first()).toBeVisible();
+  await expect(page.locator(".markdown-preview table tbody tr td").first()).toContainText("assets/a.png");
+  await expect(page.locator(".markdown-preview .markdown-image-card")).toHaveCount(1);
+  await setSource(page, "Replaced document.", "preview");
+  await expect(page.locator(".markdown-preview [data-preview-resource]")).toHaveCount(0);
+  await expect(page.locator(".markdown-preview")).toHaveText("Replaced document.");
+});
+
+test("keeps an inline image viewer outside paragraph layout and closes it without reopening", async ({ page }) => {
+  await initialize(page);
+  await setSource(page, "Before ![pixel](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1cAAAAASUVORK5CYII=) after", "preview");
+  await page.locator(".markdown-image-card img").click();
+  await expect(page.locator("body > .image-viewer-overlay")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.locator(".image-viewer-overlay")).toHaveCount(0);
+  await expect(page.locator(".markdown-preview p")).toContainText("after");
+});
+
 async function paste(page: Page, text: string) {
   await page.locator(".cm-content").evaluate((element, text) => {
     const data = new DataTransfer(); data.setData("text/plain", text);

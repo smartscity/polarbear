@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   resolveMarkdownAsset,
   type ResolveMarkdownAssetResponse
@@ -15,6 +16,7 @@ type MarkdownImageProps = {
   title?: string;
   workspaceRoot: string;
   onDelete?: (markdown: string) => void;
+  inline?: boolean;
 };
 
 type ImageState =
@@ -29,9 +31,12 @@ export function MarkdownImage({
   src,
   title,
   workspaceRoot,
-  onDelete
+  onDelete,
+  inline = false,
 }: MarkdownImageProps) {
   const { t } = useI18n();
+  const Container = inline ? "span" : "figure";
+  const Caption = inline ? "span" : "figcaption";
   const [imageState, setImageState] = useState<ImageState>({ status: "loading" });
   const [isSelected, setIsSelected] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -104,23 +109,23 @@ export function MarkdownImage({
 
   if (imageState.status === "loading") {
     return (
-      <figure className="markdown-image-card markdown-image-loading">
+      <Container className="markdown-image-card markdown-image-loading">
         <span>{t("diagram.imageLoading", { source: src })}</span>
-      </figure>
+      </Container>
     );
   }
 
   if (imageState.status === "error") {
     return (
-      <figure className="markdown-image-card markdown-image-error">
+      <Container className="markdown-image-card markdown-image-error">
         <strong>{imageState.message}</strong>
         <code>{src}</code>
-      </figure>
+      </Container>
     );
   }
 
   return (
-    <figure
+    <Container
       className={`markdown-image-card ${isSelected ? "selected" : ""}`}
       tabIndex={onDelete ? 0 : undefined}
       onBlur={() => setIsSelected(false)}
@@ -152,7 +157,7 @@ export function MarkdownImage({
       }}
     >
       <img src={imageState.src} alt={alt} title={title} />
-      {alt ? <figcaption>{alt}</figcaption> : null}
+      {alt ? <Caption className="markdown-image-caption">{alt}</Caption> : null}
       {onDelete ? (
         <button
           type="button"
@@ -162,15 +167,15 @@ export function MarkdownImage({
           {t("image.deleteReference")}
         </button>
       ) : null}
-      {isViewerOpen ? (
+      {isViewerOpen ? createPortal(
         <ImageViewer
           alt={alt}
           src={imageState.src}
           title={title}
           onClose={() => setIsViewerOpen(false)}
-        />
+        />, document.body
       ) : null}
-    </figure>
+    </Container>
   );
 }
 

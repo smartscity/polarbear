@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import MarkdownIt from "markdown-it";
 import { MarkdownImage } from "./MarkdownImage";
 import { MermaidBlock } from "../../diagram/MermaidBlock";
 import { PlantUmlBlock } from "../../diagram/PlantUmlBlock";
-import { splitMarkdownIntoSegments } from "../../preview/splitMarkdownIntoSegments";
+import { splitMarkdownIntoSegments, type MarkdownSegment } from "../../preview/splitMarkdownIntoSegments";
 import { useI18n, type Translate } from "../../../shared/i18n/I18nProvider";
 import { copyRichMarkdownDocument, isEntirePreviewSelected, prepareRichMarkdownClipboard } from "../richMarkdownClipboard";
 
@@ -89,9 +90,20 @@ export function MarkdownPreview({
   );
 
   const segments = useMemo(
-    () => splitMarkdownIntoSegments(markdownContent),
-    [markdownContent]
+    () => splitMarkdownIntoSegments(markdownContent, markdownRenderer),
+    [markdownContent, markdownRenderer]
   );
+
+  const [slots, setSlots] = useState<{ segments: MarkdownSegment[]; targets: Map<string, Element> } | null>(null);
+  const html = useMemo(() => ({ __html: segments.filter((part) => part.type === "html").map((part) => part.content).join("") }), [segments]);
+  useLayoutEffect(() => {
+    const targets = new Map<string, Element>();
+    surfaceRef.current?.querySelectorAll("[data-preview-resource]").forEach((element) => {
+      const id = element.getAttribute("data-preview-resource");
+      if (id) targets.set(id, element);
+    });
+    setSlots({ segments, targets });
+  }, [segments]);
 
   return (
     <section className="preview-pane">
@@ -106,50 +118,18 @@ export function MarkdownPreview({
           className="markdown-preview-surface"
           data-editor-document-surface="true"
         >
-          {segments.map((segment, index) => {
-            if (segment.type === "mermaid") {
-              return (
-                <MermaidBlock
-                  key={segment.id}
-                  source={segment.content}
-                  diagramId={segment.id}
-                />
-              );
-            }
-
-            if (segment.type === "plantuml") {
-              return (
-                <PlantUmlBlock
-                  key={segment.id}
-                  diagramId={segment.id}
-                  source={segment.content}
-                />
-              );
-            }
-
-            if (segment.type === "image") {
-              return (
-                <MarkdownImage
-                  activeFileId={activeFileId}
-                  alt={segment.alt}
-                  key={segment.id}
-                  markdown={segment.content}
-                  src={segment.src}
-                  title={segment.title}
-                  workspaceRoot={workspaceRoot}
-                />
-              );
-            }
-
-            return (
-              <div
-                key={`markdown-${index}`}
-                className="markdown-preview-segment"
-                dangerouslySetInnerHTML={{
-                  __html: markdownRenderer.render(segment.content)
-                }}
-              />
-            );
+          <div className="markdown-preview-segment" dangerouslySetInnerHTML={html} />
+          {slots?.segments === segments && segments.map((segment) => {
+            if (segment.type === "html") return null;
+            const target = slots.targets.get(segment.id);
+            if (!target) return null;
+            const content = segment.type === "mermaid"
+              ? <MermaidBlock source={segment.content} diagramId={segment.id} />
+              : segment.type === "plantuml"
+                ? <PlantUmlBlock source={segment.content} diagramId={segment.id} />
+                : <MarkdownImage inline activeFileId={activeFileId} alt={segment.alt}
+                    markdown={segment.content} src={segment.src} title={segment.title} workspaceRoot={workspaceRoot} />;
+            return createPortal(content, target, segment.id);
           })}
         </div>
       </article>
