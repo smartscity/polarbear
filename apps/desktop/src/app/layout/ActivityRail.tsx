@@ -1,3 +1,7 @@
+import { MessageSquare } from "lucide-react";
+import { PRODUCT_CONFIG } from "../../shared/config/productConfig";
+import { openExternalUrl } from "../../shared/tauri/openExternalUrl";
+
 export type AppSurface = "workspace" | "context";
 
 type ActivityRailProps = {
@@ -5,6 +9,7 @@ type ActivityRailProps = {
   onSelect: (surface: AppSurface) => void;
   workspaceLabel: string;
   contextLabel: string;
+  feedbackLabel: string;
 };
 
 export function ActivityRail({
@@ -12,6 +17,7 @@ export function ActivityRail({
   onSelect,
   workspaceLabel,
   contextLabel,
+  feedbackLabel,
 }: ActivityRailProps) {
   return (
     <nav className="activity-rail" aria-label={workspaceLabel}>
@@ -34,6 +40,15 @@ export function ActivityRail({
         onClick={() => onSelect("context")}
       >
         <ContextIcon />
+      </button>
+      <button
+        type="button"
+        className="activity-rail-feedback"
+        aria-label={feedbackLabel}
+        title={feedbackLabel}
+        onClick={() => void openExternalUrl(PRODUCT_CONFIG.issuesUrl)}
+      >
+        <MessageSquare aria-hidden="true" />
       </button>
     </nav>
   );

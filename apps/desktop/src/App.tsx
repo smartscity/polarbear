@@ -791,6 +791,7 @@ export function App() {
               activeSurface={activeSurface}
               contextLabel={t("context.surface")}
               workspaceLabel={t("context.workspace")}
+              feedbackLabel={t("navigation.feedback")}
               onSelect={(surface) => executeCommand(surface === "workspace" ? "surface.workspace" : "surface.context")}
             />
             {activeSurface === "workspace" ? <AppShell

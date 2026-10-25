@@ -1,5 +1,34 @@
 # Engineering Verification
 
+## Feedback Entry: 2026-10-25
+
+Baseline: `fb174d67a80704522b9c81e9908880dfed73b511` on `main`.
+This batch completes the previously uncommitted Feedback UI. The activity rail
+exposes a localized, keyboard-accessible GitHub Issues button on both surfaces.
+It uses the existing external-link adapter, product URL configuration and Lucide
+icon library. Opening is explicit; no document content is attached or uploaded.
+Native failures use the existing localized dialog without navigating the editor.
+
+Three new browser regressions cover keyboard activation, both surfaces, dirty
+draft retention, live locale changes, native launch rejection, safe browser target
+options, and narrow light/dark layouts. The initial run passed two cases and exposed
+a missing native event cleanup hook in the test fixture. The fixture now provides
+the Tauri hook; the zero-unhandled-error assertion was retained.
+
+| Local check | Result |
+| --- | --- |
+| Feedback Chromium / WebKit | PASS: 3 cases each; narrow screenshots visually inspected. |
+| Desktop typecheck / ESLint | PASS. |
+| Desktop unit / Node tests | PASS: 361 tests in 66 files, plus 40 script tests. |
+| Production frontend build | PASS; existing large-chunk warning remains. |
+
+The browser tests stub native launch/dialog IPC and browser navigation. They do
+not certify an installed application's OS browser launch or GitHub availability.
+Native suites and the full browser suite were not rerun for this frontend-only
+entry. Hosted CI remains a separate exact-commit check. The existing `v0.10.10`
+tag is unchanged and does not include this batch. IDE-generated `.idea/vcs.xml`
+changes are unrelated and excluded.
+
 ## Response Bounds and Settings Merge: 2026-10-25
 
 Baseline: `f68680d37f4f470ffdb6b641cb4a6fed87fc0217`, branch

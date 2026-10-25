@@ -41,6 +41,10 @@
   background: var(--color-hover-background, #f0f2f5);
 }
 
+.activity-rail-feedback {
+  margin-top: auto;
+}
+
 .activity-rail svg {
   width: 19px;
   height: 19px;
