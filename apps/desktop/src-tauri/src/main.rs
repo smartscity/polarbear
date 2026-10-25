@@ -536,6 +536,8 @@ fn read_markdown_document(path: &Path) -> Result<MarkdownDocumentDto, String> {
 }
 
 #[cfg(test)]
+mod engineering_performance;
+#[cfg(test)]
 mod save_regression_tests;
 
 #[tauri::command]

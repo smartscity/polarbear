@@ -18,9 +18,25 @@ The fixed evaluation contract is in [scorecard](scorecard.md#fixed-acceptance-co
   SHAs and may replace remote work. Downloads read mutable branch content.
 - **P1, migrated with rollback coverage:** sync digests previously encoded the
   entire content; excluded directories are traversed before filtering files.
-- **P1, confirmed by inspection, remediation pending:** preview image regex runs
-  inside ordinary code fences. Fixed-grid sidebars have no shared resize owner
-  or persisted width preferences.
+- **P1, reproduced and locally remediated:** preview image regex ran inside
+  ordinary/long/tilde fences and inline code. Parser-owned token rendering now
+  preserves quote/list/table ancestry and supplies explicit React resource slots.
+- **P1, implemented with browser regression:** fixed-grid sidebars had no shared
+  resize owner or persisted width preferences. Settings v5 and a single pointer
+  lifecycle now separate preferred/effective sizes, persist collapse state, and
+  retain editor identity/history. Tests also caught and fixed opposite-side growth
+  on release, stale settings resetting unsaved layout, and a one-pixel overflow.
+- **P1, bounded publication:** the new atomic sync batch is limited to 64 MiB
+  and 10,000 changes. The oversized-batch regression failed on the uncapped
+  coordinator before adding bounded native reads and pre-publication rejection.
+  Partial checkpoints retain acknowledged baselines but do not advertise a fully
+  synchronized remote head. Downloads and provider enumeration still need a
+  separate large-response streaming/size policy; no universal resource SLA is claimed.
+- **Security, fresh scan:** the original lock has 1 Critical, 10 High, 4 Moderate
+  and 1 Low advisory entries. Targeted compatible updates leave 2 Low entries
+  (one KaTeX advisory and its Mermaid parent), with a scoped, expiring exception
+  documented in verification. Cargo advisory scanning is BLOCKED by tool download
+  failure, not treated as a clean Rust dependency report.
 
 The first three findings have targeted green browser regressions. Repository
 sync now uses frozen snapshots, conditional publication and conditional local IO.

@@ -1,5 +1,42 @@
 # Refactoring Report
 
+## Preview and Workspace Layout: 2026-10-25
+
+The existing MarkdownIt renderer owns fence/image semantics. It emits one HTML
+document and typed resource slots; React portals mount Mermaid, PlantUML and image
+components into those slots without splitting their parent list/quote/table.
+Unchanged parser rules are restored in `finally`. The document generation owns
+portal targets; replacing Markdown disposes obsolete resources. The image viewer
+uses a body portal rather than inserting a block overlay inside a paragraph.
+Raw HTML remains disabled; SVG sanitization and PlantUML consent are unchanged.
+
+`App` composes `useLayoutPreferences`; `AppShell` composes `useWorkspaceResize`.
+`workspaceLayout` owns pure constraints, while shared settings own validated v5
+preferences. Pointer movement updates scoped CSS variables once per frame; one
+write occurs on release. Capture loss, Escape, blur, resize and disposal cancel.
+The opposite effective sidebar is held during a same-viewport resize, without
+overwriting its preferred size. Window changes recompute deterministic compression
+and right-before-left temporary hiding. Narrow navigation uses inert background
+content, a drawer, focus restoration and the existing localized controls.
+
+Migration accepts v1-v4, defaults missing layout fields, clamps corrupt widths,
+and preserves explicit v4 caption-translation consent. A failed layout write
+remains usable in memory; unrelated settings notifications do not resurrect the
+unchanged disk value. Cross-process concurrent settings merge remains a separate
+unverified contract. Reset Layout is one existing-registry command shared by
+Settings and the native View menu. No secondary command bus or settings store.
+
+The theme and original grid/tab/status/editor CSS are edited at their source.
+Fixed 260/224px tracks, forced 860px live-editor content and a duplicate dark-only
+status rule are removed. Reading width is 760px, independent from the center
+workspace width; high-frequency dragging does not replace the editor instance.
+
+Sync follow-up: an acknowledged partial checkpoint clears the complete-head
+marker so status cannot hide unfinished remote work. Local upload reads acquire
+the workspace lifecycle lease before path resolution and are bounded by the
+remaining 64 MiB batch budget; at most 10,000 changes are admitted. Exceeding the
+budget does not submit or blindly split an atomic provider commit.
+
 ## Conditional Sync Ownership: 2026-10-25
 
 `repository/sync_plan` owns pure three-way comparison including deletion;

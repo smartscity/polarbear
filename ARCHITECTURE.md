@@ -1,5 +1,20 @@
 # Polarbear Architecture
 
+## Workspace Layout and Preview Ownership
+
+Desktop layout preferences live in the existing versioned user settings (v5).
+The App-level preference hook commits user intent; the shell-level resize hook
+owns temporary pointer/RAF/capture state and effective sizes. Pure constraints
+preserve center space, compress sides, then temporarily hide right before left.
+Only user actions persist dimensions. Editor instances, document revisions and
+undo history do not belong to layout. Reset uses `view.resetLayout` in the existing
+Command Registry, Settings and native menu.
+
+Preview resource boundaries come from MarkdownIt tokens, not a second image/fence
+regex. One rendered HTML tree retains list, quote and table structure; generation-
+owned React portals render resource slots. Existing diagram queues, sanitized SVG,
+asset resolution and explicit PlantUML network consent remain authoritative.
+
 Polarbear is a local-first Markdown editor built with Rust, Tauri, and TypeScript. The current desktop release targets are macOS and Windows. An isolated, experimental iPhone reader lives in `apps/ios`; it is not a mobile port of the desktop editor or a published App Store application.
 
 For the release verification baseline and remaining acceptance limits, see

@@ -1,5 +1,212 @@
 # Engineering Verification
 
+## Engineering and Workspace UI Follow-up: 2026-10-25
+
+This section supersedes earlier stage counts, not their historical results.
+Baseline: `dc5e11e3c78283b55f6b004d73df8f4df2883c98`. The implementation is
+the commit containing this section on `codex/engineering-workspace-quality`;
+hosted execution is checked separately against the pushed SHA.
+Environment: Intel macOS 26.5.1, Node 26.1.0, Rust 1.96.0, Chromium supplied by
+the installed Playwright. Pre-existing Feedback UI edits are excluded from commits.
+
+### Behavioral Regressions and Ownership
+
+- Five parser assertions failed against old production: images inside ordinary
+  fences/inline code and nested fenced resources did not retain Markdown structure.
+  The shared markdown-it render rules now determine resource boundaries; portals
+  occupy parser-produced slots without re-parsing strings with an image regex.
+- The compressed opposite sidebar jumped from 180 to 280 px after releasing the
+  other separator. The failing browser assertion now passes with a transient
+  effective-width hold, without overwriting either preferred width.
+- A denied localStorage write followed by an unrelated settings event reset the
+  displayed sidebar from 304 to 240 px. The failing assertion now passes: only an
+  actual persisted layout change replaces the local usable preference.
+- An oversized publication previously succeeded in the real coordinator fixture.
+  The new assertion failed before the fix, then passed with a 64 MiB/10,000-change
+  atomic batch limit and bounded production reads. No partial batch is published
+  to evade the atomic commit contract.
+- Partial download checkpoints no longer mark the entire remote head synchronized.
+  The coordinator test requires incomplete/complete checkpoints in that order.
+  Upload reads also acquire workspace path-lifecycle admission before resolution.
+- Inline image dialogs render through the existing body overlay, not a block
+  element nested inside a Markdown paragraph. A real browser test opens/closes
+  the viewer and checks that following paragraph content remains intact.
+
+The first complete browser attempt had 100 passing cases and one failed new
+selector assertion matching two legitimate code blocks. The selector was narrowed
+to the intended text fence; the content assertion was retained. Later tests add
+four-state sidebars, mixed resources and inline image portal acceptance. Test
+fixture corrections are not counted as repaired product defects. The final mixed-
+resource layout fixture additionally uses the existing 128 px application image
+and verifies its decoded width. Two intermediate selector attempts targeted a
+nonexistent Mermaid class and then included toolbar SVG icons; the final selector
+requires the actual rendered flowchart. All eight layout cases passed afterwards.
+
+### Dependency Audit
+
+Fresh reports, checked 2026-10-25, are retained under
+[evidence/2026-10-25](evidence/2026-10-25). Full baseline npm audit:
+1 Critical, 10 High, 4 Moderate, 1 Low. Current full and production audits:
+0 Critical/High/Moderate, 2 Low (one underlying KaTeX advisory and its Mermaid
+parent). Audit exits nonzero for the remaining Low findings. Only existing
+compatible ranges were updated; no `audit fix --force` or major framework
+migration was used. Raw reports contain installed paths, ranges and advisory
+details; package.json grants/ranges are unchanged.
+
+| Package / locked version (before -> after) | Baseline severity | Advisory | Scope, trigger and disposition |
+| --- | --- | --- | --- |
+| @vitest/mocker 4.1.10 -> 4.1.12 | moderate | [GHSA-82fw-gwwq-j7x9](https://github.com/advisories/GHSA-82fw-gwwq-j7x9), [GHSA-qxg6-89mg-rqv8](https://github.com/advisories/GHSA-qxg6-89mg-rqv8) | Vitest -> mocker; test server. Untrusted mock registrations can traverse files or inject code; upgraded, not exempted as dev-only. |
+| baseline-browser-mapping 2.10.34 -> 2.11.32 | moderate | [GHSA-w5vr-8v7q-w6rv](https://github.com/advisories/GHSA-w5vr-8v7q-w6rv) | Vite -> Babel -> browserslist; build. Invalid query input can terminate the process; upgraded. |
+| brace-expansion 5.0.7 -> 5.0.12 | high | [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg), [GHSA-rgw5-rvv9-x895](https://github.com/advisories/GHSA-rgw5-rvv9-x895), [GHSA-q2hr-2g5m-vwhr](https://github.com/advisories/GHSA-q2hr-2g5m-vwhr), [GHSA-qhr7-859c-m2p7](https://github.com/advisories/GHSA-qhr7-859c-m2p7), [GHSA-6j4f-fj2g-mc7p](https://github.com/advisories/GHSA-6j4f-fj2g-mc7p) | ESLint -> minimatch; tooling. Crafted glob expansion can exhaust CPU/memory/stack; upgraded. |
+| browserslist 4.28.2 -> 4.29.4 | high | [GHSA-c83g-rgw3-j3cx](https://github.com/advisories/GHSA-c83g-rgw3-j3cx), [GHSA-73wf-gq98-2v4g](https://github.com/advisories/GHSA-73wf-gq98-2v4g) | Vite -> Babel; build. Untrusted stats/query sets can write prototypes or grow caches; upgraded. |
+| dompurify 3.4.12 -> 3.4.17 | critical | [GHSA-55q2-fjhq-7xh7](https://github.com/advisories/GHSA-55q2-fjhq-7xh7), [GHSA-6688-9rhm-gjv2](https://github.com/advisories/GHSA-6688-9rhm-gjv2), [GHSA-cg2g-xh64-v4q7](https://github.com/advisories/GHSA-cg2g-xh64-v4q7), [GHSA-mrv2-3pqr-j5jr](https://github.com/advisories/GHSA-mrv2-3pqr-j5jr), [GHSA-c6gr-qvv4-5v3f](https://github.com/advisories/GHSA-c6gr-qvv4-5v3f) | Desktop/iOS and Mermaid; production sanitizer. Reported IN_PLACE/hooks/template/XML modes are not all enabled here, but hostile SVG/HTML is reachable; upgraded and preview/clipboard regressions rerun. |
+| katex 0.16.47 -> 0.16.47 | low | [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7) | Mermaid -> KaTeX; production math labels. Requires existing prototype pollution; scoped exception below, not declared unreachable. |
+| linkify-it 5.0.1 -> 5.0.2 | high | [GHSA-v245-v573-v5vm](https://github.com/advisories/GHSA-v245-v573-v5vm) | markdown-it -> linkify-it; production text. Crafted mailto text can monopolize parsing; upgraded. |
+| markdown-it 14.2.0 -> 14.3.3 | high | [GHSA-r7fv-28h4-cvq7](https://github.com/advisories/GHSA-r7fv-28h4-cvq7), [GHSA-vfgh-jcmw-g37q](https://github.com/advisories/GHSA-vfgh-jcmw-g37q), [GHSA-gfr2-rv44-r23c](https://github.com/advisories/GHSA-gfr2-rv44-r23c), [GHSA-253c-mchw-3w2r](https://github.com/advisories/GHSA-253c-mchw-3w2r) | Desktop/reader-core; production Markdown. Reference definitions, linkification and quotes are reachable; raw HTML is disabled in preview but does not exclude other DoS paths; upgraded. |
+| mermaid 11.15.0 -> 11.17.2 | moderate | [GHSA-c4c3-pg64-4m4v](https://github.com/advisories/GHSA-c4c3-pg64-4m4v), [GHSA-6x64-9x62-f2gx](https://github.com/advisories/GHSA-6x64-9x62-f2gx), [GHSA-3rrr-jr9j-h3q3](https://github.com/advisories/GHSA-3rrr-jr9j-h3q3), [GHSA-2v8p-3f2j-5mp7](https://github.com/advisories/GHSA-2v8p-3f2j-5mp7), [GHSA-rhh3-jpg6-66xh](https://github.com/advisories/GHSA-rhh3-jpg6-66xh), katex | Desktop/iOS; production diagrams. Configuration/architecture prototype pollution and chart loops are relevant to untrusted diagrams; upgraded within 11.x. KaTeX Low remains. |
+| nanoid 3.3.12 -> 3.3.20 | high | [GHSA-28wg-ghj8-5hjv](https://github.com/advisories/GHSA-28wg-ghj8-5hjv), [GHSA-2v37-7h3g-55p8](https://github.com/advisories/GHSA-2v37-7h3g-55p8) | Vite -> PostCSS -> nanoid; build. Invalid custom sizes can loop; no direct product generator API, still upgraded. |
+| postcss 8.5.15 -> 8.5.31 | high | [GHSA-fxqj-rqcc-2cmp](https://github.com/advisories/GHSA-fxqj-rqcc-2cmp), [GHSA-r28c-9q8g-f849](https://github.com/advisories/GHSA-r28c-9q8g-f849) | Vite -> PostCSS; build. Untrusted CSS sourceMappingURL can disclose files; upgraded. |
+| rollup 4.52.5 -> 4.65.0 | high | [GHSA-mw96-cpmx-2vgc](https://github.com/advisories/GHSA-mw96-cpmx-2vgc) | Desktop/Vite -> Rollup; build. Crafted paths can write outside output; upgraded and production builds rerun. |
+| source-map-js 1.2.1 -> 1.2.2 | high | [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) | PostCSS -> source-map-js; build. Crafted indexed offsets can block the event loop; upgraded. |
+| vite 6.4.3 -> 6.4.5 | high | [GHSA-698v-4r3x-3vcv](https://github.com/advisories/GHSA-698v-4r3x-3vcv), [GHSA-r825-w8mm-5pxw](https://github.com/advisories/GHSA-r825-w8mm-5pxw), [GHSA-587h-7wmj-h5pm](https://github.com/advisories/GHSA-587h-7wmj-h5pm), [GHSA-9jrq-w75r-8gcw](https://github.com/advisories/GHSA-9jrq-w75r-8gcw), [GHSA-rq7h-c2jc-7f22](https://github.com/advisories/GHSA-rq7h-c2jc-7f22) | Desktop/iOS dev server and build. Host/path middleware and editor launch attacks affect local files and tooling credentials; upgraded, dev use is not a waiver. |
+| vitest 4.1.10 -> 4.1.12 | moderate | @vitest/mocker, [GHSA-82fw-gwwq-j7x9](https://github.com/advisories/GHSA-82fw-gwwq-j7x9) | Desktop/iOS -> Vitest/mocker; tests. File disclosure via mock redirects; upgraded together with mocker. |
+| zod 4.4.3 -> 4.6.7 | high | [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) | ESLint React hooks -> Zod; tooling. Oversized constrained collections can exhaust memory; upgraded. |
+
+KaTeX exception: [upstream advisory](https://github.com/KaTeX/KaTeX/security/advisories/GHSA-238p-pmpm-9mq7)
+requires pre-existing prototype pollution to bypass trust. Mermaid remains strict
+and rendered SVG/HTML is sanitized before insertion. The affected library is not
+declared generally safe or unreachable. Maintainers must review by **2026-11-24**,
+or sooner on any new prototype-pollution finding, renderer configuration change
+or compatible upstream patch. Moving to Mermaid 12/KaTeX 0.18 is a separate
+compatibility change, not an untested forced upgrade.
+
+Rust advisory scan: **BLOCKED**. `cargo audit` was absent; a pinned/locked
+isolated installation failed repeatedly downloading cargo-audit 0.22.2 from
+static.crates.io with timeouts. Cargo.lock and Cargo package versions are unchanged.
+Successful Cargo tests
+and Clippy are not substitutes for a current RustSec scan.
+
+### Performance Evidence and Reproduction
+
+The browser runner is `apps/desktop/scripts/measure-editor.mjs ROOT OUTPUT LABEL`.
+The baseline was an isolated git archive of the baseline SHA with its original
+lockfile installed offline; production source was not modified. The final runner
+uses actual Editor/Preview components and browser/mock IPC, not installed Tauri.
+Only the test harness's localStorage document mirroring is disabled to avoid
+the 10 MiB fixture exceeding localStorage quota. Each workload has one warmup and
+five measured rounds. P95 below is the maximum of these five observations, not a
+statistically strong long-tail claim. CPU is Chromium task time, RSS is the summed
+browser process tree, and neither describes native application CPU/RSS.
+
+| Fixture | Initial baseline -> current P95 open / edit / preview, ms | Investigation |
+| --- | --- | --- |
+| 4 KiB ordinary text | 15.7 -> 15.1 / 30.3 -> 33.0 / 33.8 -> 33.5 | No threshold crossing. |
+| 1 MiB fenced text | 54.1 -> 36.9 / 126.2 -> 51.7 / 525.0 -> 261.8 | Variable host timings; no speedup claim. |
+| 10 MiB fenced text | 211.6 -> 242.2 / 247.3 -> 560.2 / 2753.3 -> 3322.9 | Threshold crossed; paired repetition below. |
+| Eight diagrams | 16.5 -> 16.4 / 33.2 -> 34.1 / 35.6 -> 37.6 | All-SVG readiness 522.6 -> 687.6 crossed threshold; repeated. |
+
+Paired repeat without competing heavy work: 10 MiB open 167.5 -> 173.1,
+edit 258.4 -> 250.7, preview 3196.4 -> 2087.6 ms; all-eight-diagram readiness
+505.2 -> 506.9 ms. No repeatable threshold regression was established, but
+10 MiB editing/preview remains visibly expensive and is not described as optimized.
+First-pair large-document peak observed RSS was 778728 -> 842012 KiB (below 15%);
+repeat was 946312 -> 829836 KiB. Closing the repeated large fixture released the
+browser tree to 136084/99388 KiB respectively. This is resource-return evidence,
+not proof of a flat stable RSS curve or two-hour leak freedom.
+
+Retained files: `editor-baseline-retry.json`, `editor-current.json`,
+`editor-baseline-repeat.json`, `editor-current-repeat.json`.
+The earlier `editor-baseline.json` is an incomplete harness-readiness failure,
+excluded from comparisons but not deleted. Initial reports' `source` field
+identified the runner checkout rather than the baseline root; labels/archive
+provenance identify the baseline. Repeat reports correct this with explicit
+source and lockfile fingerprints.
+
+Native observations use the same test-only instrumentation on both snapshots:
+`POLARBEAR_PERF_OUTPUT=<absolute-json> cargo test --workspace
+native_io_observations -- --ignored --exact
+engineering_performance::native_io_observations --nocapture`.
+Six rounds exercise actual atomic saves plus scan/hash of a document and attachment,
+with 2,000 excluded files. No network or SQLite timing is inferred. Debug results
+are retained as `native-baseline.json` and `native-current.json`: new digests
+consume exactly 148 bytes for two files, versus 10,938 / 2,796,224 / 27,962,050
+bytes at 4 KiB / 1 MiB / 10 MiB. The old encoding embeds whole content.
+Debug SHA-256 scan/hash is slower for large files. Optimized-build measurements
+(`native-baseline-release.json`, `native-current-release.json`) confirm the cost:
+
+| Two-file size | Save P95 baseline -> current, ms | Scan/hash P95 baseline -> current, ms |
+| --- | --- | --- |
+| 4 KiB each | 43.07 -> 42.07 | 15.58 -> 0.45 |
+| 1 MiB each | 47.65 -> 45.48 | 16.70 -> 12.86 |
+| 10 MiB each | 88.48 -> 91.50 | 44.85 -> 194.99 |
+
+The 10 MiB scan crosses the investigation threshold. The old baseline performs
+reversible Base64 encoding, not a strong content hash; removing excluded-directory
+descent helps smaller workspaces but does not offset hashing larger attachments.
+An experiment reused already-locked ring 0.17.14 for identical SHA-256 output.
+Boundary/reference tests passed; observed large scan P95 was 151.85 ms and 105.27 ms
+on repeat, still above baseline and inconsistent with a defensible general
+improvement. The added dependency edge and backend change were **discarded**.
+The experiment's raw files retain `ring` in their names and are not final-source
+evidence. Its repeat overlapped the tail of a native compilation and had unusual
+filesystem latency; it is not a controlled speedup claim.
+
+**Residual regression:** large-attachment scan/hash CPU latency is higher. It runs
+on the existing blocking worker, with 64 KiB streaming storage and no unbounded
+retry or weakened revision checks. Further optimization requires a representative
+optimized CPU profile; metadata-only cache reuse would miss same-size/same-mtime
+edits and is not accepted. Correctness and fixed storage are not speed claims.
+
+### Local Acceptance Matrix
+
+Commands run from the repository root unless stated otherwise. Each row describes
+the current implementation, not an installed/released version. Raw performance
+and dependency reports plus representative screenshots are retained above.
+
+| Check | Result | Command / evidence scope |
+| --- | --- | --- |
+| Desktop typecheck / ESLint | PASS | `npm --workspace apps/desktop run typecheck` / `run lint`. |
+| Desktop unit / architecture / fixture tests | PASS | `npm --workspace apps/desktop test`: 352 Vitest tests in 65 files and 39 Node tests; zero runtime import cycles or forbidden reverse edges. |
+| Desktop browser | PASS | `npm --workspace apps/desktop run test:ui`: 106 cases; eight layout cases rerun after the final real-image fixture/flowchart selector corrections. Actual React/CodeMirror, controlled IPC. |
+| Native filesystem / controlled HTTP | PASS | `cargo test --workspace --offline`: 115 passed, four ignored entries (benchmark, real Engine integration and subprocess helpers); subprocess parents invoke their helpers. Benchmark executed separately. |
+| Native formatting / lint | PASS | `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --all-features --offline -- -D warnings`. |
+| Memory contract | PASS | `npm --workspace apps/desktop run memory-contract:check`. No direct Memory storage access introduced. |
+| Native clipboard | PASS | `npm --workspace apps/desktop run test:native-clipboard -- test-results/real-mermaid-clipboard.json`: AppKit receives all three actual PNG attachments, text order, Unicode, alternate formats and stale-copy handling. Not Word/Lark acceptance. |
+| Offline translation | PASS | `npm --workspace apps/desktop run test:offline-translation -- --webkit`: actual bundled sentence/paragraph inference and cancellation under production CSP, Chromium and WebKit. |
+| Desktop build | PASS | `npm --workspace apps/desktop run build`; App chunk 1789.71 kB, gzip 538.65 kB. Existing large-chunk warning retained; build duration under competing compilation is not a performance result. |
+| Affected iOS frontend | PASS | iOS `typecheck`, `lint`, `test` (39), `test:ui` (11), `build`. Not a physical iPhone run or iOS native build. |
+| Browser performance thresholds | PASS | Repeated matched fixtures did not reproduce initial threshold spikes; small sample and host variability remain explicit. No speedup claimed. |
+| Native scan/hash performance threshold | FAIL | Confirmed optimized 10 MiB attachment scan regression; raw data and rejected backend experiment retained. Correctness/security checks were not weakened. |
+| Full / production npm audit | FAIL | Command returns nonzero for two Low entries (one underlying scoped KaTeX advisory plus parent). Zero High/Critical/Moderate; all findings analyzed above. |
+| RustSec advisory scan | BLOCKED | Isolated cargo-audit installation could not download its package; no clean Rust risk claim. |
+| Hosted macOS / Windows CI | NOT RUN at record creation | Must query the exact final pushed SHA; local checks and YAML changes do not count as hosted execution. |
+| Installed Tauri / real provider / native Windows GUI | NOT RUN | Requires available GUI automation/manual acceptance and authorized disposable provider repository. |
+
+### Platform and Governance Boundaries
+
+Quality now runs native tests and all-target/all-feature Clippy on both macOS
+and Windows. Windows AppKit clipboard parity is not implied; that job remains
+macOS-only. Browser tests cover actual React/CodeMirror with controlled native
+responses. Native tests use real temporary filesystem operations and controlled
+HTTP provider servers, not authorized GitHub/GitLab account writes.
+
+**NOT RUN:** installed-app open/edit/save/close/reopen/quit smoke; actual remote
+provider writes; native Windows GUI/permissions acceptance; physical iPhone/IME/
+trackpad; new DMG; ASR accuracy/endurance. Native CUA is unavailable in this
+environment. No installation or user document was replaced for this audit.
+
+Read-only GitHub API inspection found main `protected:false`, required status
+enforcement off and repository rulesets `[]`. No permission change was made.
+Maintainer action: require Frontend quality, Rust format, Native tests on both
+matrix platforms, Desktop editor and clipboard, and affected iPhone Reader
+checks in the branch rule. Workflow existence alone is not enforcement.
+
+The existing MIT OR Apache-2.0 declaration now has both corresponding license
+texts. README no longer says contribution guidance/license texts are missing,
+or describes conditional GitHub GraphQL publication as REST-only.
+
+
+
 ## Conditional Sync Stage: 2026-10-25
 
 On the Intel/macOS toolchain below, `cargo test -p polarbear-desktop` passed

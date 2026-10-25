@@ -1,0 +1,167 @@
+{
+  "rows": [
+    {
+      "digestBytes": 10938,
+      "files": 2,
+      "round": 0,
+      "saveMs": 47.031229,
+      "scanAndHashMs": 15.353940999999999,
+      "size": 4096,
+      "warmup": true
+    },
+    {
+      "digestBytes": 10938,
+      "files": 2,
+      "round": 1,
+      "saveMs": 43.070826,
+      "scanAndHashMs": 15.338136,
+      "size": 4096,
+      "warmup": false
+    },
+    {
+      "digestBytes": 10938,
+      "files": 2,
+      "round": 2,
+      "saveMs": 42.26725,
+      "scanAndHashMs": 14.838481,
+      "size": 4096,
+      "warmup": false
+    },
+    {
+      "digestBytes": 10938,
+      "files": 2,
+      "round": 3,
+      "saveMs": 40.653625999999996,
+      "scanAndHashMs": 15.579343000000001,
+      "size": 4096,
+      "warmup": false
+    },
+    {
+      "digestBytes": 10938,
+      "files": 2,
+      "round": 4,
+      "saveMs": 41.813912,
+      "scanAndHashMs": 15.345723,
+      "size": 4096,
+      "warmup": false
+    },
+    {
+      "digestBytes": 10938,
+      "files": 2,
+      "round": 5,
+      "saveMs": 42.614456000000004,
+      "scanAndHashMs": 15.425701,
+      "size": 4096,
+      "warmup": false
+    },
+    {
+      "digestBytes": 2796224,
+      "files": 2,
+      "round": 0,
+      "saveMs": 50.751956,
+      "scanAndHashMs": 18.771341,
+      "size": 1048576,
+      "warmup": true
+    },
+    {
+      "digestBytes": 2796224,
+      "files": 2,
+      "round": 1,
+      "saveMs": 46.570268,
+      "scanAndHashMs": 15.770983,
+      "size": 1048576,
+      "warmup": false
+    },
+    {
+      "digestBytes": 2796224,
+      "files": 2,
+      "round": 2,
+      "saveMs": 45.394818,
+      "scanAndHashMs": 15.98343,
+      "size": 1048576,
+      "warmup": false
+    },
+    {
+      "digestBytes": 2796224,
+      "files": 2,
+      "round": 3,
+      "saveMs": 47.652756,
+      "scanAndHashMs": 16.328737,
+      "size": 1048576,
+      "warmup": false
+    },
+    {
+      "digestBytes": 2796224,
+      "files": 2,
+      "round": 4,
+      "saveMs": 45.906659000000005,
+      "scanAndHashMs": 16.43812,
+      "size": 1048576,
+      "warmup": false
+    },
+    {
+      "digestBytes": 2796224,
+      "files": 2,
+      "round": 5,
+      "saveMs": 47.616153000000004,
+      "scanAndHashMs": 16.704238999999998,
+      "size": 1048576,
+      "warmup": false
+    },
+    {
+      "digestBytes": 27962050,
+      "files": 2,
+      "round": 0,
+      "saveMs": 93.81423799999999,
+      "scanAndHashMs": 61.104348,
+      "size": 10485760,
+      "warmup": true
+    },
+    {
+      "digestBytes": 27962050,
+      "files": 2,
+      "round": 1,
+      "saveMs": 87.728949,
+      "scanAndHashMs": 44.84901,
+      "size": 10485760,
+      "warmup": false
+    },
+    {
+      "digestBytes": 27962050,
+      "files": 2,
+      "round": 2,
+      "saveMs": 88.475259,
+      "scanAndHashMs": 43.624639,
+      "size": 10485760,
+      "warmup": false
+    },
+    {
+      "digestBytes": 27962050,
+      "files": 2,
+      "round": 3,
+      "saveMs": 83.635695,
+      "scanAndHashMs": 44.619473,
+      "size": 10485760,
+      "warmup": false
+    },
+    {
+      "digestBytes": 27962050,
+      "files": 2,
+      "round": 4,
+      "saveMs": 85.19032,
+      "scanAndHashMs": 44.555926,
+      "size": 10485760,
+      "warmup": false
+    },
+    {
+      "digestBytes": 27962050,
+      "files": 2,
+      "round": 5,
+      "saveMs": 87.01419200000001,
+      "scanAndHashMs": 43.948775000000005,
+      "size": 10485760,
+      "warmup": false
+    }
+  ],
+  "scope": "Temporary files; real save and scan/digest. No network, UI or SQLite cache timing."
+}

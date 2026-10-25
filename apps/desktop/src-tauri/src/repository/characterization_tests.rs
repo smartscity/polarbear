@@ -108,6 +108,19 @@ fn sync_digest_is_versioned_fixed_size_and_does_not_embed_document_content() {
 }
 
 #[test]
+fn streamed_digests_retain_the_sha256_contract_at_block_boundaries() {
+    use sha2::{Digest, Sha256};
+    for size in [0, 1, 55, 56, 63, 64, 65, 65_535, 65_536, 65_537, 1_048_576] {
+        let bytes = (0..size)
+            .map(|index| (index % 251) as u8)
+            .collect::<Vec<_>>();
+        let expected = format!("sha256:v1:{:x}", Sha256::digest(&bytes));
+        assert_eq!(content_digest(&bytes), expected);
+        assert_eq!(super::policy::stream_digest(&bytes[..]).unwrap(), expected);
+    }
+}
+
+#[test]
 fn legacy_baseline_migration_preserves_original_bytes_and_outbox() {
     let root = std::env::temp_dir().join(format!("polarbear-digest-{}", uuid::Uuid::new_v4()));
     fs::create_dir_all(&root).unwrap();

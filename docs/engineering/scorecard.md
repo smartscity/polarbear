@@ -1,5 +1,40 @@
 # Engineering Quality Scorecard
 
+## Current Assessment: 2026-10-25
+
+The fixed six-dimension contract below remains unchanged. These are evidence-
+bounded engineering judgments, not a certification or a conversion from test
+counts. Baseline is `dc5e11e3`; final refers to the commit containing this record.
+Hosted CI is verified separately against that exact pushed SHA.
+
+| Dimension | Weight | Baseline | Current | Evidence and residual deduction |
+| --- | ---: | ---: | ---: | --- |
+| Architecture and module boundaries | 20% | 8.2 | 8.8 | Shared document completion, pure sync plan/effect boundary and parser-owned resource slots; layout preferences/effective geometry have separate owners. Session/zoom remain substantial and whole-app runtime dependency tracing is not complete. |
+| Maintainability | 20% | 8.0 | 8.8 | Duplicate save paths and conflicting preview scanners replaced; typed layout migration and source CSS cleanup. No parallel store/framework. Settings concurrency and further session decomposition remain bounded future work. |
+| Correctness and data safety | 25% | 6.5 | 8.8 | Behavioral red/green save/quit/parser/layout/batch regressions, native conditional writes, frozen provider HTTP tests and transactional digest migration. Actual provider account writes and installed-app quit/upgrade acceptance are NOT RUN. |
+| Tests and CI | 20% | 7.0 | 8.4 | Unit/native/browser/translation/clipboard/iOS checks and reproducible baseline/current probes; Windows native matrix added. Native GUI/platform evidence and enforced branch checks remain missing. Workflow configuration is not passing hosted evidence. |
+| Security and dependencies | 10% | 6.5 | 8.2 | Fresh full/production npm reports, compatible upgrades remove severe findings, bounded publication; one underlying Low advisory has scoped expiry. Fresh RustSec scan is BLOCKED, not clean. |
+| Documentation and open-source governance | 5% | 7.5 | 9.0 | Existing records updated, factual README and existing dual-license texts completed, retained raw observations and explicit boundaries. Repository-rule changes require maintainer action. |
+
+Baseline weighted sum: `8.2*.20 + 8.0*.20 + 6.5*.25 + 7.0*.20 + 6.5*.10 + 7.5*.05 = 7.29` (rounded).
+Current weighted sum: `8.8*.20 + 8.8*.20 + 8.8*.25 + 8.4*.20 + 8.2*.10 + 9.0*.05 = 8.67`.
+
+**The >9 acceptance target is not claimed.** Local repairs are substantive, but
+correctness is below 9 while native application and actual provider acceptance
+are missing. The Rust advisory scan and final-SHA hosted result are separate
+gates. No gate, test assertion or privacy rule was relaxed to obtain this score.
+Even passing hosted CI does not turn unexecuted GUI/provider checks into PASS.
+
+Minimum remaining evidence: a current RustSec scan; disposable authorized provider
+concurrency acceptance; installed macOS open/edit/save/close/reopen and quit-race
+smoke; native Windows matrix result and relevant GUI/permission acceptance.
+Performance repeats did not establish a repeatable browser threshold regression,
+but 10 MiB preview latency and the confirmed optimized large-attachment hashing
+regression remain explicit limitations. The alternative SHA-256 backend experiment
+was discarded because it did not establish a sufficient, stable improvement.
+See [verification](verification.md#engineering-and-workspace-ui-follow-up-2026-10-25)
+for commands, raw results, investigated failures and platform boundaries.
+
 ## Fixed Acceptance Contract: 2026-10-25
 
 Base: `dc5e11e3c78283b55f6b004d73df8f4df2883c98`. Branch:

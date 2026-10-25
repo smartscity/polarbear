@@ -1,0 +1,148 @@
+{
+  "label": "dc5e11e3",
+  "source": "bc43a75a40c68030b4154996634daa91514f4d4e",
+  "environment": {
+    "node": "v26.1.0",
+    "platform": "darwin",
+    "release": "25.5.0",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "browser": "153.0.8010.12"
+  },
+  "scope": "Production editor/preview in the browser harness; IPC is mocked. Fixture autosave is disabled, not native document persistence. RSS sums Chromium processes, not the Tauri app.",
+  "tolerance": {
+    "p95Relative": 0.1,
+    "p95AbsoluteMs": 20,
+    "stableRssRelative": 0.15
+  },
+  "rows": [
+    {
+      "fixture": "ordinary",
+      "round": 0,
+      "warmup": true,
+      "bytes": 3840,
+      "sha256": "b04e0b81eb6ac8173d8e48f1600bfff6d2e0eb44fdd00f8323b33f7fe4027ae0",
+      "openMs": 57,
+      "editMs": 31.09999999962747,
+      "previewMs": 34.200000000186265,
+      "rssKiB": 277124,
+      "jsHeapBytes": 13501804,
+      "taskSeconds": 0.114263,
+      "nodes": 522
+    },
+    {
+      "fixture": "ordinary",
+      "round": 1,
+      "warmup": false,
+      "bytes": 3840,
+      "sha256": "b04e0b81eb6ac8173d8e48f1600bfff6d2e0eb44fdd00f8323b33f7fe4027ae0",
+      "openMs": 10.299999999813735,
+      "editMs": 30.300000000745058,
+      "previewMs": 32.59999999962747,
+      "rssKiB": 278528,
+      "jsHeapBytes": 14253796,
+      "taskSeconds": 0.180775,
+      "nodes": 522
+    },
+    {
+      "fixture": "ordinary",
+      "round": 2,
+      "warmup": false,
+      "bytes": 3840,
+      "sha256": "b04e0b81eb6ac8173d8e48f1600bfff6d2e0eb44fdd00f8323b33f7fe4027ae0",
+      "openMs": 16.399999999441206,
+      "editMs": 33.5,
+      "previewMs": 32.40000000037253,
+      "rssKiB": 279708,
+      "jsHeapBytes": 14476644,
+      "taskSeconds": 0.247868,
+      "nodes": 522
+    },
+    {
+      "fixture": "ordinary",
+      "round": 3,
+      "warmup": false,
+      "bytes": 3840,
+      "sha256": "b04e0b81eb6ac8173d8e48f1600bfff6d2e0eb44fdd00f8323b33f7fe4027ae0",
+      "openMs": 10.099999999627471,
+      "editMs": 25.5,
+      "previewMs": 33.60000000055879,
+      "rssKiB": 280172,
+      "jsHeapBytes": 14546080,
+      "taskSeconds": 0.312082,
+      "nodes": 522
+    },
+    {
+      "fixture": "ordinary",
+      "round": 4,
+      "warmup": false,
+      "bytes": 3840,
+      "sha256": "b04e0b81eb6ac8173d8e48f1600bfff6d2e0eb44fdd00f8323b33f7fe4027ae0",
+      "openMs": 17.100000000558794,
+      "editMs": 32.59999999962747,
+      "previewMs": 34.299999999813735,
+      "rssKiB": 280464,
+      "jsHeapBytes": 14622704,
+      "taskSeconds": 0.380734,
+      "nodes": 522
+    },
+    {
+      "fixture": "ordinary",
+      "round": 5,
+      "warmup": false,
+      "bytes": 3840,
+      "sha256": "b04e0b81eb6ac8173d8e48f1600bfff6d2e0eb44fdd00f8323b33f7fe4027ae0",
+      "openMs": 15.199999999254942,
+      "editMs": 33.30000000074506,
+      "previewMs": 33.59999999962747,
+      "rssKiB": 280912,
+      "jsHeapBytes": 14664408,
+      "taskSeconds": 0.447257,
+      "nodes": 522
+    },
+    {
+      "fixture": "1MiB",
+      "round": 0,
+      "warmup": true,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 73.3999999994412,
+      "editMs": 38,
+      "previewMs": 217.40000000037253,
+      "rssKiB": 318328,
+      "jsHeapBytes": 16600024,
+      "taskSeconds": 0.402965,
+      "nodes": 56
+    },
+    {
+      "fixture": "1MiB",
+      "round": 1,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 26.299999999813735,
+      "editMs": 33.5,
+      "previewMs": 214.59999999962747,
+      "rssKiB": 328524,
+      "jsHeapBytes": 17406032,
+      "taskSeconds": 0.75836,
+      "nodes": 56
+    },
+    {
+      "fixture": "1MiB",
+      "round": 2,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 24.899999999441206,
+      "editMs": 31.800000000745058,
+      "previewMs": 193.69999999925494,
+      "rssKiB": 336352,
+      "jsHeapBytes": 17680172,
+      "taskSeconds": 1.086698,
+      "nodes": 56
+    }
+  ],
+  "errors": [
+    "Error: page.evaluate: Error: Source failed to open\n    at eval (eval at evaluate (:311:30), <anonymous>:5:40)\n    at async <anonymous>:337:30"
+  ]
+}
