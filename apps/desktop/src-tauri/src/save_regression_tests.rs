@@ -95,6 +95,185 @@ fn rename_waits_for_a_staged_save_and_stale_saves_cannot_recreate_the_old_path()
 }
 
 #[test]
+fn creation_does_not_create_parents_before_path_mutation_admission() {
+    for directory in [false, true] {
+        let workspace = Workspace::new();
+        let root = workspace.root().to_owned();
+        let lease = super::workspace_io::path_mutation().unwrap();
+        let (started_tx, started_rx) = mpsc::channel();
+        let operation = std::thread::spawn(move || {
+            started_tx.send(()).unwrap();
+            if directory {
+                super::create_workspace_directory(root, "new/folder".into())
+            } else {
+                super::create_markdown_file(root, "new/file.md".into())
+            }
+        });
+        started_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        std::thread::sleep(Duration::from_millis(100));
+        let bypassed = workspace.0.join("new").exists();
+        drop(lease);
+        operation.join().unwrap().unwrap();
+        assert!(
+            !bypassed,
+            "creation changed the tree before acquiring lifecycle access"
+        );
+        assert!(workspace.0.join("new").exists());
+    }
+}
+
+#[test]
+fn entry_mutations_wait_for_staged_saves_and_copy_committed_bytes() {
+    for delete in [false, true] {
+        let workspace = Workspace::new();
+        let root = workspace.root().to_owned();
+        let operation_root = root.clone();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let writer = std::thread::spawn(move || {
+            BEFORE_REPLACE.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    entered_tx.send(()).unwrap();
+                    release_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+                }));
+            });
+            save_markdown_file_content(
+                &root,
+                "note.md",
+                "committed before operation",
+                Some(&content_revision(b"original")),
+            )
+        });
+        entered_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        let (finished_tx, finished_rx) = mpsc::channel();
+        let operation = std::thread::spawn(move || {
+            let result = if delete {
+                super::workspace_entries::delete(
+                    &operation_root,
+                    "note.md",
+                    &Default::default(),
+                    |_| Ok(()),
+                )
+                .map(|_| ())
+            } else {
+                super::workspace_entries::duplicate(&operation_root, "note.md", |_| Ok(()))
+                    .map(|_| ())
+            };
+            finished_tx.send(()).unwrap();
+            result
+        });
+        let bypassed = finished_rx.recv_timeout(Duration::from_millis(100)).is_ok();
+        release_tx.send(()).unwrap();
+        writer.join().unwrap().unwrap();
+        operation.join().unwrap().unwrap();
+        assert!(!bypassed, "entry mutation bypassed an in-flight save");
+        if delete {
+            assert!(!workspace.path().exists());
+            assert!(save_markdown_file_content(
+                workspace.root(),
+                "note.md",
+                "stale",
+                Some(&content_revision(b"original"))
+            )
+            .is_err());
+        } else {
+            assert_eq!(
+                fs::read_to_string(workspace.0.join("note copy.md")).unwrap(),
+                "committed before operation"
+            );
+        }
+    }
+}
+
+#[test]
+fn entry_commit_survives_outbox_failure_and_duplicate_rejects_workspace_root() {
+    let workspace = Workspace::new();
+    let copy = super::workspace_entries::duplicate(workspace.root(), "note.md", |_| {
+        Err("queue unavailable".into())
+    })
+    .unwrap();
+    assert_eq!(copy.new_relative_path, "note copy.md");
+    assert!(copy.warning.is_some());
+    assert_eq!(
+        fs::read_to_string(workspace.0.join("note copy.md")).unwrap(),
+        "original"
+    );
+    let deleted =
+        super::workspace_entries::delete(workspace.root(), "note.md", &Default::default(), |_| {
+            Err("queue unavailable".into())
+        })
+        .unwrap();
+    assert!(deleted.warning.is_some());
+    assert!(!workspace.path().exists());
+    assert!(super::workspace_entries::duplicate(workspace.root(), "", |_| Ok(())).is_err());
+    assert!(
+        super::workspace_entries::duplicate(workspace.root(), "../escape", |_| Ok(())).is_err()
+    );
+}
+
+#[test]
+fn nested_entry_operations_keep_wire_paths_and_unrelated_prefixes() {
+    let workspace = Workspace::new();
+    fs::create_dir_all(workspace.0.join("docs/nested")).unwrap();
+    fs::write(workspace.0.join("docs/nested/hello.md"), "nested").unwrap();
+    let relative = PathBuf::from("docs").join("nested");
+    let copied = super::workspace_entries::duplicate(
+        workspace.root(),
+        relative.to_str().unwrap(),
+        |paths| {
+            assert_eq!(
+                paths.iter().cloned().collect::<Vec<_>>(),
+                ["docs/nested copy/hello.md"]
+            );
+            Ok(())
+        },
+    )
+    .unwrap();
+    assert_eq!(copied.new_relative_path, "docs/nested copy");
+    assert!(copied.warning.is_none());
+    let tracked = std::collections::BTreeSet::from([
+        "docs/nested/gone.md".to_owned(),
+        "docs/nested-old/keep.md".to_owned(),
+    ]);
+    let deleted = super::workspace_entries::delete(
+        workspace.root(),
+        relative.to_str().unwrap(),
+        &tracked,
+        |paths| {
+            assert_eq!(
+                paths.iter().cloned().collect::<Vec<_>>(),
+                ["docs/nested/gone.md", "docs/nested/hello.md"]
+            );
+            Ok(())
+        },
+    )
+    .unwrap();
+    assert!(deleted.warning.is_none());
+    assert_eq!(
+        fs::read_to_string(workspace.0.join("docs/nested copy/hello.md")).unwrap(),
+        "nested"
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn duplicate_keeps_private_source_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+    let workspace = Workspace::new();
+    fs::set_permissions(workspace.path(), fs::Permissions::from_mode(0o600)).unwrap();
+    let result =
+        super::workspace_entries::duplicate(workspace.root(), "note.md", |_| Ok(())).unwrap();
+    assert_eq!(
+        fs::metadata(workspace.0.join(result.new_relative_path))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777,
+        0o600
+    );
+}
+
+#[test]
 fn outbox_failure_acknowledges_the_committed_revision_and_allows_the_next_save() {
     let workspace = Workspace::new();
     // A directory at the SQLite path deterministically fails without touching user data.

@@ -308,6 +308,32 @@ migration is introduced. Historical outbox entries are not rewritten by this
 change. Literal backslashes in Unix filenames are not Windows separators; general
 support for those names across all existing frontend/sync code is not certified.
 
+### Workspace Entry Completion
+
+The document session owns buffers, dirty state and stable IDs. Native create,
+duplicate and delete acknowledgements first update a root-qualified cached tree;
+directory refresh is a separate projection step, not the disk commit. A later
+navigation intent prevents creation/duplication from taking over the current tab.
+`workspaceEntryCompletion` contains pure tree and deletion-retention policies.
+Deletion uses completion-time state, closes only clean target documents, and
+retains edits made during IO. Recovery Save As targets the affected document ID,
+not whichever tab happens to be active when the dialog is used.
+
+`workspace_entries` owns native duplicate/delete filesystem work. It shares the
+existing process-wide path lifecycle lock with rename/move and document saves.
+Creation takes admission before creating parent directories; the existing atomic
+save path still owns Markdown publication. Lock order remains lifecycle, document,
+then macOS coordination. Duplicate files use exclusive creation and preserve source
+permissions; workspace-root duplication and symlinks remain rejected.
+
+Delete/duplicate responses can include `warning: "workspace.syncQueueUnavailable"`
+after a successful local operation. The frontend commits the local result and
+reports the warning rather than inviting a destructive retry. This is not an
+atomic transaction spanning filesystem and sync SQLite. Recursive copy/delete
+can still be partial on filesystem errors; uncooperative external processes and
+power-loss recovery require separate qualification. No persistent schema migration
+or new command registry is introduced.
+
 ## Secret Management
 
 Secrets must be isolated behind `secret_store`.

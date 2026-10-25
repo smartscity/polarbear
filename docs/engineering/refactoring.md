@@ -1,5 +1,25 @@
 # Refactoring Report
 
+## Entry Mutation Completion: 2026-10-25
+
+Baseline: `3c39b338e74a04947bdae766cf7bf423418065d3`. This follow-up completes
+the session ownership protocol for create, duplicate and delete, not just rename
+and move. It does not represent whole-audit or installed-application acceptance.
+
+| Problem | Pattern / decision | Owner and invariant |
+| --- | --- | --- |
+| Delayed native completion overwrites newer navigation | Reuse navigation generation and root-qualified projections | `useDocumentSession` applies disk acknowledgement independently from active-tab intent; only the owning workspace's tree changes. |
+| Deletion drops late edits or new unrelated tabs | Pure completion policy, applied to current state | `workspaceEntryCompletion` selects clean target IDs to close; the session retains dirty buffers and offers the existing recovery flow. No second buffer store. |
+| Recovery saves the wrong active tab | Reuse the single `saveTab` command | Recovery supplies the deleted document's ID and clears only the acknowledged recovery notice. |
+| Duplicated create-file/folder completion | Shared typed creation flow | One acknowledgement/projection/refresh path; loading a new buffer is optional and cannot change disk success. |
+| Native entry IO mixed with Tauri and sync bookkeeping | Extract filesystem service, reuse existing lifecycle admission | `workspace_entries` does root validation, copy/delete and no-overwrite creation. Tauri wrappers supply sync callbacks; failed optional enqueue becomes an acknowledgement warning. |
+| Creation modifies parent directories before admission | Extend existing save lifecycle | `document_save::create_workspace_markdown` acquires access before path resolution and parent creation, then uses the existing document lock and coordinated atomic publication without recursively acquiring the lifecycle lock. |
+
+No event bus, repository framework, new persistent store or parallel save engine.
+The session file loses duplicated completion code; a pure policy module and native
+filesystem module isolate the two actual change axes. The remaining recursive IO
+partial-failure boundary is explicit in the owning architecture document.
+
 ## Native Platform Boundary Follow-up: 2026-10-25
 
 Memory workspace binding remains portable, but its current Admin transport uses

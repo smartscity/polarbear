@@ -25,9 +25,16 @@ are missing. The Rust advisory scan and final-SHA hosted result are separate
 gates. No gate, test assertion or privacy rule was relaxed to obtain this score.
 Even passing hosted CI does not turn unexecuted GUI/provider checks into PASS.
 
+The entry-completion follow-up adds 15 browser regressions, native staged-save and
+creation-admission tests, and root-qualified recovery without increasing this score.
+The earlier path-contract commit `3c39b33` has actual green macOS/Windows native
+and browser execution in Quality run 40184586892. This replaces the earlier lack
+of hosted Windows evidence for that commit, not installed Windows GUI acceptance
+or final-SHA verification of subsequent changes.
+
 Minimum remaining evidence: upstream warning remediation; disposable authorized provider
 concurrency acceptance; installed macOS open/edit/save/close/reopen and quit-race
-smoke; native Windows matrix result and relevant GUI/permission acceptance.
+smoke; final-SHA native Windows result and relevant GUI/permission acceptance.
 Performance repeats did not establish a repeatable browser threshold regression,
 but 10 MiB preview latency and the confirmed optimized large-attachment hashing
 regression remain explicit limitations. The alternative SHA-256 backend experiment

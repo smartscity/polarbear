@@ -11,6 +11,7 @@ import { findWorkspaceItem, workspaceTreesEqual, type WorkspaceDocumentMap, type
 import { useWorkspaceDocumentRevision, type WorkspaceDocumentRevisionTarget } from "../../features/workspace/useWorkspaceDocumentRevision";
 import { ensureMarkdownFilePath, fileNameOf, findFirstFile, joinWorkspacePath, normalizeMarkdownFileName, normalizeWorkspacePath, parentPathOf, remapPath } from "../../features/workspace/workspacePaths";
 import { WorkspacePathMutations, remapWorkspaceDocumentPaths, remapWorkspaceTree } from "./workspacePathMutations";
+import { containsWorkspacePath, omitDocumentIds, planDeletedDocuments, projectWorkspaceEntry, removeWorkspaceEntry } from "./workspaceEntryCompletion";
 import { chooseMarkdownFile, chooseMarkdownSavePath, chooseWorkspaceFolder, createMarkdownFile, createWorkspaceDirectory, deleteWorkspaceEntry, duplicateWorkspaceEntry, listWorkspaceFiles, loadMarkdownFile, moveEntry, openMarkdownFile, renameEntry, saveMarkdownFile, takePendingOpenFiles, writeMarkdownFile, type MarkdownSaveResult } from "../../features/workspace/tauriWorkspaceAdapter";
 import { workspaceDocumentSaveConflict, workspaceSaveFailureKey } from "../../features/workspace/workspaceSaveError";
 import { saveWorkspaceDocuments } from "../../features/workspace/saveWorkspaceDocuments";
@@ -1135,9 +1136,10 @@ export function useDocumentSession({
   };
 
   const saveDeletedExternalDocumentAs = async () => {
-    const didSave = await saveActiveFileAs();
-    if (didSave) {
-      setExternalDocumentChange(null);
+    const change = externalDocumentChange;
+    if (!change || change.reason !== "deleted") return;
+    if (await saveTab(change.fileId, true)) {
+      setExternalDocumentChange((current) => current === change ? null : current);
     }
   };
 
@@ -1152,96 +1154,71 @@ export function useDocumentSession({
     }));
   };
 
-  const createFile = async (fileName: string) => {
-    const relativePath = joinWorkspacePath(
-      createParentPath,
-      normalizeMarkdownFileName(fileName),
-    );
+  const projectEntryMutation = (root: string, project: (items: WorkspaceItem[]) => WorkspaceItem[]) => {
+    setWorkspaceItemsByRoot((trees) => ({ ...trees, [root]: project(trees[root] ?? []) }));
+    if (workspaceRootRef.current === root) setWorkspaceItems(project);
+  };
 
-    if (!relativePath) {
-      setStatusMessage(t("status.nameRequired", { item: t("common.file") }));
-      return;
-    }
-
-    if (!workspaceRoot) {
-      setStatusMessage(t("status.openWorkspaceBeforeCreate", { item: t("common.file") }));
-      return;
-    }
-
+  const refreshMutatedTree = async (root: string): Promise<boolean> => {
     try {
-      await createMarkdownFile({
-        workspaceRoot,
-        relativePath,
-      });
-      const items = await listWorkspaceFiles(workspaceRoot);
-      const document = await loadMarkdownFile({
-        workspaceRoot,
-        relativePath,
-      });
-
-      setWorkspaceItems(items);
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspaceRoot]: items,
-      }));
-      setDocuments((currentDocuments) => ({
-        ...currentDocuments,
-        [relativePath]: document.markdownContent,
-      }));
-      setDocumentRevisions((currentRevisions) => ({
-        ...currentRevisions,
-        [relativePath]: document.revision,
-      }));
-      setDocumentWorkspaceRoots((currentRoots) => ({
-        ...currentRoots,
-        [relativePath]: workspaceRoot,
-      }));
-      setDocumentRelativePaths((currentPaths) => ({
-        ...currentPaths,
-        [relativePath]: relativePath,
-      }));
-      setActiveFileId(relativePath);
-      addOpenTab(relativePath);
-      setSelectedTreeItemId(relativePath);
-      revealFolder(createParentPath);
-      setStatusMessage(t("status.createdPath", { path: relativePath }));
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      const items = await listWorkspaceFiles(root);
+      setWorkspaceItemsByRoot((trees) => ({ ...trees, [root]: items }));
+      if (workspaceRootRef.current === root) setWorkspaceItems(items);
+      return true;
+    } catch {
+      if (workspaceRootRef.current === root) setStatusMessage(t("status.workspaceRefreshAfterMutationFailed"));
+      return false;
     }
   };
 
-  const createFolder = async (folderName: string) => {
-    const relativePath = joinWorkspacePath(
-      createParentPath,
-      normalizeWorkspacePath(folderName),
-    );
+  const openCreatedDocument = useEventCallback((root: string, path: string, document: { markdownContent: string; revision: string }) => {
+    const existing = findOpenDocumentIdForWorkspaceFile(openFileIds, documentWorkspaceRoots, documentRelativePaths, root, path);
+    if (existing) return; // Never replace an already-open buffer with a late read.
+    const id = makeWorkspaceDocumentId({
+      currentDocumentIds: new Set([...openFileIds, ...Object.keys(documents)]),
+      currentWorkspaceRoot: workspaceRoot, workspaceRoot: root, relativePath: path,
+    });
+    setDocuments((current) => ({ ...current, [id]: document.markdownContent }));
+    setDocumentRevisions((current) => ({ ...current, [id]: document.revision }));
+    setDocumentWorkspaceRoots((current) => ({ ...current, [id]: root }));
+    setDocumentRelativePaths((current) => ({ ...current, [id]: path }));
+    setActiveFileId(id);
+    addOpenTab(id);
+    setSelectedTreeItemId(path);
+    revealFolder(parentFolderIdOf(path));
+  });
 
-    if (!relativePath) {
-      setStatusMessage(t("status.nameRequired", { item: t("common.folder") }));
+  const createWorkspaceItem = async (type: CreateItemType, name: string) => {
+    const root = workspaceRoot;
+    const path = joinWorkspacePath(createParentPath, type === "file" ? normalizeMarkdownFileName(name) : normalizeWorkspacePath(name));
+    if (!path || !root) {
+      setStatusMessage(t(!path ? "status.nameRequired" : "status.openWorkspaceBeforeCreate", { item: t(type === "file" ? "common.file" : "common.folder") }));
       return;
     }
-
-    if (!workspaceRoot) {
-      setStatusMessage(t("status.openWorkspaceBeforeCreate", { item: t("common.folder") }));
-      return;
-    }
-
+    const isCurrent = documentNavigation.begin();
     try {
-      await createWorkspaceDirectory({
-        workspaceRoot,
-        relativePath,
-      });
-      const items = await listWorkspaceFiles(workspaceRoot);
-      setWorkspaceItems(items);
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspaceRoot]: items,
-      }));
-      setSelectedTreeItemId(relativePath);
-      revealFolder(createParentPath);
-      setStatusMessage(t("status.createdFolder", { path: relativePath }));
+      await (type === "file" ? createMarkdownFile : createWorkspaceDirectory)({ workspaceRoot: root, relativePath: path });
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      if (isCurrent()) setStatusMessage(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    projectEntryMutation(root, (items) => projectWorkspaceEntry(items, { id: path, name: fileNameOf(path), type }));
+    let opened = true;
+    if (isCurrent() && workspaceRootRef.current === root) {
+      if (type === "file") {
+        try {
+          const document = await loadMarkdownFile({ workspaceRoot: root, relativePath: path });
+          if (isCurrent() && workspaceRootRef.current === root) openCreatedDocument(root, path, document);
+        } catch { opened = false; }
+      } else {
+        setSelectedTreeItemId(path);
+        revealFolder(parentFolderIdOf(path));
+      }
+    }
+    const refreshed = await refreshMutatedTree(root);
+    if (isCurrent() && workspaceRootRef.current === root) {
+      if (!opened) setStatusMessage(t("status.createdButOpenFailed", { path }));
+      else if (refreshed) setStatusMessage(t(type === "file" ? "status.createdPath" : "status.createdFolder", { path }));
     }
   };
 
@@ -1289,13 +1266,7 @@ export function useDocumentSession({
       setCreateItemType(null);
       setCreateParentPath(null);
 
-      if (itemType === "file") {
-        await createFile(name);
-      }
-
-      if (itemType === "folder") {
-        await createFolder(name);
-      }
+      if (itemType) await createWorkspaceItem(itemType, name);
     } finally { release(); }
   };
 
@@ -1316,6 +1287,37 @@ export function useDocumentSession({
     setRenameItemId(targetItem.id);
   };
 
+  const applyDeletedEntry = useEventCallback((root: string, path: string) => {
+    const { closed, retained } = planDeletedDocuments({ root, path, currentRoot: workspaceRoot,
+      openIds: openFileIds, dirtyIds: dirtyFileIds, roots: documentWorkspaceRoots, paths: documentRelativePaths });
+    for (const id of closed) documentReads.close(id);
+    const remaining = openFileIds.filter((id) => !closed.has(id));
+    setOpenFileIds(remaining);
+    setDocuments((values) => omitDocumentIds(values, closed));
+    setDocumentRevisions((values) => omitDocumentIds(values, closed));
+    setDocumentWorkspaceRoots((values) => omitDocumentIds(values, closed));
+    setDocumentRelativePaths((values) => omitDocumentIds(values, closed));
+    setDocumentTitles((values) => omitDocumentIds(values, closed));
+    setDirtyFileIds((ids) => new Set([...ids].filter((id) => !closed.has(id))));
+    const recoveryId = retained.includes(activeFileId) ? activeFileId : retained[0];
+    setExternalDocumentChange((current) => recoveryId ? {
+      fileId: recoveryId, workspaceRoot: root,
+      relativePath: documentRelativePathForId(recoveryId, documentRelativePaths),
+      revision: documentRevisions[recoveryId] ?? "", reason: "deleted",
+    } : current && closed.has(current.fileId) ? null : current);
+    projectEntryMutation(root, (items) => removeWorkspaceEntry(items, path));
+    if (workspaceRoot === root) {
+      setSelectedTreeItemId((selected) => containsWorkspacePath(path, selected) ? "" : selected);
+    }
+    if (closed.has(activeFileId)) {
+      const next = remaining.at(-1);
+      setActiveFileId(next ?? "");
+      if (next) void activateTab(next);
+      else onSessionEmpty();
+    }
+    return retained.length > 0;
+  });
+
   const deleteWorkspaceItem = async (targetPath?: string) => {
     if (rejectDuringPathMutation()) return;
     const targetId = targetPath ?? (selectedTreeItemId || activeFileId);
@@ -1324,19 +1326,7 @@ export function useDocumentSession({
       setStatusMessage(t("status.selectBeforeDelete"));
       return;
     }
-    const isDeletedPath = (path: string) =>
-      path === targetItem.id || path.startsWith(`${targetItem.id}/`);
-    const hasDirtyTarget = Array.from(dirtyFileIds).some((fileId) => {
-      return (
-        documentWorkspaceRootForId(
-          fileId,
-          documentWorkspaceRoots,
-          workspaceRoot,
-        ) === workspaceRoot &&
-        isDeletedPath(documentRelativePathForId(fileId, documentRelativePaths))
-      );
-    });
-    if (hasDirtyTarget) {
+    if (hasDirtyPath(workspaceRoot, targetItem.id)) {
       setStatusMessage(t("status.saveBeforeDelete"));
       return;
     }
@@ -1354,102 +1344,23 @@ export function useDocumentSession({
     if (savesInProgressRef.current.size) { setStatusMessage(t("status.workspaceOperationBusy")); return; }
     const release = pathMutations.begin(workspaceRoot);
     if (!release) return;
+    documentNavigation.invalidate();
+    for (const id of openFileIdsRef.current) documentReads.invalidate(id);
 
     try {
-      await deleteWorkspaceEntry({
+      const result = await deleteWorkspaceEntry({
         workspaceRoot,
         relativePath: targetItem.id,
       });
-      const items = await listWorkspaceFiles(workspaceRoot);
-      const remainingOpenFileIds = openFileIds.filter((fileId) => {
-        const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-        const root = documentWorkspaceRootForId(
-          fileId,
-          documentWorkspaceRoots,
-          workspaceRoot,
-        );
-        return root !== workspaceRoot || !isDeletedPath(relativePath);
-      });
-
-      setWorkspaceItems(items);
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspaceRoot]: items,
-      }));
-      setOpenFileIds(remainingOpenFileIds);
-      setDocuments((currentDocuments) =>
-        Object.fromEntries(
-          Object.entries(currentDocuments).filter(([fileId]) => {
-            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-            const root = documentWorkspaceRootForId(
-              fileId,
-              documentWorkspaceRoots,
-              workspaceRoot,
-            );
-            return root !== workspaceRoot || !isDeletedPath(relativePath);
-          }),
-        ),
-      );
-      setDocumentRevisions((currentRevisions) =>
-        Object.fromEntries(
-          Object.entries(currentRevisions).filter(([fileId]) => {
-            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-            const root = documentWorkspaceRootForId(
-              fileId,
-              documentWorkspaceRoots,
-              workspaceRoot,
-            );
-            return root !== workspaceRoot || !isDeletedPath(relativePath);
-          }),
-        ),
-      );
-      setDirtyFileIds((currentDirtyIds) =>
-        new Set(
-          Array.from(currentDirtyIds).filter((fileId) => {
-            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-            const root = documentWorkspaceRootForId(
-              fileId,
-              documentWorkspaceRoots,
-              workspaceRoot,
-            );
-            return root !== workspaceRoot || !isDeletedPath(relativePath);
-          }),
-        ),
-      );
-      setExternalDocumentChange((currentChange) =>
-        currentChange &&
-        currentChange.workspaceRoot === workspaceRoot &&
-        isDeletedPath(currentChange.relativePath)
-          ? null
-          : currentChange,
-      );
-      setDocumentWorkspaceRoots((currentRoots) =>
-        Object.fromEntries(
-          Object.entries(currentRoots).filter(([fileId, root]) => {
-            const relativePath = documentRelativePathForId(fileId, documentRelativePaths);
-            return root !== workspaceRoot || !isDeletedPath(relativePath);
-          }),
-        ),
-      );
-      setDocumentRelativePaths((currentPaths) =>
-        Object.fromEntries(
-          Object.entries(currentPaths).filter(([fileId, relativePath]) => {
-            const root = documentWorkspaceRootForId(
-              fileId,
-              documentWorkspaceRoots,
-              workspaceRoot,
-            );
-            return root !== workspaceRoot || !isDeletedPath(relativePath);
-          }),
-        ),
-      );
-      setSelectedTreeItemId("");
-      if (isDeletedPath(documentRelativePathForId(activeFileId, documentRelativePaths))) {
-        setActiveFileId(remainingOpenFileIds.at(-1) ?? "");
+      const retainedEdits = applyDeletedEntry(workspaceRoot, targetItem.id);
+      const refreshed = await refreshMutatedTree(workspaceRoot);
+      if (workspaceRootRef.current === workspaceRoot) {
+        if (retainedEdits) setStatusMessage(t("status.deletedEditsRetained", { path: targetItem.id }));
+        else if (refreshed) setStatusMessage(t("status.deletedNeedsSync", { path: targetItem.id }));
+        if (result.warning) setStatusMessage((message) => `${message} ${t("status.mutationSyncQueueUnavailable")}`);
       }
-      setStatusMessage(t("status.deletedNeedsSync", { path: targetItem.id }));
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      if (workspaceRootRef.current === workspaceRoot) setStatusMessage(error instanceof Error ? error.message : String(error));
     } finally { release(); }
   };
 
@@ -1463,22 +1374,30 @@ export function useDocumentSession({
     }
     const release = pathMutations.begin(workspaceRoot);
     if (!release) return;
+    const isCurrent = documentNavigation.begin();
     try {
       const result = await duplicateWorkspaceEntry({
         workspaceRoot,
         relativePath: targetItem.id,
       });
-      const items = await listWorkspaceFiles(workspaceRoot);
-      setWorkspaceItems(items);
-      setWorkspaceItemsByRoot((currentTrees) => ({
-        ...currentTrees,
-        [workspaceRoot]: items,
-      }));
-      setSelectedTreeItemId(result.newRelativePath);
-      revealFolder(parentFolderIdOf(result.newRelativePath));
-      setStatusMessage(t("status.duplicatedPath", { path: result.newRelativePath }));
+      const copy = (item: WorkspaceItem): WorkspaceItem => ({ ...item,
+        id: remapPath(item.id, targetItem.id, result.newRelativePath),
+        name: item.id === targetItem.id ? fileNameOf(result.newRelativePath) : item.name,
+        children: item.children?.map(copy) });
+      projectEntryMutation(workspaceRoot, (items) => projectWorkspaceEntry(items, copy(targetItem)));
+      if (isCurrent() && workspaceRootRef.current === workspaceRoot) {
+        setSelectedTreeItemId(result.newRelativePath);
+        revealFolder(parentFolderIdOf(result.newRelativePath));
+      }
+      const refreshed = await refreshMutatedTree(workspaceRoot);
+      if (refreshed && isCurrent() && workspaceRootRef.current === workspaceRoot) {
+        setStatusMessage(t("status.duplicatedPath", { path: result.newRelativePath }));
+      }
+      if (result.warning && workspaceRootRef.current === workspaceRoot) {
+        setStatusMessage((message) => `${message} ${t("status.mutationSyncQueueUnavailable")}`);
+      }
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : String(error));
+      if (isCurrent()) setStatusMessage(error instanceof Error ? error.message : String(error));
     } finally { release(); }
   };
 

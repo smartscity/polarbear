@@ -1,6 +1,5 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -24,14 +23,12 @@ mod secret_store;
 mod system_open;
 mod vocab_bridge;
 mod vocab_outbox;
+mod workspace_entries;
 mod workspace_io;
 mod workspace_paths;
 
 use document_save::atomic_write;
-use repository::{
-    policy::allowed_sync_file,
-    store::{cloud_sync_database_path, read_binding, scan_sync_files},
-};
+use repository::store::{cloud_sync_database_path, read_binding};
 use workspace_paths::{
     normalize_relative_path, relative_path_for_wire, validate_entry_name, workspace_path,
 };
@@ -128,12 +125,16 @@ struct RenameEntryResponseDto {
 #[serde(rename_all = "camelCase")]
 struct DeleteEntryResponseDto {
     deleted_relative_paths: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    warning: Option<SaveWarning>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DuplicateEntryResponseDto {
     new_relative_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    warning: Option<SaveWarning>,
 }
 
 #[derive(Debug, Serialize)]
@@ -544,32 +545,12 @@ mod save_regression_tests;
 
 #[tauri::command]
 fn create_markdown_file(workspace_root: String, relative_path: String) -> Result<(), String> {
-    let path = workspace_path(&workspace_root, &relative_path)?;
-
-    if !is_markdown_file(&path) {
-        return Err("New files must use .md or .markdown extension.".to_owned());
-    }
-
-    if path.exists() {
-        return Err("File already exists.".to_owned());
-    }
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-    }
-
-    document_save::save(
-        &path,
-        b"# Untitled\n\nStart writing in Polarbear.\n",
-        None,
-        document_save::SaveTarget::CreateNew,
-    )
-    .map(|_| ())
-    .map_err(|error| error.message)
+    document_save::create_workspace_markdown(&workspace_root, &relative_path)
 }
 
 #[tauri::command]
 fn create_workspace_directory(workspace_root: String, relative_path: String) -> Result<(), String> {
+    let _mutation = workspace_io::path_mutation().map_err(|error| error.to_string())?;
     let path = workspace_path(&workspace_root, &relative_path)?;
 
     if path.exists() {
@@ -585,52 +566,24 @@ fn delete_workspace_entry(
     workspace_root: String,
     relative_path: String,
 ) -> Result<DeleteEntryResponseDto, String> {
-    let relative_path = relative_path_for_wire(&normalize_relative_path(&relative_path)?);
-    if relative_path.trim().is_empty() {
-        return Err("Workspace root cannot be deleted.".to_owned());
-    }
-    let path = workspace_path(&workspace_root, &relative_path)?;
-    if !path.exists() {
-        return Err("The selected file or folder no longer exists.".to_owned());
-    }
-
     let binding = read_binding(&app, &workspace_root)?;
-    let path_prefix = format!("{}/", relative_path.trim_end_matches('/'));
-    let mut deleted_sync_paths = binding
+    let tracked = binding
         .as_ref()
-        .map(|binding| {
-            binding
-                .manifest
-                .keys()
-                .filter(|path| *path == &relative_path || path.starts_with(&path_prefix))
-                .cloned()
-                .collect::<BTreeSet<_>>()
-        })
+        .map(|binding| binding.manifest.keys().cloned().collect())
         .unwrap_or_default();
-    if path.is_dir() {
-        deleted_sync_paths.extend(scan_sync_files(Path::new(&workspace_root), &path)?.into_keys());
-        fs::remove_dir_all(&path).map_err(|error| error.to_string())?;
-    } else {
-        if allowed_sync_file(&path) {
-            deleted_sync_paths.insert(relative_path.clone());
+    workspace_entries::delete(&workspace_root, &relative_path, &tracked, |paths| {
+        if binding.is_some() {
+            let database_path = cloud_sync_database_path(&app)?;
+            for path in paths {
+                cloud_sync_store::queue_outbox_path(
+                    &database_path,
+                    &workspace_root,
+                    path,
+                    "delete",
+                )?;
+            }
         }
-        fs::remove_file(&path).map_err(|error| error.to_string())?;
-    }
-
-    if binding.is_some() {
-        let database_path = cloud_sync_database_path(&app)?;
-        for deleted_path in &deleted_sync_paths {
-            cloud_sync_store::queue_outbox_path(
-                &database_path,
-                &workspace_root,
-                deleted_path,
-                "delete",
-            )?;
-        }
-    }
-
-    Ok(DeleteEntryResponseDto {
-        deleted_relative_paths: deleted_sync_paths.into_iter().collect(),
+        Ok(())
     })
 }
 
@@ -640,97 +593,21 @@ fn duplicate_workspace_entry(
     workspace_root: String,
     relative_path: String,
 ) -> Result<DuplicateEntryResponseDto, String> {
-    let source_path = workspace_path(&workspace_root, &relative_path)?;
-    if !source_path.exists() {
-        return Err("The selected file or folder no longer exists.".to_owned());
-    }
-    let parent = source_path
-        .parent()
-        .ok_or_else(|| "Workspace root cannot be duplicated.".to_owned())?;
-    let destination = next_duplicate_path(&source_path, parent);
-    copy_workspace_entry_recursive(&source_path, &destination)?;
-
-    let root = PathBuf::from(&workspace_root);
-    let new_relative_path = relative_path_for_wire(
-        destination
-            .strip_prefix(&root)
-            .map_err(|error| error.to_string())?,
-    );
-    if read_binding(&app, &workspace_root)?.is_some() {
-        let database_path = cloud_sync_database_path(&app)?;
-        let duplicated_files = if destination.is_dir() {
-            scan_sync_files(&root, &destination)?
-        } else if allowed_sync_file(&destination) {
-            BTreeMap::from([(new_relative_path.clone(), destination.clone())])
-        } else {
-            BTreeMap::new()
-        };
-        for duplicated_path in duplicated_files.keys() {
-            cloud_sync_store::queue_outbox_path(
-                &database_path,
-                &workspace_root,
-                duplicated_path,
-                "upload",
-            )?;
+    let binding = read_binding(&app, &workspace_root)?;
+    workspace_entries::duplicate(&workspace_root, &relative_path, |paths| {
+        if binding.is_some() {
+            let database_path = cloud_sync_database_path(&app)?;
+            for path in paths {
+                cloud_sync_store::queue_outbox_path(
+                    &database_path,
+                    &workspace_root,
+                    path,
+                    "upload",
+                )?;
+            }
         }
-    }
-
-    Ok(DuplicateEntryResponseDto { new_relative_path })
-}
-
-fn next_duplicate_path(source: &Path, parent: &Path) -> PathBuf {
-    let file_name = source
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("Copy");
-    let (stem, extension) = if source.is_file() {
-        (
-            source
-                .file_stem()
-                .and_then(|name| name.to_str())
-                .unwrap_or(file_name),
-            source.extension().and_then(|value| value.to_str()),
-        )
-    } else {
-        (file_name, None)
-    };
-    for index in 1.. {
-        let suffix = if index == 1 {
-            " copy".to_owned()
-        } else {
-            format!(" copy {index}")
-        };
-        let candidate_name = match extension {
-            Some(extension) => format!("{stem}{suffix}.{extension}"),
-            None => format!("{stem}{suffix}"),
-        };
-        let candidate = parent.join(candidate_name);
-        if !candidate.exists() {
-            return candidate;
-        }
-    }
-    unreachable!("duplicate name loop is unbounded")
-}
-
-fn copy_workspace_entry_recursive(source: &Path, destination: &Path) -> Result<(), String> {
-    if fs::symlink_metadata(source)
-        .map_err(|error| error.to_string())?
-        .file_type()
-        .is_symlink()
-    {
-        return Err("Symbolic links cannot be duplicated.".to_owned());
-    }
-    if source.is_dir() {
-        fs::create_dir_all(destination).map_err(|error| error.to_string())?;
-        for entry in fs::read_dir(source).map_err(|error| error.to_string())? {
-            let entry = entry.map_err(|error| error.to_string())?;
-            copy_workspace_entry_recursive(&entry.path(), &destination.join(entry.file_name()))?;
-        }
-        return Ok(());
-    }
-    fs::copy(source, destination)
-        .map(|_| ())
-        .map_err(|error| error.to_string())
+        Ok(())
+    })
 }
 
 #[tauri::command]
@@ -1388,9 +1265,11 @@ mod tests {
             folder.children.as_ref().expect("file children")[0].id,
             "archive/renamed/world.md"
         );
-        let files =
-            super::scan_sync_files(std::path::Path::new(&root), std::path::Path::new(&root))
-                .expect("sync keys");
+        let files = super::repository::store::scan_sync_files(
+            std::path::Path::new(&root),
+            std::path::Path::new(&root),
+        )
+        .expect("sync keys");
         assert_eq!(
             files.keys().map(String::as_str).collect::<Vec<_>>(),
             vec!["archive/renamed/world.md"]

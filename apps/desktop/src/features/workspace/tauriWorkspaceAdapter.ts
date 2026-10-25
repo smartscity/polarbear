@@ -47,10 +47,12 @@ type RenameEntryResponseDto = {
 
 type DeleteEntryResponseDto = {
   deletedRelativePaths: string[];
+  warning?: MarkdownSaveResult["warning"];
 };
 
 type DuplicateEntryResponseDto = {
   newRelativePath: string;
+  warning?: MarkdownSaveResult["warning"];
 };
 
 type AssetWriteResponseDto = {

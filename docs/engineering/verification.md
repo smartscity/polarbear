@@ -1,5 +1,63 @@
 # Engineering Verification
 
+## Entry Completion Follow-up: 2026-10-25
+
+Baseline: `3c39b338e74a04947bdae766cf7bf423418065d3`, branch
+`codex/engineering-workspace-quality`. Tests below apply to the source committed
+with this section, with the pre-existing Feedback UI edits still present locally
+and excluded from this commit. Hosted CI must separately verify the exact pushed
+SHA; the previous green run is not evidence for this change.
+
+### Reproduced Before Fixing
+
+- Nine browser lifecycle cases failed against old production: create/duplicate
+  replaced newer selection/tree state, deletion dropped another root's new tab,
+  and acknowledged operations remained absent from the cached tree after refresh
+  failure. The initial dialog fixture used an obsolete command; it was corrected
+  to the installed plugin's `message` / `Yes` contract before recording all nine
+  behavioral failures. Fixture failure is not counted as a product defect.
+- A tenth browser regression wrote the unrelated active document's content during
+  deleted-document recovery. It now saves the affected ID through `saveTab`.
+- The staged-save test failed with `entry mutation bypassed an in-flight save`
+  after extracting the existing IO path, before adding lifecycle exclusion.
+- The parent-creation regression failed with `creation changed the tree before
+  acquiring lifecycle access`. Admission now precedes path resolution and mkdir.
+
+### Local Final Validation
+
+Environment: Intel macOS 26.5.1, Node 26.1.0, Rust 1.96.0. Commands run from the
+repository root, using the installed Node/Cargo/LLVM paths where necessary.
+
+| Check | Actual result |
+| --- | --- |
+| Desktop typecheck / ESLint | PASS |
+| `npm --workspace apps/desktop run test` | PASS: 354 Vitest cases in 66 files and 40 Node script cases |
+| `npm --workspace apps/desktop run test:ui` | PASS: 124 cases in the full run (4.5 minutes), plus the subsequently added active-delete workspace-transition case in a focused run; 15 new entry-lifecycle cases total |
+| `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --locked` | PASS: 124 native cases; 4 existing opt-in fixtures ignored, not counted as executed acceptance |
+| `cargo fmt --all -- --check` | PASS |
+| macOS `cargo clippy --all-targets --all-features --locked -- -D warnings` | PASS |
+| `cargo xwin clippy --target x86_64-pc-windows-msvc --all-targets --all-features --locked -- -D warnings` with Desktop manifest | PASS: actual Windows SDK/CRT target, production and test configurations; not Windows runtime execution |
+| Desktop Vite production build | PASS, existing large-chunk warning remains |
+| Native clipboard receiver with browser-generated Mermaid fixture | PASS: three actual image attachments, surrounding text and stale-copy protection |
+| Bundled offline translation / production CSP | PASS in Chromium and WebKit, including cancellation |
+| Memory Admin generated contract check | PASS |
+
+An initial all-feature Clippy overlapped the frontend build's output-directory
+replacement and failed on a missing translation asset. It was rerun successfully
+only after the build completed; no assertion or compiler warning was suppressed.
+The native nested-copy/delete contract test was added last, followed by a complete
+native-suite rerun and final Windows compilation.
+
+### Acceptance Boundaries
+
+The browser tests execute the real React document session with deferred native
+IPC fixtures. Native tests use real temporary files, staged saves, private file
+permissions and failure callbacks. Installed macOS/Windows GUI interactions,
+provider-account writes, power failure, hostile concurrent external processes and
+recursive IO partial-failure recovery are NOT VERIFIED by this slice. No model,
+ASR performance, DMG, tag, release or mainline merge is part of this delivery.
+The current default branch is `main`, not `master`; merge remains a separate action.
+
 ## Engineering and Workspace UI Follow-up: 2026-10-25
 
 This section supersedes earlier stage counts, not their historical results.

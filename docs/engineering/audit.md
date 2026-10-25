@@ -1,5 +1,27 @@
 # Engineering Audit
 
+## Entry Lifecycle Follow-up: 2026-10-25
+
+Baseline `3c39b338e74a04947bdae766cf7bf423418065d3` has a verified green hosted
+Quality run [40184586892](https://github.com/smartscity/polarbear/actions/runs/40184586892),
+including Windows native execution. This does not validate the new changes below;
+their exact-commit evidence belongs in verification and the delivery report.
+
+| Finding | Root cause | Remediation / remaining boundary |
+| --- | --- | --- |
+| P0: deletion discards late edits and newly opened tabs | Completion filters admission-time document arrays and metadata | Plan closure using current root-qualified state; retain dirty buffers and target recovery by document ID. Browser regressions reproduced the wrong-tab and late-edit behavior. |
+| P1: create/duplicate takes over a different workspace | Unconditional tree, selection and active-ID setters after awaited IO | Reuse navigation generation, collision-safe IDs and cached root projections. |
+| P1: refresh failure hides a committed mutation | Native write and subsequent tree read share one success/failure branch | Commit the projection first; refresh failure is an explicit partial-success message. |
+| P1: native duplicate races a staged save | Copy/delete do not acquire existing lifecycle exclusion | Extract testable entry IO and acquire the same lock as rename/move; deterministic save hook reproduced bypass before the fix. |
+| P1: creation changes directories before admission | Parent creation precedes `document_save::save`'s lease | Acquire before resolution/parent creation; blocked-admission filesystem test reproduced early mutation. |
+| P1: sync enqueue failure reported as disk failure | Post-commit queue writes return a generic operation error | Add the existing typed sync warning to delete/duplicate acknowledgements and display it without losing the local projection. |
+
+Remaining work is not hidden by these repairs: recursive copy/delete can partially
+complete on filesystem failure; downloads/provider enumeration still need bounded
+response policy; settings cross-process merge and native GUI/provider acceptance
+remain open. Security deferrals and the measured hashing regression remain in the
+fixed scorecard. Branch delivery must not be described as mainline release.
+
 ## Current Follow-up: 2026-10-25
 
 Baseline `dc5e11e3c78283b55f6b004d73df8f4df2883c98`, isolated engineering branch.

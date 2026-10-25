@@ -35,6 +35,31 @@ pub(crate) fn save(
     })
 }
 
+pub(crate) fn create_workspace_markdown(workspace: &str, relative: &str) -> Result<(), String> {
+    let _access = crate::workspace_io::document_access().map_err(|error| error.to_string())?;
+    let path = crate::workspace_paths::workspace_path(workspace, relative)?;
+    if !crate::is_markdown_file(&path) {
+        return Err("New files must use .md or .markdown extension.".to_owned());
+    }
+    if path.exists() {
+        return Err("File already exists.".to_owned());
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    // The lifecycle lease covers parent creation and publication; do not re-enter it.
+    with_document_lock(&path, |resolved| {
+        save_coordinated(
+            resolved,
+            b"# Untitled\n\nStart writing in Polarbear.\n",
+            None,
+            SaveTarget::CreateNew,
+        )
+    })
+    .map(|_| ())
+    .map_err(|error| error.message)
+}
+
 fn with_document_lock<T>(
     path: &Path,
     action: impl FnOnce(&Path) -> Result<T, WorkspaceSaveError>,
