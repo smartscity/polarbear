@@ -59,8 +59,12 @@ jobs:
         run: cargo fmt --all -- --check
 
   native-tests:
-    name: Native tests
-    runs-on: macos-26
+    name: Native tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -96,6 +100,7 @@ jobs:
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast
 
       - name: Native rich document paste
+        if: runner.os == 'macOS'
         run: node apps/desktop/scripts/test-native-clipboard.mjs
 
   desktop-browser:

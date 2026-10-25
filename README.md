@@ -72,7 +72,7 @@ Desktop and the experimental iPhone reader are separate applications. The reader
 - Browse Markdown files from a repository
 - Read remote Markdown files
 - Edit and commit changes back to the selected provider
-- Sync through provider REST APIs without requiring a local Git installation
+- Sync through provider APIs without requiring a local Git installation; GitHub publication uses a conditional GraphQL commit and GitLab uses a conditional batch commit.
 - Use commit messages such as:
 
 ```text
@@ -116,7 +116,7 @@ Mermaid, PlantUML, Cloud Sync, and export are built-in features with explicit mo
 - Vite
 - CodeMirror 6
 - Mermaid
-- GitHub and GitLab REST APIs
+- GitHub REST/GraphQL and GitLab REST APIs
 
 ---
 
@@ -162,9 +162,10 @@ the reader. `packages/reader-core` holds portable reader logic, while
 `packages/apple-document-store` contains a shared native linked-document
 foundation whose user-facing editing/sync integration is not yet delivered.
 
-The repository does not contain a separate `CONTRIBUTING.md` or root project
-license-text files. Cargo declares `MIT OR Apache-2.0`; bundled translation assets
-have their own included third-party license notices.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and verification rules.
+The existing Cargo declaration `MIT OR Apache-2.0` is accompanied by
+[MIT](LICENSE-MIT) and [Apache-2.0](LICENSE-APACHE) texts. Bundled translation
+assets retain their separate included third-party license notices.
 
 ---
 
@@ -214,7 +215,7 @@ Platform rules:
 - Keep macOS-only APIs isolated from portable command and service logic.
 - Put platform-specific behavior behind traits or adapter modules.
 - Keep Tauri commands thin and free of platform-specific business logic.
-- Use provider REST APIs for sync so repository workflows do not depend on a local Git executable.
+- Use provider APIs for sync so repository workflows do not depend on a local Git executable. Freeze the comparison commit and reject conditional publication conflicts rather than silently choosing local content.
 - Treat local file access as capability-based; the iPhone reader imports authorized snapshots inside its app sandbox.
 - Keep Mermaid rendering in the WebView layer.
 - Avoid dynamic native plugin loading for the MVP.
@@ -453,4 +454,4 @@ graph TD
 
 ## License
 
-Cargo manifests declare `MIT OR Apache-2.0`; corresponding root project license-text files are still absent. Bundled Bergamot/model MPL-2.0 notices and the fflate MIT notice are separate third-party notices and do not replace the project license texts. See [the bundled asset notice](apps/desktop/public/models/en-zh/README.md).
+Polarbear follows the existing `MIT OR Apache-2.0` Cargo declaration, at your option: [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE). This does not relicense bundled dependencies or models. Bergamot/model MPL-2.0 notices and the fflate MIT notice remain separate; see [the bundled asset notice](apps/desktop/public/models/en-zh/README.md).
