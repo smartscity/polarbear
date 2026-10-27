@@ -65,7 +65,7 @@ it("offers a native cleanup retry even when account metadata is absent", () => {
 });
 
 function NativeMenuFixture() {
-  useNativeAppMenu(vi.fn(), { commandContext: {} as never, repositoryAccount: null, repositoryBinding: null });
+  useNativeAppMenu(vi.fn(), { recentDocuments: { entries: [], busy: false, open: vi.fn(), clear: vi.fn() }, commandContext: {} as never, repositoryAccount: null, repositoryBinding: null });
 }
 beforeEach(() => {
   fixture.owner = undefined; fixture.cleanup = undefined; fixture.next = 0;

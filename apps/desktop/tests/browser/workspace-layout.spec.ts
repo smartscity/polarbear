@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { nativeFixture } from "./fixtures/native";
+import { nativeFixture, menuItem } from "./fixtures/native";
 
 async function start(page: Page) {
   await nativeFixture(page);
@@ -166,7 +166,7 @@ test("shows long navigation labels, four sidebar states, settings and mixed reso
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/docs/Architecture-and-durable-document-ownership.md", 1);
   }, source);
-  await page.locator(".recent-documents").getByRole("button", { name: /Architecture-and/ }).first().click();
+  await menuItem(page, /Architecture-and/);
   await expect(page.locator(".cm-content").first()).toContainText("Workspace quality");
   await expect(page.locator('[data-tree-item-id="docs/Architecture-and-durable-document-ownership.md"]')).toBeVisible();
   await expect.poll(() => page.getByAltText("Local sample").evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBe(128);

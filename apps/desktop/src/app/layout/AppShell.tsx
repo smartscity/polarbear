@@ -5,7 +5,6 @@ import type { SidebarSide } from "./workspaceLayout";
 import { LAYOUT_LIMITS as L, type LayoutPreferences } from "../../shared/settings/layoutPreferences";
 import type { ExecuteAppCommand } from "../../shared/commands/appCommandTypes";
 import type { WorkspaceItem } from "../../features/workspace/workspaceModel";
-import type { DocumentOpenResult } from "../../features/workspace/documentNavigation";
 import type { DocumentStructureItem } from "../../features/editor/documentModel";
 import { Sidebar } from "./Sidebar";
 import { StatusBar } from "./StatusBar";
@@ -49,7 +48,6 @@ type AppShellProps = {
   onRenameConfirm: (item: WorkspaceItem, nextName: string) => void;
   onSelectDocumentStructureItem: (position: number) => void;
   onSelectFile: (fileId: string) => void;
-  onOpenRecent: (path: string) => Promise<DocumentOpenResult>;
   onSelectTab: (tabId: string) => void;
   onSelectTreeItem: (itemId: string) => void;
   onSidebarClose: () => void;
@@ -88,7 +86,6 @@ export function AppShell({
   onRenameConfirm,
   onSelectDocumentStructureItem,
   onSelectFile,
-  onOpenRecent,
   onSelectTab,
   onSelectTreeItem,
   onSync,
@@ -179,7 +176,6 @@ export function AppShell({
           onRenameCancel={onRenameCancel}
           onRenameConfirm={onRenameConfirm}
           onSelectFile={onSelectFile}
-          onOpenRecent={onOpenRecent}
           onSelectTreeItem={onSelectTreeItem}
         />
         </div>

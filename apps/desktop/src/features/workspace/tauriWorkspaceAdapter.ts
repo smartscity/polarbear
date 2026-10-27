@@ -4,6 +4,13 @@ import { translateCurrent } from "../../shared/i18n/translate";
 import { TAURI_COMMANDS } from "../../shared/tauri/commandIds";
 import { invokeTauri } from "../../shared/tauri/invokeTauri";
 
+/** Native feedback remains visible when the file sidebar or Workspace surface is hidden. */
+export async function showRecentDocumentUnavailable(name: string): Promise<void> {
+  await message(translateCurrent("recent.unavailable", { name }), {
+    title: translateCurrent("recent.title"), kind: "error", okLabel: translateCurrent("common.ok"),
+  });
+}
+
 export {
   hasWorkspaceSaveErrorCode,
   WORKSPACE_SAVE_ERROR_CODES,
