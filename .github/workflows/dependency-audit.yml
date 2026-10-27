@@ -1,0 +1,35 @@
+name: Dependency governance
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  dependency-audit:
+    name: Scoped dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install pinned scanner
+        run: cargo install cargo-audit --version 0.22.2 --locked
+      - name: Fetch current advisory database
+        run: git clone --depth 1 https://github.com/RustSec/advisory-db.git "$RUNNER_TEMP/rustsec-db"
+      - name: Enforce scoped expiring exceptions
+        run: node apps/desktop/scripts/run-dependency-audit.mjs dependency-evidence "$RUNNER_TEMP/rustsec-db"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: dependency-audit-${{ github.run_id }}
+          path: dependency-evidence
+          if-no-files-found: error
