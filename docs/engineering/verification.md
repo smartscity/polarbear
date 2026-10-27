@@ -23,6 +23,25 @@ not modified. Evidence: [menu](evidence/2026-10-27-recent-menu) and
 | Rebuild/remount/event handling | PASS in controlled tests: pending native builds cannot retarget the visible item, ID population is bounded, duplicate click admits one IO, latest callbacks are used and history listeners are removed on remount. |
 | Windows/Linux native menu UI | NOT RUN: no desktop test entry. Existing earlier Windows CI is historical evidence, not proof of this new menu's interaction. Run the steps below on each available platform. |
 
+Hosted run [40527827124](https://github.com/smartscity/polarbear/actions/runs/40527827124)
+on `e0155bc` passed Frontend quality, Rust format, dependency audit and both native
+jobs, including Windows Clippy, native tests and installer artifact `12744764653`.
+Desktop WebKit passed 74/74; Chromium passed 150/151, including every recent-menu
+case. One existing layout persistence test reloaded after observing the optimistic
+width without awaiting its IndexedDB acknowledgment, allowing navigation to race
+the write; the restarted width was 240 instead of 280. This timing diagnosis follows
+from the test and persistence code, not an instrumented native trace. The raw failed
+job is retained. Native rich clipboard
+in that job was SKIPPED after the failure, not PASS.
+
+The fixture correction adds a real held settings lock to demonstrate that rendered
+widths can lead the acknowledged settings, checks both persisted widths after
+release, then reloads. Hiding the sidebar likewise waits for its persisted value.
+It adds assertions without a fixed sleep, changed product persistence, longer
+timeout or weakened post-reload expectations. The targeted case is repeated three
+times in Chromium and three in WebKit; results are retained separately. The next
+hosted run must validate the corrected test snapshot before claiming full CI PASS.
+
 Actual main-panel screenshots: `native-empty-panel.png`, `native-loaded-panel.png`,
 and `native-cleared-draft-panel.png`. Native menu accessibility captures retain the
 restored, translated, cleared and cleared-after-restart states. CUA returned
