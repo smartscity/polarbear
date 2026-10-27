@@ -1,0 +1,13 @@
+{
+  "recordedAt": "2026-10-27T15:32:02.847064+00:00",
+  "scope": "Generated native acceptance files after Clear, explicit discard of the new draft, and relaunch.",
+  "firstFileExists": true,
+  "secondFileExists": true,
+  "savedMarkerPresent": true,
+  "discardedDraftAbsent": true,
+  "secondGeneratedFileUnchanged": true,
+  "sha256": {
+    "中文 文件/Notes.md": "ebc36fc544917ffbf712c58bee67ae9a5edca3cf6ac80c29f5fbbe9e8116965c",
+    "other folder/Notes.md": "6876838ecc56ae99358dec0920781957b213b48a48ca0dbd8c270e5315891b5b"
+  }
+}

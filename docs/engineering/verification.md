@@ -21,7 +21,7 @@ not modified. Evidence: [menu](evidence/2026-10-27-recent-menu) and
 | Persistence and Clear | PASS on macOS: save with Command-S, quit/relaunch and open restored history. Add a new draft, clear history, observe disabled empty/Clear items with draft and tabs intact. Disk content is unchanged by Clear. Quit using the explicit discard option for this generated draft; relaunch leaves history empty. |
 | Language and existing File behavior | PASS: actual EN/ZH native menu labels, Command-O, Command-S and dirty-quit prompt. Browser coverage also verifies successful Save As uses the committed path and other File commands retain their shortcut dispatch. |
 | Rebuild/remount/event handling | PASS in controlled tests: pending native builds cannot retarget the visible item, ID population is bounded, duplicate click admits one IO, latest callbacks are used and history listeners are removed on remount. |
-| Windows/Linux native menu UI | NOT RUN: no desktop test entry. Existing earlier Windows CI is historical evidence, not proof of this new menu's interaction. Run the steps below on each available platform. |
+| Windows/Linux native menu UI | NOT RUN: no desktop test entry. The passing Windows native/build job below is not proof of menu interaction. Run the steps below on each available platform. |
 
 Hosted run [40527827124](https://github.com/smartscity/polarbear/actions/runs/40527827124)
 on `e0155bc` passed Frontend quality, Rust format, dependency audit and both native
@@ -39,8 +39,18 @@ widths can lead the acknowledged settings, checks both persisted widths after
 release, then reloads. Hiding the sidebar likewise waits for its persisted value.
 It adds assertions without a fixed sleep, changed product persistence, longer
 timeout or weakened post-reload expectations. The targeted case is repeated three
-times in Chromium and three in WebKit; results are retained separately. The next
-hosted run must validate the corrected test snapshot before claiming full CI PASS.
+times in Chromium and three in WebKit; results are retained separately.
+
+Final source/test snapshot `df06675dafb7db65c306fe14844779829b3e32a5` passed all six
+jobs in [Quality 40530524335](https://github.com/smartscity/polarbear/actions/runs/40530524335):
+Frontend quality, Rust format, scoped dependency audit, macOS native, Windows
+native and Desktop editor/clipboard. Chromium passed 151/151 and WebKit 74/74;
+bundled offline translation and native rich clipboard also passed. The Windows
+job passed Clippy, native tests and installer creation; installer artifact
+`12745294553` is retained by that run. `ci-qualified.json` binds jobs/artifacts to
+the exact SHA, and `ci-qualified-desktop-job.txt` retains the successful log.
+The later evidence-only commit changes no executable source or tests. Native
+file hashes after Clear/discard/relaunch are in `native-files-after-clear.json`.
 
 Actual main-panel screenshots: `native-empty-panel.png`, `native-loaded-panel.png`,
 and `native-cleared-draft-panel.png`. Native menu accessibility captures retain the
