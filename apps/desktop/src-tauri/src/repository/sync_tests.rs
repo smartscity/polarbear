@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 use super::{
     policy::content_digest,
-    sync_coordinator::{synchronize, SyncIo},
+    sync_coordinator::{synchronize, PublishedCommit, SyncIo},
     sync_plan::Manifest,
 };
 use std::{collections::BTreeMap, fs, path::PathBuf};
@@ -94,7 +94,7 @@ impl SyncIo for Fixture {
         &mut self,
         expected: &str,
         changes: &BTreeMap<String, Option<Vec<u8>>>,
-    ) -> Result<String, String> {
+    ) -> Result<PublishedCommit, String> {
         if expected != self.head {
             return Err("remote conflict".into());
         }
@@ -110,7 +110,7 @@ impl SyncIo for Fixture {
         if self.lose_response {
             return Err("unknown publication outcome".into());
         }
-        Ok(self.head.clone())
+        Ok(PublishedCommit::FullSnapshot(self.head.clone()))
     }
     fn checkpoint(&mut self, baseline: &Manifest, _: &str, complete: bool) -> Result<(), String> {
         if self.fail_checkpoint {

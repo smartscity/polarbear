@@ -191,6 +191,14 @@ fn write_fallback_secrets(
     write_fallback_file(&path, content.as_bytes())
 }
 
+/// Test-only read of the same Keychain backend used by release builds; no new credential store.
+#[cfg(test)]
+pub(crate) fn acceptance_repository_secret(provider: &str) -> Result<String, String> {
+    KeychainSecretStore
+        .get_secret(repository_secret_key(provider))?
+        .ok_or_else(|| "Application Keychain credential is unavailable.".to_owned())
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {

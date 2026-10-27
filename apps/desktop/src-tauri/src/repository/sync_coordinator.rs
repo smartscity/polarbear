@@ -7,6 +7,12 @@ use std::collections::BTreeMap;
 const MAX_PUBLICATION_BYTES: usize = 64 * 1024 * 1024;
 const MAX_PUBLICATION_FILES: usize = 10_000;
 
+/// Publication scope is independent of whether the server accepted the submitted paths.
+pub(super) enum PublishedCommit {
+    FullSnapshot(String),
+    ChangedPaths(String),
+}
+
 pub(super) trait SyncIo {
     fn read_local(&mut self, path: &str, limit: usize) -> Result<Vec<u8>, String>;
     fn read_remote(&mut self, commit: &str, path: &str) -> Result<Vec<u8>, String>;
@@ -20,7 +26,7 @@ pub(super) trait SyncIo {
         &mut self,
         commit: &str,
         changes: &BTreeMap<String, Option<Vec<u8>>>,
-    ) -> Result<String, String>;
+    ) -> Result<PublishedCommit, String>;
     fn checkpoint(
         &mut self,
         baseline: &Manifest,
@@ -31,6 +37,7 @@ pub(super) trait SyncIo {
 
 pub(super) struct SyncOutcome {
     pub conflicts: Vec<String>,
+    pub remote_pending: bool,
 }
 
 /// Checkpoints only acknowledged content. A failed checkpoint is retried by three-way comparison.
@@ -59,7 +66,10 @@ pub(super) fn synchronize(
         .map(|(path, _)| path.clone())
         .collect::<Vec<_>>();
     if !conflicts.is_empty() {
-        return Ok(SyncOutcome { conflicts });
+        return Ok(SyncOutcome {
+            conflicts,
+            remote_pending: true,
+        });
     }
 
     let mut acknowledged = baseline.clone();
@@ -111,7 +121,7 @@ pub(super) fn synchronize(
         }
     }
     let committed = if uploads.is_empty() {
-        remote_commit.to_owned()
+        PublishedCommit::FullSnapshot(remote_commit.to_owned())
     } else {
         let commit = io.publish(remote_commit, &uploads)?;
         for (path, bytes) in &uploads {
@@ -120,9 +130,14 @@ pub(super) fn synchronize(
         }
         commit
     };
-    io.checkpoint(&acknowledged, &committed, true)?;
+    let (commit, complete) = match committed {
+        PublishedCommit::FullSnapshot(commit) => (commit, true),
+        PublishedCommit::ChangedPaths(commit) => (commit, false),
+    };
+    io.checkpoint(&acknowledged, &commit, complete)?;
     Ok(SyncOutcome {
         conflicts: Vec::new(),
+        remote_pending: !complete,
     })
 }
 
