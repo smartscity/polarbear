@@ -53,6 +53,28 @@ const fileTreeContext: KeybindingContext = {
   textInputFocused: false,
 };
 
+describe("native shortcut ownership", () => {
+  it.each(["MacIntel", "iPad", "Win32", "Linux x86_64"])("does not treat extra primary modifiers as an application shortcut on %s", (platform) => {
+    vi.stubGlobal("navigator", { platform });
+    try {
+      const shortcuts = resolveShortcutDefinitions({});
+      expect(resolveShortcutForKeyboardEvent(primaryModifierEvent({ code: "KeyF", key: "f" }), shortcuts, editorContext))
+        .toMatchObject({ kind: "match", shortcut: { command: "edit.find" } });
+      for (const [key, code] of [["f", "KeyF"], ["s", "KeyS"], ["=", "Equal"]]) {
+        expect(resolveShortcutForKeyboardEvent(keydownEvent({ key, code, metaKey: true, ctrlKey: true }), shortcuts, editorContext))
+          .toEqual({ kind: "none" });
+      }
+      const foreignModifier = isApplePlatform() ? { ctrlKey: true } : { metaKey: true };
+      expect(resolveShortcutForKeyboardEvent(keydownEvent({ key: "F2", code: "F2", ...foreignModifier }), shortcuts, fileTreeContext))
+        .toEqual({ kind: "none" });
+      expect(resolveShortcutForKeyboardEvent(keydownEvent({ key: "F2", code: "F2" }), shortcuts, fileTreeContext))
+        .toMatchObject({ kind: "match", shortcut: { command: "file.rename" } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 function keydownEvent(
   values: Pick<KeyboardEvent, "code" | "key"> & Partial<
     Pick<KeyboardEvent, "altKey" | "ctrlKey" | "isComposing" | "metaKey" | "shiftKey">

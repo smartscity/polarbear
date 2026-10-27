@@ -274,8 +274,20 @@ test("favorites an offline unknown word in the header and delivers after the car
   await page.evaluate(() => (window as unknown as { __quality: { setTheme: (theme: string) => void } }).__quality.setTheme("light"));
   await page.screenshot({ path: "test-results/favorite-offline.png" });
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(800);
+  await expect(card).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe("OEMS");
+  await expect.poll(() => page.evaluate(async () => {
+    const runtime = (window as unknown as { __TAURI_INTERNALS__: { invoke: (command: string, args: Record<string, unknown>) => Promise<{ inMyVocabulary: boolean }[]> } }).__TAURI_INTERNALS__;
+    try { return (await runtime.invoke("vocab_request", { operation: { method: "lookup", query: "OEMS" } }))[0]?.inMyVocabulary; }
+    catch { return false; }
+  })).toBe(true);
+  // Escape restores the old range. Collapse it before reselecting, rather than
+  // starting a native text drag from inside the restored selection.
+  await page.locator(".markdown-preview-segment p").click({ position: { x: 1, y: 1 } });
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.isCollapsed)).toBe(true);
   await selectText(page, ".markdown-preview-segment p", "OEMS");
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe("OEMS");
+  await expect(card).toBeVisible();
   await card.getByRole("checkbox").uncheck();
   await card.getByRole("button", { name: "Remove from vocabulary notebook", exact: true }).click();
   await card.getByRole("button", { name: "Favorite word" }).click();

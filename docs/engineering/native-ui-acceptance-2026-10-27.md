@@ -133,3 +133,75 @@ confirm About/version and the actual running executable, then repeat sidebar
 drag/restart, narrow drawer, dirty-edit undo/save, zoom reset, Settings focus, and
 light/dark code readability on the installed release. Keep the user's original
 preferences and documents intact during upgrade checks.
+
+## Fullscreen Follow-up
+
+Follow-up baseline: `480bfe1080d4c032c8374e45fe4c30c1af5e3a2f` on `main`.
+The command resolver accepted extra modifiers: Control-Command-F matched
+Command-F and consumed the native fullscreen accelerator. The existing Tauri
+predefined Fullscreen menu already owns Control-Command-F on macOS. Command
+matching now requires the exact primary-modifier pair; gesture modifier handling
+is unchanged. No second fullscreen command or window service was introduced.
+
+Before changing production code, four platform cases failed (Mac, iPad, Windows,
+Linux), and the real-editor WebKit regression failed because the event was
+prevented. Both passed after the correction. The regression also checks normal
+Find, non-primary F2, dirty content, selection and editor focus. The browser case
+tests event ownership, not OS fullscreen transitions.
+
+The isolated native bundle was rebuilt from the follow-up source. Actual
+Control-Command-F entered fullscreen and the same chord exited it, without opening
+Find. The window returned to 1200 by 800 logical pixels with 240/280 sidebar
+preferences. Command-F still opened Find. A 23-character disposable draft survived
+another enter/exit cycle, and Command-Z removed the insertion in one operation.
+The fixture was restored and saved; the acceptance app was quit.
+
+- [Native shortcut entering fullscreen](evidence/2026-10-27/fullscreen-shortcut-enter.png)
+- [Native shortcut exiting fullscreen](evidence/2026-10-27/fullscreen-shortcut-exit.png)
+
+**Remaining focus observation:** after the native transition, accessibility
+reported the window as focused and an immediate paste did not insert text.
+Native Find and Undo still worked. Automatic first-responder restoration after
+the OS transition is not certified by the browser focus assertion and remains
+unresolved; this report does not claim all fullscreen editing acceptance passed.
+
+### Hosted Evidence Correction
+
+Authenticated checks supersede the earlier public-URL-only observation:
+
+- [v0.10.11 Release run](https://github.com/smartscity/polarbear/actions/runs/40199865735)
+  completed successfully at source `1988263e9dfc99d08b19d26a93b246db9fe928e5`.
+  macOS DMG build, mounted-DMG verification and upload succeeded; Windows build
+  also succeeded. This artifact does not contain either follow-up UI correction.
+- Artifact `12601554865`, `Polarbear-macOS-0.10.11`, is a 149,091,595-byte ZIP,
+  SHA-256 `5cf471d486a4dd3c1b9e735d639d79619397ea88f945bd23e743c7b689b6a0e0`.
+  The release job created a draft release and uploaded `Polarbear_0.10.11.dmg`.
+  Missing public download availability is not a failed DMG build.
+- [Baseline Quality run](https://github.com/smartscity/polarbear/actions/runs/40450575631)
+  passed frontend quality, Rust format and both native platforms, but failed one
+  of 138 Chromium cases: reselecting the saved word after closing its card timed
+  out. All 18 selected WebKit cases passed. This run is not all green.
+
+The failing favorite test passed three consecutive local runs before any change.
+Its CI screenshot retained the old selection without a card. The test now waits
+for actual fixture delivery rather than an 800 ms sleep, asserts Escape restored
+the selection, collapses it through a real pointer click, and then reselects and
+asserts the exact word. This avoids attempting a native text drag from an existing
+range. Favorite persistence assertions remain unchanged. This is test-gesture
+hardening, not a claimed production Vocab fix.
+
+### Follow-up Local Verification
+
+| Check | Result |
+| --- | --- |
+| Desktop typecheck and ESLint | PASS. |
+| Desktop unit and script suites | PASS: 365 Vitest cases and 40 Node cases. |
+| WebKit fullscreen/layout/settings/theme selection | PASS: 15 cases. |
+| Full Chromium suite | PASS: 139 cases, five minutes. The favorite gesture was hardened while this run was in progress, so its final source is checked separately below. |
+| Final favorite gesture, three repetitions per engine | PASS: 3 Chromium and 3 WebKit cases. The `--browser=all` command exited 1 because all 3 Firefox launches failed: Firefox 1543 is not installed. Firefox behavior is NOT RUN, not passing. |
+| Native app build | PASS: production Vite build and debug x86_64 bundle. |
+| Native fullscreen shortcut | PASS for enter/exit, normal Find and draft Undo; first-responder continuation remains unresolved as noted above. |
+| Official DMG local install/upgrade | BLOCKED: artifact transfer timed out after 120 seconds; a resumed transfer also timed out after 480 seconds. The partial ZIP was not installed or treated as verified. |
+
+Hosted CI for the follow-up commit is a separate status check after pushing. No
+tag was created, moved or published, and the draft release was not published.

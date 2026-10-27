@@ -120,7 +120,7 @@ jobs:
       - name: Bundled offline translation with production CSP
         run: npm --workspace apps/desktop run test:offline-translation -- --webkit
       - name: Cross-window settings and layout in WebKit
-        run: npm --workspace apps/desktop run test:ui -- settings-concurrency.spec.ts workspace-layout.spec.ts settings-focus.spec.ts workspace-theme.spec.ts --browser webkit
+        run: npm --workspace apps/desktop run test:ui -- settings-concurrency.spec.ts workspace-layout.spec.ts settings-focus.spec.ts workspace-theme.spec.ts native-shortcut-ownership.spec.ts --browser webkit
       - run: npm --workspace apps/desktop run test:ui
       - name: Paste actual Mermaid images into a native rich text receiver
         run: npm --workspace apps/desktop run test:native-clipboard -- test-results/real-mermaid-clipboard.json

@@ -17,6 +17,17 @@ export function hasPrimaryModifier(
   return isApplePlatform(platformHint) ? event.metaKey : event.ctrlKey;
 }
 
+/** Match command modifiers exactly; extra OS modifiers must not invoke a simpler shortcut. */
+export function matchesPrimaryModifier(
+  event: ModifierEvent,
+  required: boolean,
+  platformHint = currentPlatformHint(),
+): boolean {
+  const apple = isApplePlatform(platformHint);
+  return event.metaKey === (required && apple)
+    && event.ctrlKey === (required && !apple);
+}
+
 /**
  * Zoom gestures can be initiated by either Command/Control wheel or browser
  * pinch emulation. Keep this broader than the keyboard command modifier.

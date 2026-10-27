@@ -1,5 +1,5 @@
 import type { AppCommand } from "../shared/commands/appCommandTypes";
-import { hasPrimaryModifier } from "../shared/platform/keyboard";
+import { matchesPrimaryModifier } from "../shared/platform/keyboard";
 import type { KeybindingOverrides } from "../shared/settings/userSettings";
 import {
   acceleratorForCommand,
@@ -186,7 +186,7 @@ export function resolveShortcutForKeyboardEvent(
   const key = event.key.toLowerCase();
   const codeKey = keyFromKeyboardCode(event.code);
   const matching = shortcuts.filter((shortcut) => {
-    if ((shortcut.primaryModifier !== false) !== hasPrimaryModifier(event)) {
+    if (!matchesPrimaryModifier(event, shortcut.primaryModifier !== false)) {
       return false;
     }
     if (!matchesShortcutContext(shortcut.when, context)) {

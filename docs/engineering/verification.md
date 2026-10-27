@@ -1,5 +1,25 @@
 # Engineering Verification
 
+## Native Fullscreen Shortcut Follow-up: 2026-10-27
+
+Baseline: `480bfe1080d4c032c8374e45fe4c30c1af5e3a2f` on `main`.
+The [acceptance follow-up](native-ui-acceptance-2026-10-27.md#fullscreen-follow-up)
+records the test-first primary-modifier fix, actual native fullscreen enter/exit,
+and the remaining first-responder and official-DMG installation boundaries.
+The native Tauri menu retains fullscreen ownership; application shortcuts no
+longer accept extra Control/Command modifiers. Gesture modifiers are unchanged.
+
+Local typecheck, lint, 365 unit tests, 40 script tests, 15 selected WebKit cases,
+139 Chromium cases and the isolated native bundle build passed. The baseline
+hosted Quality run failed the favorite reselection case despite its other gates
+passing; it must not be described as all green. The favorite test now collapses
+the Escape-restored range before a fresh pointer selection and polls fixture
+delivery instead of sleeping. This is test hardening, not a Vocab production fix.
+
+The v0.10.11 release workflow succeeded and uploaded a DMG to a draft release.
+That artifact predates these fixes. Local download retries timed out, so release
+installation/upgrade acceptance is still blocked. No tag or release was changed.
+
 ## Native Workspace UI Acceptance: 2026-10-27
 
 Baseline: `1988263e9dfc99d08b19d26a93b246db9fe928e5`, `main` / `v0.10.11`.
