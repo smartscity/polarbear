@@ -1,0 +1,25 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test navigation-settings.spec.ts -g one task allocate|batched with|Save As --output /tmp/polarbear-session-final-results
+
+[WebServer] (node:32417) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:32459) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:32481) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/navigation-settings.spec.ts:34:1 › Save As commits the new identity even when refreshing its directory fails (7.2s)
+  ✓   2 tests/browser/navigation-settings.spec.ts:163:1 › Save As completion keeps the newly selected document and workspace active (3.7s)
+  ✓   3 tests/browser/navigation-settings.spec.ts:633:1 › preserves newer text and its dirty state when Save As replaces the document identity (5.6s)
+  ✓   4 tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /saved (11.0s)
+  ✓   5 tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /other (8.9s)
+  ✓   6 tests/browser/navigation-settings.spec.ts:1084:37 › Save As completion preserves target registration after closing (reopen: false) (1.5s)
+  ✓   7 tests/browser/navigation-settings.spec.ts:1084:37 › Save As completion preserves target registration after closing (reopen: true) (1.9s)
+  ✓   8 tests/browser/navigation-settings.spec.ts:1135:1 › Save As and a target open completed in one task allocate distinct identities (2.1s)
+  ✓   9 tests/browser/navigation-settings.spec.ts:1162:37 › an edit batched with the save receipt stays dirty (Save As: false) (2.0s)
+  ✓  10 tests/browser/navigation-settings.spec.ts:1162:37 › an edit batched with the save receipt stays dirty (Save As: true) (1.7s)
+
+  10 passed (1.0m)

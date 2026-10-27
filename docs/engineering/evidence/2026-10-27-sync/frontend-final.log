@@ -1,0 +1,70 @@
+
+> test
+> npm --workspace apps/desktop run test
+
+
+> polarbear-desktop@0.1.0 test
+> vitest run && node --test scripts/memory-m1-assets.node-test.mjs scripts/caption-engine-fixture.node-test.mjs scripts/macos-release-artifacts.node-test.mjs scripts/workspace-dependencies.node-test.mjs scripts/architecture-graph.node-test.mjs scripts/dependency-audit.node-test.mjs
+
+
+ RUN  v4.1.12 /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+
+
+ Test Files  66 passed (66)
+      Tests  365 passed (365)
+   Start at  13:40:11
+   Duration  24.16s (transform 11.11s, setup 0ms, import 46.27s, tests 10.90s, environment 48ms)
+
+✔ detects self and indirect dependency cycles without rejecting shared leaves (5.370944ms)
+✔ production imports have no runtime cycles or reverse shared and feature dependencies (3761.903734ms)
+✔ quality and macOS release keep native correctness and all-target lint checks (4.000423ms)
+✔ quality runs on engineering branch pushes without requiring a release tag (0.948415ms)
+✔ local native verification compiles Windows production and test configurations before a push (1.494554ms)
+✔ native repository contracts and providers do not depend on entry-point internals (7.833561ms)
+✔ native quality produces frontend assets before checking custom-protocol (2.366479ms)
+✔ release builds frontend assets before all-feature native validation (1.331661ms)
+✔ manual release validation can target a branch without creating a version tag (1.607694ms)
+✔ caption production gates are not replaced by research based on the branch name (3.136946ms)
+✔ App composes repository workflows and the live editor composes feature extensions (3.396469ms)
+✔ document sessions, zoom resources and table transactions have dedicated owners (6.33904ms)
+✔ does not treat a three-second host bootstrap delay as a protocol failure (600.09394ms)
+✔ validates fixture format and rejects truncated WAV chunks (4.224533ms)
+✔ replays diagnostic float WAV samples without quantizing them (470.218602ms)
+✔ feeds timestamped PCM with an empty environment and waits for EOF (510.195303ms)
+✔ preserves every sample and timestamp across irregular packet boundaries (526.78573ms)
+✔ rejects invalid packet patterns before spawning a helper (16.01328ms)
+✔ kills and reaps a helper stalled during model loading with phase diagnostics (5876.687477ms)
+✔ distinguishes an inference stall from a startup stall (2911.773915ms)
+✔ rejects an early engine exit instead of waiting for the timeout (430.837983ms)
+✔ rejects malformed and oversized events without uncaught parser errors (760.415646ms)
+✔ requires the same CPU handshake used in production (387.687213ms)
+✔ preserves the malformed frame exit code (367.339103ms)
+✔ paces PCM against the sample clock and measures final latency (1376.308501ms)
+✔ stops paced feeding when the helper exits early (522.299016ms)
+✔ does not expose arbitrary stderr or recognized content in progress (469.273222ms)
+✔ accepts only numeric diagnostic fields and never forwards private extras (531.472186ms)
+✔ reviews a transitive finding once and retains exact expiring exceptions (19.15369ms)
+✔ blocks expired, changed-version and newly severe findings (3.49417ms)
+✔ blocks new native warnings, vulnerability findings and malformed scanner output (5.570928ms)
+✔ rejects unresolvable transitive chains instead of silently treating them as reviewed (0.936188ms)
+✔ locates a universal app and DMG under Cargo's custom target directory (161.931069ms)
+✔ supports native build output and product paths containing spaces (29.837601ms)
+✔ reports the dmg-only cleanup regression even when the DMG exists (93.532603ms)
+✔ does not fall back to source resources when the packaged helper is missing (28.896905ms)
+✔ rejects missing or ambiguous DMGs rather than picking the first file (54.74481ms)
+✔ release workflow retains the app and verifies the mounted DMG before upload (10.863656ms)
+✔ release quality, caption qualification and both packages use one resolved candidate SHA (3.349888ms)
+✔ the frozen corpus satisfies the M1 oracle invariants (83.456117ms)
+✔ the scorer accepts complete safe results and measures evidence and latency (113.609895ms)
+✔ the scorer fails an unsafe wrong-task reuse (5.507289ms)
+✔ the scorer does not treat missing observations as successful rejection (1.489107ms)
+✔ workspaces declare directly imported source dependencies instead of relying on hoisting (3948.002476ms)
+✔ workspace runtime declarations match the lockfile without changing resolved versions (13.466325ms)
+ℹ tests 45
+ℹ suites 0
+ℹ pass 45
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16490.258841
