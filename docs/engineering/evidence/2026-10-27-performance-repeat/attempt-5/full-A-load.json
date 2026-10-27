@@ -1,0 +1,352 @@
+{
+  "command": [
+    "node",
+    "/private/tmp/polarbear-perf-1027/candidate/apps/desktop/scripts/measure-editor.mjs",
+    "/private/tmp/polarbear-perf-1027/baseline",
+    "/private/tmp/polarbear-perf-1027/evidence/attempt-5/full-A.json",
+    "full-A"
+  ],
+  "returncode": 143,
+  "invalidExternalLoad": true,
+  "samples": [
+    {
+      "at": "2026-10-27T13:35:07.447632+00:00",
+      "risks": [],
+      "top": [
+        {
+          "pid": 899,
+          "ppid": 463,
+          "cpu": 8.0,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+        },
+        {
+          "pid": 264,
+          "ppid": 1,
+          "cpu": 6.8,
+          "command": "/usr/libexec/syspolicyd"
+        },
+        {
+          "pid": 670,
+          "ppid": 463,
+          "cpu": 2.7,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+        },
+        {
+          "pid": 463,
+          "ppid": 1,
+          "cpu": 1.8,
+          "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+        },
+        {
+          "pid": 210,
+          "ppid": 1,
+          "cpu": 1.7,
+          "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+        },
+        {
+          "pid": 742,
+          "ppid": 463,
+          "cpu": 1.1,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+        },
+        {
+          "pid": 778,
+          "ppid": 463,
+          "cpu": 1.1,
+          "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+        },
+        {
+          "pid": 228,
+          "ppid": 1,
+          "cpu": 0.9,
+          "command": "/usr/libexec/trustd"
+        },
+        {
+          "pid": 167,
+          "ppid": 1,
+          "cpu": 0.7,
+          "command": "/usr/sbin/bluetoothd"
+        },
+        {
+          "pid": 447,
+          "ppid": 1,
+          "cpu": 0.2,
+          "command": "/usr/libexec/sharingd"
+        },
+        {
+          "pid": 233,
+          "ppid": 1,
+          "cpu": 0.1,
+          "command": "/usr/libexec/symptomsd"
+        },
+        {
+          "pid": 443,
+          "ppid": 1,
+          "cpu": 0.1,
+          "command": "/usr/libexec/rapportd"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-27T13:35:08.511692+00:00",
+      "risks": [
+        {
+          "pid": 494,
+          "ppid": 1,
+          "cpu": 76.3,
+          "command": "/System/Library/CoreServices/CoreLocationAgent.app/Contents/MacOS/CoreLocationAgent"
+        }
+      ],
+      "top": [
+        {
+          "pid": 494,
+          "ppid": 1,
+          "cpu": 76.3,
+          "command": "/System/Library/CoreServices/CoreLocationAgent.app/Contents/MacOS/CoreLocationAgent"
+        },
+        {
+          "pid": 264,
+          "ppid": 1,
+          "cpu": 5.1,
+          "command": "/usr/libexec/syspolicyd"
+        },
+        {
+          "pid": 228,
+          "ppid": 1,
+          "cpu": 3.8,
+          "command": "/usr/libexec/trustd"
+        },
+        {
+          "pid": 211,
+          "ppid": 1,
+          "cpu": 3.6,
+          "command": "/System/Library/PrivateFrameworks/TCC.framework/Support/tccd"
+        },
+        {
+          "pid": 899,
+          "ppid": 463,
+          "cpu": 3.5,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+        },
+        {
+          "pid": 670,
+          "ppid": 463,
+          "cpu": 0.8,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+        },
+        {
+          "pid": 420,
+          "ppid": 1,
+          "cpu": 0.7,
+          "command": "/usr/sbin/cfprefsd"
+        },
+        {
+          "pid": 442,
+          "ppid": 1,
+          "cpu": 0.7,
+          "command": "/usr/libexec/trustd"
+        },
+        {
+          "pid": 1,
+          "ppid": 0,
+          "cpu": 0.4,
+          "command": "/sbin/launchd"
+        },
+        {
+          "pid": 168,
+          "ppid": 1,
+          "cpu": 0.4,
+          "command": "/usr/sbin/notifyd"
+        },
+        {
+          "pid": 778,
+          "ppid": 463,
+          "cpu": 0.4,
+          "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+        },
+        {
+          "pid": 144,
+          "ppid": 1,
+          "cpu": 0.3,
+          "command": "/System/Library/CoreServices/launchservicesd"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-27T13:35:09.903534+00:00",
+      "risks": [
+        {
+          "pid": 154,
+          "ppid": 1,
+          "cpu": 72.8,
+          "command": "/usr/libexec/dasd"
+        }
+      ],
+      "top": [
+        {
+          "pid": 154,
+          "ppid": 1,
+          "cpu": 72.8,
+          "command": "/usr/libexec/dasd"
+        },
+        {
+          "pid": 3928,
+          "ppid": 1,
+          "cpu": 37.5,
+          "command": "/System/Library/PrivateFrameworks/OnDeviceStorage.framework/Support/amsondevicestoraged"
+        },
+        {
+          "pid": 226,
+          "ppid": 1,
+          "cpu": 27.3,
+          "command": "/usr/libexec/lsd"
+        },
+        {
+          "pid": 592,
+          "ppid": 1,
+          "cpu": 22.3,
+          "command": "/System/Library/PrivateFrameworks/PhotoLibraryServices.framework/Versions/A/Support/photolibraryd"
+        },
+        {
+          "pid": 1,
+          "ppid": 0,
+          "cpu": 21.8,
+          "command": "/sbin/launchd"
+        },
+        {
+          "pid": 3927,
+          "ppid": 1,
+          "cpu": 20.2,
+          "command": "/System/Library/PrivateFrameworks/SafariSafeBrowsing.framework/com.apple.Safari.SafeBrowsing.Service"
+        },
+        {
+          "pid": 3929,
+          "ppid": 1,
+          "cpu": 18.3,
+          "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+        },
+        {
+          "pid": 3933,
+          "ppid": 1,
+          "cpu": 16.2,
+          "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+        },
+        {
+          "pid": 3932,
+          "ppid": 1,
+          "cpu": 15.7,
+          "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+        },
+        {
+          "pid": 3926,
+          "ppid": 1,
+          "cpu": 13.8,
+          "command": "/System/Library/Frameworks/CoreSpotlight.framework/spotlightknowledged"
+        },
+        {
+          "pid": 2836,
+          "ppid": 1,
+          "cpu": 11.9,
+          "command": "/System/Library/Frameworks/ExtensionFoundation.framework/Versions/A/XPCServices/extensionkitservice.xpc/Contents/MacOS/extensionkitservice"
+        },
+        {
+          "pid": 225,
+          "ppid": 1,
+          "cpu": 11.8,
+          "command": "/usr/libexec/runningboardd"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-27T13:35:11.005715+00:00",
+      "risks": [
+        {
+          "pid": 264,
+          "ppid": 1,
+          "cpu": 68.8,
+          "command": "/usr/libexec/syspolicyd"
+        },
+        {
+          "pid": 3948,
+          "ppid": 1,
+          "cpu": 58.4,
+          "command": "/usr/libexec/remindd"
+        }
+      ],
+      "top": [
+        {
+          "pid": 264,
+          "ppid": 1,
+          "cpu": 68.8,
+          "command": "/usr/libexec/syspolicyd"
+        },
+        {
+          "pid": 3948,
+          "ppid": 1,
+          "cpu": 58.4,
+          "command": "/usr/libexec/remindd"
+        },
+        {
+          "pid": 154,
+          "ppid": 1,
+          "cpu": 41.3,
+          "command": "/usr/libexec/dasd"
+        },
+        {
+          "pid": 226,
+          "ppid": 1,
+          "cpu": 37.3,
+          "command": "/usr/libexec/lsd"
+        },
+        {
+          "pid": 3937,
+          "ppid": 1,
+          "cpu": 35.6,
+          "command": "/System/Library/ExtensionKit/Extensions/AssetMetricsExtension.appex/Contents/MacOS/AssetMetricsExtension"
+        },
+        {
+          "pid": 1,
+          "ppid": 0,
+          "cpu": 32.1,
+          "command": "/sbin/launchd"
+        },
+        {
+          "pid": 441,
+          "ppid": 1,
+          "cpu": 31.0,
+          "command": "/System/Library/Frameworks/Accounts.framework/Versions/A/Support/accountsd"
+        },
+        {
+          "pid": 437,
+          "ppid": 1,
+          "cpu": 27.5,
+          "command": "/System/Library/PrivateFrameworks/BiomeStreams.framework/Support/BiomeAgent"
+        },
+        {
+          "pid": 225,
+          "ppid": 1,
+          "cpu": 24.0,
+          "command": "/usr/libexec/runningboardd"
+        },
+        {
+          "pid": 720,
+          "ppid": 1,
+          "cpu": 23.7,
+          "command": "/System/Library/PrivateFrameworks/IntelligencePlatformCompute.framework/Versions/A/XPCServices/IntelligencePlatformComputeService.xpc/Contents/MacOS/IntelligencePlatformComputeService"
+        },
+        {
+          "pid": 444,
+          "ppid": 1,
+          "cpu": 23.6,
+          "command": "/System/Library/PrivateFrameworks/CloudKitDaemon.framework/Support/cloudd"
+        },
+        {
+          "pid": 3988,
+          "ppid": 1,
+          "cpu": 23.3,
+          "command": "/System/Library/ExtensionKit/Extensions/SiriTurnRestatementExtension.appex/Contents/MacOS/SiriTurnRestatementExtension"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+✔ detects self and indirect dependency cycles without rejecting shared leaves (1.918525ms)
+✔ production imports have no runtime cycles or reverse shared and feature dependencies (446.945599ms)
+✔ quality and macOS release keep native correctness and all-target lint checks (1.698382ms)
+✔ quality runs on engineering branch pushes without requiring a release tag (0.336178ms)
+✔ local native verification compiles Windows production and test configurations before a push (0.561195ms)
+✔ native repository contracts and providers do not depend on entry-point internals (4.122339ms)
+✔ native quality produces frontend assets before checking custom-protocol (0.464506ms)
+✔ release builds frontend assets before all-feature native validation (0.299294ms)
+✔ manual release validation can target a branch without creating a version tag (0.343872ms)
+✔ caption production gates are not replaced by research based on the branch name (1.136899ms)
+✔ App composes repository workflows and the live editor composes feature extensions (0.777538ms)
+✔ document sessions, zoom resources and table transactions have dedicated owners (0.798568ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 986.422296

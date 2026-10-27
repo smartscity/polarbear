@@ -1,0 +1,16 @@
+{
+  "app-build.txt": "2b1d58f5c616cd4ddfbad72a9beb11208075b434132793d51da12b4719f20cd2",
+  "architecture.txt": "cfc8c0e3aafa53119dcd4bffeba4738af3999373c358f4c0fa509785f036fc7b",
+  "chinese-menu-ax.txt": "ff2cfe26cb0e52866cfd386d02c312dd2c20fdadeef3a4312179e103b6895dbd",
+  "cleared-menu-ax.txt": "ff2cfe26cb0e52866cfd386d02c312dd2c20fdadeef3a4312179e103b6895dbd",
+  "cleared-restart-menu-ax.txt": "ff2cfe26cb0e52866cfd386d02c312dd2c20fdadeef3a4312179e103b6895dbd",
+  "complete-test.txt": "d5ea0e9ff36a20cfddf1b999abf9e3cc697c594c032c3ec7c2615901d1aa756b",
+  "final-browser.txt": "7b32cdb81f1c7c9eb2aa440550c8899be585f0dd430a3230551fee5ac2ab7dbd",
+  "final-check.txt": "45ad2984b45601f4552fe18959ca3aaf2309e35b15408e5c0893742b2cfcf718",
+  "native-cleared-draft-panel.png": "ea0ae8a68025ab00f6db36e8469ed80bbcf309da83e172c5005be4ae95219177",
+  "native-empty-panel.png": "90a381ca1dab31c9b27e26654420d8d5e5a401bf934386a988cfcb81878e9630",
+  "native-loaded-panel.png": "23bdd98977b2015e02be5d222c56af849a0e0fe391228759a0577b512c5821e2",
+  "regression.txt": "55b5017cc5cd2235604b0be457ec5849d63bfa0fa76f4f932bf1dcf06a3abd54",
+  "restart-menu-ax.txt": "ff2cfe26cb0e52866cfd386d02c312dd2c20fdadeef3a4312179e103b6895dbd",
+  "webkit.txt": "71d3d720d4a7a836a0b2476b5e9ae095a72662cdc8cf436a7e8221fb522760ca"
+}

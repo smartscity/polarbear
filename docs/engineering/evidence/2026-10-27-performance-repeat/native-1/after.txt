@@ -1,0 +1,6 @@
+
+running 1 test
+test engineering_performance::native_io_observations ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 147 filtered out; finished in 2.23s
+

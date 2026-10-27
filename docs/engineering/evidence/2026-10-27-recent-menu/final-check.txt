@@ -1,0 +1,113 @@
+
+> typecheck
+> npm --workspace apps/desktop run typecheck
+
+
+> polarbear-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+
+> lint
+> npm --workspace apps/desktop run lint
+
+
+> polarbear-desktop@0.1.0 lint
+> eslint src
+
+
+> test
+> npm --workspace apps/desktop run test
+
+
+> polarbear-desktop@0.1.0 test
+> vitest run && node --test scripts/memory-m1-assets.node-test.mjs scripts/caption-engine-fixture.node-test.mjs scripts/macos-release-artifacts.node-test.mjs scripts/workspace-dependencies.node-test.mjs scripts/architecture-graph.node-test.mjs scripts/dependency-audit.node-test.mjs
+
+
+ RUN  v4.1.12 /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+
+
+ Test Files  67 passed (67)
+      Tests  368 passed (368)
+   Start at  21:37:41
+   Duration  7.63s (transform 2.39s, setup 0ms, import 13.18s, tests 4.47s, environment 12ms)
+
+✔ detects self and indirect dependency cycles without rejecting shared leaves (2.230323ms)
+✖ production imports have no runtime cycles or reverse shared and feature dependencies (874.710729ms)
+✔ quality and macOS release keep native correctness and all-target lint checks (4.483634ms)
+✔ quality runs on engineering branch pushes without requiring a release tag (0.369031ms)
+✔ local native verification compiles Windows production and test configurations before a push (0.815513ms)
+✔ native repository contracts and providers do not depend on entry-point internals (9.015784ms)
+✔ native quality produces frontend assets before checking custom-protocol (0.30728ms)
+✔ release builds frontend assets before all-feature native validation (0.231792ms)
+✔ manual release validation can target a branch without creating a version tag (0.875471ms)
+✔ caption production gates are not replaced by research based on the branch name (1.250838ms)
+✔ App composes repository workflows and the live editor composes feature extensions (0.780643ms)
+✔ document sessions, zoom resources and table transactions have dedicated owners (0.80119ms)
+✔ does not treat a three-second host bootstrap delay as a protocol failure (207.04586ms)
+✔ validates fixture format and rejects truncated WAV chunks (1.663676ms)
+✔ replays diagnostic float WAV samples without quantizing them (137.676766ms)
+✔ feeds timestamped PCM with an empty environment and waits for EOF (140.665747ms)
+✔ preserves every sample and timestamp across irregular packet boundaries (149.120798ms)
+✔ rejects invalid packet patterns before spawning a helper (8.540642ms)
+✔ kills and reaps a helper stalled during model loading with phase diagnostics (439.22407ms)
+✔ distinguishes an inference stall from a startup stall (1481.214194ms)
+✔ rejects an early engine exit instead of waiting for the timeout (133.829607ms)
+✔ rejects malformed and oversized events without uncaught parser errors (264.902331ms)
+✔ requires the same CPU handshake used in production (136.851522ms)
+✔ preserves the malformed frame exit code (131.379455ms)
+✔ paces PCM against the sample clock and measures final latency (1128.861165ms)
+✔ stops paced feeding when the helper exits early (132.912242ms)
+✔ does not expose arbitrary stderr or recognized content in progress (147.519212ms)
+✔ accepts only numeric diagnostic fields and never forwards private extras (137.025474ms)
+✔ reviews a transitive finding once and retains exact expiring exceptions (1.705726ms)
+✔ blocks expired, changed-version and newly severe findings (0.453689ms)
+✔ blocks new native warnings, vulnerability findings and malformed scanner output (10.939928ms)
+✔ rejects unresolvable transitive chains instead of silently treating them as reviewed (0.27429ms)
+✔ locates a universal app and DMG under Cargo's custom target directory (19.508061ms)
+✔ supports native build output and product paths containing spaces (10.820843ms)
+✔ reports the dmg-only cleanup regression even when the DMG exists (11.256031ms)
+✔ does not fall back to source resources when the packaged helper is missing (10.598081ms)
+✔ rejects missing or ambiguous DMGs rather than picking the first file (22.66764ms)
+✔ release workflow retains the app and verifies the mounted DMG before upload (3.551778ms)
+✔ release quality, caption qualification and both packages use one resolved candidate SHA (2.111257ms)
+✔ the frozen corpus satisfies the M1 oracle invariants (6.888335ms)
+✔ the scorer accepts complete safe results and measures evidence and latency (17.601622ms)
+✔ the scorer fails an unsafe wrong-task reuse (1.397904ms)
+✔ the scorer does not treat missing observations as successful rejection (0.575293ms)
+✔ workspaces declare directly imported source dependencies instead of relying on hoisting (982.51414ms)
+✔ workspace runtime declarations match the lockfile without changing resolved versions (3.760515ms)
+ℹ tests 45
+ℹ suites 0
+ℹ pass 44
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5004.957226
+
+✖ failing tests:
+
+test at scripts/architecture-graph.node-test.mjs:12:1
+✖ production imports have no runtime cycles or reverse shared and feature dependencies (874.710729ms)
+  Error: ENOENT: no such file or directory, open '/Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/src/features/workspace/components/RecentDocuments.tsx'
+      at readFileSync (node:fs:436:20)
+      at auditArchitecture (file:///Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/scripts/architecture-graph.mjs:32:46)
+      at TestContext.<anonymous> (file:///Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/scripts/architecture-graph.node-test.mjs:13:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1306:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:897:18)
+      at Test.postRun (node:internal/test_runner/test:1447:19)
+      at Test.run (node:internal/test_runner/test:1372:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/src/features/workspace/components/RecentDocuments.tsx'
+  }
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error workspace polarbear-desktop@0.1.0
+npm error location /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error command failed
+npm error command sh -c vitest run && node --test scripts/memory-m1-assets.node-test.mjs scripts/caption-engine-fixture.node-test.mjs scripts/macos-release-artifacts.node-test.mjs scripts/workspace-dependencies.node-test.mjs scripts/architecture-graph.node-test.mjs scripts/dependency-audit.node-test.mjs

@@ -1,0 +1,111 @@
+{
+  "label": "1MiB-B2",
+  "sourceFingerprint": "893a315f8712756511dee019a58be2a5c2dac0369707538a4d2d7f05c687b6f4",
+  "lockFingerprint": "1430f0a922c135fa0343da93a3863f8940299720c5d635c0ea4a1e19b292630d",
+  "environment": {
+    "node": "v26.1.0",
+    "platform": "darwin",
+    "release": "25.5.0",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "browser": "153.0.8010.12"
+  },
+  "scope": "Production editor/preview in the browser harness; IPC is mocked. Fixture autosave is disabled, not native document persistence. RSS sums Chromium processes, not the Tauri app.",
+  "tolerance": {
+    "p95Relative": 0.1,
+    "p95AbsoluteMs": 20,
+    "stableRssRelative": 0.15
+  },
+  "rows": [
+    {
+      "fixture": "1MiB",
+      "round": 0,
+      "warmup": true,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 55.39999999990687,
+      "editMs": 33.89999999990687,
+      "previewMs": 196.5,
+      "rssKiB": 319436,
+      "jsHeapBytes": 17220460,
+      "taskSeconds": 0.348838,
+      "nodes": 54
+    },
+    {
+      "fixture": "1MiB",
+      "round": 1,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 24.199999999953434,
+      "editMs": 31.899999999906868,
+      "previewMs": 189,
+      "rssKiB": 329064,
+      "jsHeapBytes": 18002544,
+      "taskSeconds": 0.669021,
+      "nodes": 54
+    },
+    {
+      "fixture": "1MiB",
+      "round": 2,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 21.200000000186265,
+      "editMs": 33.5,
+      "previewMs": 182.69999999995343,
+      "rssKiB": 337288,
+      "jsHeapBytes": 18249532,
+      "taskSeconds": 0.974607,
+      "nodes": 54
+    },
+    {
+      "fixture": "1MiB",
+      "round": 3,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 22.200000000186265,
+      "editMs": 33.699999999953434,
+      "previewMs": 183.39999999990687,
+      "rssKiB": 344444,
+      "jsHeapBytes": 18314836,
+      "taskSeconds": 1.286031,
+      "nodes": 54
+    },
+    {
+      "fixture": "1MiB",
+      "round": 4,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 22.300000000046566,
+      "editMs": 35.0999999998603,
+      "previewMs": 182.10000000009313,
+      "rssKiB": 351944,
+      "jsHeapBytes": 18417360,
+      "taskSeconds": 1.595796,
+      "nodes": 54
+    },
+    {
+      "fixture": "1MiB",
+      "round": 5,
+      "warmup": false,
+      "bytes": 1048605,
+      "sha256": "a145372f8745941658fcc577febb03f630bb70360065b5672e3ffb2711a69f6d",
+      "openMs": 22.300000000046566,
+      "editMs": 39,
+      "previewMs": 189.39999999990687,
+      "rssKiB": 359768,
+      "jsHeapBytes": 18469204,
+      "taskSeconds": 1.925344,
+      "nodes": 54
+    }
+  ],
+  "released": [
+    {
+      "fixture": "1MiB",
+      "rssKiB": 123884
+    }
+  ],
+  "errors": []
+}

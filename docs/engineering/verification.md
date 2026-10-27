@@ -1,5 +1,107 @@
 # Engineering Verification
 
+## Recent Menu and Performance Follow-up: 2026-10-27
+
+Menu source: `3ff3ac3`; starting snapshot: `eeea3b4`. All changes are isolated on
+`codex/sync-session-qualification`. The original checkout and its other tasks were
+not modified. Evidence: [menu](evidence/2026-10-27-recent-menu) and
+[performance repeat](evidence/2026-10-27-performance-repeat).
+
+### Recent Menu Verification
+
+| Check | Result and evidence boundary |
+| --- | --- |
+| TypeScript, ESLint | PASS. `final-check.txt` includes both successful checks. |
+| Unit and Node checks | PASS: 368 Vitest tests in 67 files, plus 45 Node tests; `complete-test.txt`. The earlier graph check failed because its tracked-file inventory still contained the unstaged deleted component. Staging that deletion fixed the inventory; no assertion was weakened. Earlier failure and the 12-test graph rerun are retained. |
+| Related Chromium suite | 67/68 initially passed; the new remount fixture used an incorrect ReactDOM module import. Correcting the test import yielded 4/4 recent-menu tests. The other 64 cases had already passed unchanged. Both attempts are retained. |
+| WebKit | PASS: 4 recent-menu cases and the native-shortcut case, 5 total. |
+| macOS build | PASS: isolated debug `.app`, product name `Polarbear Recent Acceptance`, identifier `dev.polarbear.recentacceptance`, no file associations. Actual packaged source is `3ff3ac3`; this is not an installed release upgrade. |
+| Native menu, file IO, draft reuse | PASS on macOS: open two generated `Notes.md` files, including Chinese/space paths; native submenu distinguishes parent paths. Reopening the first activates its existing tab, retains the dirty buffer and moves history to the top. |
+| Missing file | PASS on macOS: rename only the generated second file externally, select its recent item, observe the native error alert, then confirm the first dirty document and both tabs remain. Restore the fixture afterward. |
+| Persistence and Clear | PASS on macOS: save with Command-S, quit/relaunch and open restored history. Add a new draft, clear history, observe disabled empty/Clear items with draft and tabs intact. Disk content is unchanged by Clear. Quit using the explicit discard option for this generated draft; relaunch leaves history empty. |
+| Language and existing File behavior | PASS: actual EN/ZH native menu labels, Command-O, Command-S and dirty-quit prompt. Browser coverage also verifies successful Save As uses the committed path and other File commands retain their shortcut dispatch. |
+| Rebuild/remount/event handling | PASS in controlled tests: pending native builds cannot retarget the visible item, ID population is bounded, duplicate click admits one IO, latest callbacks are used and history listeners are removed on remount. |
+| Windows/Linux native menu UI | NOT RUN: no desktop test entry. Existing earlier Windows CI is historical evidence, not proof of this new menu's interaction. Run the steps below on each available platform. |
+
+Actual main-panel screenshots: `native-empty-panel.png`, `native-loaded-panel.png`,
+and `native-cleared-draft-panel.png`. Native menu accessibility captures retain the
+restored, translated, cleared and cleared-after-restart states. CUA returned
+`Screenshot unavailable` while native menus held focus; its system screenshot
+shortcut also produced no readable image. Menu screenshot delivery remains
+BLOCKED by that capture capability. No mock menu image is substituted. An explicit
+request for permission to use macOS `screencapture` remains pending.
+
+For another desktop: create `a/Notes.md` and `中文 文件/Notes.md`, open both, edit one
+without saving, and reopen it through File > Open Recent. Confirm one tab per path,
+parent-path labels and intact edits. Move the other disk file and select its item;
+confirm an error and intact draft. Clear history; confirm disabled placeholder,
+unchanged tabs/files, then quit with the generated draft explicitly discarded and
+relaunch. Repeat without clearing to verify restored history; switch EN/ZH and
+exercise Open, Save and Save As. Capture the actual submenu and both panel states.
+
+### Frozen Performance Repeat
+
+Baseline remains `64d394a`; candidate is `eeea3b4` (the sync/session candidate plus
+documentation). Menu source is intentionally excluded from this frozen comparison.
+Both archives use the same locked dependency versions, Node 26.1.0, Chromium
+153.0.8010.12, Intel i7-9750H and macOS 25.5.0. Native release binaries were built
+before measurement with two compile jobs. Source/lock/binary hashes and compiler
+version are in `provenance.json`; all scripts and raw observations are retained.
+One warmup plus five measured observations per fixture; maximum is **not P95**.
+
+The monitor samples process CPU/ancestry each second, excluding only the owned
+measurement tree. Three preflight snapshots must be clear. Risk thresholds are
+compiler CPU >5%, external Chrome/WebKit/Chromium/Playwright >20%, or any external
+process >50%. Initial attempts stop at three consecutive risky samples; later
+strict attempts stop at the first. Only owned measurement processes are stopped.
+No external task, browser, security agent or system setting was changed. Startup
+and between-run delays do not manufacture an idle result; all rejected runs stay
+in evidence. Earlier brief bursts are disclosed even when they did not trip the
+three-sample stop rule.
+
+The focused ABBA repeat (`attempt-3`) did not reproduce the 1 MiB threshold:
+
+| Run | Open median / max ms | Edit median / max ms | Preview median / max ms | RSS median / max KiB |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline A1 | 23.1 / 24.3 | 34.8 / 35.8 | 185.2 / 201.7 | 343488 / 357176 |
+| Candidate B1 | 23.7 / 39.2 | 34.6 / 39.1 | 184.1 / 192.7 | 343744 / 357204 |
+| Candidate B2 | 22.3 / 24.2 | 33.7 / 39.0 | 183.4 / 189.4 | 344444 / 359768 |
+| Baseline A2 | 22.9 / 39.0 | 33.7 / 35.7 | 187.3 / 195.4 | 343612 / 357848 |
+
+A1/B1/B2 had no detected parallel compiler or external browser-heavy sample;
+each had a brief CoreLocationAgent burst at startup. A2 additionally had one
+external Chrome burst. None supports a perfectly idle-host claim. The original
+maximum increases of +70.8/+43.8/+84.4 ms are not repeated; neither paired
+maximum nor median crosses both +10% and +20 ms, and RSS stays below +15%.
+
+The completed four-fixture pair in `attempt-6` is supplementary only: external
+Chrome and OS bursts remain in the load traces. Its 1 MiB maxima are
+40.2 -> 40.5 / 40.1 -> 37.4 / 224.4 -> 210.3 ms. The original 1 MiB signal is
+**NOT REPRODUCED**, but strict zero-detected-load paired browser acceptance remains
+**BLOCKED**: strict baseline runs completed cleanly, while candidate runs were
+interrupted by system bursts and other preflights rejected external Chrome load.
+No incomplete candidate output is promoted to PASS. The full matrix and
+long-duration RSS plateau are not certified by these short observations.
+
+Native release measurements (`native-1`) completed with zero detected risk samples
+in every preflight and measurement. Each row scans two files of the stated size;
+2,000 excluded files remain excluded and digest storage stays 148 bytes.
+
+| Per-file size | Before save median / max ms | After save median / max ms | Before scan+hash median / max ms | After scan+hash median / max ms |
+| --- | ---: | ---: | ---: | ---: |
+| 4 KiB | 42.489 / 43.886 | 42.025 / 43.270 | 0.600 / 0.696 | 0.614 / 0.671 |
+| 1 MiB | 47.593 / 48.625 | 47.020 / 47.547 | 12.314 / 12.348 | 12.420 / 12.485 |
+| 10 MiB | 79.812 / 80.464 | 80.621 / 80.708 | 89.459 / 92.988 | 91.263 / 97.244 |
+
+No new native threshold regression is observed. For 20 MiB, stage medians are
+enumeration 0.093 ms, streaming read+hash 83.968 ms, independent read 3.125 ms,
+independent memory SHA-256 80.782 ms and independent checkpoint 2.325 ms.
+Independent probes are not additive. SHA-256 remains the dominant cost; the
+historical encoding-to-fixed-digest tradeoff is not erased by this comparison.
+No speculative cache, metadata-only shortcut or concurrency patch was added.
+The retained correctness/security behavior and previous 9+ acceptance boundaries
+remain unchanged.
+
 ## Sync and Session Qualification: 2026-10-27
 
 Start: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5` on `main`, later than the

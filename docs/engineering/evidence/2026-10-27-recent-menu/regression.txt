@@ -1,0 +1,118 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test recent-menu.spec.ts navigation-settings.spec.ts workspace-layout.spec.ts native-shortcut-ownership.spec.ts --output /tmp/polarbear-recent-regression
+
+[WebServer] (node:4417) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:4444) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 68 tests using 1 worker
+
+(node:4452) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/native-shortcut-ownership.spec.ts:4:1 › leaves Control-Command-F to the native window without searching or changing the draft (3.1s)
+  ✓   2 tests/browser/navigation-settings.spec.ts:34:1 › Save As commits the new identity even when refreshing its directory fails (1.7s)
+  ✓   3 tests/browser/navigation-settings.spec.ts:57:1 › cancelling a dirty tab confirmation does not discard the document (1.6s)
+  ✓   4 tests/browser/navigation-settings.spec.ts:72:58 › quit preserves edits to a earlier document while a later save is pending (1.9s)
+  ✓   5 tests/browser/navigation-settings.spec.ts:72:58 › quit preserves edits to a new document while a later save is pending (1.9s)
+  ✓   6 tests/browser/navigation-settings.spec.ts:109:40 › quit honors the explicit Cancel choice without saving (1.5s)
+  ✓   7 tests/browser/navigation-settings.spec.ts:109:40 › quit honors the explicit No choice without saving (1.6s)
+  ✓   8 tests/browser/navigation-settings.spec.ts:124:1 › renaming keeps file-tree dirty state and image writes on the current path (1.7s)
+  ✓   9 tests/browser/navigation-settings.spec.ts:163:1 › Save As completion keeps the newly selected document and workspace active (1.1s)
+  ✓  10 tests/browser/navigation-settings.spec.ts:192:1 › closing after a delayed confirmation preserves tabs opened during the prompt (1.3s)
+  ✓  11 tests/browser/navigation-settings.spec.ts:213:1 › reset cancels a queued zoom gesture and keeps the header inside the viewport (1.5s)
+  ✓  12 tests/browser/navigation-settings.spec.ts:233:1 › delayed close preserves the workspace of a subsequently opened document (1.3s)
+  ✓  13 tests/browser/navigation-settings.spec.ts:264:1 › repository connection retries a secure write failure and preserves the empty repository state (1.4s)
+  ✓  14 tests/browser/navigation-settings.spec.ts:298:1 › repository status failure stays visible and can be retried without changing the document (1.3s)
+  ✓  15 tests/browser/navigation-settings.spec.ts:316:1 › a repository status response cannot reopen an obsolete workspace dialog (1.1s)
+  ✓  16 tests/browser/navigation-settings.spec.ts:339:1 › native link failure keeps the document and reports a localized error without browser fallback (1.5s)
+  ✓  17 tests/browser/navigation-settings.spec.ts:378:1 › a blocked browser link never replaces the editor page (1.4s)
+  ✓  18 tests/browser/navigation-settings.spec.ts:391:1 › failed credential deletion retains the disconnect command and a successful retry clears it (1.1s)
+  ✓  19 tests/browser/navigation-settings.spec.ts:419:1 › reloaded application can finish pending cleanup without an authenticated account (1.7s)
+  ✓  20 tests/browser/navigation-settings.spec.ts:453:1 › preserves typing during an external reload and offers an explicit conflict choice (4.4s)
+  ✓  21 tests/browser/navigation-settings.spec.ts:497:1 › preserves typing while Memory opens the source of an already open document (1.6s)
+  ✓  22 tests/browser/navigation-settings.spec.ts:507:1 › does not reopen a closed document when a Memory source read finishes (1.4s)
+  ✓  23 tests/browser/navigation-settings.spec.ts:515:1 › refreshes and selects an unchanged Memory source document (1.4s)
+  ✓  24 tests/browser/navigation-settings.spec.ts:523:1 › does not apply an old disk read to a closed and reopened document (4.0s)
+  ✓  25 tests/browser/navigation-settings.spec.ts:534:1 › cancels a pending explicit reload when the user chooses to keep editing (3.7s)
+  ✓  26 tests/browser/navigation-settings.spec.ts:547:1 › preserves edits made while synchronization reloads a clean document (1.5s)
+  ✓  27 tests/browser/navigation-settings.spec.ts:561:1 › reloads an accepted dirty snapshot and clears only its dirty marker (3.8s)
+  ✓  28 tests/browser/navigation-settings.spec.ts:575:1 › reports sync reload failures without declaring success or changing the buffer (1.1s)
+  ✓  29 tests/browser/navigation-settings.spec.ts:585:1 › ignores read errors from a closed document (4.0s)
+  ✓  30 tests/browser/navigation-settings.spec.ts:595:1 › retains edits made while a document save is pending (1.6s)
+  ✓  31 tests/browser/navigation-settings.spec.ts:633:1 › preserves newer text and its dirty state when Save As replaces the document identity (1.6s)
+  ✓  32 tests/browser/navigation-settings.spec.ts:663:1 › keeps the document open and dirty when saving before close is denied (1.4s)
+  ✓  33 tests/browser/navigation-settings.spec.ts:687:1 › acknowledges a local save with a sync warning and reuses its revision (1.5s)
+  ✓  34 tests/browser/navigation-settings.spec.ts:715:1 › does not start a second save or synchronize while a document save is pending (1.5s)
+  ✓  35 tests/browser/navigation-settings.spec.ts:750:1 › retains the current document when a file-tree read fails (1.6s)
+  ✓  36 tests/browser/navigation-settings.spec.ts:783:1 › ignores an old recent-file completion after a new tab is created (1.5s)
+  ✓  37 tests/browser/navigation-settings.spec.ts:811:1 › does not discard unsaved text when opening another workspace (1.1s)
+  ✓  38 tests/browser/navigation-settings.spec.ts:830:1 › opens Workspace on launch and reload even after visiting Context (1.2s)
+  ✓  39 tests/browser/navigation-settings.spec.ts:840:1 › reopens recent documents through the native menu and retains unavailable entries until clear (2.2s)
+  ✓  40 tests/browser/navigation-settings.spec.ts:862:1 › keeps Context edits across refresh and persists confirmed settings across remount and reload (2.0s)
+  ✓  41 tests/browser/navigation-settings.spec.ts:885:1 › keeps settings aligned, persisted and synchronized with caption state in both themes (2.4s)
+  ✓  42 tests/browser/navigation-settings.spec.ts:921:1 › does not replace system preferences on startup and receives changes from another window (1.3s)
+  ✓  43 tests/browser/navigation-settings.spec.ts:943:1 › blocks default Context writes when saved configuration cannot be read (518ms)
+  ✓  44 tests/browser/navigation-settings.spec.ts:960:1 › retains Context drafts after a rejected save and does not report persistence (710ms)
+  ✓  45 tests/browser/navigation-settings.spec.ts:979:1 › rejects an older refresh response after a newer Context save (1.2s)
+  ✓  46 tests/browser/navigation-settings.spec.ts:994:1 › discards a pending Context save when switching to another workspace (892ms)
+  ✓  47 tests/browser/navigation-settings.spec.ts:1011:1 › keeps Context busy until every current operation finishes (607ms)
+  ✓  48 tests/browser/navigation-settings.spec.ts:1029:1 › does not carry an unsaved Context draft into a different workspace (982ms)
+  ✓  49 tests/browser/navigation-settings.spec.ts:1041:48 › Save As preserves a late opened dirty target in /saved (1.6s)
+  ✓  50 tests/browser/navigation-settings.spec.ts:1041:48 › Save As preserves a late opened dirty target in /other (1.6s)
+  ✓  51 tests/browser/navigation-settings.spec.ts:1081:37 › Save As completion preserves target registration after closing (reopen: false) (343ms)
+  ✓  52 tests/browser/navigation-settings.spec.ts:1081:37 › Save As completion preserves target registration after closing (reopen: true) (354ms)
+  ✓  53 tests/browser/navigation-settings.spec.ts:1116:1 › accepted uploads with pending remote confirmation remain visible and retryable (1.1s)
+  ✓  54 tests/browser/navigation-settings.spec.ts:1132:1 › Save As and a target open completed in one task allocate distinct identities (329ms)
+  ✓  55 tests/browser/navigation-settings.spec.ts:1159:37 › an edit batched with the save receipt stays dirty (Save As: false) (341ms)
+  ✓  56 tests/browser/navigation-settings.spec.ts:1159:37 › an edit batched with the save receipt stays dirty (Save As: true) (338ms)
+  ✓  57 tests/browser/recent-menu.spec.ts:12:1 › moves the history into File, restores it, distinguishes names and preserves an already open draft (1.7s)
+  ✓  58 tests/browser/recent-menu.spec.ts:35:1 › retains unavailable entries and draft contents, then clears only persisted history (1.7s)
+  ✓  59 tests/browser/recent-menu.spec.ts:57:1 › updates translated menus and successful Save As paths while preserving File commands (1.0s)
+  ✘  60 tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount (1.2s)
+(node:4691) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  61 tests/browser/workspace-layout.spec.ts:22:1 › resizes independently, persists preferences, and restores them after a narrow window (2.6s)
+  ✓  62 tests/browser/workspace-layout.spec.ts:47:1 › cancels interrupted drags and supports mirrored keyboard resizing and reset (1.7s)
+  ✓  63 tests/browser/workspace-layout.spec.ts:62:1 › keeps the editor instance, dirty content, selection, and undo across resizing (1.9s)
+  ✓  64 tests/browser/workspace-layout.spec.ts:82:1 › keeps the opposite compressed sidebar stable when committing a resize (1.5s)
+  ✓  65 tests/browser/workspace-layout.spec.ts:95:1 › keeps a failed persistence edit usable across unrelated settings events (1.1s)
+  ✓  66 tests/browser/workspace-layout.spec.ts:109:1 › enforces bounds, cancels capture loss and container resize, and restores drawer focus (1.4s)
+  ✓  67 tests/browser/workspace-layout.spec.ts:134:1 › renders quiet light and dark workspaces without horizontal overflow (2.2s)
+  ✓  68 tests/browser/workspace-layout.spec.ts:151:1 › shows long navigation labels, four sidebar states, settings and mixed resources (2.6s)
+
+
+  1) tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount 
+
+    Error: page.evaluate: TypeError: createRoot is not a function
+        at eval (eval at evaluate (:311:30), <anonymous>:45:22)
+        at async <anonymous>:337:30
+        at eval (eval at evaluate (:311:30), <anonymous>:45:22)
+        at async <anonymous>:337:30
+        at /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/tests/browser/recent-menu.spec.ts:105:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../tmp/polarbear-recent-regression/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../../../tmp/polarbear-recent-regression/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../../../tmp/polarbear-recent-regression/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../../../tmp/polarbear-recent-regression/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount 
+  67 passed (2.0m)
+npm error Lifecycle script `test:ui` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error workspace polarbear-desktop@0.1.0
+npm error location /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error command failed
+npm error command sh -c playwright test recent-menu.spec.ts navigation-settings.spec.ts workspace-layout.spec.ts native-shortcut-ownership.spec.ts --output /tmp/polarbear-recent-regression

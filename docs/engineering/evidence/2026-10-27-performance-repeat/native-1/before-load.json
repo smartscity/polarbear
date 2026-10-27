@@ -1,0 +1,247 @@
+{
+  "command": [
+    "/private/tmp/polarbear-perf-1027/native-baseline",
+    "engineering_performance::native_io_observations",
+    "--ignored",
+    "--exact",
+    "--test-threads=1"
+  ],
+  "returncode": 0,
+  "invalidExternalLoad": false,
+  "samples": [
+    {
+      "at": "2026-10-27T13:42:58.851585+00:00",
+      "risks": [],
+      "top": [
+        {
+          "pid": 899,
+          "ppid": 463,
+          "cpu": 7.3,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+        },
+        {
+          "pid": 159,
+          "ppid": 1,
+          "cpu": 4.4,
+          "command": "/usr/libexec/PerfPowerServices"
+        },
+        {
+          "pid": 210,
+          "ppid": 1,
+          "cpu": 3.9,
+          "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+        },
+        {
+          "pid": 670,
+          "ppid": 463,
+          "cpu": 2.2,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+        },
+        {
+          "pid": 167,
+          "ppid": 1,
+          "cpu": 2.1,
+          "command": "/usr/sbin/bluetoothd"
+        },
+        {
+          "pid": 442,
+          "ppid": 1,
+          "cpu": 1.8,
+          "command": "/usr/libexec/trustd"
+        },
+        {
+          "pid": 149,
+          "ppid": 1,
+          "cpu": 1.5,
+          "command": "/usr/libexec/locationd"
+        },
+        {
+          "pid": 673,
+          "ppid": 463,
+          "cpu": 0.9,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+        },
+        {
+          "pid": 447,
+          "ppid": 1,
+          "cpu": 0.5,
+          "command": "/usr/libexec/sharingd"
+        },
+        {
+          "pid": 463,
+          "ppid": 1,
+          "cpu": 0.5,
+          "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+        },
+        {
+          "pid": 170,
+          "ppid": 1,
+          "cpu": 0.4,
+          "command": "/usr/libexec/corebrightnessd"
+        },
+        {
+          "pid": 634,
+          "ppid": 1,
+          "cpu": 0.4,
+          "command": "/Library/Input Methods/SogouInput.app/Contents/MacOS/SogouInput"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-27T13:42:59.920412+00:00",
+      "risks": [],
+      "top": [
+        {
+          "pid": 1180,
+          "ppid": 1,
+          "cpu": 47.1,
+          "command": "/System/Library/PrivateFrameworks/XprotectFramework.framework/Versions/A/XPCServices/XprotectService.xpc/Contents/MacOS/XprotectService"
+        },
+        {
+          "pid": 104,
+          "ppid": 1,
+          "cpu": 19.8,
+          "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd"
+        },
+        {
+          "pid": 129,
+          "ppid": 1,
+          "cpu": 5.1,
+          "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds"
+        },
+        {
+          "pid": 899,
+          "ppid": 463,
+          "cpu": 4.3,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+        },
+        {
+          "pid": 463,
+          "ppid": 1,
+          "cpu": 1.3,
+          "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+        },
+        {
+          "pid": 670,
+          "ppid": 463,
+          "cpu": 0.9,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+        },
+        {
+          "pid": 264,
+          "ppid": 1,
+          "cpu": 0.8,
+          "command": "/usr/libexec/syspolicyd"
+        },
+        {
+          "pid": 322,
+          "ppid": 1,
+          "cpu": 0.6,
+          "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds_stores"
+        },
+        {
+          "pid": 210,
+          "ppid": 1,
+          "cpu": 0.4,
+          "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+        },
+        {
+          "pid": 228,
+          "ppid": 1,
+          "cpu": 0.4,
+          "command": "/usr/libexec/trustd"
+        },
+        {
+          "pid": 167,
+          "ppid": 1,
+          "cpu": 0.3,
+          "command": "/usr/sbin/bluetoothd"
+        },
+        {
+          "pid": 420,
+          "ppid": 1,
+          "cpu": 0.2,
+          "command": "/usr/sbin/cfprefsd"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-27T13:43:00.977493+00:00",
+      "risks": [],
+      "top": [
+        {
+          "pid": 899,
+          "ppid": 463,
+          "cpu": 3.7,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+        },
+        {
+          "pid": 225,
+          "ppid": 1,
+          "cpu": 1.7,
+          "command": "/usr/libexec/runningboardd"
+        },
+        {
+          "pid": 104,
+          "ppid": 1,
+          "cpu": 1.5,
+          "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd"
+        },
+        {
+          "pid": 471,
+          "ppid": 1,
+          "cpu": 1.4,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        },
+        {
+          "pid": 491,
+          "ppid": 1,
+          "cpu": 1.4,
+          "command": "/usr/sbin/filecoordinationd"
+        },
+        {
+          "pid": 670,
+          "ppid": 463,
+          "cpu": 1.2,
+          "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+        },
+        {
+          "pid": 210,
+          "ppid": 1,
+          "cpu": 0.9,
+          "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+        },
+        {
+          "pid": 598,
+          "ppid": 1,
+          "cpu": 0.7,
+          "command": "/System/Library/ExtensionKit/Extensions/VPN.appex/Contents/MacOS/VPN"
+        },
+        {
+          "pid": 744,
+          "ppid": 471,
+          "cpu": 0.5,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper.app/Contents/MacOS/Google Chrome Helper"
+        },
+        {
+          "pid": 778,
+          "ppid": 463,
+          "cpu": 0.5,
+          "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+        },
+        {
+          "pid": 1180,
+          "ppid": 1,
+          "cpu": 0.5,
+          "command": "/System/Library/PrivateFrameworks/XprotectFramework.framework/Versions/A/XPCServices/XprotectService.xpc/Contents/MacOS/XprotectService"
+        },
+        {
+          "pid": 129,
+          "ppid": 1,
+          "cpu": 0.4,
+          "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mds"
+        }
+      ]
+    }
+  ]
+}
