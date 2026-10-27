@@ -24,6 +24,12 @@ export type ThemeTokens = {
     accentText: string;
     codeBackground: string;
     codeText: string;
+    syntaxKeyword: string;
+    syntaxString: string;
+    syntaxNumber: string;
+    syntaxComment: string;
+    syntaxProperty: string;
+    syntaxTag: string;
     tableBorder: string;
     tableHeaderBackground: string;
     blockquoteBorder: string;
@@ -94,6 +100,12 @@ export const themeTokens: Record<ThemeName, ThemeTokens> = {
       accentText: "#ffffff",
       codeBackground: "#f6f8fa",
       codeText: "#24292f",
+      syntaxKeyword: "#7c3aed",
+      syntaxString: "#047857",
+      syntaxNumber: "#b45309",
+      syntaxComment: "#6b7280",
+      syntaxProperty: "#2563eb",
+      syntaxTag: "#be123c",
       tableBorder: "#d8dee4",
       tableHeaderBackground: "#f6f8fa",
       blockquoteBorder: "#d0d7de",
@@ -125,6 +137,12 @@ export const themeTokens: Record<ThemeName, ThemeTokens> = {
       accentText: "#06111f",
       codeBackground: "#10141c",
       codeText: "#dbeafe",
+      syntaxKeyword: "#c4b5fd",
+      syntaxString: "#6ee7b7",
+      syntaxNumber: "#fbbf24",
+      syntaxComment: "#aeb4c0",
+      syntaxProperty: "#93c5fd",
+      syntaxTag: "#fda4af",
       tableBorder: "#2f3747",
       tableHeaderBackground: "#1a202b",
       blockquoteBorder: "#5aa9ff",

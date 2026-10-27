@@ -11,7 +11,17 @@ export function SettingsDialog({ onClose, onResetLayout }: { onClose: () => void
   const settings = useUserSettings();
   const dialog = useRef<HTMLDialogElement>(null);
   const [failed, setFailed] = useState(false);
-  useEffect(() => { dialog.current?.showModal(); }, []);
+  useEffect(() => {
+    const node = dialog.current;
+    const previousFocus = document.activeElement;
+    node?.showModal();
+    return () => {
+      node?.close();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus({ preventScroll: true });
+      }
+    };
+  }, []);
   return <dialog ref={dialog} className="reading-settings-dialog" aria-label={t("settings.title")}
     onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <header><h2>{t("settings.title")}</h2><button type="button" onClick={onClose} aria-label={t("common.close")}><X size={18} /></button></header>

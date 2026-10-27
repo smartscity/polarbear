@@ -1,5 +1,25 @@
 # Engineering Verification
 
+## Native Workspace UI Acceptance: 2026-10-27
+
+Baseline: `1988263e9dfc99d08b19d26a93b246db9fe928e5`, `main` / `v0.10.11`.
+[Native acceptance report](native-ui-acceptance-2026-10-27.md) records actual
+macOS interactions, separate installed/build identities, screenshots, red/green
+regressions, and unverified release/platform boundaries.
+
+Two reproduced defects were corrected after failing tests: Settings dismissal
+lost keyboard focus, and code highlighters used light-only colors in dark mode.
+The existing dialog lifecycle and theme tokens now own these behaviors. No
+workspace layout algorithm, native persistence, or document format was changed.
+
+Final local results: 14 focused browser cases each in WebKit and Chromium,
+361 Vitest cases, 40 script cases, typecheck, ESLint, and the isolated native app
+build all passed. The final native bundle was launched with production frontend
+assets, with Settings focus, code contrast and fullscreen layout checked again.
+The installed app remains 0.10.2; official v0.10.11 DMG installation/upgrade and
+Windows GUI acceptance remain unverified, not inferred from the local debug app.
+No release tag was created or moved. The user's unrelated IDE change is excluded.
+
 ## Feedback Entry: 2026-10-25
 
 Baseline: `fb174d67a80704522b9c81e9908880dfed73b511` on `main`.

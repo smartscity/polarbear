@@ -109,30 +109,30 @@
 }
 
 .syntax-keyword {
-  color: #7c3aed;
+  color: var(--color-syntax-keyword, #7c3aed);
   font-weight: 700;
 }
 
 .syntax-string {
-  color: #047857;
+  color: var(--color-syntax-string, #047857);
 }
 
 .syntax-key {
-  color: #1d4ed8;
+  color: var(--color-syntax-property, #2563eb);
   font-weight: 650;
 }
 
 .syntax-number {
-  color: #b45309;
+  color: var(--color-syntax-number, #b45309);
 }
 
 .syntax-literal {
-  color: #be123c;
+  color: var(--color-syntax-tag, #be123c);
   font-weight: 650;
 }
 
 .syntax-comment {
-  color: #6b7280;
+  color: var(--color-syntax-comment, #6b7280);
   font-style: italic;
 }
 

@@ -48,7 +48,11 @@ export function StatusBar({
         <span>{t("status.characters", { count: characterCount })}</span>
       </div>
       <div className="status-bar-right">
-        <button type="button" className="status-sync-button" aria-label={t("settings.title")} title={t("settings.title")} onClick={onSettings}><Settings2 size={16} /></button>
+        <button type="button" className="status-sync-button" aria-label={t("settings.title")} title={t("settings.title")} onClick={(event) => {
+          // WebKit does not focus buttons on pointer clicks; retain the dialog's return target.
+          event.currentTarget.focus({ preventScroll: true });
+          onSettings();
+        }}><Settings2 size={16} /></button>
         {syncState !== "idle" && syncMessage ? (
           <span
             className={`status-sync-message ${syncState}`}

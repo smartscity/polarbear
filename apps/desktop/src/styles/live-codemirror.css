@@ -1274,30 +1274,30 @@ body,
 
 .cm-typora-code-token-keyword,
 .cm-typora-code-token-boolean {
-  color: #7c3aed;
+  color: var(--color-syntax-keyword, #7c3aed);
   font-weight: 650;
 }
 
 .cm-typora-code-token-string {
-  color: #047857;
+  color: var(--color-syntax-string, #047857);
 }
 
 .cm-typora-code-token-number {
-  color: #b45309;
+  color: var(--color-syntax-number, #b45309);
 }
 
 .cm-typora-code-token-comment {
-  color: #6b7280;
+  color: var(--color-syntax-comment, #6b7280);
   font-style: italic;
 }
 
 .cm-typora-code-token-property,
 .cm-typora-code-token-attr {
-  color: #2563eb;
+  color: var(--color-syntax-property, #2563eb);
 }
 
 .cm-typora-code-token-tag {
-  color: #be123c;
+  color: var(--color-syntax-tag, #be123c);
 }
 
 .cm-typora-diagram-preview {
