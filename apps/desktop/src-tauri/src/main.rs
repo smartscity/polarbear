@@ -12,6 +12,7 @@ mod app_zoom;
 mod cloud_sync_store;
 mod document_save;
 mod external_url;
+mod fullscreen_focus;
 mod ipc_contracts;
 mod live_caption;
 mod memory_admin;
@@ -977,6 +978,7 @@ fn main() -> tauri::Result<()> {
         .setup(|app| {
             vocab_outbox::start(app.handle())?;
             native_pinch::install_native_pinch(app).map_err(std::io::Error::other)?;
+            fullscreen_focus::install(app)?;
             system_open::enqueue_open_files(
                 app.handle(),
                 system_open::markdown_paths_from_args(std::env::args()),

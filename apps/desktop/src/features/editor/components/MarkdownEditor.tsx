@@ -11,6 +11,7 @@ import { createEditorCommandBindings } from "../editorCommandKeymap";
 import { createRichMarkdownCopyExtension } from "../richMarkdownClipboard";
 import { createMermaidPasteExtension } from "../mermaidPasteExtension";
 import { platformNavigationKeymap } from "./platformNavigationKeymap";
+import { nativeFullscreenFocus } from "../nativeFullscreenFocus";
 
 export type MarkdownEditorView = EditorView;
 
@@ -87,6 +88,7 @@ export function MarkdownEditor({
         height="100%"
         extensions={[
           platformNavigationKeymap(),
+          nativeFullscreenFocus,
           commandKeymap,
           clipboardExtension,
           pasteExtension,

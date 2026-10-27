@@ -1,5 +1,99 @@
 # Native Workspace UI Acceptance
 
+## Native Focus Recovery Follow-up
+
+Baseline: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5`. Its Quality
+(`40452613718`) and iPhone Reader Quality (`40452613824`) runs both passed.
+This does not certify the subsequent native focus correction.
+
+The exit-focus defect is below the editor: Tao 0.35.3 restores the macOS window
+style asynchronously and makes its host NSView the first responder. The DOM
+selection can remain present while keyboard input no longer reaches WebKit.
+`WebviewWindow::set_focus` only activates the window and is not a substitute for
+restoring its WebView responder. Recreating CodeMirror would lose the wrong state.
+
+The macOS adapter in `fullscreen_focus.rs` observes the existing window lifecycle,
+detects an exit once, and queues native WebView focus restoration after the style
+change. At execution it checks that the window is still key, is no longer
+fullscreen, has no sheet, and has not focused another native control. The retained
+view is accessed only on the main operation queue; closing its window makes the
+callback a no-op. A scoped recovery event then lets the active CodeMirror editor
+project its authoritative selection back into the DOM. Native testing showed
+that responder recovery alone could leave WebKit at the document start while
+CodeMirror still held the correct final-line selection. Merely calling
+`EditorView.focus()` can also trust a stale cached DOM range.
+
+Both source and Live Preview reuse `nativeFullscreenFocus`. Search inputs,
+dialogs, nested editors and IME composition are excluded. Listener teardown is
+owned by the editor plugin. No additional fullscreen command, timer loop,
+document transaction, persistent selection store or dependency was added.
+Other platforms do not emit this native recovery event.
+
+Test-first evidence: the transition tests failed twice before implementation.
+The transition and focus-guard tests subsequently passed. Actual native testing
+rejected synchronous restoration, outer-view-only restoration, and retaining the
+native responder alone. The two-stage implementation addresses native input
+routing and DOM selection separately. The new WebKit regression failed with an
+empty DOM range instead of the selected `d`, then passed after registration of
+the reconciliation extension; a separate case protects Find focus and content.
+
+An unrelated worktree occupied port 1422 during several intermediate browser
+runs. Those runs are not current-source evidence. The failure and success above
+were rerun on port 1437 with a temporary config pointing explicitly at this
+checkout and `reuseExistingServer: false`.
+
+### Final Native Interaction Evidence
+
+The final isolated x86_64 app was rebuilt with production Vite assets and launched
+as `dev.polarbear.uiacceptance` on Intel macOS 26.5.1. Three consecutive actual
+Control-Command-F enter/exit cycles preserved the selected final line. Immediate
+input replaced that line with `Final recovery cycle one.`, `two.`, then `three.`
+without clicking the editor again. CodeMirror's debug state remained on line 40,
+not the document start. Undo restored cycle two and Redo restored cycle three.
+With Find focused, another fullscreen cycle kept subsequent `Architecture` input
+in Find and left the document unchanged. The disposable fixture was restored to
+its original sentinel, saved, debug display disabled, and the app quit.
+
+This supersedes the unresolved first-responder observation in the earlier
+Fullscreen Follow-up section. It does not turn the older DMG into evidence for
+this fix. Chinese IME, Windows GUI, and release-artifact repetition remain
+separate, unverified boundaries. Policy tests and browser fixtures alone do not
+certify native fullscreen behavior.
+
+The broader WebKit runs also encountered intermittent five-second startup
+timeouts before sidebar interaction began. The failed compressed-sidebar case
+subsequently passed unchanged, while two other cases timed out at the same
+initial readiness assertion during native compilation. No assertion or timeout
+was weakened, and these failed runs are not described as passing suites.
+After compilation completed, the unchanged 17-case WebKit selection passed
+serially in 1.1 minutes, including all three previously timed-out sidebar cases.
+
+| Final-source local check | Result |
+| --- | --- |
+| Desktop typecheck / ESLint | PASS. |
+| Desktop unit / script suites | PASS: 365 Vitest cases and 40 Node cases. |
+| Rust format / Clippy, all targets and features with warnings denied | PASS. |
+| Rust tests, all features, locked dependencies | PASS: 137 passed, 4 existing ignored cases; ignored cases are not claimed as independently run. |
+| WebKit fullscreen / layout / Settings / theme | PASS: 17 cases on the isolated port after native compilation. Earlier startup failures are retained above. |
+| Full Chromium behavior suite | PASS: 141 cases, 3.7 minutes, isolated current-checkout server. |
+| Production frontend and native acceptance app build | PASS; existing Vite large-chunk warnings remain. |
+| Actual native fullscreen continuation | PASS: three cycles, final-line replacement, Undo/Redo, and Find focus. |
+
+Hosted checks must be evaluated against the final pushed commit separately.
+No release tag is created or moved by this correction.
+
+The official v0.10.11 ZIP was subsequently downloaded completely and matched the
+SHA-256 recorded below. Its DMG mounted read-only and contained a universal
+`x86_64 arm64` application reporting version 0.10.11. A copy under
+`/private/tmp/polarbear-release-acceptance` launched to Workspace; the original
+`/Applications/Polarbear.app` was not replaced. `codesign --verify --deep --strict`
+reported that this application is not signed. Native automation timed out after
+Open, so remaining interactions on this older artifact are NOT VERIFIED. A
+one-second process sample showed its main thread in the AppKit run loop, not
+evidence of a confirmed application deadlock. The isolated process was closed
+without modifying documents and the DMG was ejected. This artifact predates the
+fullscreen fixes and cannot certify them.
+
 ## Scope and Build Identity
 
 Baseline: `1988263e9dfc99d08b19d26a93b246db9fe928e5` (`main`, `v0.10.11`).
