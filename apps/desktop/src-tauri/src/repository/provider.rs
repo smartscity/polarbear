@@ -5,7 +5,6 @@ use super::{
     response_limits::{self, EnumerationBudget},
 };
 use crate::repository_identity::{normalize_repository_provider, repository_token};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::{collections::BTreeMap, time::Duration};
@@ -42,12 +41,6 @@ pub(super) struct GithubCommitRef {
 }
 
 #[derive(Debug, Deserialize)]
-pub(super) struct GithubContentResponse {
-    pub(super) content: Option<String>,
-    pub(super) encoding: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub(super) struct GithubTreeResponse {
     pub(super) tree: Vec<GithubTreeItemResponse>,
     #[serde(default)]
@@ -59,6 +52,7 @@ pub(super) struct GithubTreeItemResponse {
     pub(super) path: String,
     #[serde(rename = "type")]
     pub(super) item_type: String,
+    pub(super) size: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,6 +90,7 @@ pub(super) struct GitlabTreeItemResponse {
 pub(super) fn github_client(token: &str) -> Result<Client, String> {
     Client::builder()
         .user_agent("Polarbear")
+        .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(30))
         .default_headers({
@@ -335,39 +330,32 @@ pub(super) fn github_download_file(
     binding: &RepositoryBindingDto,
     relative_path: &str,
 ) -> Result<Vec<u8>, String> {
-    let response = client
-        .get(github_content_url(binding, relative_path))
-        .query(&[("ref", binding.branch.as_str())])
-        .send()
-        .map_err(|error| error.to_string())?
-        .error_for_status()
-        .map_err(|error| error.to_string())?;
-    let content: GithubContentResponse =
-        response_limits::json(response, response_limits::CONTENT_JSON_BYTES)?;
-
-    decode_github_content(content, response_limits::FILE_BYTES)
+    github_download_content(
+        client,
+        &github_content_url(binding, relative_path),
+        &binding.branch,
+    )
 }
 
-pub(super) fn decode_github_content(
-    content: GithubContentResponse,
-    limit: usize,
+// The production caller constructs the trusted URL; tests substitute a loopback endpoint.
+pub(super) fn github_download_content(
+    client: &Client,
+    url: &str,
+    commit: &str,
 ) -> Result<Vec<u8>, String> {
-    if content.encoding.as_deref() != Some("base64") {
-        return Err("GitHub returned unsupported file encoding.".to_owned());
+    let response = client
+        .get(url)
+        .header(reqwest::header::ACCEPT, "application/vnd.github.raw+json")
+        .query(&[("ref", commit)])
+        .send()
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "GitHub download rejected ({}); no content was accepted.",
+            response.status()
+        ));
     }
-
-    let encoded = content
-        .content
-        .ok_or_else(|| "GitHub content response did not include content.".to_owned())?
-        .replace('\n', "");
-    if encoded.len() > limit.div_ceil(3) * 4 {
-        return Err("Decoded provider file exceeds the size limit.".into());
-    }
-    let decoded = BASE64.decode(encoded).map_err(|error| error.to_string())?;
-    if decoded.len() > limit {
-        return Err("Decoded provider file exceeds the size limit.".into());
-    }
-    Ok(decoded)
+    response_limits::bytes(response, response_limits::FILE_BYTES)
 }
 
 pub(super) fn github_remote_files(
@@ -404,12 +392,18 @@ pub(super) fn github_remote_files(
         }
 
         if let Some(relative_path) = relative_sync_path(binding, &item.path) {
-            remote_paths.push(relative_path);
+            let size = item
+                .size
+                .ok_or("GitHub tree omitted a blob size; sync stopped.")?;
+            if size > response_limits::FILE_BYTES as u64 {
+                return Err("GitHub file exceeds the 64 MiB size limit; sync stopped.".into());
+            }
+            remote_paths.push((relative_path, size));
         }
     }
 
     let remote_total = remote_paths.len();
-    for (remote_index, relative_path) in remote_paths.into_iter().enumerate() {
+    for (remote_index, (relative_path, expected_size)) in remote_paths.into_iter().enumerate() {
         emit_repository_sync_progress(
             app,
             "remote-content",
@@ -418,6 +412,9 @@ pub(super) fn github_remote_files(
             Some(remote_total),
         );
         let content = github_download_file(client, binding, &relative_path)?;
+        if content.len() as u64 != expected_size {
+            return Err("GitHub content length differs from the frozen tree; sync stopped.".into());
+        }
         files.insert(relative_path, content_digest(&content));
     }
 
