@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-10-27T05:13:25.486Z",
+  "head": "64d394ae9fd05c24bbf599f55bf1aeef3769b2d5",
+  "npm": "11.13.0",
+  "cargoAudit": "cargo-audit-audit 0.22.2",
+  "rustsecCommit": "3279c99911354c400e1d41e47c7d60e39258b147",
+  "npmDatabase": "npm advisory service at timestamp; service does not expose a database version",
+  "yankedCheck": "NOT RUN; separate from RustSec advisories",
+  "locks": {
+    "Cargo.lock": "bcdc4899cd18e93f750d65ef54b871c1bf4ebbf6001d201b9535601db9378a34",
+    "package-lock.json": "1430f0a922c135fa0343da93a3863f8940299720c5d635c0ea4a1e19b292630d"
+  }
+}

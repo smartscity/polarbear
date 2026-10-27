@@ -1,0 +1,23 @@
+{
+  "label": "baseline-64d394a",
+  "sourceFingerprint": "fa51dcab9a11eb0f15724a5f6e383256a842762a8e7cbcb882207c137c02d777",
+  "lockFingerprint": "1430f0a922c135fa0343da93a3863f8940299720c5d635c0ea4a1e19b292630d",
+  "environment": {
+    "node": "v26.1.0",
+    "platform": "darwin",
+    "release": "25.5.0",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "browser": "153.0.8010.12"
+  },
+  "scope": "Production editor/preview in the browser harness; IPC is mocked. Fixture autosave is disabled, not native document persistence. RSS sums Chromium processes, not the Tauri app.",
+  "tolerance": {
+    "p95Relative": 0.1,
+    "p95AbsoluteMs": 20,
+    "stableRssRelative": 0.15
+  },
+  "rows": [],
+  "released": [],
+  "errors": [
+    "TimeoutError: page.waitForFunction: Timeout 60000ms exceeded."
+  ]
+}

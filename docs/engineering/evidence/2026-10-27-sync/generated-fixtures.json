@@ -1,0 +1,25 @@
+{
+  "runId": "polarbear-acceptance-31b12c6a919240afbad86de61c8dedf9",
+  "workspace": "/private/tmp/polarbear-sync-generated/workspace",
+  "remoteBranch": "polarbear-acceptance-31b12c6a919240afbad86de61c8dedf9",
+  "remotePath": "polarbear-acceptance-31b12c6a919240afbad86de61c8dedf9",
+  "ownership": "Only this generated directory and the explicitly created matching branch belong to this run.",
+  "files": {
+    "a.md": {
+      "bytes": 5,
+      "sha256": "d36766ed4863dacfe38241d999cc40b49f518f63ab20693aa9fd28db2ee549b4"
+    },
+    "b.md": {
+      "bytes": 5,
+      "sha256": "1847eb0f9fb12e724dff88dedc41a8e0553b23c76068fe57990df6ee2bf0b545"
+    },
+    "large.md": {
+      "bytes": 1350027,
+      "sha256": "c8320be9dd2bbbe1e71714836fe700223334957b922b84d861432ebb540d9f6d"
+    },
+    "attachment.png": {
+      "bytes": 3147060,
+      "sha256": "5d05c72e14c096351cbc4122c6aba2b03988f196838411838aab9cc5a79c33e4"
+    }
+  }
+}

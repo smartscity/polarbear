@@ -1,0 +1,356 @@
+{
+  "head": "2a8e8f7fef6754db8d031188eeacc8ecfad0109d",
+  "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014",
+  "jobs": [
+    {
+      "name": "Desktop editor and clipboard",
+      "conclusion": "success",
+      "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014/job/122031119360",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v7",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run npm ci",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run npm exec --workspace apps/desktop -- playwright install chromium webkit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Bundled offline translation with production CSP",
+          "conclusion": "success"
+        },
+        {
+          "name": "Cross-window settings and layout in WebKit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run npm --workspace apps/desktop run test:ui",
+          "conclusion": "success"
+        },
+        {
+          "name": "Paste actual Mermaid images into a native rich text receiver",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/upload-artifact@v6",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v7",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "dependency-audit / Scoped dependency audit",
+      "conclusion": "success",
+      "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014/job/122031119518",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v7",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run npm ci",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run dtolnay/rust-toolchain@stable",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pinned scanner",
+          "conclusion": "success"
+        },
+        {
+          "name": "Fetch current advisory database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Enforce scoped expiring exceptions",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/upload-artifact@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v7",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Native tests (macos-26)",
+      "conclusion": "success",
+      "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014/job/122031119528",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Setup Node.js for native prerequisites",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install frontend dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build assets embedded by custom-protocol",
+          "conclusion": "success"
+        },
+        {
+          "name": "Setup Rust",
+          "conclusion": "success"
+        },
+        {
+          "name": "Rust cache",
+          "conclusion": "success"
+        },
+        {
+          "name": "Clippy all targets",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run native tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build Windows acceptance installer",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Preserve Windows acceptance installer",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Native rich document paste",
+          "conclusion": "success"
+        },
+        {
+          "name": "Native custom-origin settings arbitration",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Rust cache",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Setup Node.js for native prerequisites",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Rust format",
+      "conclusion": "success",
+      "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014/job/122031119548",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Setup Rust",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check formatting",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Native tests (windows-latest)",
+      "conclusion": "success",
+      "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014/job/122031119557",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Setup Node.js for native prerequisites",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install frontend dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build assets embedded by custom-protocol",
+          "conclusion": "success"
+        },
+        {
+          "name": "Setup Rust",
+          "conclusion": "success"
+        },
+        {
+          "name": "Rust cache",
+          "conclusion": "success"
+        },
+        {
+          "name": "Clippy all targets",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run native tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build Windows acceptance installer",
+          "conclusion": "success"
+        },
+        {
+          "name": "Preserve Windows acceptance installer",
+          "conclusion": "success"
+        },
+        {
+          "name": "Native rich document paste",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Native custom-origin settings arbitration",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Rust cache",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Setup Node.js for native prerequisites",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Frontend quality",
+      "conclusion": "success",
+      "url": "https://github.com/smartscity/polarbear/actions/runs/40456549014/job/122031119569",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Setup Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Lint",
+          "conclusion": "success"
+        },
+        {
+          "name": "Typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Memory Admin contract",
+          "conclusion": "success"
+        },
+        {
+          "name": "Unit tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Production build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Setup Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Checkout",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

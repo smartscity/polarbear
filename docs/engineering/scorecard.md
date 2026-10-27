@@ -1,5 +1,36 @@
 # Engineering Quality Scorecard
 
+## Sync and Session Qualification: 2026-10-27
+
+External baseline is frozen at `1988263e9dfc99d08b19d26a93b246db9fe928e5`,
+8.68 (displayed as 8.7). Implementation starts at `64d394a`; code candidate is
+`2a8e8f7fef6754db8d031188eeacc8ecfad0109d`. These are evidence-bound engineering
+self-assessments, not a replacement for the external review.
+
+| Dimension | Fixed weight | External baseline | Current self-assessment | Evidence and remaining limit |
+| --- | ---: | ---: | ---: | --- |
+| Architecture and module boundaries | 20% | 8.8 | 8.8 | Existing provider/coordinator/session owners retained; no global store or storage-internal coupling. |
+| Maintainability | 20% | 8.5 | 8.7 | Typed publication scope and one local immediate-session-state owner; large session implementation remains. |
+| Correctness and data safety | 25% | 8.5 | 8.8 | Production HTTP/native filesystem and actual-App IPC red/green close both sync defects and the frontend identity defect. Real providers and native Save As scheduling remain unverified. |
+| Testing and CI | 20% | 9.0 | 9.1 | Exact code-candidate Quality passed all six jobs, including both native platforms, strict Clippy, WebKit, offline translation and native integration; Windows installer retained. Device GUI gaps remain. |
+| Security and dependency governance | 10% | 8.6 | 8.8 | Fresh scoped fail-closed audit passed; eleven exact exceptions expire 2026-11-24. Required-check enforcement cannot be inspected with connector permissions. |
+| Documentation and open-source practice | 5% | 8.7 | 8.9 | Four existing reports extended with commits, raw evidence, failure history and isolated acceptance continuation; no merge/release claim. |
+
+Weighted self-assessment: **8.845, displayed as 8.85 / 10**. The external baseline
+remains 8.68; weights and history are not recomputed. The 9+ gate is **FAIL (not yet satisfied)**: correctness is below 9, key
+real-service/device
+acceptance is incomplete, and controlled performance comparison is blocked by
+concurrent external workloads. No known open P0/P1 is established by this slice;
+that statement does not certify every historical finding as closed. No unreviewed
+High/Critical dependency finding was silently allowed. Repaired defects are not
+charged again as open defects.
+
+See [verification](verification.md#sync-and-session-qualification-2026-10-27)
+for exact results, commands, artifacts and external actions. Performance evidence
+is assessed within correctness, maintainability and testing; it is not a seventh
+weighted dimension. Hosted tests do not substitute for Windows GUI or real
+GitLab service acceptance.
+
 ## Current Assessment: 2026-10-25
 
 The fixed six-dimension contract below remains unchanged. These are evidence-

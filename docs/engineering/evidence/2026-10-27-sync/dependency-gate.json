@@ -1,0 +1,172 @@
+{
+  "status": "PASS",
+  "evaluatedAt": "2026-10-27",
+  "findings": [
+    {
+      "id": "GHSA-238p-pmpm-9mq7",
+      "package": "katex",
+      "version": "0.16.47",
+      "kind": "low",
+      "status": "PASS",
+      "exception": {
+        "id": "GHSA-238p-pmpm-9mq7",
+        "package": "katex",
+        "version": "0.16.47",
+        "kind": "low",
+        "expires": "2026-11-24",
+        "reason": "Mermaid math labels; strict rendering and SVG/HTML sanitization remain required. Review on prototype-pollution finding, rendering-policy change, or compatible fix."
+      }
+    },
+    {
+      "id": "RUSTSEC-2024-0370",
+      "package": "proc-macro-error",
+      "version": "1.0.4",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2024-0370",
+        "package": "proc-macro-error",
+        "version": "1.0.4",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "GTK build macro tooling; replace through a compatible upstream dependency update."
+      }
+    },
+    {
+      "id": "RUSTSEC-2025-0081",
+      "package": "unic-char-property",
+      "version": "0.9.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2025-0081",
+        "package": "unic-char-property",
+        "version": "0.9.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Tauri URL-pattern runtime dependency; re-review on Tauri upgrade or new reachable advisory."
+      }
+    },
+    {
+      "id": "RUSTSEC-2025-0075",
+      "package": "unic-char-range",
+      "version": "0.9.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2025-0075",
+        "package": "unic-char-range",
+        "version": "0.9.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Tauri URL-pattern runtime dependency; re-review on Tauri upgrade or new reachable advisory."
+      }
+    },
+    {
+      "id": "RUSTSEC-2025-0080",
+      "package": "unic-common",
+      "version": "0.9.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2025-0080",
+        "package": "unic-common",
+        "version": "0.9.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Tauri URL-pattern runtime dependency; re-review on Tauri upgrade or new reachable advisory."
+      }
+    },
+    {
+      "id": "RUSTSEC-2025-0100",
+      "package": "unic-ucd-ident",
+      "version": "0.9.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2025-0100",
+        "package": "unic-ucd-ident",
+        "version": "0.9.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Tauri URL-pattern runtime dependency; re-review on Tauri upgrade or new reachable advisory."
+      }
+    },
+    {
+      "id": "RUSTSEC-2025-0098",
+      "package": "unic-ucd-version",
+      "version": "0.9.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2025-0098",
+        "package": "unic-ucd-version",
+        "version": "0.9.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Tauri URL-pattern runtime dependency; re-review on Tauri upgrade or new reachable advisory."
+      }
+    },
+    {
+      "id": "RUSTSEC-2026-0371",
+      "package": "zbus_names",
+      "version": "4.3.4",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2026-0371",
+        "package": "zbus_names",
+        "version": "4.3.4",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Linux single-instance D-Bus dependency; re-review before Linux release or Tauri upgrade."
+      }
+    },
+    {
+      "id": "RUSTSEC-2026-0370",
+      "package": "zvariant",
+      "version": "5.15.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2026-0370",
+        "package": "zvariant",
+        "version": "5.15.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Linux single-instance D-Bus dependency; re-review before Linux release or Tauri upgrade."
+      }
+    },
+    {
+      "id": "RUSTSEC-2026-0372",
+      "package": "zvariant_derive",
+      "version": "5.15.0",
+      "kind": "unmaintained",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2026-0372",
+        "package": "zvariant_derive",
+        "version": "5.15.0",
+        "kind": "unmaintained",
+        "expires": "2026-11-24",
+        "reason": "Linux single-instance D-Bus dependency; re-review before Linux release or Tauri upgrade."
+      }
+    },
+    {
+      "id": "RUSTSEC-2024-0429",
+      "package": "glib",
+      "version": "0.18.5",
+      "kind": "unsound",
+      "status": "PASS",
+      "exception": {
+        "id": "RUSTSEC-2024-0429",
+        "package": "glib",
+        "version": "0.18.5",
+        "kind": "unsound",
+        "expires": "2026-11-24",
+        "reason": "Linux GTK/WebKit runtime; review before Linux release or any reachable VariantStrIter use."
+      }
+    }
+  ],
+  "failures": []
+}
