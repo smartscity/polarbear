@@ -1040,3 +1040,143 @@ test("does not carry an unsaved Context draft into a different workspace", async
   await expect(page.getByRole("combobox", { name: "Capture mode" })).toHaveValue("manual");
   await expect(page.getByRole("button", { name: "Save settings" })).toBeDisabled();
 });
+
+for (const targetRoot of ["/saved", "/other"]) test(`Save As preserves a late opened dirty target in ${targetRoot}`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if (command === "write_markdown_file") return new Promise((resolve) => {
+        (window as any).__finishSaveAs = () => resolve({ revision: "source-saved" });
+      });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async (root) => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record(`${root}/Source.md`, 1);
+  }, targetRoot);
+  await page.locator(".recent-documents").getByRole("button", { name: /Source.md/ }).first().click();
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("source buffer");
+  await page.keyboard.press("ControlOrMeta+Shift+s");
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.evaluate(async (root) => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record(`${root}/Target.md`, 1);
+  }, targetRoot);
+  await page.locator(".recent-documents").getByRole("button", { name: /Target.md/ }).first().click();
+  await editor.click(); await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" target unsaved edit");
+  await page.evaluate(() => (window as any).__finishSaveAs());
+  await expect(editor).toContainText("target unsaved edit");
+  await expect(page.locator(".window-tab.active .window-tab-dirty")).toHaveCount(1);
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Target.md" })).toHaveCount(2);
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args.workspaceRoot)).toBe(targetRoot);
+  const saved = await page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args);
+  expect(saved.markdownContent).toContain("target unsaved edit");
+  expect(saved.expectedRevision).not.toBe("source-saved");
+});
+
+for (const reopen of [false, true]) test(`Save As completion preserves target registration after closing (reopen: ${reopen})`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state = window as any, runtime = state.__TAURI_INTERNALS__, invoke = runtime.invoke;
+    state.__writes = 0;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if (command === "write_markdown_file") { state.__writes++; return new Promise((resolve) => { state.__finishSaveAs = () => resolve({ revision: "saved" }); }); }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/tests/browser/navigation.html?documents");
+  await expect.poll(() => page.evaluate(() => Boolean((window as any).__documents))).toBe(true);
+  await page.evaluate(() => (window as any).__documents.openMarkdownPath("/saved/Source.md"));
+  const source = await page.evaluate(() => (window as any).__documents.activeFileId);
+  await page.evaluate(() => { void (window as any).__documents.saveActiveFileAs(); });
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.evaluate(async (id) => { const s=(window as any).__documents; await s.closeTab(id); await s.saveActiveFileAs(); }, source);
+  expect(await page.evaluate(() => (window as any).__writes)).toBe(1);
+  expect(await page.evaluate((id) => (window as any).__documents.openFileIds.includes(id), source)).toBe(true);
+  await page.evaluate(() => (window as any).__documents.openMarkdownPath("/saved/Target.md"));
+  const target = await page.evaluate(() => (window as any).__documents.activeFileId);
+  await page.evaluate((id) => (window as any).__documents.closeTab(id), target);
+  if (reopen) {
+    await page.evaluate(() => (window as any).__documents.openMarkdownPath("/saved/Target.md"));
+    await page.evaluate(() => (window as any).__documents.updateActiveDocument("reopened unsaved buffer"));
+  }
+  await page.evaluate(() => (window as any).__finishSaveAs());
+  await expect.poll(() => page.evaluate((id) => (window as any).__documents.openFileIds.includes(id), source)).toBe(false);
+  const state = await page.evaluate(() => { const s=(window as any).__documents; return { ids:s.openFileIds, docs:s.documents, revisions:s.documentRevisions, dirty:[...s.dirtyFileIds] }; });
+  expect(new Set(state.ids).size).toBe(state.ids.length);
+  if (reopen) { expect(Object.values(state.docs)).toContain("reopened unsaved buffer"); expect(state.dirty.length).toBe(1); }
+  expect(Object.values(state.revisions)).toContain("saved");
+});
+
+test("accepted uploads with pending remote confirmation remain visible and retryable", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(() => {
+    const runtime=(window as any).__TAURI_INTERNALS__, invoke=runtime.invoke;
+    runtime.invoke=(command:string,args:any) => {
+      if (command === "repository_sync_now") return Promise.resolve({ conflicts: [], localChanges: 0, remoteChanged: true, account: { provider: "gitlab", login: "fixture" }, binding: { provider: "gitlab", owner: "fixture", repo: "fixture", branch: "main", manifest: {}, hasSynced: true, lastSyncCommitSha: null } });
+      if (command === "load_markdown_file") return Promise.resolve({ markdownContent: "# Opened document\n\nContent.", revision: "fixture" });
+      return invoke(command,args);
+    };
+  });
+  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await expect(page.locator(".workspace-status")).toContainText("Sync again to check");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sync now", exact: true }).last()).toBeEnabled();
+});
+
+test("Save As and a target open completed in one task allocate distinct identities", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state=window as any, runtime=state.__TAURI_INTERNALS__, invoke=runtime.invoke;
+    runtime.invoke=(command:string,args:any) => {
+      if(command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if(command === "write_markdown_file") return new Promise(resolve=>{state.__finishSaveAs=()=>resolve({revision:"source-saved"});});
+      return invoke(command,args);
+    };
+  });
+  await page.goto("/tests/browser/navigation.html?documents");
+  await expect.poll(()=>page.evaluate(()=>Boolean((window as any).__documents))).toBe(true);
+  await page.evaluate(()=>(window as any).__documents.openMarkdownPath("/saved/Source.md"));
+  await page.evaluate(()=>{void (window as any).__documents.saveActiveFileAs();});
+  await expect.poll(()=>page.evaluate(()=>typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.evaluate(async()=>{
+    await (window as any).__documents.openMarkdownPath("/saved/Target.md");
+    (window as any).__finishSaveAs();
+  });
+  await expect.poll(()=>page.evaluate(()=>{
+    const s=(window as any).__documents;
+    return s.openFileIds.filter((id:string)=>s.documentRelativePaths[id]==="Target.md").length;
+  })).toBe(2);
+  const ids=await page.evaluate(()=>(window as any).__documents.openFileIds as string[]);
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+for (const saveAs of [false, true]) test(`an edit batched with the save receipt stays dirty (Save As: ${saveAs})`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state=window as any, runtime=state.__TAURI_INTERNALS__, invoke=runtime.invoke;
+    runtime.invoke=(command:string,args:any) => {
+      if(command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if(["write_markdown_file","save_markdown_file"].includes(command)) return new Promise(resolve=>{state.__finishSave=()=>resolve({revision:"saved-snapshot"});});
+      return invoke(command,args);
+    };
+  });
+  await page.goto("/tests/browser/navigation.html?documents");
+  await expect.poll(()=>page.evaluate(()=>Boolean((window as any).__documents))).toBe(true);
+  await page.evaluate(()=>(window as any).__documents.openMarkdownPath("/saved/Source.md"));
+  await page.evaluate(()=>(window as any).__documents.updateActiveDocument("saved snapshot"));
+  await page.evaluate((saveAs)=>{const s=(window as any).__documents; void (saveAs?s.saveActiveFileAs():s.saveActiveFile());},saveAs);
+  await expect.poll(()=>page.evaluate(()=>typeof (window as any).__finishSave)).toBe("function");
+  await page.evaluate(()=>{(window as any).__documents.updateActiveDocument("late unsaved edit");(window as any).__finishSave();});
+  await expect.poll(()=>page.evaluate(()=>Object.values((window as any).__documents.documentRevisions).includes("saved-snapshot"))).toBe(true);
+  const snapshot=await page.evaluate(()=>{const s=(window as any).__documents;return {content:s.documents[s.activeFileId],dirty:s.dirtyFileIds.has(s.activeFileId)};});
+  expect(snapshot).toEqual({content:"late unsaved edit",dirty:true});
+});
