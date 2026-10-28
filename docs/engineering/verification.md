@@ -56,9 +56,14 @@ Actual main-panel screenshots: `native-empty-panel.png`, `native-loaded-panel.pn
 and `native-cleared-draft-panel.png`. Native menu accessibility captures retain the
 restored, translated, cleared and cleared-after-restart states. CUA returned
 `Screenshot unavailable` while native menus held focus; its system screenshot
-shortcut also produced no readable image. Menu screenshot delivery remains
-BLOCKED by that capture capability. No mock menu image is substituted. An explicit
-request for permission to use macOS `screencapture` remains pending.
+shortcut also produced no readable image. On 2026-10-28 the user explicitly
+authorized macOS `screencapture`. The command succeeded, but the captured region
+showed the acceptance window without its expanded menu and with a different
+application's menu bar. That unsuitable image was discarded and is not evidence.
+CUA window Raise and menu actions did not resolve the foreground mismatch; the
+subsequent Dock activation attempt returned `timeoutReached`. Menu screenshot
+delivery remains BLOCKED by desktop activation/capture, not pending permission.
+No mock menu image is substituted, and no system settings were changed.
 
 For another desktop: create `a/Notes.md` and `中文 文件/Notes.md`, open both, edit one
 without saving, and reopen it through File > Open Recent. Confirm one tab per path,
