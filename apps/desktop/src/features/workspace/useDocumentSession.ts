@@ -21,6 +21,7 @@ import { useWorkspaceFileTreeRefresh } from "../../features/workspace/useWorkspa
 import { APP_EVENTS } from "../../shared/events/appEvents";
 import { recentDocumentStore, documentHistoryPath } from "../../features/workspace/recentDocuments";
 import type { Dispatch, SetStateAction } from "react";
+import { useImmediateSessionState } from "./useImmediateSessionState";
 import { confirmDocumentClose } from "./tauriWorkspaceAdapter";
 
 const initialWorkspace: WorkspaceItem[] = [];
@@ -56,7 +57,7 @@ export function useDocumentSession({
 
   const [workspaceItems, setWorkspaceItems] = useState(initialWorkspace);
   const [workspaceItemsByRoot, setWorkspaceItemsByRoot] = useState<Record<string, WorkspaceItem[]>>({});
-  const [documents, setDocuments] = useState(initialDocuments);
+  const [documents, setDocuments, documentsRef] = useImmediateSessionState(initialDocuments);
   const [documentNavigation] = useState(() => new DocumentNavigation());
   const [documentReads] = useState(() => new DocumentReadRequests());
   useEffect(() => () => documentNavigation.invalidate(), [documentNavigation]);
@@ -72,10 +73,10 @@ export function useDocumentSession({
     setStatusMessage(t("status.workspaceOperationBusy"));
     return true;
   };
-  const getCurrentDocument = useEventCallback((fileId: string) => documents[fileId]);
+  const getCurrentDocument = useCallback((fileId: string) => documentsRef.current[fileId], [documentsRef]);
   const [documentRevisions, setDocumentRevisions] = useState<Record<string, string>>({});
-  const [activeFileId, setActiveFileId] = useState("untitled:1");
-  const [openFileIds, setOpenFileIds] = useState<string[]>(["untitled:1"]);
+  const [activeFileId, setActiveFileId, activeFileIdRef] = useImmediateSessionState("untitled:1");
+  const [openFileIds, setOpenFileIds, openFileIdsRef] = useImmediateSessionState<string[]>(["untitled:1"]);
   const [documentWorkspaceRoots, setDocumentWorkspaceRoots] = useState<Record<string, string>>({});
   const [documentRelativePaths, setDocumentRelativePaths] = useState<Record<string, string>>({});
   const [documentTitles, setDocumentTitles] = useState<Record<string, string>>(
@@ -83,12 +84,8 @@ export function useDocumentSession({
   );
   const [untitledCounter, setUntitledCounter] = useState(1);
 
-  const [workspaceRoot, setWorkspaceRoot] = useState("");
-  const workspaceRootRef = useRef(workspaceRoot);
-  useLayoutEffect(() => {
-    workspaceRootRef.current = workspaceRoot;
-  }, [workspaceRoot]);
-  const [dirtyFileIds, setDirtyFileIds] = useState<Set<string>>(new Set());
+  const [workspaceRoot, setWorkspaceRoot, workspaceRootRef] = useImmediateSessionState("");
+  const [dirtyFileIds, setDirtyFileIds, dirtyFileIdsRef] = useImmediateSessionState<Set<string>>(new Set());
   const hasDirtyPath = useEventCallback((root: string, path: string) => [...dirtyFileIds].some((id) =>
     documentWorkspaceRootForId(id, documentWorkspaceRoots, workspaceRoot) === root
     && (documentRelativePathForId(id, documentRelativePaths) === path
@@ -122,20 +119,6 @@ export function useDocumentSession({
     useState<ExternalDocumentChange | null>(null);
 
   const quitRequestedRef = useRef(false);
-  const dirtyFileIdsRef = useRef(dirtyFileIds);
-  const openFileIdsRef = useRef(openFileIds);
-  const activeFileIdRef = useRef(activeFileId);
-  useLayoutEffect(() => { activeFileIdRef.current = activeFileId; }, [activeFileId]);
-
-  useLayoutEffect(() => {
-    dirtyFileIdsRef.current = dirtyFileIds;
-  }, [dirtyFileIds]);
-
-  useLayoutEffect(() => {
-    openFileIdsRef.current = openFileIds;
-  }, [openFileIds]);
-
-
   const handleWorkspaceFileTreeRefresh = useCallback(
     (refreshedWorkspaceRoot: string, items: WorkspaceItem[]) => {
       if (pathMutations.affects(refreshedWorkspaceRoot) || workspaceRootRef.current !== refreshedWorkspaceRoot) return;
@@ -149,7 +132,7 @@ export function useDocumentSession({
           : { ...currentTrees, [refreshedWorkspaceRoot]: items };
       });
     },
-    [pathMutations],
+    [pathMutations, workspaceRootRef],
   );
 
   const reloadDocumentFromDisk = useEventCallback(
@@ -365,7 +348,7 @@ export function useDocumentSession({
         ? currentFileIds
         : [...currentFileIds, fileId],
     );
-  }, []);
+  }, [setOpenFileIds]);
 
 
   const updateActiveDocument = (value: string) => {
@@ -774,6 +757,14 @@ export function useDocumentSession({
   };
 
 
+  const allocateSavedDocumentId = useCallback((fileId: string, root: string, path: string) =>
+    makeWorkspaceDocumentId({
+      currentDocumentIds: new Set([...openFileIdsRef.current, ...Object.keys(documentsRef.current)].filter((id) => id !== fileId)),
+      currentWorkspaceRoot: root,
+      relativePath: path,
+      workspaceRoot: root,
+    }), [documentsRef, openFileIdsRef]);
+
   const performSaveTab = async (fileId: string, saveAs = false): Promise<string | null> => {
     const isSameDocument = documentReads.captureIdentity(fileId);
     const content = getCurrentDocument(fileId);
@@ -800,12 +791,8 @@ export function useDocumentSession({
 
       const workspacePath = parentPathOf(markdownFilePath);
       const relativePath = fileNameOf(markdownFilePath);
-      const nextDocumentId = makeWorkspaceDocumentId({
-        currentDocumentIds: new Set([...openFileIds, ...Object.keys(documents)].filter((id) => id !== fileId)),
-        currentWorkspaceRoot: workspacePath,
-        relativePath,
-        workspaceRoot: workspacePath,
-      });
+      // Allocate from the completion-time registry; another tab may have opened during IPC.
+      const nextDocumentId = allocateSavedDocumentId(fileId, workspacePath, relativePath);
       if (!isSameDocument()) return null;
       const currentContent = getCurrentDocument(fileId);
       if (currentContent === undefined) return null;

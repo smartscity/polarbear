@@ -1,0 +1,278 @@
+{
+  "performance/gated-focus/preflight.json": {
+    "snapshots": 3,
+    "first": "2026-10-28T14:02:17.913496+00:00",
+    "last": "2026-10-28T14:02:22.143456+00:00",
+    "risks": {
+      "WindowServer": {
+        "samples": 3,
+        "minimumCpu": 53.9,
+        "maximumCpu": 62.6
+      },
+      "com.apple.WebKit.WebContent": {
+        "samples": 1,
+        "minimumCpu": 98.2,
+        "maximumCpu": 98.2
+      }
+    }
+  },
+  "performance/gated-focus-2/preflight.json": {
+    "snapshots": 10,
+    "first": "2026-10-28T14:03:26.291126+00:00",
+    "last": "2026-10-28T14:03:45.385541+00:00",
+    "risks": {
+      "Google Chrome Helper (Renderer)": {
+        "samples": 1,
+        "minimumCpu": 96.1,
+        "maximumCpu": 96.1
+      },
+      "WindowServer": {
+        "samples": 2,
+        "minimumCpu": 67.3,
+        "maximumCpu": 94.8
+      },
+      "com.apple.WebKit.WebContent": {
+        "samples": 1,
+        "minimumCpu": 29.1,
+        "maximumCpu": 29.1
+      },
+      "Codex (Renderer)": {
+        "samples": 1,
+        "minimumCpu": 54.3,
+        "maximumCpu": 54.3
+      }
+    }
+  },
+  "performance/gated-focus-3/preflight.json": {
+    "snapshots": 42,
+    "first": "2026-10-28T14:25:46.089785+00:00",
+    "last": "2026-10-28T14:27:14.552046+00:00",
+    "risks": {
+      "WindowServer": {
+        "samples": 18,
+        "minimumCpu": 50.2,
+        "maximumCpu": 96.9
+      },
+      "clang": {
+        "samples": 9,
+        "minimumCpu": 51.9,
+        "maximumCpu": 99.0
+      },
+      "rustc": {
+        "samples": 63,
+        "minimumCpu": 16.8,
+        "maximumCpu": 817.5
+      },
+      "swift-frontend": {
+        "samples": 1,
+        "minimumCpu": 97.8,
+        "maximumCpu": 97.8
+      },
+      "(swift-frontend)": {
+        "samples": 1,
+        "minimumCpu": 99.6,
+        "maximumCpu": 99.6
+      },
+      "syspolicyd": {
+        "samples": 5,
+        "minimumCpu": 51.6,
+        "maximumCpu": 85.0
+      },
+      "node": {
+        "samples": 26,
+        "minimumCpu": 52.7,
+        "maximumCpu": 238.3
+      },
+      "(rustfmt)": {
+        "samples": 1,
+        "minimumCpu": 56.0,
+        "maximumCpu": 56.0
+      },
+      "(node)": {
+        "samples": 4,
+        "minimumCpu": 57.2,
+        "maximumCpu": 69.5
+      },
+      "codex": {
+        "samples": 2,
+        "minimumCpu": 52.8,
+        "maximumCpu": 76.3
+      },
+      "Google Chrome Helper (Renderer)": {
+        "samples": 4,
+        "minimumCpu": 25.9,
+        "maximumCpu": 54.4
+      },
+      "Google Chrome Helper": {
+        "samples": 1,
+        "minimumCpu": 24.1,
+        "maximumCpu": 24.1
+      },
+      "PerfPowerServices": {
+        "samples": 1,
+        "minimumCpu": 61.2,
+        "maximumCpu": 61.2
+      },
+      "ChatGPT": {
+        "samples": 2,
+        "minimumCpu": 58.5,
+        "maximumCpu": 76.1
+      },
+      "Codex (Renderer)": {
+        "samples": 4,
+        "minimumCpu": 76.8,
+        "maximumCpu": 115.9
+      },
+      "(rustc)": {
+        "samples": 1,
+        "minimumCpu": 62.0,
+        "maximumCpu": 62.0
+      },
+      "duetexpertd": {
+        "samples": 1,
+        "minimumCpu": 63.5,
+        "maximumCpu": 63.5
+      }
+    }
+  },
+  "performance/gated-focus-4/preflight.json": {
+    "snapshots": 41,
+    "first": "2026-10-28T14:33:34.226024+00:00",
+    "last": "2026-10-28T14:35:03.893115+00:00",
+    "risks": {
+      "WindowServer": {
+        "samples": 26,
+        "minimumCpu": 51.3,
+        "maximumCpu": 84.9
+      },
+      "chrome-headless-shell": {
+        "samples": 89,
+        "minimumCpu": 21.7,
+        "maximumCpu": 175.5
+      },
+      "codex": {
+        "samples": 1,
+        "minimumCpu": 69.4,
+        "maximumCpu": 69.4
+      },
+      "Codex (Renderer)": {
+        "samples": 1,
+        "minimumCpu": 69.2,
+        "maximumCpu": 69.2
+      },
+      "com.apple.WebKit.WebContent": {
+        "samples": 3,
+        "minimumCpu": 26.3,
+        "maximumCpu": 61.1
+      },
+      "NotificationCenter": {
+        "samples": 2,
+        "minimumCpu": 82.3,
+        "maximumCpu": 84.3
+      },
+      "node": {
+        "samples": 7,
+        "minimumCpu": 55.6,
+        "maximumCpu": 117.1
+      },
+      "(chrome-headless-)": {
+        "samples": 3,
+        "minimumCpu": 90.4,
+        "maximumCpu": 107.5
+      },
+      "Python": {
+        "samples": 13,
+        "minimumCpu": 60.4,
+        "maximumCpu": 98.9
+      },
+      "contactsd": {
+        "samples": 1,
+        "minimumCpu": 69.7,
+        "maximumCpu": 69.7
+      },
+      "Google Chrome Helper (Renderer)": {
+        "samples": 1,
+        "minimumCpu": 93.0,
+        "maximumCpu": 93.0
+      },
+      "SkyComputerUseService": {
+        "samples": 1,
+        "minimumCpu": 61.1,
+        "maximumCpu": 61.1
+      }
+    }
+  },
+  "performance/gated-focus-5/preflight.json": {
+    "snapshots": 141,
+    "first": "2026-10-28T14:38:19.209697+00:00",
+    "last": "2026-10-28T14:43:17.698635+00:00",
+    "risks": {
+      "Codex (Renderer)": {
+        "samples": 3,
+        "minimumCpu": 62.9,
+        "maximumCpu": 265.3
+      },
+      "chrome-headless-shell": {
+        "samples": 26,
+        "minimumCpu": 21.7,
+        "maximumCpu": 146.1
+      },
+      "java": {
+        "samples": 153,
+        "minimumCpu": 51.6,
+        "maximumCpu": 809.5
+      },
+      "Google Chrome Helper (Renderer)": {
+        "samples": 19,
+        "minimumCpu": 21.9,
+        "maximumCpu": 163.4
+      },
+      "node": {
+        "samples": 1,
+        "minimumCpu": 73.5,
+        "maximumCpu": 73.5
+      },
+      "WindowServer": {
+        "samples": 37,
+        "minimumCpu": 53.4,
+        "maximumCpu": 134.1
+      },
+      "com.apple.WebKit.WebContent": {
+        "samples": 2,
+        "minimumCpu": 67.4,
+        "maximumCpu": 92.9
+      },
+      "Google Chrome": {
+        "samples": 22,
+        "minimumCpu": 20.3,
+        "maximumCpu": 52.1
+      },
+      "Google Chrome Helper": {
+        "samples": 9,
+        "minimumCpu": 20.1,
+        "maximumCpu": 42.2
+      },
+      "codex": {
+        "samples": 1,
+        "minimumCpu": 58.9,
+        "maximumCpu": 58.9
+      },
+      "keytool": {
+        "samples": 1,
+        "minimumCpu": 196.0,
+        "maximumCpu": 196.0
+      },
+      "ChatGPT": {
+        "samples": 1,
+        "minimumCpu": 52.0,
+        "maximumCpu": 52.0
+      }
+    }
+  },
+  "performance/strict-focus/preflight.json": {
+    "snapshots": 3,
+    "first": "2026-10-28T13:59:59.921641+00:00",
+    "last": "2026-10-28T14:00:06.077700+00:00",
+    "risks": {}
+  }
+}

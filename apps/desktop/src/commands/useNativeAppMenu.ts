@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { RecentMenuActions } from "./recentMenuActions";
+import type { RecentDocumentMenuState } from "../features/workspace/useRecentDocumentMenu";
 import { NativeMenuInstaller } from "./nativeMenuInstaller";
 import { getCommandState, type CommandRuntimeContext } from "./commandState";
 import {
@@ -17,6 +19,7 @@ import type { KeybindingOverrides } from "../shared/settings/userSettings";
 import { PRODUCT_CONFIG } from "../shared/config/productConfig";
 
 type NativeAppMenuState = {
+  recentDocuments: RecentDocumentMenuState;
   commandContext: CommandRuntimeContext;
   repositoryAccount: RepositoryAccount | null;
   repositoryBinding: RepositoryBinding | null;
@@ -28,8 +31,11 @@ export function useNativeAppMenu(
 ): void {
   const { language, t } = useI18n();
   const userSettings = useUserSettings();
-  const [installer] = useState(() => new NativeMenuInstaller((error) => {
-    console.info("Native menu is unavailable in this environment.", error);
+  const [{ installer, recentActions }] = useState(() => ({
+    installer: new NativeMenuInstaller((error) => {
+      console.info("Native menu is unavailable in this environment.", error);
+    }),
+    recentActions: new RecentMenuActions(),
   }));
 
   useEffect(() => {
@@ -69,7 +75,8 @@ export function useNativeAppMenu(
           checkableMenuItem("theme.light"),
           checkableMenuItem("theme.dark"),
         ];
-        return Menu.new({
+        const recent = recentActions.prepare(state.recentDocuments, t);
+        const menu = await Menu.new({
           items: [
             {
               id: "app",
@@ -119,6 +126,7 @@ export function useNativeAppMenu(
                   enabled: commandState("file.openFile").enabled,
                   action: () => executeCommand("file.openFile")
                 },
+                recent.submenu,
                 { item: "Separator" },
                 {
                   id: "file.save",
@@ -436,9 +444,17 @@ export function useNativeAppMenu(
             }
           ]
         });
+        return {
+          close: () => menu.close(),
+          setAsAppMenu: async () => {
+            const previous = await menu.setAsAppMenu();
+            recent.activate();
+            return previous;
+          },
+        };
 
     });
-  }, [installer, executeCommand, language, state.commandContext, state.repositoryAccount, state.repositoryBinding, t, userSettings.keybindings]);
+  }, [installer, recentActions, state.recentDocuments, executeCommand, language, state.commandContext, state.repositoryAccount, state.repositoryBinding, t, userSettings.keybindings]);
 }
 
 export function repositoryMenuItems(params: {

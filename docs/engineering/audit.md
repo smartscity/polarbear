@@ -1,5 +1,24 @@
 # Engineering Audit
 
+## Sync and Session Follow-up: 2026-10-27
+
+Start `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5`; external assessment remains
+`1988263` / 8.68. This slice does not rewrite historical scores or repeat deductions
+for repaired findings.
+
+| ID | Classification / evidence | Root cause and disposition |
+| --- | --- | --- |
+| SYNC27-01 | Existing confirmed compatibility defect; production HTTP red/green | Contents JSON/base64 does not cover GitHub's 1–100 MB contract. Use frozen-ref raw requests, bounded streamed reads, fixed-tree size verification and no redirects. |
+| SYNC27-02 | Existing confirmed protocol defect; production coordinator/provider red/green | GitLab file-conditional receipt was treated as a complete branch snapshot. Confirm only submitted paths; preserve pending state and reconcile on the next explicit Sync. |
+| SESSION27-01 | Existing frontend state defect reproduced in actual App with mock IPC; native reachability unverified | Save As allocated from admission-time arrays. Allocate from the completion-time session registry; preserve other buffers/revisions and prevent duplicate IDs. Native production P1 data loss is not asserted. |
+| PERF27-01 | Previously measured cost; loaded-machine stage observations completed | SHA-256 streams all file content. The current profile attributes most 20 MiB scan work to hashing; enumeration and storage probes are smaller. External load prevents a controlled regression verdict. Retain fixed digest storage and conditional writes; no speculative cache or parallel implementation. |
+| GOV27-01 | Confirmed governance gap | Convert scoped advisory decisions into a fail-closed, expiring exact-ID gate and require Quality on the frozen release candidate. Repository-rule enforcement is separately blocked by connector administration access. |
+
+These changes reuse existing owners and contracts. They do not modify Memory
+storage internals, renderer consent, offline translation, credential persistence
+or the parallel fullscreen work. Detailed executed results and remaining platform/
+provider limits are in the dated verification section.
+
 ## Response and Settings Follow-up: 2026-10-25
 
 Baseline: `f68680d37f4f470ffdb6b641cb4a6fed87fc0217`.

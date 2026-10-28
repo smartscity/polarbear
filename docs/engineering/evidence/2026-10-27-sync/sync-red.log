@@ -1,0 +1,76 @@
+   Compiling polarbear-desktop v0.1.0 (/Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 33s
+     Running unittests src/main.rs (/tmp/polarbear-sync-target/debug/deps/polarbear_desktop-5406f76be064aadd)
+
+running 41 tests
+test repository::characterization_tests::binding_wire_format_and_legacy_defaults_remain_compatible ... ok
+test repository::characterization_tests::excluded_directories_are_not_entered_even_when_unreadable ... ok
+test repository::characterization_tests::invalid_baseline_rolls_back_migration_and_can_recover_on_restart ... ok
+test repository::characterization_tests::legacy_baseline_migration_preserves_original_bytes_and_outbox ... ok
+test repository::characterization_tests::local_sync_scan_skips_links_and_excluded_files ... ok
+test repository::characterization_tests::manifests_count_additions_changes_and_deletions_once ... ok
+test repository::characterization_tests::provider_http_errors_preserve_authentication_and_permission_diagnostics ... ok
+test repository::characterization_tests::provider_paths_preserve_scoping_and_component_encoding ... ok
+test repository::characterization_tests::streamed_digests_match_memory_digests_for_empty_unicode_and_large_files ... ok
+test repository::characterization_tests::streamed_digests_retain_the_sha256_contract_at_block_boundaries ... ok
+test repository::characterization_tests::sync_digest_is_versioned_fixed_size_and_does_not_embed_document_content ... ok
+test repository::conditional_publish_tests::github_conflict_and_unknown_outcome_never_retry_with_a_new_head ... ok
+test repository::conditional_publish_tests::github_publishes_one_atomic_batch_with_the_planned_head_and_returns_its_commit ... ok
+test repository::conditional_publish_tests::gitlab_conditions_updates_on_file_versions_read_from_the_frozen_commit ... ok
+test repository::conditional_publish_tests::gitlab_confirmation_download_failure_retains_old_baseline_and_retries_pull ... ok
+test repository::conditional_publish_tests::gitlab_confirmation_preserves_local_edits_during_application ... ok
+test repository::conditional_publish_tests::gitlab_receipt_never_certifies_an_unobserved_unrelated_remote_edit ... FAILED
+test repository::conditional_publish_tests::gitlab_unknown_receipt_and_checkpoint_failure_reconcile_without_duplicate_upload ... ok
+test repository::conditional_publish_tests::gitlab_unrelated_create_and_delete_are_reconciled_only_on_the_next_snapshot ... ok
+test repository::provider_response_tests::bounded_response_checks_actual_bytes_with_or_without_length_or_chunks ... ok
+test repository::provider_response_tests::enumeration_caps_cumulative_wire_bytes_not_only_each_page ... ok
+test repository::provider_response_tests::enumeration_rejects_repeated_pages_and_limits_retained_entries ... ok
+test repository::provider_response_tests::github_base64_limit_checks_decoded_padding_and_preserves_exact_boundary ... ok
+test repository::provider_response_tests::github_raw_download_bounds_real_streams_and_preserves_http_failures ... FAILED
+test repository::provider_response_tests::github_raw_download_uses_frozen_ref_and_preserves_large_markdown_and_binary ... FAILED
+test repository::provider_response_tests::gitlab_download_rejects_oversized_declared_body_before_reading ... ok
+test repository::provider_response_tests::oversized_successful_commit_acknowledgment_is_an_unknown_outcome ... ok
+test repository::provider_response_tests::provider_error_body_is_bounded_without_losing_permission_diagnostics ... ok
+test repository::provider_response_tests::provider_json_rejects_chunked_oversize_before_deserializing ... ok
+test repository::provider_response_tests::truncated_bodies_and_invalid_json_remain_failures ... ok
+test repository::sync_plan::tests::three_way_plan_covers_content_and_existence_without_a_preferred_side ... ok
+test repository::sync_tests::a_checkpoint_failure_after_download_recovers_without_overwriting_later_edits ... ok
+test repository::sync_tests::conditional_create_and_delete_do_not_overwrite_newer_files ... ok
+test repository::sync_tests::conflicting_real_files_remain_intact_and_never_reach_publication ... ok
+test repository::sync_tests::local_edit_during_download_rejects_the_conditional_replace ... ok
+test repository::sync_tests::lost_publish_response_is_reconciled_without_a_duplicate_upload ... ok
+test repository::sync_tests::mixed_download_and_upload_checkpoint_only_acknowledged_versions ... ok
+test repository::sync_tests::overlapping_repository_operations_are_rejected_and_admission_recovers ... ok
+test repository::sync_tests::oversized_atomic_publication_is_rejected_without_advancing_the_baseline ... ok
+test repository::sync_tests::rejected_download_does_not_publish_replace_local_bytes_or_advance_checkpoint ... ok
+test repository::sync_tests::unknown_upload_followed_by_a_remote_edit_preserves_the_conflict ... ok
+
+failures:
+
+---- repository::conditional_publish_tests::gitlab_receipt_never_certifies_an_unobserved_unrelated_remote_edit stdout ----
+
+thread 'repository::conditional_publish_tests::gitlab_receipt_never_certifies_an_unobserved_unrelated_remote_edit' (208706) panicked at apps/desktop/src-tauri/src/repository/conditional_publish_tests.rs:234:5:
+assertion `left == right` failed
+  left: [true]
+ right: [false]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- repository::provider_response_tests::github_raw_download_bounds_real_streams_and_preserves_http_failures stdout ----
+
+thread 'repository::provider_response_tests::github_raw_download_bounds_real_streams_and_preserves_http_failures' (209243) panicked at apps/desktop/src-tauri/src/repository/provider_response_tests.rs:302:46:
+called `Result::unwrap()` on an `Err` value: "expected value at line 1 column 1"
+
+---- repository::provider_response_tests::github_raw_download_uses_frozen_ref_and_preserves_large_markdown_and_binary stdout ----
+
+thread 'repository::provider_response_tests::github_raw_download_uses_frozen_ref_and_preserves_large_markdown_and_binary' (209401) panicked at apps/desktop/src-tauri/src/repository/provider_response_tests.rs:263:27:
+called `Result::unwrap()` on an `Err` value: "expected value at line 1 column 1"
+
+
+failures:
+    repository::conditional_publish_tests::gitlab_receipt_never_certifies_an_unobserved_unrelated_remote_edit
+    repository::provider_response_tests::github_raw_download_bounds_real_streams_and_preserves_http_failures
+    repository::provider_response_tests::github_raw_download_uses_frozen_ref_and_preserves_large_markdown_and_binary
+
+test result: FAILED. 38 passed; 3 failed; 0 ignored; 0 measured; 104 filtered out; finished in 32.11s
+
+error: test failed, to rerun pass `--bin polarbear-desktop`

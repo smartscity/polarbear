@@ -1,0 +1,20 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test recent-menu.spec.ts native-shortcut-ownership.spec.ts --browser webkit --output /tmp/polarbear-recent-webkit
+
+[WebServer] (node:4892) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:4919) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:4921) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [webkit] › tests/browser/native-shortcut-ownership.spec.ts:4:1 › leaves Control-Command-F to the native window without searching or changing the draft (3.4s)
+  ✓  2 [webkit] › tests/browser/recent-menu.spec.ts:12:1 › moves the history into File, restores it, distinguishes names and preserves an already open draft (2.6s)
+  ✓  3 [webkit] › tests/browser/recent-menu.spec.ts:35:1 › retains unavailable entries and draft contents, then clears only persisted history (2.2s)
+  ✓  4 [webkit] › tests/browser/recent-menu.spec.ts:57:1 › updates translated menus and successful Save As paths while preserving File commands (1.8s)
+  ✓  5 [webkit] › tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount (1.6s)
+
+  5 passed (15.3s)

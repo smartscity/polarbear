@@ -1,5 +1,51 @@
 # Refactoring Report
 
+## Recent Documents in the Native File Menu: 2026-10-27
+
+Source candidate: `3ff3ac3`, based on `eeea3b4`. The existing native File menu
+now owns the Open Recent entry immediately after Open. The sidebar's recent list,
+dedicated styles, forwarding props and empty footer are removed.
+
+| Problem | Pattern decision | State owner and invariant |
+| --- | --- | --- |
+| Move an entry without migrating user data | Reuse the existing store; add a React projection hook | `RecentDocumentStore` remains the sole persisted authority (`polarbear.recentDocuments.v1`, limit 20). Existing normalization, ordering, deduplication, successful-open/save and rename behavior remain. |
+| Dynamic native IDs can change a visible item's target before installation | Small bounded action-generation owner | `RecentMenuActions` alternates two banks of 20 IDs. Only the generation acknowledged by native installation may open its immutable path. Reuse `NativeMenuInstaller` for serialized, coalesced replacements and resource-lease disposal. |
+| Native callbacks outlive renders or unmounts | Reuse current-value callbacks and explicit lifecycle admission | The hook subscribes to history invalidations/storage events, removes both listeners on unmount, rejects duplicate pending opens and rejects cleared/stale entries. The session still owns loading, tab identity, revisions and drafts. |
+| Missing files need visible feedback outside the sidebar | Reuse the native dialog adapter and translations | Existing open errors/status remain; a failed recent open also displays an EN/ZH unavailable-file alert. Failure retains history and current buffers. Clear changes history only. |
+
+Final boundary review: no second history database, independent file loader, global
+event framework, new dependency or replacement native menu system. Same-name
+entries include their parent paths; empty history and Clear are disabled. Local
+browser tests exercise Tauri's actual JavaScript menu Channel handlers against
+controlled IPC; macOS acceptance separately exercises the real native menu and IO.
+See the current follow-up in [verification](verification.md).
+
+## Sync and Session Acceptance Design: 2026-10-27
+
+Starting point: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5`, `main`.
+Engineering branch: `codex/sync-session-qualification`. The pre-existing `.idea/vcs.xml`
+change is excluded. The external review at `1988263` remains historical evidence.
+
+| Problem | Pattern decision | State owner and invariant |
+| --- | --- | --- |
+| GitHub medium-size content | Reuse provider Adapter and bounded reader | Request raw content from the constructed API URL at the frozen commit; never trust a returned download URL. Retain the 64 MiB file cap. |
+| File-conditional publication | Explicit completion state in the existing coordinator | A receipt acknowledges submitted paths only. GitLab publication checkpoints those paths with complete=false and returns pending confirmation. Next explicit Sync observes a fresh frozen snapshot and reconciles against acknowledged baselines. No recursive catch-up loop or new manifest-as-baseline shortcut. |
+| Save As identity collision | Reuse session identity allocator and completion transaction | Read the current registered IDs at completion, allocate before synchronous state publication, and preserve every other buffer/revision/dirty marker. Retain source identity-generation checks and save admission. |
+| Performance | Profile before policy/cache changes | Preserve SHA-256 and content-conditional writes. No metadata-only cache, extra executor or unbounded retained content. |
+
+GitHub's whole-head conditional publication retains its existing completion
+semantics. A GitLab receipt deliberately requires one later Sync even without a
+concurrent writer. This trades a bounded extra user action for a small recoverable
+protocol: confirmed uploads survive read failure; unobserved paths retain their old
+baseline; later local edits still undergo three-way comparison and conditional IO.
+The session's existing current-value references now update in its mutation handlers,
+with React as their rendered projection. The local `useImmediateSessionState` hook
+owns this relationship for buffers, tab IDs, active ID, workspace root and dirty
+IDs. A render-delayed ref and an empty `flushSync` barrier both failed the same-task
+completion regression; neither is the final implementation. This prevents stale
+registration, focus and dirty-state reads without a second global store or a
+prohibition on tab switching.
+
 ## Provider Bounds and Settings Arbitration: 2026-10-25
 
 Baseline: `f68680d37f4f470ffdb6b641cb4a6fed87fc0217`.

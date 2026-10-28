@@ -59,11 +59,22 @@ test("release workflow retains the app and verifies the mounted DMG before uploa
   assert.ok(workflow.indexOf("Verify caption engine inside DMG") < workflow.indexOf("Upload DMG build artifact"));
   assert.match(workflow, /name: Upload DMG to GitHub Release\s+if: env\.RELEASE_TAG != ''/);
   assert.match(workflow, /branches:\s+- main/);
-  assert.match(workflow, /caption_gate:\s+name: Native caption gate\s+uses: \.\/\.github\/workflows\/caption\.yml/);
-  assert.match(workflow, /build_macos:\s+name: Build macOS DMG\s+needs: \[caption_gate, caption_soak\]/);
+  assert.match(workflow, /caption_gate:\s+name: Native caption gate\s+needs: candidate\s+uses: \.\/\.github\/workflows\/caption\.yml/);
+  assert.match(workflow, /build_macos:\s+name: Build macOS DMG\s+needs: \[candidate, quality, caption_gate, caption_soak\]/);
   assert.match(workflow, /caption_soak:[\s\S]*uses: \.\/\.github\/workflows\/caption-qualification\.yml[\s\S]*production_only: true/);
   const gate = await readFile(new URL("../../../.github/workflows/caption.yml", import.meta.url), "utf8");
   assert.match(gate, /runner: \[macos-26, macos-15-intel\]/);
   assert.match(gate, /test-caption-engine\.mjs.*--realtime/);
   assert.doesNotMatch(gate, /continue-on-error/);
+});
+
+
+test("release quality, caption qualification and both packages use one resolved candidate SHA", async () => {
+  const workflow = await readFile(new URL("../../../.github/workflows/release.yml", import.meta.url), "utf8");
+  const consumers = workflow.slice(workflow.indexOf("  quality:"));
+  assert.match(workflow, /sha=\$\(git rev-parse HEAD\)/);
+  assert.match(consumers, /uses: \.\/\.github\/workflows\/quality\.yml/);
+  assert.doesNotMatch(consumers, /ref: \$\{\{ inputs\.release_tag|ref: \$\{\{ github\./);
+  assert.equal((consumers.match(/ref: \$\{\{ needs\.candidate\.outputs\.sha \}\}/g) ?? []).length, 5);
+  assert.match(consumers, /needs: \[candidate, quality, build_macos\]/);
 });

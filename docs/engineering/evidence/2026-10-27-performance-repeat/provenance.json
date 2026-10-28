@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-27T15:03:18.200730+00:00",
+  "baselineCommit": "64d394ae9fd05c24bbf599f55bf1aeef3769b2d5",
+  "candidateCommit": "eeea3b46ef9ed41048c29b1b9d29ab1d113568ea",
+  "menuSourceCommit": "3ff3ac3a1af72fcd5c055ac91935f9890ab8d43f",
+  "buildsFinishedBeforeMeasurements": true,
+  "installedDependencyVersionsMatchFrozenLock": true,
+  "files": {
+    "native-baseline": "d501096f98e3296b4abd9c2c24fdfc4e225abbde13f36d723e8399e068a6e37e",
+    "native-candidate": "4aadc51ad6d6e6254ea7e24c158b4ed9f37b2f46b8008a02444d758ead7c23c9",
+    "baseline/package-lock.json": "1430f0a922c135fa0343da93a3863f8940299720c5d635c0ea4a1e19b292630d",
+    "candidate/package-lock.json": "1430f0a922c135fa0343da93a3863f8940299720c5d635c0ea4a1e19b292630d",
+    "baseline/Cargo.lock": "bcdc4899cd18e93f750d65ef54b871c1bf4ebbf6001d201b9535601db9378a34",
+    "candidate/Cargo.lock": "bcdc4899cd18e93f750d65ef54b871c1bf4ebbf6001d201b9535601db9378a34",
+    "candidate/apps/desktop/scripts/measure-editor.mjs": "16fd530e54f4fb6187d093b4d1a72ae35125355b63dcfd24240b9dc5e8019a14"
+  },
+  "nativeCompiler": "rustc 1.96.0 (ac68faa20 2026-05-25)"
+}

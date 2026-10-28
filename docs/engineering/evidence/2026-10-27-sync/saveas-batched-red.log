@@ -1,0 +1,50 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test navigation-settings.spec.ts -g one task allocate
+
+
+Running 1 test using 1 worker
+
+(node:31427) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/navigation-settings.spec.ts:1135:1 › Save As and a target open completed in one task allocate distinct identities (2.0s)
+
+
+  1) tests/browser/navigation-settings.spec.ts:1135:1 › Save As and a target open completed in one task allocate distinct identities 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: 2
+
+      1157 |   })).toBe(2);
+      1158 |   const ids=await page.evaluate(()=>(window as any).__documents.openFileIds as string[]);
+    > 1159 |   expect(new Set(ids).size).toBe(ids.length);
+           |                             ^
+      1160 | });
+      1161 |
+        at /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/tests/browser/navigation-settings.spec.ts:1159:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/navigation-settings-Save-A-c40db-llocate-distinct-identities/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/navigation-settings-Save-A-c40db-llocate-distinct-identities/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/navigation-settings-Save-A-c40db-llocate-distinct-identities/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/navigation-settings-Save-A-c40db-llocate-distinct-identities/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/browser/navigation-settings.spec.ts:1135:1 › Save As and a target open completed in one task allocate distinct identities 
+npm error Lifecycle script `test:ui` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error workspace polarbear-desktop@0.1.0
+npm error location /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error command failed
+npm error command sh -c playwright test navigation-settings.spec.ts -g 'one task allocate'

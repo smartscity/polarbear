@@ -26,24 +26,44 @@ permissions:
   contents: write
 
 jobs:
+  candidate:
+    name: Freeze candidate commit
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.sha }}
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Candidate quality
+    needs: candidate
+    uses: ./.github/workflows/quality.yml
+    with:
+      ref: ${{ needs.candidate.outputs.sha }}
+
   caption_gate:
     name: Native caption gate
+    needs: candidate
     uses: ./.github/workflows/caption.yml
     with:
-      ref: ${{ inputs.release_tag || github.sha }}
+      ref: ${{ needs.candidate.outputs.sha }}
 
   caption_soak:
     name: Production caption first-text validation
-    needs: caption_gate
+    needs: [candidate, caption_gate]
     uses: ./.github/workflows/caption-qualification.yml
     with:
-      ref: ${{ inputs.release_tag || github.sha }}
+      ref: ${{ needs.candidate.outputs.sha }}
       production_only: true
       release_tag: ${{ inputs.release_tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
 
   build_macos:
     name: Build macOS DMG
-    needs: [caption_gate, caption_soak]
+    needs: [candidate, quality, caption_gate, caption_soak]
     runs-on: macos-26
     outputs:
       app_version: ${{ steps.release_metadata.outputs.app_version }}
@@ -53,7 +73,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag || github.sha }}
+          ref: ${{ needs.candidate.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -281,7 +301,7 @@ jobs:
 
   build_windows:
     name: Build Windows installers
-    needs: build_macos
+    needs: [candidate, quality, build_macos]
     if: needs.build_macos.outputs.release_tag != ''
     runs-on: windows-latest
     env:
@@ -292,7 +312,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_tag || github.ref }}
+          ref: ${{ needs.candidate.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

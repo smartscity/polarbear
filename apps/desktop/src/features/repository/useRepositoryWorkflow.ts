@@ -381,7 +381,7 @@ export function useRepositoryWorkflow({
       const localConflict = (action === "pull" || action === "sync")
         ? await reloadWorkspaceAfterDownload(context.workspaceRoot)
         : false;
-      setRepositoryDialog(status.conflicts.length > 0 ? "status" : null);
+      setRepositoryDialog(status.conflicts.length > 0 || status.remoteChanged ? "status" : null);
       setRepositoryOperation({
         title: operation.title,
         message:
@@ -389,6 +389,7 @@ export function useRepositoryWorkflow({
             ? t("status.syncReloadPreserved")
             : status.conflicts.length > 0
             ? t("status.syncConflicts", { count: status.conflicts.length })
+            : status.remoteChanged ? t("status.syncPendingConfirmation")
             : t("status.operationCompleted", { operation: operation.title }),
         isBusy: false,
         status: localConflict || status.conflicts.length > 0 ? "error" : "success",
@@ -398,6 +399,7 @@ export function useRepositoryWorkflow({
           ? t("status.syncReloadPreserved")
           : status.conflicts.length > 0
           ? t("status.syncConflicts", { count: status.conflicts.length })
+          : status.remoteChanged ? t("status.syncPendingConfirmation")
           : t("status.operationCompleted", { operation: operation.title }),
       );
     } catch (error) {

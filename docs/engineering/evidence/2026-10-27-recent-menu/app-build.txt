@@ -1,0 +1,134 @@
+
+> polarbear-desktop@0.1.0 tauri
+> tauri build --debug --bundles app --config /private/tmp/polarbear-recent-config.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> polarbear-desktop@0.1.0 build
+> vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 3968 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.46 kB │ gzip:     0.29 kB
+dist/caption.html                                             0.74 kB │ gzip:     0.43 kB
+dist/models/en-zh/manifest.json                               0.93 kB │ gzip:     0.50 kB
+dist/translation-runtime/fflate-LICENSE.txt                   1.07 kB │ gzip:     0.66 kB
+dist/translation-runtime/LICENSE                             16.73 kB
+dist/translation-runtime/translator-worker.js                17.19 kB
+dist/translation-runtime/bergamot-translator-worker.js       80.47 kB
+dist/translation-runtime/bergamot-translator-worker.wasm  5,174.29 kB │ gzip: 1,913.57 kB
+dist/assets/CaptionPanel-DbPrnBQr.css                         3.73 kB │ gzip:     1.12 kB
+dist/assets/main-CM2t3KuV.css                               101.26 kB │ gzip:    17.51 kB
+dist/assets/channel-BGm1KRrT.js                               0.11 kB │ gzip:     0.12 kB
+dist/assets/translationError-RW3xhcBM.js                      0.11 kB │ gzip:     0.11 kB
+dist/assets/init-Gi6I4Gst.js                                  0.15 kB │ gzip:     0.13 kB
+dist/assets/chunk-2Q5K7J3B-B2kcjMHZ.js                        0.18 kB │ gzip:     0.16 kB
+dist/assets/chunk-XXDRQBXY-BJpxQKDk.js                        0.22 kB │ gzip:     0.20 kB
+dist/assets/chunk-JWPE2WC7-rpaJZRQ3.js                        0.29 kB │ gzip:     0.20 kB
+dist/assets/chunk-5VM5RSS4-DvW1N-8e.js                        0.36 kB │ gzip:     0.27 kB
+dist/assets/chunk-POPQ4Y6H-DQfoyaB7.js                        0.52 kB │ gzip:     0.37 kB
+dist/assets/stateDiagram-v2-MP3YSRHH-DttAl4pA.js              0.54 kB │ gzip:     0.35 kB
+dist/assets/classDiagram-ZZMXUADV-4xTtlGDg.js                 0.58 kB │ gzip:     0.37 kB
+dist/assets/classDiagram-v2-VYDZK3BY-4xTtlGDg.js              0.58 kB │ gzip:     0.37 kB
+dist/assets/swimlanesDiagram-VR7AAH4N-B6nE5aHt.js             0.66 kB │ gzip:     0.42 kB
+dist/assets/infoDiagram-27XIBGKW-DRsHxsEP.js                  0.69 kB │ gzip:     0.46 kB
+dist/assets/CaptionTranslator-HRyd9Eoh.js                     0.96 kB │ gzip:     0.52 kB
+dist/assets/sizeCapture-INFHLROL-BdsGKgIz.js                  1.11 kB │ gzip:     0.61 kB
+dist/assets/ordinal-Cboi1Yqb.js                               1.19 kB │ gzip:     0.57 kB
+dist/assets/railroadDiagram-O6MQD6OU-DKpNFyBt.js              1.71 kB │ gzip:     0.81 kB
+dist/assets/chunk-F27PBJKO-BMuCLnkC.js                        1.87 kB │ gzip:     0.83 kB
+dist/assets/abnfDiagram-VCTEODGH-4mmVbw9n.js                  1.92 kB │ gzip:     0.94 kB
+dist/assets/pegDiagram-XKGWAZYB-C142Eldk.js                   2.06 kB │ gzip:     0.97 kB
+dist/assets/ebnfDiagram-PWID7BFC-DjCGd_fm.js                  2.11 kB │ gzip:     0.93 kB
+dist/assets/arc-DPOtxQJU.js                                   3.43 kB │ gzip:     1.48 kB
+dist/assets/diagram-Z3DM3KII-R76p0Bi5.js                      4.35 kB │ gzip:     1.91 kB
+dist/assets/defaultLocale-DX6XiGOO.js                         4.69 kB │ gzip:     2.18 kB
+dist/assets/captionAdapter-abjW1ur0.js                        5.02 kB │ gzip:     2.01 kB
+dist/assets/linear-BZrv8Emz.js                                5.65 kB │ gzip:     2.31 kB
+dist/assets/diagram-UQ7AKVKN-BIh0EK-Q.js                      6.34 kB │ gzip:     2.73 kB
+dist/assets/pieDiagram-E7YTZNPT-BBC5tVGD.js                   6.46 kB │ gzip:     2.71 kB
+dist/assets/CaptionSourceSelect-Bd6v9r3i.js                   7.60 kB │ gzip:     3.01 kB
+dist/assets/diagram-S7CK7UJ4-C-_cGMNX.js                      8.46 kB │ gzip:     3.78 kB
+dist/assets/bergamotWorker-D5KoQb8Z.js                        9.86 kB │ gzip:     4.84 kB
+dist/assets/menu-Db5Uxr16.js                                 10.16 kB │ gzip:     2.35 kB
+dist/assets/cynefinDiagram-5FMLGOSQ-B3FiHTHc.js              10.21 kB │ gzip:     3.68 kB
+dist/assets/stateDiagram-D77RDMKH-DZpPNN1D.js                10.47 kB │ gzip:     3.68 kB
+dist/assets/diagram-VSXAHHWV-Ct7hBuvI.js                     10.93 kB │ gzip:     4.22 kB
+dist/assets/dagre-GXQ25YYZ-BIs9FjgQ.js                       11.24 kB │ gzip:     4.24 kB
+dist/assets/CaptionPanel-CQErLQAu.js                         13.50 kB │ gzip:     4.21 kB
+dist/assets/chunk-SVP7TREG-Cu-Fmjer.js                       15.75 kB │ gzip:     4.42 kB
+dist/assets/diagram-VX7I27RA-5TIMMt9j.js                     16.18 kB │ gzip:     5.78 kB
+dist/assets/ishikawaDiagram-5VMMS53U-CU_Y31xd.js             17.67 kB │ gzip:     6.73 kB
+dist/assets/kanban-definition-UXKFOSKX-S-kGGQ85.js           20.81 kB │ gzip:     7.34 kB
+dist/assets/mindmap-definition-YA3MSWOX-wzpfnZ8a.js          23.47 kB │ gzip:     7.94 kB
+dist/assets/sankeyDiagram-P5KCCOFB-Co-I1N7h.js               23.50 kB │ gzip:     8.64 kB
+dist/assets/journeyDiagram-3NMN7TZE-B1FJ50Qb.js              23.68 kB │ gzip:     8.40 kB
+dist/assets/wardleyDiagram-VM6X3IG4-D9MBNK_R.js              26.20 kB │ gzip:     6.99 kB
+dist/assets/gitGraphDiagram-WWUBYQGX-Dts0nnSZ.js             30.04 kB │ gzip:     8.93 kB
+dist/assets/erDiagram-RLTQ6QDP-DaeO_Xuv.js                   31.04 kB │ gzip:    10.68 kB
+dist/assets/requirementDiagram-BXWQKSXE-D5THpLAQ.js          31.31 kB │ gzip:     9.87 kB
+dist/assets/timeline-definition-24CTP7MA-CRHJ7opa.js         31.45 kB │ gzip:    10.48 kB
+dist/assets/quadrantDiagram-AXDQQJYC-B7Bth3ED.js             34.60 kB │ gzip:    10.18 kB
+dist/assets/layout-I25iE-hY.js                               35.43 kB │ gzip:    12.74 kB
+dist/assets/chunk-IMKFNOWR-eX20YZJ1.js                       38.57 kB │ gzip:    12.65 kB
+dist/assets/vennDiagram-4TSXK5OY-D_jBm2iz.js                 42.48 kB │ gzip:    15.85 kB
+dist/assets/blockDiagram-I7D4REHJ-DSx297AO.js                43.26 kB │ gzip:    13.97 kB
+dist/assets/xychartDiagram-S5SC5T6Z-BPEyzQzm.js              44.62 kB │ gzip:    12.66 kB
+dist/assets/chunk-TICWLB2K-CG7v5NeD.js                       49.29 kB │ gzip:    15.77 kB
+dist/assets/flowDiagram-HODETNUW-CynjQ10j.js                 62.60 kB │ gzip:    20.04 kB
+dist/assets/c4Diagram-7LVT6UL2-D3OnO2GO.js                   65.66 kB │ gzip:    18.88 kB
+dist/assets/ganttDiagram-EL5Y4UJY-HVsC_ZGV.js                69.80 kB │ gzip:    23.61 kB
+dist/assets/cose-bilkent-JH36ORCC-B2JlwYqc.js                81.83 kB │ gzip:    22.53 kB
+dist/assets/swimlanes-42K2YHIH-Dn6BFnD1.js                  117.23 kB │ gzip:    42.89 kB
+dist/assets/sequenceDiagram-WJ2MYXX4-DQJqA1QH.js            117.55 kB │ gzip:    31.33 kB
+dist/assets/architectureDiagram-5GKGNRK7-BlbF7V8N.js        152.13 kB │ gzip:    43.27 kB
+dist/assets/katex-C5jXJg4s.js                               261.33 kB │ gzip:    77.57 kB
+dist/assets/main-DI9fGqlt.js                                309.21 kB │ gzip:    98.45 kB
+dist/assets/cytoscape.esm-DTSO7Bv0.js                       443.72 kB │ gzip:   142.36 kB
+dist/assets/cynefin-OW5HDTMX-D8safElJ.js                    690.85 kB │ gzip:   155.11 kB
+dist/assets/App-S0iNIqtL.js                               1,791.50 kB │ gzip:   539.61 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 16.15s
+   Compiling objc2-exception-helper v0.1.1
+   Compiling libsqlite3-sys v0.30.1
+   Compiling objc2 v0.6.4
+   Compiling polarbear-desktop v0.1.0 (/Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/src-tauri)
+   Compiling objc2-core-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling objc2-foundation v0.3.2
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-core-text v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling rusqlite v0.32.1
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tauri-runtime v2.11.2
+   Compiling wry v0.55.1
+   Compiling tao v0.35.3
+   Compiling tauri-runtime-wry v2.11.2
+   Compiling window-vibrancy v0.6.0
+   Compiling muda v0.19.2
+   Compiling tauri v2.11.2
+   Compiling rfd v0.16.0
+   Compiling tauri-plugin-fs v2.5.1
+   Compiling tauri-plugin-dialog v2.7.1
+   Compiling tauri-plugin-single-instance v2.4.4
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 52s
+       Built application at: /private/tmp/polarbear-menu-target/debug/polarbear-desktop
+    Bundling Polarbear Recent Acceptance.app (/private/tmp/polarbear-menu-target/debug/bundle/macos/Polarbear Recent Acceptance.app)
+    Finished 1 bundle at:
+        /private/tmp/polarbear-menu-target/debug/bundle/macos/Polarbear Recent Acceptance.app
+

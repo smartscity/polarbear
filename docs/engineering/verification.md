@@ -1,5 +1,507 @@
 # Engineering Verification
 
+## Native Menu Capture and Idle-Gate Follow-up: 2026-10-28
+
+Evidence: [2026-10-28-follow-up](evidence/2026-10-28-follow-up).
+The previous temporary app and performance archives had been removed. Rebuilt
+the isolated acceptance app from the unchanged `3ff3ac3` source, with the same
+`dev.polarbear.recentacceptance` identifier and no file associations. The build
+passed; executable hash and source identity are retained in `provenance.json`.
+No installed application or product source was changed.
+
+**Native menu screenshot delivery: PASS.** After explicit user authorization,
+`open -a` and System Events opened the actual File > Open Recent menu. Read-only
+CoreGraphics metadata identified only this app's menu windows (layer 101), then
+`screencapture -x -o -l<window-id>` captured them in the same shell operation.
+Capturing the parent menu also includes its attached submenu. The images are
+actual native captures, not reconstructed UI or composites:
+
+- `native-open-recent.png`: File entry next to Open, two same-name generated
+  files distinguished by Chinese/space parent paths, separator and Clear Recent.
+- `native-open-recent-empty.png`: after clearing the isolated history, disabled
+  No Recent Files and Clear Recent entries.
+- `native-main-panel.png`: the actual app window, without a recent-files panel.
+
+Earlier fixed-region attempts were unsuitable and discarded; they are not
+acceptance evidence. Reading accessibility menu state alone had not produced a
+visible system popup. The successful procedure retains menu-window metadata and
+requires no system-setting or permission changes. Only generated temporary files
+and this app's isolated history were used; the acceptance app was quit afterward.
+This closes the screenshot limitation recorded in the previous section below.
+
+**Strict browser performance pair: BLOCKED by external workload.** Recreated
+`64d394a` and `eeea3b4` archives; installed dependency versions matched their lock.
+Preserved the initial strict attempt and every subsequent preflight/partial run.
+A temporary copy of the runner adds a quiet gate after the excluded warmup and
+before the five measured observations. This waits for three consecutive clean
+snapshots; it does not change production code, fixtures, sample count or thresholds.
+Startup bursts remain recorded. Any risky sample after admission still terminates
+only the owned measurement process. This amended protocol is not silently pooled
+with the earlier protocol's observations.
+
+One admitted candidate run was interrupted by an external installed Chrome
+renderer at 21.1% CPU. Later attempts did not reach measurement. The final bounded
+five-minute wait recorded 141 preflight snapshots, with external headless-browser
+CPU up to 146.1%, Java up to 809.5%, and installed Chrome renderer up to 163.4%.
+Process working-directory checks distinguished another task's browser tests in
+the original checkout from this run's temporary archives. No external process was
+stopped, paused or reprioritized. The wait ended without three consecutive clean
+snapshots; no formal before/after pair or new performance PASS is claimed.
+
+The earlier 1 MiB signal remains NOT REPRODUCED by the completed observations,
+while strict quiet-host qualification remains open. No speculative product
+optimization was added. Resume the retained gate/runner on an idle host after
+the other local workloads finish; require complete before/after output and clean
+measurement-phase load traces before updating this status. Windows/Linux desktop
+menu interaction and the broader real-provider acceptance limits are unchanged.
+
+## Recent Menu and Performance Follow-up: 2026-10-27
+
+Menu source: `3ff3ac3`; starting snapshot: `eeea3b4`. All changes are isolated on
+`codex/sync-session-qualification`. The original checkout and its other tasks were
+not modified. Evidence: [menu](evidence/2026-10-27-recent-menu) and
+[performance repeat](evidence/2026-10-27-performance-repeat).
+
+### Recent Menu Verification
+
+| Check | Result and evidence boundary |
+| --- | --- |
+| TypeScript, ESLint | PASS. `final-check.txt` includes both successful checks. |
+| Unit and Node checks | PASS: 368 Vitest tests in 67 files, plus 45 Node tests; `complete-test.txt`. The earlier graph check failed because its tracked-file inventory still contained the unstaged deleted component. Staging that deletion fixed the inventory; no assertion was weakened. Earlier failure and the 12-test graph rerun are retained. |
+| Related Chromium suite | 67/68 initially passed; the new remount fixture used an incorrect ReactDOM module import. Correcting the test import yielded 4/4 recent-menu tests. The other 64 cases had already passed unchanged. Both attempts are retained. |
+| WebKit | PASS: 4 recent-menu cases and the native-shortcut case, 5 total. |
+| macOS build | PASS: isolated debug `.app`, product name `Polarbear Recent Acceptance`, identifier `dev.polarbear.recentacceptance`, no file associations. Actual packaged source is `3ff3ac3`; this is not an installed release upgrade. |
+| Native menu, file IO, draft reuse | PASS on macOS: open two generated `Notes.md` files, including Chinese/space paths; native submenu distinguishes parent paths. Reopening the first activates its existing tab, retains the dirty buffer and moves history to the top. |
+| Missing file | PASS on macOS: rename only the generated second file externally, select its recent item, observe the native error alert, then confirm the first dirty document and both tabs remain. Restore the fixture afterward. |
+| Persistence and Clear | PASS on macOS: save with Command-S, quit/relaunch and open restored history. Add a new draft, clear history, observe disabled empty/Clear items with draft and tabs intact. Disk content is unchanged by Clear. Quit using the explicit discard option for this generated draft; relaunch leaves history empty. |
+| Language and existing File behavior | PASS: actual EN/ZH native menu labels, Command-O, Command-S and dirty-quit prompt. Browser coverage also verifies successful Save As uses the committed path and other File commands retain their shortcut dispatch. |
+| Rebuild/remount/event handling | PASS in controlled tests: pending native builds cannot retarget the visible item, ID population is bounded, duplicate click admits one IO, latest callbacks are used and history listeners are removed on remount. |
+| Windows/Linux native menu UI | NOT RUN: no desktop test entry. The passing Windows native/build job below is not proof of menu interaction. Run the steps below on each available platform. |
+
+Hosted run [40527827124](https://github.com/smartscity/polarbear/actions/runs/40527827124)
+on `e0155bc` passed Frontend quality, Rust format, dependency audit and both native
+jobs, including Windows Clippy, native tests and installer artifact `12744764653`.
+Desktop WebKit passed 74/74; Chromium passed 150/151, including every recent-menu
+case. One existing layout persistence test reloaded after observing the optimistic
+width without awaiting its IndexedDB acknowledgment, allowing navigation to race
+the write; the restarted width was 240 instead of 280. This timing diagnosis follows
+from the test and persistence code, not an instrumented native trace. The raw failed
+job is retained. Native rich clipboard
+in that job was SKIPPED after the failure, not PASS.
+
+The fixture correction adds a real held settings lock to demonstrate that rendered
+widths can lead the acknowledged settings, checks both persisted widths after
+release, then reloads. Hiding the sidebar likewise waits for its persisted value.
+It adds assertions without a fixed sleep, changed product persistence, longer
+timeout or weakened post-reload expectations. The targeted case is repeated three
+times in Chromium and three in WebKit; results are retained separately.
+
+Final source/test snapshot `df06675dafb7db65c306fe14844779829b3e32a5` passed all six
+jobs in [Quality 40530524335](https://github.com/smartscity/polarbear/actions/runs/40530524335):
+Frontend quality, Rust format, scoped dependency audit, macOS native, Windows
+native and Desktop editor/clipboard. Chromium passed 151/151 and WebKit 74/74;
+bundled offline translation and native rich clipboard also passed. The Windows
+job passed Clippy, native tests and installer creation; installer artifact
+`12745294553` is retained by that run. `ci-qualified.json` binds jobs/artifacts to
+the exact SHA, and `ci-qualified-desktop-job.txt` retains the successful log.
+The later evidence-only commit changes no executable source or tests. Native
+file hashes after Clear/discard/relaunch are in `native-files-after-clear.json`.
+
+Actual main-panel screenshots: `native-empty-panel.png`, `native-loaded-panel.png`,
+and `native-cleared-draft-panel.png`. Native menu accessibility captures retain the
+restored, translated, cleared and cleared-after-restart states. CUA returned
+`Screenshot unavailable` while native menus held focus; its system screenshot
+shortcut also produced no readable image. On 2026-10-28 the user explicitly
+authorized macOS `screencapture`. The command succeeded, but the captured region
+showed the acceptance window without its expanded menu and with a different
+application's menu bar. That unsuitable image was discarded and is not evidence.
+CUA window Raise and menu actions did not resolve the foreground mismatch; the
+subsequent Dock activation attempt returned `timeoutReached`. Menu screenshot
+delivery was BLOCKED at that point by desktop activation/capture, not pending
+permission. The later 2026-10-28 follow-up above resolves this capture limitation.
+No mock menu image is substituted, and no system settings were changed.
+
+For another desktop: create `a/Notes.md` and `中文 文件/Notes.md`, open both, edit one
+without saving, and reopen it through File > Open Recent. Confirm one tab per path,
+parent-path labels and intact edits. Move the other disk file and select its item;
+confirm an error and intact draft. Clear history; confirm disabled placeholder,
+unchanged tabs/files, then quit with the generated draft explicitly discarded and
+relaunch. Repeat without clearing to verify restored history; switch EN/ZH and
+exercise Open, Save and Save As. Capture the actual submenu and both panel states.
+
+### Frozen Performance Repeat
+
+Baseline remains `64d394a`; candidate is `eeea3b4` (the sync/session candidate plus
+documentation). Menu source is intentionally excluded from this frozen comparison.
+Both archives use the same locked dependency versions, Node 26.1.0, Chromium
+153.0.8010.12, Intel i7-9750H and macOS 25.5.0. Native release binaries were built
+before measurement with two compile jobs. Source/lock/binary hashes and compiler
+version are in `provenance.json`; all scripts and raw observations are retained.
+One warmup plus five measured observations per fixture; maximum is **not P95**.
+
+The monitor samples process CPU/ancestry each second, excluding only the owned
+measurement tree. Three preflight snapshots must be clear. Risk thresholds are
+compiler CPU >5%, external Chrome/WebKit/Chromium/Playwright >20%, or any external
+process >50%. Initial attempts stop at three consecutive risky samples; later
+strict attempts stop at the first. Only owned measurement processes are stopped.
+No external task, browser, security agent or system setting was changed. Startup
+and between-run delays do not manufacture an idle result; all rejected runs stay
+in evidence. Earlier brief bursts are disclosed even when they did not trip the
+three-sample stop rule.
+
+The focused ABBA repeat (`attempt-3`) did not reproduce the 1 MiB threshold:
+
+| Run | Open median / max ms | Edit median / max ms | Preview median / max ms | RSS median / max KiB |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline A1 | 23.1 / 24.3 | 34.8 / 35.8 | 185.2 / 201.7 | 343488 / 357176 |
+| Candidate B1 | 23.7 / 39.2 | 34.6 / 39.1 | 184.1 / 192.7 | 343744 / 357204 |
+| Candidate B2 | 22.3 / 24.2 | 33.7 / 39.0 | 183.4 / 189.4 | 344444 / 359768 |
+| Baseline A2 | 22.9 / 39.0 | 33.7 / 35.7 | 187.3 / 195.4 | 343612 / 357848 |
+
+A1/B1/B2 had no detected parallel compiler or external browser-heavy sample;
+each had a brief CoreLocationAgent burst at startup. A2 additionally had one
+external Chrome burst. None supports a perfectly idle-host claim. The original
+maximum increases of +70.8/+43.8/+84.4 ms are not repeated; neither paired
+maximum nor median crosses both +10% and +20 ms, and RSS stays below +15%.
+
+The completed four-fixture pair in `attempt-6` is supplementary only: external
+Chrome and OS bursts remain in the load traces. Its 1 MiB maxima are
+40.2 -> 40.5 / 40.1 -> 37.4 / 224.4 -> 210.3 ms. The original 1 MiB signal is
+**NOT REPRODUCED**, but strict zero-detected-load paired browser acceptance remains
+**BLOCKED**: strict baseline runs completed cleanly, while candidate runs were
+interrupted by system bursts and other preflights rejected external Chrome load.
+No incomplete candidate output is promoted to PASS. The full matrix and
+long-duration RSS plateau are not certified by these short observations.
+
+Native release measurements (`native-1`) completed with zero detected risk samples
+in every preflight and measurement. Each row scans two files of the stated size;
+2,000 excluded files remain excluded and digest storage stays 148 bytes.
+
+| Per-file size | Before save median / max ms | After save median / max ms | Before scan+hash median / max ms | After scan+hash median / max ms |
+| --- | ---: | ---: | ---: | ---: |
+| 4 KiB | 42.489 / 43.886 | 42.025 / 43.270 | 0.600 / 0.696 | 0.614 / 0.671 |
+| 1 MiB | 47.593 / 48.625 | 47.020 / 47.547 | 12.314 / 12.348 | 12.420 / 12.485 |
+| 10 MiB | 79.812 / 80.464 | 80.621 / 80.708 | 89.459 / 92.988 | 91.263 / 97.244 |
+
+No new native threshold regression is observed. For 20 MiB, stage medians are
+enumeration 0.093 ms, streaming read+hash 83.968 ms, independent read 3.125 ms,
+independent memory SHA-256 80.782 ms and independent checkpoint 2.325 ms.
+Independent probes are not additive. SHA-256 remains the dominant cost; the
+historical encoding-to-fixed-digest tradeoff is not erased by this comparison.
+No speculative cache, metadata-only shortcut or concurrency patch was added.
+The retained correctness/security behavior and previous 9+ acceptance boundaries
+remain unchanged.
+
+## Sync and Session Qualification: 2026-10-27
+
+Start: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5` on `main`, later than the
+external `1988263` review. Isolated branch: `codex/sync-session-qualification`.
+The original `.idea/vcs.xml` change and concurrent fullscreen work were preserved
+in the user's checkout. This worktree starts from the recorded commit and does
+not include the other chat's in-progress fullscreen changes.
+Evidence directory: [2026-10-27-sync](evidence/2026-10-27-sync).
+
+### Behavioral Evidence and Protocol
+
+| ID | Evidence level | Before | After and recovery |
+| --- | --- | --- | --- |
+| SYNC27-01 | Production provider request code + real loopback HTTP | Two new raw-content regressions failed on the JSON/base64 path. | Raw media type at the frozen ref; 64 MiB declared/streamed limit, interrupted-body errors, non-success rejection and no redirects. Frozen tree sizes also reject truncated/inconsistent content. Failure aborts observation without manufacturing deletion or advancing a baseline. |
+| SYNC27-02 | Production coordinator + production GitLab HTTP adapter + real temporary filesystem | Receipt checkpoint was `[true]` despite unobserved `b1`; regression expected `[false]`. | `PublishedCommit` distinguishes whole-snapshot and changed-path receipts. GitLab persists confirmed uploads, clears complete-head state, and returns pending remote confirmation. Next explicit Sync reconciles a fresh frozen snapshot. Failed downloads retain `b0` baseline; late edits conflict; unknown receipts compare instead of blindly replaying uploads. |
+| SESSION27-01 | Actual App + controlled browser IPC; additional session hook cases | Same-root and cross-root late target opens produced duplicate tab identity/dirty projections. | Completion reads the current registration before allocating a unique ID. Other buffers, revisions and dirty state remain intact. Repeated-save/close admission and target close/reopen are covered. |
+
+The first collision fixture opened the target from an empty workspace and passed
+before the patch because that path selected a root-qualified ID. Opening the source
+workspace first reproduces the reported collision. The failing assertion observed
+two active dirty markers; it is evidence of duplicate identities, not a fabricated
+native data-loss trace. No production behavior was changed to force a red test.
+A further same-task open/receipt regression also failed the first callback-only
+repair. An empty flush barrier did not close that window. The final session owner
+updates its current-value refs synchronously and projects them into React, so
+allocation, active ownership and content-version checks do not depend on render
+batch timing. Normal Save and Save As both retain an edit batched with the receipt.
+The obsolete base64-decoder-only test was removed with its unused production decoder;
+raw-byte boundary checks now exercise the request code used by production.
+
+The pending GitLab state deliberately costs one later Sync after a successful upload.
+There is no recursive catch-up loop: each invocation observes one frozen snapshot
+and submits at most the existing bounded atomic batch. A later branch advance is
+observed by status/head comparison or the next Sync. Fresh observations never enter
+the common baseline until equality or conditional application confirms that path.
+GitHub retains `expectedHeadOid`; GitLab retains each affected file's frozen
+`last_commit_id`. No resource, permission, save/revision or conflict gate was relaxed.
+
+### Native Scheduling Boundary
+
+Both `load_markdown_file` and `write_markdown_file` remain synchronous Tauri
+commands. The locked Tauri macro's blocking wrapper invokes the function before
+resolving its result. That is a native command execution fact, not proof that every
+platform serializes JavaScript edits, IPC delivery and promise callbacks in the
+same order. Actual-App browser/mock IPC reproduction is PASS; a controlled native
+Save As collision on macOS or Windows is NOT RUN until a native trace proves that
+specific ordering. The local allocator change is defensive hardening on native
+platforms, not a claimed native P1 data-loss reproduction.
+
+### Dependency and Workflow Governance
+
+The fresh scan uses cargo-audit 0.22.2, official archive SHA-256
+`847831323de932155b226ab60ee4a180e13e5d007a019f0d4b7b4d89a6de2ab2`, and RustSec
+commit `3279c99911354c400e1d41e47c7d60e39258b147`. Exact lock hashes, npm version
+and service timestamp are in `audit-provenance.json`. Npm exposes no database
+version; it is not invented. Yanked-package checking is NOT RUN.
+
+`dependency-exceptions.json` encodes the already-analyzed KaTeX Low finding and
+ten Rust warnings by exact advisory ID, package version, category, rationale and
+2026-11-24 review deadline. Upstream-version changes, newly reachable affected
+APIs, Linux release and rendering-policy changes still require review as specified
+per entry and in the historical analysis. The gate rejects new/malformed findings,
+all High/Critical npm entries, every Rust vulnerability, and expired exceptions.
+Scanner failures cannot be mistaken for an empty report. Raw findings remain in
+artifacts even when a scoped exception allows the gate to pass.
+
+Quality invokes the reusable dependency scan and retains Windows NSIS installers
+for acceptance. Release resolves its requested ref once, then passes that exact
+commit to Quality, caption gates and both platform builds. Existing direct gates
+remain. Hosted results are distinct from workflow configuration.
+
+Repository administration inspection: rulesets API returned `[]`; the traditional
+main-branch protection API returned 403 `Resource not accessible by integration`.
+Enforced required checks are therefore BLOCKED for verification, not confirmed
+absent or enabled. No rules were changed. Proposed required contexts for maintainer
+review: `Frontend quality`, `Rust format`, `Native tests (macos-26)`,
+`Native tests (windows-latest)`, `Desktop editor and clipboard`, and the reusable
+`Scoped dependency audit` context as emitted by the current run. Require current
+head checks and prohibit bypass according to the maintainer's existing policy.
+
+### Real Provider Acceptance Entry
+
+GitHub connector capability inspection found no repository-creation operation.
+`smartscity/polarbear-sync-sandbox` lookup returned 404; organization membership
+returned no usable membership entry. This does not prove the name is globally free
+or that the user lacks organization rights. Repository creation is BLOCKED through
+this connector. GitHub CLI is not installed and has no existing auth configuration;
+SSH push access to the product repository is not an organization creation API. No public repository, alternate account or permission expansion
+was attempted. Application credential access is separately NOT RUN without a target.
+
+Minimum manual step: create a **private** repository in `smartscity`, initialize
+README with “Generated Polarbear sync acceptance data only; retain for reuse”, and
+share the actual repository URL. If the name already exists, inspect its purpose
+before choosing a unique suffix. In Polarbear's Cloud Sync connection, ensure the
+existing fine-grained token grants this exact repository Contents read/write;
+organization SSO authorization may also be needed. Never paste credentials into
+chat. A successful connector operation is not application-authentication proof.
+
+Generate isolated fixtures:
+
+```sh
+python3 apps/desktop/scripts/prepare-sync-acceptance.py /private/tmp/polarbear-acceptance-UNIQUE
+```
+
+This creates `workspace/a.md`, `b.md`, >1 MiB Markdown, a valid >1 MiB PNG,
+separate remote-edit versions, and `ownership.json` with SHA-256 and a unique
+`polarbear-acceptance-...` branch/path. Create only that branch from the dedicated
+sandbox's initial commit. Keep test configuration outside the sync workspace:
+
+```json
+{
+  "workspaceRef": "/private/tmp/polarbear-acceptance-UNIQUE/workspace",
+  "provider": "github",
+  "owner": "smartscity",
+  "repo": "polarbear-sync-sandbox",
+  "branch": "COPY-runId-FROM-ownership.json",
+  "remotePath": "COPY-runId-FROM-ownership.json",
+  "manifest": {},
+  "hasSynced": false
+}
+```
+
+For an explicitly authorized private GitLab project, use `provider: "gitlab"`,
+its owner/repo and `baseUrl`. No GitLab account or infrastructure is created.
+The opt-in runner uses the same Keychain backend as release builds, production
+provider functions, production coordinator and native conditional filesystem IO:
+
+```sh
+POLARBEAR_LIVE_ACCEPTANCE_CONFIG=/absolute/path/acceptance-config.json \
+  cargo test --release --locked --manifest-path apps/desktop/src-tauri/Cargo.toml \
+  repository::live_acceptance::isolated_provider_acceptance \
+  -- --ignored --exact --nocapture
+```
+
+This does not read debug fallback credentials, and missing credentials fail rather
+than silently using the connector login. It refuses a nonprivate target, unowned
+branch/path, pre-existing run data or modified generated fixture. It tests large
+fixed-snapshot bytes, a concurrent `b1`, GitHub stale-head rejection or GitLab
+pending confirmation, and the next reconciliation. `live-result.json` records
+heads and scope without secrets. This runner has compiled local coverage but real
+GitHub/GitLab execution remains NOT RUN until a permitted target exists.
+After retaining the result, remove only the branch named in its matching ownership
+record; retain the sandbox repository. No cleanup is performed on an ambiguous
+ownership record. Do not claim cleanup before confirming the branch is removed.
+
+### Windows GUI Continuation
+
+Download the NSIS artifact from the exact candidate's passing Windows job, record
+its SHA-256 and installed About version, and use only the generated workspace.
+Open `a.md`, edit/save, close/reopen, compare disk bytes and native revision; perform
+Save As; Cancel a dirty close; edit again during a later quit-save; verify a rejected
+save preserves the buffer. Modify a fixture externally, exercise conflict and retry,
+then repeat the authorized provider cases. Preserve event order, screenshots and
+content hashes. Native test/Clippy/build success is not GUI PASS. Windows GUI remains
+NOT RUN without an accessible Windows desktop.
+
+### Frozen Code Results
+
+Code candidate: `2a8e8f7fef6754db8d031188eeacc8ecfad0109d`. The subsequent report
+commit changes documentation/evidence only. Source/lock/environment and binary
+fingerprints are in `candidate-environment.json`; logs below are in the evidence
+directory. Local JavaScript uses Node 26.1.0 and the existing unchanged locked
+node_modules cache. Hosted jobs independently executed `npm ci`.
+
+| Check | Status | Current evidence |
+| --- | --- | --- |
+| Desktop typecheck / lint | PASS | No errors or warnings on frozen executable source. |
+| Desktop unit / Node scripts | PASS | 365 tests in 66 files; 45 Node checks, `frontend-final.log`. |
+| Full actual-App/browser suite | PASS | 147 tests, 12.5 minutes, `browser-final.log`; controlled IPC, not native provider credentials. |
+| Native optimized tests | PASS | 142 passed, 6 opt-in/helper entries ignored, `native-final.log`; parent tests invoke process helpers. The new live service runner remains ignored. |
+| Strict all-target/all-feature Clippy | PASS | Local `clippy.log` plus both hosted native platforms. |
+| macOS native application build | PASS | Isolated debug custom-protocol app, `native-app-build.log`; this is not a signed release DMG. |
+| Hosted Quality | PASS | [Run 40456549014](https://github.com/smartscity/polarbear/actions/runs/40456549014), all six jobs on the exact code SHA. |
+| Hosted native integrations | PASS | Both platform tests/Clippy; macOS WKWebView settings arbitration, actual Mermaid/AppKit clipboard, WebKit session regressions and offline translation under production CSP. See `ci-code-candidate.json`. |
+| Windows installer build | PASS | [NSIS artifact](https://github.com/smartscity/polarbear/actions/runs/40456549014/artifacts/12712957138), `windows-acceptance-2a8e8f7fef6754db8d031188eeacc8ecfad0109d`, 43,561,624 archive bytes. Installation/GUI remain NOT RUN. |
+| Shared/iOS regression | PASS | Typecheck/lint, 39 unit tests, 11 browser tests and native Swift storage/capture tests; `ios-checks.log`, `ios-browser.log`. No physical iOS device acceptance claim. |
+| Real GitHub / GitLab | NOT RUN | No accessible authorized private target; creation capability and application authentication are separate outstanding checks. |
+| Repository required-check enforcement | BLOCKED | Rulesets returned empty; classic branch protection returned integration permission error. No administration mutation. |
+
+Earlier failures remain part of the record: production raw download and GitLab
+receipt tests failed before repair (`sync-red.log`); actual App late-target identity
+failed (`saveas-red.log`); a same-task registration/receipt case still failed the
+first callback-only repair (`saveas-batched-red.log`). Final immediate ownership
+passed the ten targeted cases (`session-green.log`) and the full 147-case suite.
+An intermediate full browser run had an artifact-cleanup ENOENT when two runs
+shared Playwright output; final runs were serialized and used separate output.
+An existing WebKit watcher setup timed out once and passed unchanged on retry;
+its initial failure is not silently counted as a pass. Hosted WebKit then passed.
+The initial native sandbox coordination failure and copied Swift module-cache
+path failure were environment/setup errors; final runs used system-coordinated
+native IO and rebuilt the copied cache. No behavior assertion was weakened.
+
+### macOS Application Attempt
+
+The final-source app was built with an isolated bundle identifier
+`dev.polarbear.syncacceptance`, displayed `tauri://localhost`, an Untitled tab,
+Workspace, editor and normal controls. Launch/render is PASS. A generated
+`/tmp/polarbear-native-ui-owned/source.md` was prepared. Invoking Command+O reached
+a system open/save panel service, but automation timed out repeatedly, including
+subsequent app inspection; the panel service was observed above 100% CPU during
+one sample. This is **BLOCKED** for open/edit/save/close/reopen and native event
+ordering, not a confirmed product defect or successful save. The empty isolated
+app process was terminated for cleanup; that is not a successful protected Quit.
+No real workspace was opened or modified. The other chat's acceptance app was
+not controlled. Installed-app CPU/RSS and native collision scheduling are NOT RUN.
+Use the Windows continuation above on either platform after a responsive native
+file dialog is available; record native events and disk revisions separately.
+
+### Performance Observations and Disposition
+
+The same Intel i7-9750H machine, unchanged lockfiles, release-native binaries and
+one warmup plus five observations per case were used. External rustc, WebKit and
+Chrome workloads were observed during measurements; this run could not reserve
+an idle machine without interfering with other work. Controlled before/after
+acceptance is **BLOCKED**, and these observations are not a speedup/no-regression
+claim. The first archived native baseline was also contaminated and is retained
+as `native-before-interfered.json`. A browser baseline using `/tmp` failed to load
+its harness due to canonical path resolution; `editor-before-invalid-path.json`
+preserves the timeout. Retrying with `/private/tmp` loaded all four workloads.
+
+Native values below are median / five-sample maximum in milliseconds. Two files
+of the stated size are scanned; 2,000 files in an excluded directory remain
+excluded. Digest storage is 148 bytes in both candidates.
+
+| Per-file size | Before save | After save | Before scan + hash | After scan + hash |
+| --- | ---: | ---: | ---: | ---: |
+| 4 KiB | 49.14 / 49.77 | 51.01 / 53.39 | 0.90 / 1.54 | 1.00 / 1.03 |
+| 1 MiB | 62.12 / 68.16 | 61.27 / 74.73 | 36.34 / 41.13 | 38.91 / 49.46 |
+| 10 MiB | 242.26 / 278.79 | 165.69 / 279.06 | 552.95 / 691.70 | 434.94 / 532.36 |
+
+Production-path stage medians and independent attribution probes:
+
+| Per-file size | Enumerate | Stream read + hash | Independent read | Independent memory SHA-256 | Independent SQLite checkpoint |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 4 KiB | 0.406 | 0.557 | 0.335 | 0.149 | 7.144 |
+| 1 MiB | 0.342 | 33.056 | 1.146 | 32.216 | 6.311 |
+| 10 MiB | 0.351 | 325.219 | 9.762 | 288.194 | 7.756 |
+
+Read, memory-hash and checkpoint probes are independent and must not be added to
+the production scan total. The observations support hashing as the main native
+cost for 20 MiB, not directory traversal or digest storage. The scan/digest/save
+runtime implementations are unchanged between the two source commits. There is
+no evidence for a useful cache or concurrency change under this load; retain
+SHA-256, fixed digests, bounded IO and content-conditional writes. No metadata-only
+shortcut, Base64 regression, extra thread pool or retained-content cache was added.
+The historical 44.56 -> 88.22 ms observation is not recomputed from this loaded run.
+
+Browser harness medians in milliseconds; IPC mocked, autosave disabled. RSS is
+summed Chromium process RSS after GC, not installed-app RSS. These five observations
+do not establish a stable plateau or a reliable long-tail P95.
+
+| Fixture | Before open/edit/preview | After open/edit/preview | Before/after median RSS (MiB) |
+| --- | ---: | ---: | ---: |
+| ordinary | 34.4 / 47.1 / 32.3 | 35.6 / 46.3 / 31.7 | 283.4 / 277.0 |
+| 1MiB | 71.9 / 98.4 / 568.0 | 87.9 / 130.0 / 650.6 | 340.9 / 339.3 |
+| 10MiB | 383.6 / 511.3 / 6075.2 | 406.1 / 506.1 / 5927.9 | 805.8 / 800.5 |
+| diagrams | 24.5 / 37.6 / 77.1 | 27.0 / 31.7 / 72.0 | 332.1 / 332.9 |
+
+The 1 MiB maximum observations trigger investigation: open 86.8 -> 157.6 ms,
+edit 106.3 -> 150.1 ms, preview 592.0 -> 676.4 ms exceed both 10% and 20 ms.
+These are maxima, not P95. Inspection confirms this harness's editor/preview,
+scanner, clipboard and rendering runtime modules were unchanged; session changes
+are outside this harness. External workload and changed thermal/load state prevent
+causal attribution. The threshold remains open for an idle-machine repeat, rather
+than being waived or called a product regression. No median RSS increase reaches
+15%, but the 10 MiB case grows across repetitions; candidate page-close RSS drops
+to about 136 MiB. This does not prove absence of long-duration retention.
+
+The dominant observed editor phase is 10 MiB preview (about 5.9 seconds), while
+open/edit are about 0.4/0.5 seconds. Source inspection shows synchronous Markdown
+segmentation/rendering, escaped code HTML plus encoded copy payload, DOM insertion
+and clipboard preparation; function-level CPU attribution is not established by
+these wall-clock probes. Large-preview responsiveness remains a bounded follow-up,
+not an invented improvement in this sync/session patch. Diagram completion and CPU
+task duration, all sample maxima, bytes, hashes and released RSS are retained in
+raw browser JSON. Application package CPU/RSS is separately NOT RUN.
+
+Repeat on a quiet machine with no parallel compile/browser load, preserving the
+same frozen source, locks and generated data:
+
+```sh
+POLARBEAR_PERF_OUTPUT=/absolute/evidence/native.json \
+  cargo test --release --locked --manifest-path apps/desktop/src-tauri/Cargo.toml \
+  engineering_performance::native_io_observations -- --ignored --exact --test-threads=1
+POLARBEAR_PROFILE_OUTPUT=/absolute/evidence/stages.json \
+  cargo test --release --locked --manifest-path apps/desktop/src-tauri/Cargo.toml \
+  engineering_performance::native_stage_profile -- --ignored --exact --test-threads=1
+node apps/desktop/scripts/measure-editor.mjs /canonical/frozen/checkout \
+  /absolute/evidence/editor.json candidate-SHA
+```
+
+### Delivery Map and Remaining External Work
+
+| Commit | Scope | Result |
+| --- | --- | --- |
+| `e5a2542` | SYNC27-01 raw frozen GitHub bytes and boundary regressions | PASS locally/CI; real GitHub NOT RUN. |
+| `a470bbe` | SYNC27-02 scoped receipts, pending UI, HTTP/native recovery and opt-in live runner | PASS locally/CI; real GitLab NOT RUN. |
+| `af79865` | SESSION27-01 immediate session ownership and batched completion regressions | PASS actual-App browser/WebKit; native collision NOT RUN. |
+| `a6057ae` | GOV27-01 scoped audit and candidate-SHA release dependencies | PASS current Quality; branch enforcement BLOCKED. |
+| `2a8e8f7` | PERF27-01 native phase attribution | Probe execution PASS; controlled comparison BLOCKED. |
+
+Remaining external actions are narrowly scoped: create/identify the authorized
+private GitHub sandbox and grant that exact target through Polarbear's existing
+secure connection; supply an already-authorized GitLab private project when one
+exists; provide a Windows desktop and responsive macOS native-dialog session;
+reserve a quiet measurement window; let a repository administrator inspect/approve
+the proposed required contexts. No credentials should be posted in chat. No remote
+test branch/data was created, so no remote cleanup is claimed. The test repository
+must be retained once created. Merge, tag, release and repository-rule mutation
+were not performed.
 ## Packaged Fullscreen Regression: 2026-10-28
 
 All three hosted workflows passed on `1185b42`, including the universal DMG

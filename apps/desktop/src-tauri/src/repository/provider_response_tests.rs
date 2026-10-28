@@ -154,29 +154,6 @@ fn truncated_bodies_and_invalid_json_remain_failures() {
 }
 
 #[test]
-fn github_base64_limit_checks_decoded_padding_and_preserves_exact_boundary() {
-    use super::provider::{decode_github_content, GithubContentResponse};
-    for (encoded, valid) in [
-        ("YW\nJjZA==", true),
-        ("YWJjZGU=", false),
-        ("invalid!", false),
-    ] {
-        let result = decode_github_content(
-            GithubContentResponse {
-                content: Some(encoded.into()),
-                encoding: Some("base64".into()),
-            },
-            4,
-        );
-        if valid {
-            assert_eq!(result.unwrap(), b"abcd");
-        } else {
-            assert!(result.is_err());
-        }
-    }
-}
-
-#[test]
 fn enumeration_rejects_repeated_pages_and_limits_retained_entries() {
     use super::response_limits::{next_page, EnumerationBudget};
     for invalid in ["1", "0", "-1", "bad"] {
@@ -253,5 +230,154 @@ fn enumeration_caps_cumulative_wire_bytes_not_only_each_page() {
         .read_page::<Vec<String>>(response)
         .unwrap_err()
         .contains("size limit"));
+    server.join().unwrap();
+}
+
+#[test]
+fn github_raw_download_uses_frozen_ref_and_preserves_large_markdown_and_binary() {
+    for (path, body) in [
+        ("small.md", b"# small".to_vec()),
+        ("large.md", vec![b'x'; 1_048_577]),
+        (
+            "image.png",
+            (0..1_048_577).map(|i| (i % 256) as u8).collect(),
+        ),
+    ] {
+        let (result, request) = github_download_fixture(path, "200 OK", "", &body, false);
+        assert_eq!(result.unwrap(), body);
+        assert!(
+            request.contains(&format!("/{path}?ref=frozen-commit")),
+            "{request}"
+        );
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains("accept: application/vnd.github.raw+json"),
+            "{request}"
+        );
+        assert!(request.contains("Bearer fixture-only"));
+    }
+}
+
+fn github_download_fixture(
+    path: &str,
+    status: &str,
+    framing: &str,
+    body: &[u8],
+    chunked: bool,
+) -> (Result<Vec<u8>, String>, String) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let endpoint = format!("http://{}/{path}", listener.local_addr().unwrap());
+    let body = body.to_vec();
+    let status = status.to_owned();
+    let framing = framing.to_owned();
+    let server = thread::spawn(move || {
+        let (mut socket, _) = listener.accept().unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        let mut request = Vec::new();
+        while !request.windows(4).any(|s| s == b"\r\n\r\n") {
+            let mut bytes = [0; 4096];
+            let n = socket.read(&mut bytes).unwrap();
+            assert!(n > 0);
+            request.extend_from_slice(&bytes[..n]);
+        }
+        write!(
+            socket,
+            "HTTP/1.1 {status}\r\n{framing}Connection: close\r\n\r\n"
+        )
+        .unwrap();
+        if chunked {
+            if write!(socket, "{:x}\r\n", body.len()).is_ok() && socket.write_all(&body).is_ok() {
+                let _ = socket.write_all(b"\r\n0\r\n\r\n");
+            }
+        } else {
+            let _ = socket.write_all(&body);
+        }
+        String::from_utf8(request).unwrap()
+    });
+    let client = super::provider::github_client("fixture-only").unwrap();
+    let result = super::provider::github_download_content(&client, &endpoint, "frozen-commit");
+    (result, server.join().unwrap())
+}
+
+#[test]
+fn github_raw_download_bounds_real_streams_and_preserves_http_failures() {
+    let limit = super::response_limits::FILE_BYTES;
+    for (size, chunked) in [(limit, false), (limit + 1, false), (limit + 1, true)] {
+        let body = vec![b'x'; size];
+        let (result, _) = github_download_fixture(
+            "attachment.png",
+            "200 OK",
+            if chunked {
+                "Transfer-Encoding: chunked\r\n"
+            } else {
+                ""
+            },
+            &body,
+            chunked,
+        );
+        if size == limit {
+            assert_eq!(result.unwrap().len(), limit);
+        } else {
+            assert!(result.unwrap_err().contains("size limit"));
+        }
+    }
+    for status in [
+        "401 Unauthorized",
+        "403 Forbidden",
+        "404 Not Found",
+        "429 Too Many Requests",
+    ] {
+        let (result, _) =
+            github_download_fixture("note.md", status, "Content-Length: 0\r\n", b"", false);
+        assert!(result.unwrap_err().contains(&status[..3]));
+    }
+    for (headers, body, expected) in [
+        ("Content-Length: 67108865\r\n", &b""[..], "size limit"),
+        ("Content-Length: 10\r\n", &b"short"[..], "Could not read"),
+        (
+            "Transfer-Encoding: chunked\r\n",
+            &b"a\r\nshort"[..],
+            "Could not read",
+        ),
+    ] {
+        let (result, _) = github_download_fixture("note.md", "200 OK", headers, body, false);
+        assert!(result.unwrap_err().contains(expected));
+    }
+}
+
+#[test]
+fn github_download_rejects_redirects_without_forwarding_credentials() {
+    let (result, _) = github_download_fixture(
+        "note.md",
+        "302 Found",
+        "Location: http://127.0.0.1:1/untrusted\r\nContent-Length: 0\r\n",
+        b"",
+        false,
+    );
+    assert!(result.unwrap_err().contains("302"));
+}
+
+#[test]
+fn github_download_timeout_is_a_failure_without_partial_content() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = thread::spawn(move || {
+        let (mut socket, _) = listener.accept().unwrap();
+        let mut request = [0; 4096];
+        assert!(socket.read(&mut request).unwrap() > 0);
+        socket
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\nConnection: close\r\n\r\nshort")
+            .unwrap();
+        thread::sleep(Duration::from_millis(150));
+    });
+    let client = Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_millis(50))
+        .build()
+        .unwrap();
+    assert!(super::provider::github_download_content(&client, &url, "frozen").is_err());
     server.join().unwrap();
 }

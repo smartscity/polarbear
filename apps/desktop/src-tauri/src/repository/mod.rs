@@ -356,6 +356,8 @@ mod characterization_tests;
 #[cfg(test)]
 mod conditional_publish_tests;
 #[cfg(test)]
+mod live_acceptance;
+#[cfg(test)]
 mod provider_response_tests;
 #[cfg(test)]
 mod sync_tests;
@@ -409,7 +411,7 @@ fn synchronize_workspace(
         account: read_connected_account(&app)?,
         local_changes: manifest_change_count(&current, &io.binding.manifest),
         binding: Some(io.binding),
-        remote_changed: !outcome.conflicts.is_empty(),
+        remote_changed: outcome.remote_pending,
         conflicts: outcome.conflicts,
     })
 }
@@ -451,7 +453,7 @@ impl sync_coordinator::SyncIo for NativeSync<'_> {
         &mut self,
         commit: &str,
         changes: &BTreeMap<String, Option<Vec<u8>>>,
-    ) -> Result<String, String> {
+    ) -> Result<sync_coordinator::PublishedCommit, String> {
         conditional_publish::publish(self.app, &self.binding, commit, self.remote, changes)
     }
     fn checkpoint(

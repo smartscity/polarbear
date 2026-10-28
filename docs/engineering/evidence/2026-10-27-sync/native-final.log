@@ -1,0 +1,171 @@
+
+running 148 tests
+test engineering_performance::native_io_observations ... ignored, Run alone with POLARBEAR_PERF_OUTPUT set to an evidence JSON path
+test engineering_performance::native_stage_profile ... ignored, Run alone with POLARBEAR_PROFILE_OUTPUT set
+test external_url::tests::accepts_web_urls_and_preserves_query_and_fragment ... ok
+test external_url::tests::launcher_exit_failure_and_spawn_failure_are_not_success ... ok
+test external_url::tests::rejects_invalid_or_sensitive_urls_without_launching_anything ... ok
+test external_url::tests::windows_shell_result_distinguishes_all_failure_codes_from_success ... ok
+test live_caption::recording::tests::bounds_recordings_without_silently_overwriting_audio ... ok
+test live_caption::recording::tests::creates_private_files_and_never_overwrites_an_existing_recording ... ok
+test live_caption::recording::tests::records_exact_recognizer_samples_as_a_float_wav ... ok
+test live_caption::runtime::tests::batches_pcm_without_changing_protocol_bytes_or_sample_order ... ok
+test live_caption::runtime::tests::engine_errors_preserve_overload_without_accepting_unknown_codes ... ok
+test live_caption::runtime::tests::later_pipe_failure_cannot_replace_the_original_capture_error ... ok
+test live_caption::runtime::tests::rejects_invalid_frames_and_reports_partial_pipe_failure ... ok
+test live_caption::runtime::tests::seals_admission_after_overflow_and_drains_the_accepted_prefix ... ok
+test live_caption::runtime::tests::stop_drains_accepted_frames_before_closing_the_engine_input ... ok
+test live_caption::store::tests::finalized_segments_are_idempotent_and_translation_is_leased ... ok
+test live_caption::store::tests::invalid_segments_do_not_create_jobs ... ok
+test live_caption::store::tests::paginated_history_and_live_tail_do_not_truncate_copy_source ... ok
+test live_caption::store::tests::recovery_keeps_text_and_never_restarts_capture ... ok
+test live_caption::store::tests::reopened_history_retains_both_languages_without_recording ... ok
+test live_caption::store::tests::storage_failure_does_not_acknowledge_or_overwrite_a_segment ... ok
+test live_caption::store::tests::timezone_migration_is_repeatable_and_preserves_existing_sessions ... ok
+test live_caption::tests::events_from_a_previous_session_or_capture_epoch_cannot_pollute_current_text ... ok
+test live_caption::tests::failed_persistence_does_not_publish_a_final_or_discard_its_partial ... ok
+test live_caption::tests::final_commit_and_partial_are_one_projection_without_text_deduplication ... ok
+test live_caption::tests::recording_requires_an_explicit_start_request_flag ... ok
+test live_caption::tests::simulated_two_hour_history_without_a_panel_or_translator_remains_bounded ... ok
+test memory_admin::tests::desktop_starts_the_real_engine_from_the_installed_runtime_descriptor ... ignored, set POLARBEAR_MEMORY_E2E_RUNTIME and POLARBEAR_MEMORY_E2E_CLI to built Engine paths
+test memory_admin::tests::explicit_runtime_override_has_priority_over_the_managed_descriptor ... ok
+test memory_admin::tests::managed_runtime_descriptor_is_node_version_agnostic ... ok
+test memory_admin::tests::managed_runtime_descriptor_launches_without_path_or_shell_discovery ... ok
+test memory_admin::tests::memory_workspace_requires_git_and_initialized_project ... ok
+test memory_admin::tests::missing_runtime_cli_reports_a_repairable_error ... ok
+test memory_admin::tests::missing_runtime_descriptor_reports_a_repairable_error ... ok
+test memory_admin::tests::native_state_rejects_a_workspace_that_is_not_currently_bound ... ok
+test memory_admin::tests::rust_proxy_authenticates_and_preserves_the_engine_protocol_contract ... ok
+test memory_admin::tests::stale_runtime_descriptor_reports_a_repairable_error ... ok
+test repository::characterization_tests::binding_wire_format_and_legacy_defaults_remain_compatible ... ok
+test repository::characterization_tests::excluded_directories_are_not_entered_even_when_unreadable ... ok
+test repository::characterization_tests::invalid_baseline_rolls_back_migration_and_can_recover_on_restart ... ok
+test repository::characterization_tests::legacy_baseline_migration_preserves_original_bytes_and_outbox ... ok
+test repository::characterization_tests::local_sync_scan_skips_links_and_excluded_files ... ok
+test repository::characterization_tests::manifests_count_additions_changes_and_deletions_once ... ok
+test repository::characterization_tests::provider_http_errors_preserve_authentication_and_permission_diagnostics ... ok
+test repository::characterization_tests::provider_paths_preserve_scoping_and_component_encoding ... ok
+test repository::characterization_tests::streamed_digests_match_memory_digests_for_empty_unicode_and_large_files ... ok
+test repository::characterization_tests::streamed_digests_retain_the_sha256_contract_at_block_boundaries ... ok
+test repository::characterization_tests::sync_digest_is_versioned_fixed_size_and_does_not_embed_document_content ... ok
+test repository::conditional_publish_tests::github_conflict_and_unknown_outcome_never_retry_with_a_new_head ... ok
+test repository::conditional_publish_tests::github_publishes_one_atomic_batch_with_the_planned_head_and_returns_its_commit ... ok
+test repository::conditional_publish_tests::gitlab_conditions_updates_on_file_versions_read_from_the_frozen_commit ... ok
+test repository::conditional_publish_tests::gitlab_confirmation_download_failure_retains_old_baseline_and_retries_pull ... ok
+test repository::conditional_publish_tests::gitlab_confirmation_preserves_local_edits_during_application ... ok
+test repository::conditional_publish_tests::gitlab_receipt_never_certifies_an_unobserved_unrelated_remote_edit ... ok
+test repository::conditional_publish_tests::gitlab_rejects_a_changed_file_version_without_retrying_or_dropping_its_guard ... ok
+test repository::conditional_publish_tests::gitlab_unknown_receipt_and_checkpoint_failure_reconcile_without_duplicate_upload ... ok
+test repository::conditional_publish_tests::gitlab_unrelated_create_and_delete_are_reconciled_only_on_the_next_snapshot ... ok
+test repository::live_acceptance::isolated_provider_acceptance ... ignored, Requires POLARBEAR_LIVE_ACCEPTANCE_CONFIG, owned private sandbox branch and the existing application Keychain credential
+test repository::provider_response_tests::bounded_response_checks_actual_bytes_with_or_without_length_or_chunks ... ok
+test repository::provider_response_tests::enumeration_caps_cumulative_wire_bytes_not_only_each_page ... ok
+test repository::provider_response_tests::enumeration_rejects_repeated_pages_and_limits_retained_entries ... ok
+test repository::provider_response_tests::github_download_rejects_redirects_without_forwarding_credentials ... ok
+test repository::provider_response_tests::github_download_timeout_is_a_failure_without_partial_content ... ok
+test repository::provider_response_tests::github_raw_download_bounds_real_streams_and_preserves_http_failures ... ok
+test repository::provider_response_tests::github_raw_download_uses_frozen_ref_and_preserves_large_markdown_and_binary ... ok
+test repository::provider_response_tests::gitlab_download_rejects_oversized_declared_body_before_reading ... ok
+test repository::provider_response_tests::oversized_successful_commit_acknowledgment_is_an_unknown_outcome ... ok
+test repository::provider_response_tests::provider_error_body_is_bounded_without_losing_permission_diagnostics ... ok
+test repository::provider_response_tests::provider_json_rejects_chunked_oversize_before_deserializing ... ok
+test repository::provider_response_tests::truncated_bodies_and_invalid_json_remain_failures ... ok
+test repository::sync_plan::tests::three_way_plan_covers_content_and_existence_without_a_preferred_side ... ok
+test repository::sync_tests::a_checkpoint_failure_after_download_recovers_without_overwriting_later_edits ... ok
+test repository::sync_tests::conditional_create_and_delete_do_not_overwrite_newer_files ... ok
+test repository::sync_tests::conflicting_real_files_remain_intact_and_never_reach_publication ... ok
+test repository::sync_tests::local_edit_during_download_rejects_the_conditional_replace ... ok
+test repository::sync_tests::lost_publish_response_is_reconciled_without_a_duplicate_upload ... ok
+test repository::sync_tests::mixed_download_and_upload_checkpoint_only_acknowledged_versions ... ok
+test repository::sync_tests::overlapping_repository_operations_are_rejected_and_admission_recovers ... ok
+test repository::sync_tests::oversized_atomic_publication_is_rejected_without_advancing_the_baseline ... ok
+test repository::sync_tests::rejected_download_does_not_publish_replace_local_bytes_or_advance_checkpoint ... ok
+test repository::sync_tests::unknown_upload_followed_by_a_remote_edit_preserves_the_conflict ... ok
+test repository_identity::tests::cleanup_recovers_in_a_new_process ... ok
+test repository_identity::tests::credential_read_failure_preserves_account_without_starting_deletion ... ok
+test repository_identity::tests::failed_intent_persistence_never_deletes_credentials ... ok
+test repository_identity::tests::healthy_legacy_account_is_unchanged_and_does_not_delete_credentials ... ok
+test repository_identity::tests::intent_exists_before_any_destructive_step ... ok
+test repository_identity::tests::legacy_missing_active_secret_cannot_hide_other_credentials ... ok
+test repository_identity::tests::metadata_failure_keeps_intent_for_restart ... ok
+test repository_identity::tests::partial_deletion_survives_restart_and_retries_without_restoring_secrets ... ok
+test repository_identity::tests::restart_after_metadata_removal_still_finishes_cleanup ... ok
+test repository_identity::tests::restart_process_fixture ... ignored, Invoked by cleanup_recovers_in_a_new_process with isolated fixture paths
+test save_regression_tests::a_rejected_local_save_does_not_enqueue_sync_work ... ok
+test save_regression_tests::absolute_save_rejects_symlink_targets ... ok
+test save_regression_tests::concurrent_workspace_and_absolute_saves_commit_only_one_revision ... ok
+test save_regression_tests::coordinated_save_process_fixture ... ignored, Invoked as an isolated process by saves_coordinate_across_native_processes
+test save_regression_tests::create_only_transaction_cannot_replace_an_existing_document ... ok
+test save_regression_tests::creation_does_not_create_parents_before_path_mutation_admission ... ok
+test save_regression_tests::duplicate_keeps_private_source_permissions ... ok
+test save_regression_tests::entry_commit_survives_outbox_failure_and_duplicate_rejects_workspace_root ... ok
+test save_regression_tests::entry_mutations_wait_for_staged_saves_and_copy_committed_bytes ... ok
+test save_regression_tests::nested_entry_operations_keep_wire_paths_and_unrelated_prefixes ... ok
+test save_regression_tests::new_absolute_save_succeeds_without_a_revision ... ok
+test save_regression_tests::outbox_failure_acknowledges_the_committed_revision_and_allows_the_next_save ... ok
+test save_regression_tests::rename_waits_for_a_staged_save_and_stale_saves_cannot_recreate_the_old_path ... ok
+test save_regression_tests::save_as_reports_permission_denied_when_it_cannot_create_the_parent ... ok
+test save_regression_tests::save_does_not_recreate_a_file_deleted_during_staging ... ok
+test save_regression_tests::save_does_not_replace_a_read_only_file_in_a_writable_directory ... ok
+test save_regression_tests::save_enforces_target_acl_and_leaves_no_temporary_file ... ok
+test save_regression_tests::save_handles_parent_permission_failure_without_changing_original ... ok
+test save_regression_tests::save_preserves_macos_extended_attributes_and_acl ... ok
+test save_regression_tests::save_preserves_private_file_permissions ... ok
+test save_regression_tests::save_rechecks_external_changes_before_replacement_and_cleans_staging ... ok
+test save_regression_tests::saves_coordinate_across_native_processes ... 
+running 1 test
+
+running 1 test
+test save_regression_tests::coordinated_save_process_fixture ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 147 filtered out; finished in 0.35s
+
+test save_regression_tests::coordinated_save_process_fixture ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 147 filtered out; finished in 0.23s
+
+ok
+test save_regression_tests::successful_outbox_write_preserves_the_legacy_success_shape ... ok
+test secret_store::credential_file::tests::disconnect_removes_crash_leftovers_without_removing_unrelated_files ... ok
+test secret_store::credential_file::tests::failed_staging_cleanup_is_reported_and_retry_is_idempotent ... ok
+test secret_store::credential_file::tests::inherited_acl_is_removed_before_the_secret_is_written ... ok
+test secret_store::credential_file::tests::permissive_umask_cannot_expose_the_first_write ... 
+running 1 test
+test secret_store::credential_file::tests::private_before_first_byte_and_failed_write_preserves_old_file ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 147 filtered out; finished in 0.01s
+
+ok
+test secret_store::credential_file::tests::private_before_first_byte_and_failed_write_preserves_old_file ... ok
+test secret_store::tests::credential_publication_failure_has_a_stable_code_without_private_details ... ok
+test secret_store::tests::deletion_reports_partial_failure_attempts_every_store_and_can_be_retried ... ok
+test secret_store::tests::fallback_failure_is_not_success_and_does_not_expose_internal_details ... ok
+test secret_store::tests::fallback_never_writes_through_a_symbolic_link ... ok
+test secret_store::tests::fallback_replacement_does_not_modify_a_hard_link_or_reuse_public_permissions ... ok
+test secret_store::tests::inaccessible_fallback_is_not_acknowledged_as_absent ... ok
+test secret_store::tests::unavailable_keychain_is_not_reported_as_a_missing_credential ... ok
+test system_open::tests::extracts_markdown_files_from_gui_launch_arguments ... ok
+test system_open::tests::ignores_runtime_flags ... ok
+test system_open::tests::local_file_urls_round_trip_reserved_characters_and_unicode ... ok
+test tests::markdown_file_watch_reports_a_metadata_token_for_existing_files ... ok
+test tests::markdown_file_watch_reports_a_missing_file_without_using_an_error_string ... ok
+test tests::nested_mutations_and_tree_ids_share_the_relative_path_protocol ... ok
+test tests::save_rejects_an_externally_changed_document_without_overwriting_it ... ok
+test tests::save_reports_when_an_open_document_was_deleted_externally ... ok
+test tests::workspace_commands_create_save_load_and_list_markdown_files ... ok
+test tests::workspace_commands_do_not_follow_symlinks_outside_the_workspace ... ok
+test tests::workspace_commands_rename_files_and_directories ... ok
+test tests::workspace_entry_names_keep_the_existing_validation_contract ... ok
+test tests::workspace_paths_preserve_logical_roots_and_reject_escape ... ok
+test vocab_bridge::tests::exchanges_a_bounded_request_with_a_private_local_socket ... ok
+test vocab_bridge::tests::requires_an_acknowledged_versioned_response ... ok
+test vocab_outbox::tests::persists_offline_captures_and_requires_exact_acknowledgement ... ok
+test vocab_outbox::tests::rejects_invalid_payloads_and_bounds_pending_storage ... ok
+test workspace_io::tests::concurrent_moves_never_replace_the_winner ... ok
+test workspace_io::tests::existing_directories_and_dangling_symlinks_are_not_replaced ... ok
+test workspace_io::tests::path_mutation_waits_for_existing_document_access ... ok
+test workspace_paths::wire_tests::relative_path_wire_format_is_independent_of_native_separators ... ok
+test workspace_paths::wire_tests::windows_wire_fixture_matches_the_frontend_mutation_contract ... ok
+
+test result: ok. 142 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 11.96s
+

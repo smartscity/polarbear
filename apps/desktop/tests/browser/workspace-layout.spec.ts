@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { nativeFixture } from "./fixtures/native";
+import { nativeFixture, menuItem } from "./fixtures/native";
 
 async function start(page: Page) {
   await nativeFixture(page);
@@ -19,11 +19,31 @@ async function drag(page: Page, side: "left" | "right", delta: number, cancel?: 
   await page.mouse.up();
 }
 
+async function persistedLayout(page: Page) {
+  return page.evaluate(async () => {
+    const path = "/src/shared/settings/userSettings.ts";
+    return (await import(path)).readUserSettings().layout;
+  });
+}
+
 test("resizes independently, persists preferences, and restores them after a narrow window", async ({ page }) => {
   await start(page);
+  // Rendered widths are optimistic. Hold admission to distinguish them from committed settings.
+  await page.evaluate(async () => {
+    const path = "/src/shared/constants/storageKeys.ts";
+    const { STORAGE_KEYS } = await import(path);
+    await new Promise<void>(resolve => {
+      void navigator.locks.request(STORAGE_KEYS.settings, async () => {
+        await new Promise<void>(release => { (window as any).__releaseLayoutSettings = release; resolve(); });
+      });
+    });
+  });
   await drag(page, "left", 80); await drag(page, "right", -40);
   await expect(page.locator(".workspace-separator.left")).toHaveAttribute("aria-valuenow", "320");
   await expect(page.locator(".workspace-separator.right")).toHaveAttribute("aria-valuenow", "280");
+  expect(await persistedLayout(page)).toMatchObject({ leftWidth: 240, rightWidth: 240 });
+  await page.evaluate(() => (window as any).__releaseLayoutSettings());
+  await expect.poll(() => persistedLayout(page)).toMatchObject({ leftWidth: 320, rightWidth: 280 });
   await page.reload();
   await expect(page.locator(".workspace-separator.left")).toHaveAttribute("aria-valuenow", "320");
   await expect(page.locator(".workspace-separator.right")).toHaveAttribute("aria-valuenow", "280");
@@ -38,6 +58,7 @@ test("resizes independently, persists preferences, and restores them after a nar
   await expect(page.locator(".workspace-separator.left")).toHaveAttribute("aria-valuenow", "320");
   await expect(page.locator(".workspace-separator.right")).toHaveAttribute("aria-valuenow", "280");
   await page.getByRole("button", { name: "File Tree", exact: true }).click();
+  await expect.poll(() => persistedLayout(page)).toMatchObject({ leftOpen: false });
   await page.reload();
   await expect(page.locator("#workspace-sidebar")).toHaveAttribute("aria-hidden", "true");
   await page.getByRole("button", { name: "File Tree", exact: true }).click();
@@ -166,7 +187,7 @@ test("shows long navigation labels, four sidebar states, settings and mixed reso
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/docs/Architecture-and-durable-document-ownership.md", 1);
   }, source);
-  await page.locator(".recent-documents").getByRole("button", { name: /Architecture-and/ }).first().click();
+  await menuItem(page, /Architecture-and/);
   await expect(page.locator(".cm-content").first()).toContainText("Workspace quality");
   await expect(page.locator('[data-tree-item-id="docs/Architecture-and-durable-document-ownership.md"]')).toBeVisible();
   await expect.poll(() => page.getByAltText("Local sample").evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBe(128);

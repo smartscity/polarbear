@@ -1,0 +1,109 @@
+
+> polarbear-desktop@0.1.0 tauri
+> tauri build --debug --bundles app --config /tmp/polarbear-sync-app-config.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> polarbear-desktop@0.1.0 build
+> vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 3967 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.46 kB │ gzip:     0.29 kB
+dist/caption.html                                             0.74 kB │ gzip:     0.42 kB
+dist/models/en-zh/manifest.json                               0.93 kB │ gzip:     0.50 kB
+dist/translation-runtime/fflate-LICENSE.txt                   1.07 kB │ gzip:     0.66 kB
+dist/translation-runtime/LICENSE                             16.73 kB
+dist/translation-runtime/translator-worker.js                17.19 kB
+dist/translation-runtime/bergamot-translator-worker.js       80.47 kB
+dist/translation-runtime/bergamot-translator-worker.wasm  5,174.29 kB │ gzip: 1,913.57 kB
+dist/assets/CaptionPanel-DbPrnBQr.css                         3.73 kB │ gzip:     1.12 kB
+dist/assets/main-B13ptiY3.css                               102.59 kB │ gzip:    17.73 kB
+dist/assets/channel-6ljf2lFA.js                               0.11 kB │ gzip:     0.12 kB
+dist/assets/translationError-RW3xhcBM.js                      0.11 kB │ gzip:     0.11 kB
+dist/assets/init-Gi6I4Gst.js                                  0.15 kB │ gzip:     0.13 kB
+dist/assets/chunk-2Q5K7J3B-BIuoLHR4.js                        0.18 kB │ gzip:     0.15 kB
+dist/assets/chunk-XXDRQBXY-BD4u9_4c.js                        0.22 kB │ gzip:     0.20 kB
+dist/assets/chunk-JWPE2WC7-BoGTG_a7.js                        0.29 kB │ gzip:     0.20 kB
+dist/assets/chunk-5VM5RSS4-Cqe0HXUj.js                        0.36 kB │ gzip:     0.26 kB
+dist/assets/chunk-POPQ4Y6H-DOGxJ6K9.js                        0.52 kB │ gzip:     0.37 kB
+dist/assets/stateDiagram-v2-MP3YSRHH-CyhiigfU.js              0.54 kB │ gzip:     0.35 kB
+dist/assets/classDiagram-ZZMXUADV-Uh3d9D4M.js                 0.58 kB │ gzip:     0.37 kB
+dist/assets/classDiagram-v2-VYDZK3BY-Uh3d9D4M.js              0.58 kB │ gzip:     0.37 kB
+dist/assets/swimlanesDiagram-VR7AAH4N-Bmb18sBX.js             0.66 kB │ gzip:     0.42 kB
+dist/assets/infoDiagram-27XIBGKW-D5QXJu_3.js                  0.69 kB │ gzip:     0.46 kB
+dist/assets/CaptionTranslator-CftyftNd.js                     0.96 kB │ gzip:     0.52 kB
+dist/assets/sizeCapture-INFHLROL-Thh6ghBC.js                  1.11 kB │ gzip:     0.61 kB
+dist/assets/ordinal-Cboi1Yqb.js                               1.19 kB │ gzip:     0.57 kB
+dist/assets/railroadDiagram-O6MQD6OU-CjhGNFUK.js              1.71 kB │ gzip:     0.81 kB
+dist/assets/chunk-F27PBJKO-CzNKUluL.js                        1.87 kB │ gzip:     0.82 kB
+dist/assets/abnfDiagram-VCTEODGH-cmfyrTQf.js                  1.92 kB │ gzip:     0.94 kB
+dist/assets/pegDiagram-XKGWAZYB-CYo2efth.js                   2.06 kB │ gzip:     0.98 kB
+dist/assets/ebnfDiagram-PWID7BFC-B8ZMiA2O.js                  2.11 kB │ gzip:     0.93 kB
+dist/assets/arc-ZWgMkAJL.js                                   3.43 kB │ gzip:     1.48 kB
+dist/assets/diagram-Z3DM3KII-DQO3_osL.js                      4.35 kB │ gzip:     1.91 kB
+dist/assets/defaultLocale-DX6XiGOO.js                         4.69 kB │ gzip:     2.18 kB
+dist/assets/captionAdapter-D1ZWzf1E.js                        5.02 kB │ gzip:     2.01 kB
+dist/assets/linear-BhBzv0CU.js                                5.65 kB │ gzip:     2.30 kB
+dist/assets/diagram-UQ7AKVKN-YRwaCrSn.js                      6.34 kB │ gzip:     2.73 kB
+dist/assets/pieDiagram-E7YTZNPT-DOA5WXus.js                   6.46 kB │ gzip:     2.71 kB
+dist/assets/CaptionSourceSelect-DhQAn5KL.js                   8.07 kB │ gzip:     3.13 kB
+dist/assets/diagram-S7CK7UJ4-Dd4Y1Ky0.js                      8.46 kB │ gzip:     3.78 kB
+dist/assets/bergamotWorker-D5KoQb8Z.js                        9.86 kB │ gzip:     4.84 kB
+dist/assets/menu-CqdAb6va.js                                 10.16 kB │ gzip:     2.35 kB
+dist/assets/cynefinDiagram-5FMLGOSQ-BqyX7IhY.js              10.21 kB │ gzip:     3.68 kB
+dist/assets/stateDiagram-D77RDMKH-CR2m7gDO.js                10.47 kB │ gzip:     3.67 kB
+dist/assets/diagram-VSXAHHWV-BjzKYUzl.js                     10.93 kB │ gzip:     4.22 kB
+dist/assets/dagre-GXQ25YYZ-B3Gl4llN.js                       11.24 kB │ gzip:     4.24 kB
+dist/assets/CaptionPanel-Bc2TWxtX.js                         13.03 kB │ gzip:     4.09 kB
+dist/assets/chunk-SVP7TREG-dIvIIH-X.js                       15.75 kB │ gzip:     4.42 kB
+dist/assets/diagram-VX7I27RA-Dj1Js9_N.js                     16.18 kB │ gzip:     5.78 kB
+dist/assets/ishikawaDiagram-5VMMS53U-B95-63y3.js             17.67 kB │ gzip:     6.73 kB
+dist/assets/kanban-definition-UXKFOSKX-DfFH4NQ5.js           20.81 kB │ gzip:     7.34 kB
+dist/assets/mindmap-definition-YA3MSWOX-DYlu2Osd.js          23.47 kB │ gzip:     7.95 kB
+dist/assets/sankeyDiagram-P5KCCOFB-BAWJasSy.js               23.50 kB │ gzip:     8.64 kB
+dist/assets/journeyDiagram-3NMN7TZE-Ca1KyEta.js              23.68 kB │ gzip:     8.40 kB
+dist/assets/wardleyDiagram-VM6X3IG4-rci543Rp.js              26.20 kB │ gzip:     6.99 kB
+dist/assets/gitGraphDiagram-WWUBYQGX-CvN0BHoJ.js             30.04 kB │ gzip:     8.93 kB
+dist/assets/erDiagram-RLTQ6QDP-DLdMZ7hs.js                   31.04 kB │ gzip:    10.68 kB
+dist/assets/requirementDiagram-BXWQKSXE-1ynKZbgX.js          31.31 kB │ gzip:     9.87 kB
+dist/assets/timeline-definition-24CTP7MA-CFUqpmDV.js         31.45 kB │ gzip:    10.48 kB
+dist/assets/quadrantDiagram-AXDQQJYC-BWAY5Zm8.js             34.60 kB │ gzip:    10.18 kB
+dist/assets/layout-CPD5cWUc.js                               35.43 kB │ gzip:    12.74 kB
+dist/assets/chunk-IMKFNOWR-CATrZ-Y2.js                       38.57 kB │ gzip:    12.65 kB
+dist/assets/vennDiagram-4TSXK5OY-BQ7f0P8Z.js                 42.48 kB │ gzip:    15.85 kB
+dist/assets/blockDiagram-I7D4REHJ-CtHi5O3m.js                43.26 kB │ gzip:    13.97 kB
+dist/assets/xychartDiagram-S5SC5T6Z-B2fDCW6b.js              44.62 kB │ gzip:    12.66 kB
+dist/assets/chunk-TICWLB2K-D7GcjIJU.js                       49.29 kB │ gzip:    15.77 kB
+dist/assets/flowDiagram-HODETNUW-EmhRQ0xQ.js                 62.60 kB │ gzip:    20.04 kB
+dist/assets/c4Diagram-7LVT6UL2-B4HWADYQ.js                   65.66 kB │ gzip:    18.88 kB
+dist/assets/ganttDiagram-EL5Y4UJY-DKYmqluh.js                69.80 kB │ gzip:    23.61 kB
+dist/assets/cose-bilkent-JH36ORCC-2FIn8c3g.js                81.83 kB │ gzip:    22.53 kB
+dist/assets/swimlanes-42K2YHIH-BFdsBy6k.js                  117.23 kB │ gzip:    42.89 kB
+dist/assets/sequenceDiagram-WJ2MYXX4-GqfehCL_.js            117.55 kB │ gzip:    31.33 kB
+dist/assets/architectureDiagram-5GKGNRK7-sXnL83il.js        152.13 kB │ gzip:    43.27 kB
+dist/assets/katex-C5jXJg4s.js                               261.33 kB │ gzip:    77.57 kB
+dist/assets/main-B1eisie0.js                                309.34 kB │ gzip:    98.49 kB
+dist/assets/cytoscape.esm-DTSO7Bv0.js                       443.72 kB │ gzip:   142.36 kB
+dist/assets/cynefin-OW5HDTMX-KP4X_lLO.js                    690.85 kB │ gzip:   155.11 kB
+dist/assets/App-BiyUG0ef.js                               1,791.81 kB │ gzip:   539.48 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1m 39s
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling polarbear-desktop v0.1.0 (/Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 14s
+       Built application at: /tmp/polarbear-sync-target/debug/polarbear-desktop
+    Bundling Polarbear Sync Acceptance.app (/tmp/polarbear-sync-target/debug/bundle/macos/Polarbear Sync Acceptance.app)
+    Finished 1 bundle at:
+        /tmp/polarbear-sync-target/debug/bundle/macos/Polarbear Sync Acceptance.app
+

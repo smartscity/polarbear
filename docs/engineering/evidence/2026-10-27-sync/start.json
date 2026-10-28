@@ -1,0 +1,17 @@
+{
+  "head": "64d394ae9fd05c24bbf599f55bf1aeef3769b2d5",
+  "branch": "codex/sync-session-acceptance",
+  "initialUserChanges": [
+    ".idea/vcs.xml"
+  ],
+  "os": "macOS-26.5.1-x86_64-i386-64bit-Mach-O",
+  "cpu": "",
+  "memoryBytes": "",
+  "rust": "rustc 1.96.0 (ac68faa20 2026-05-25)\nbinary: rustc\ncommit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96\ncommit-date: 2026-05-25\nhost: x86_64-apple-darwin\nrelease: 1.96.0\nLLVM version: 22.1.2",
+  "node": "v26.1.0",
+  "locks": {
+    "Cargo.lock": "bcdc4899cd18e93f750d65ef54b871c1bf4ebbf6001d201b9535601db9378a34",
+    "package-lock.json": "1430f0a922c135fa0343da93a3863f8940299720c5d635c0ea4a1e19b292630d"
+  },
+  "nativeBaseline": "Initial measurement plan only; subsequent process inspection found concurrent external compilation. See candidate-environment.json; results are not a controlled regression comparison."
+}

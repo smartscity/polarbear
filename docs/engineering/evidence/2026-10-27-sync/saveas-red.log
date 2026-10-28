@@ -1,0 +1,107 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test navigation-settings.spec.ts -g Save As preserves a late
+
+[WebServer] (node:24912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:24938) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:24944) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /saved (11.8s)
+(node:25013) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /other (8.8s)
+
+
+  1) tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /saved 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.window-tab.active .window-tab-dirty')
+    Expected: 1
+    Received: 2
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.window-tab.active .window-tab-dirty') with timeout 5000ms
+      - waiting for locator('.window-tab.active .window-tab-dirty')
+        14 × locator resolved to 2 elements
+           - unexpected value "2"
+
+
+      1073 |   await page.evaluate(() => (window as any).__finishSaveAs());
+      1074 |   await expect(editor).toContainText("target unsaved edit");
+    > 1075 |   await expect(page.locator(".window-tab.active .window-tab-dirty")).toHaveCount(1);
+           |                                                                      ^
+      1076 |   await expect(page.locator(".window-tab-title").filter({ hasText: "Target.md" })).toHaveCount(2);
+      1077 |   await page.keyboard.press("ControlOrMeta+s");
+      1078 |   await expect.poll(() => page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args.workspaceRoot)).toBe(targetRoot);
+        at /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/tests/browser/navigation-settings.spec.ts:1075:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/navigation-settings-Save-A-affca-pened-dirty-target-in-saved/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/navigation-settings-Save-A-affca-pened-dirty-target-in-saved/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/navigation-settings-Save-A-affca-pened-dirty-target-in-saved/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/navigation-settings-Save-A-affca-pened-dirty-target-in-saved/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /other 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.window-tab.active .window-tab-dirty')
+    Expected: 1
+    Received: 2
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.window-tab.active .window-tab-dirty') with timeout 5000ms
+      - waiting for locator('.window-tab.active .window-tab-dirty')
+        14 × locator resolved to 2 elements
+           - unexpected value "2"
+
+
+      1073 |   await page.evaluate(() => (window as any).__finishSaveAs());
+      1074 |   await expect(editor).toContainText("target unsaved edit");
+    > 1075 |   await expect(page.locator(".window-tab.active .window-tab-dirty")).toHaveCount(1);
+           |                                                                      ^
+      1076 |   await expect(page.locator(".window-tab-title").filter({ hasText: "Target.md" })).toHaveCount(2);
+      1077 |   await page.keyboard.press("ControlOrMeta+s");
+      1078 |   await expect.poll(() => page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args.workspaceRoot)).toBe(targetRoot);
+        at /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop/tests/browser/navigation-settings.spec.ts:1075:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/navigation-settings-Save-A-81ab1-pened-dirty-target-in-other/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/navigation-settings-Save-A-81ab1-pened-dirty-target-in-other/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/navigation-settings-Save-A-81ab1-pened-dirty-target-in-other/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/navigation-settings-Save-A-81ab1-pened-dirty-target-in-other/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /saved 
+    tests/browser/navigation-settings.spec.ts:1044:48 › Save As preserves a late opened dirty target in /other 
+npm error Lifecycle script `test:ui` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error workspace polarbear-desktop@0.1.0
+npm error location /Users/liyunlong/.codex/worktrees/sync-session-acceptance/Smartscity/apps/desktop
+npm error command failed
+npm error command sh -c playwright test navigation-settings.spec.ts -g 'Save As preserves a late'

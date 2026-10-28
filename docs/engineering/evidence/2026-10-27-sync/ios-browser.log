@@ -1,0 +1,28 @@
+
+> polarbear-ios@0.1.0 test:ui
+> playwright test --output /tmp/polarbear-ios-browser-results
+
+[WebServer] (node:39169) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 11 tests using 3 workers
+
+(node:39177) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39178) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39179) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/open-in.spec.ts:3:1 › opens cold and warm native deliveries directly and recovers after an import error (5.0s)
+  ✓   2 tests/browser/reading-tools.spec.ts:58:1 › translates a selection in place, stops speech and persists an honest pending capture (5.9s)
+  ✓   3 tests/browser/reader.spec.ts:33:1 › imports, reads, restores progress, switches language and never requests remote images (8.3s)
+  ✓   5 tests/browser/reader.spec.ts:66:1 › handles import failure without losing an existing collection (2.8s)
+  ✓   4 tests/browser/reading-tools.spec.ts:84:1 › supports manual lookup, discards stale translations and localizes the reading panel (5.3s)
+  ✓   6 tests/browser/reader.spec.ts:78:1 › keeps wide tables inside the reading area at narrow widths and large text (2.7s)
+  ✓   7 tests/browser/reading-tools.spec.ts:105:1 › requires a word for sentence captures and offers source opt-out (2.8s)
+  ✓   8 tests/browser/reader.spec.ts:91:1 › imports local images and linked documents as an offline collection (2.9s)
+  ✓   9 tests/browser/reader.spec.ts:117:1 › keeps PlantUML source readable and does not render remotely (2.7s)
+  ✓  10 tests/browser/reader.spec.ts:129:37 › flushes a mid-document position before debounce with a visible container (8.3s)
+  ✓  11 tests/browser/reader.spec.ts:129:37 › flushes a mid-document position before debounce with a hidden container (2.4s)
+
+  11 passed (43.5s)

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { nativeFixture } from "./fixtures/native";
+import { nativeFixture, menuItem, recentMenuEntries } from "./fixtures/native";
 
 async function reloadFixture(page: Page) {
   await nativeFixture(page);
@@ -27,7 +27,7 @@ async function reloadFixture(page: Page) {
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Reload.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Reload.md/ }).first().click();
+  await menuItem(page, /Reload.md/);
   await expect.poll(() => page.evaluate(() => Boolean((window as any).__watchStarted))).toBe(true);
 }
 
@@ -90,7 +90,7 @@ for (const edit of ["earlier document", "new document"]) test(`quit preserves ed
   });
   const editor = page.locator(".editor-workspace .cm-content").first();
   for (const name of ["A.md", "B.md"]) {
-    await page.locator(".recent-documents").getByRole("button", { name: new RegExp(name) }).first().click();
+    await menuItem(page, new RegExp(name));
     await editor.click(); await page.keyboard.type(" draft");
   }
   await page.keyboard.press("ControlOrMeta+q");
@@ -144,7 +144,7 @@ test("renaming keeps file-tree dirty state and image writes on the current path"
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Original.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Original.md/ }).first().click();
+  await menuItem(page, /Original.md/);
   await page.locator('[data-tree-item-id="Original.md"]').dblclick();
   await page.locator(".rename-input").fill("Renamed.md");
   await page.locator(".rename-input").press("Enter");
@@ -178,10 +178,10 @@ test("Save As completion keeps the newly selected document and workspace active"
     recentDocumentStore().record("/first/First.md", 1);
     recentDocumentStore().record("/second/Second.md", 2);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /First.md/ }).first().click();
+  await menuItem(page, /First.md/);
   await page.keyboard.press("ControlOrMeta+Shift+s");
   await expect.poll(() => page.evaluate(() => typeof (window as any).__finishSaveAs)).toBe("function");
-  await page.locator(".recent-documents").getByRole("button", { name: /Second.md/ }).first().click();
+  await menuItem(page, /Second.md/);
   await page.evaluate(() => (window as any).__finishSaveAs());
   await expect(page.locator(".window-tab-title").filter({ hasText: "Renamed.md" })).toBeVisible();
   await expect(page.locator(".window-tab.active")).toContainText("Second.md");
@@ -249,12 +249,12 @@ test("delayed close preserves the workspace of a subsequently opened document", 
     recentDocumentStore().record("/first/First.md", 1);
     recentDocumentStore().record("/second/Second.md", 2);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /First.md/ }).first().click();
+  await menuItem(page, /First.md/);
   await page.locator(".editor-workspace .cm-content").first().click();
   await page.keyboard.type("draft ");
   await page.getByRole("button", { name: "Close First.md", exact: true }).click();
   await expect.poll(() => page.evaluate(() => typeof (window as any).__finishClose)).toBe("function");
-  await page.locator(".recent-documents").getByRole("button", { name: /Second.md/ }).first().click();
+  await menuItem(page, /Second.md/);
   await expect(page.locator(".workspace-tree-shell")).toContainText("Second.md");
   await page.evaluate(() => (window as any).__finishClose());
   await expect(page.locator(".window-tab.active")).toContainText("Second.md");
@@ -328,7 +328,7 @@ test("a repository status response cannot reopen an obsolete workspace dialog", 
   });
   await page.keyboard.press("ControlOrMeta+Alt+Shift+S");
   await expect.poll(() => page.evaluate(() => typeof (window as any).__finishStatus)).toBe("function");
-  await page.locator(".recent-documents").getByRole("button", { name: /Other.md/ }).first().click();
+  await menuItem(page, /Other.md/);
   await expect(page.locator(".window-tab-title").filter({ hasText: "Other.md" })).toHaveCount(1);
   await page.evaluate(() => (window as any).__finishStatus());
   await expect(page.getByRole("button", { name: "Sync now", exact: true })).toBeEnabled();
@@ -525,7 +525,7 @@ test("does not apply an old disk read to a closed and reopened document", async 
   await page.evaluate(() => { (window as any).__diskVersion = "changed"; });
   await expect.poll(() => page.evaluate(() => (window as any).__reads.length)).toBe(1);
   await page.getByRole("button", { name: "Close Reload.md", exact: true }).click();
-  await page.locator(".recent-documents").getByRole("button", { name: /Reload.md/ }).first().click();
+  await menuItem(page, /Reload.md/);
   await page.evaluate(() => (window as any).__reads[0].resolve());
   await expect(page.locator(".workspace-status")).not.toContainText("Reloaded");
   await expect(page.locator(".editor-workspace .cm-content").first()).toContainText("Opened document");
@@ -610,7 +610,7 @@ test("retains edits made while a document save is pending", async ({ page }) => 
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Save.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Save.md/ }).first().click();
+  await menuItem(page, /Save.md/);
   const editor = page.locator(".editor-workspace .cm-content").first();
   await editor.click(); await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type(" first edit");
@@ -647,7 +647,7 @@ test("preserves newer text and its dirty state when Save As replaces the documen
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Original.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Original.md/ }).first().click();
+  await menuItem(page, /Original.md/);
   const editor = page.locator(".editor-workspace .cm-content").first();
   await editor.click(); await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type(" before save as");
@@ -675,7 +675,7 @@ test("keeps the document open and dirty when saving before close is denied", asy
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Private.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Private.md/ }).first().click();
+  await menuItem(page, /Private.md/);
   const editor = page.locator(".editor-workspace .cm-content").first();
   await editor.click(); await page.keyboard.type("pending text ");
   await page.getByRole("button", { name: "Close Private.md", exact: true }).click();
@@ -701,7 +701,7 @@ test("acknowledges a local save with a sync warning and reuses its revision", as
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Local.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Local.md/ }).first().click();
+  await menuItem(page, /Local.md/);
   const editor = page.locator(".editor-workspace .cm-content").first();
   await editor.click(); await page.keyboard.type("first edit ");
   await page.keyboard.press("ControlOrMeta+s");
@@ -733,7 +733,7 @@ test("does not start a second save or synchronize while a document save is pendi
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Sync.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Sync.md/ }).first().click();
+  await menuItem(page, /Sync.md/);
   const editor = page.locator(".editor-workspace .cm-content").first();
   await editor.click(); await page.keyboard.type("pending sync edit ");
   await page.keyboard.press("ControlOrMeta+s");
@@ -770,7 +770,7 @@ test("retains the current document when a file-tree read fails", async ({ page }
     const path = "/src/features/workspace/recentDocuments.ts";
     (await import(path)).recentDocumentStore().record("/test/Working.md", 1);
   });
-  await page.locator(".recent-documents").getByRole("button", { name: /Working.md/ }).first().click();
+  await menuItem(page, /Working.md/);
   const editor = page.locator(".editor-workspace .cm-content").first();
   await editor.click(); await page.keyboard.type("important unsaved text ");
   await page.locator('[data-tree-item-id="Unavailable.md"]').click();
@@ -797,8 +797,7 @@ test("ignores an old recent-file completion after a new tab is created", async (
     const store = (await import(path)).recentDocumentStore();
     store.record("/test/Slow.md", 1);
   });
-  const recent = page.locator(".recent-documents");
-  await recent.getByRole("button", { name: /Slow.md/ }).first().click();
+  await menuItem(page, /Slow.md/);
   await expect.poll(() => page.evaluate(() => !!(window as any).__finishOpen)).toBe(true);
   await page.getByRole("button", { name: "New tab", exact: true }).click();
   const editor = page.locator(".editor-workspace .cm-content").first();
@@ -806,7 +805,7 @@ test("ignores an old recent-file completion after a new tab is created", async (
   await page.evaluate(() => (window as any).__finishOpen());
   await expect(editor).toContainText("newer document text");
   await expect(page.locator(".window-tab-title").filter({ hasText: "Slow.md" })).toHaveCount(0);
-  await expect(recent.getByRole("alert")).toHaveCount(0);
+  await expect(page.locator(".workspace-status")).not.toContainText("Cannot open");
 });
 
 test("does not discard unsaved text when opening another workspace", async ({ page }) => {
@@ -838,7 +837,7 @@ test("opens Workspace on launch and reload even after visiting Context", async (
   await expect(page.locator(".activity-rail button").first()).toHaveAttribute("aria-pressed", "true");
 });
 
-test("reopens recent documents through native access and retains unavailable entries for removal", async ({ page }) => {
+test("reopens recent documents through the native menu and retains unavailable entries until clear", async ({ page }) => {
   await nativeFixture(page); await page.goto("/");
   await page.evaluate(async () => {
     const path = "/src/features/workspace/recentDocuments.ts";
@@ -846,20 +845,18 @@ test("reopens recent documents through native access and retains unavailable ent
     recentDocumentStore().record("/test/Article.md", 1);
     recentDocumentStore().record("/test/missing.md", 2);
   });
-  const recent = page.locator(".recent-documents");
-  await recent.getByRole("button", { name: /Article.md/ }).first().click();
+  await menuItem(page, /Article.md/);
   await expect(page.locator(".editor-workspace")).toContainText("Opened document");
-  await expect(recent.locator("li").first()).toContainText("Article.md");
+  await expect.poll(async () => (await recentMenuEntries(page))[0]?.text).toBe("Article.md");
   await page.reload();
-  await expect(recent.locator("li")).toHaveCount(2);
-  await recent.getByRole("button", { name: /missing.md/ }).first().click();
+  await expect.poll(async () => (await recentMenuEntries(page)).filter((item) => /^file\.recent\.[01]\./.test(item.id)).length).toBe(2);
+  await menuItem(page, /missing.md/);
   await expect(page.locator(".workspace-status")).toContainText("File not found");
   await page.screenshot({ path: "test-results/workspace-operation-feedback.png" });
-  await expect(recent.getByRole("alert")).toContainText("Cannot open missing.md");
-  await recent.getByRole("button", { name: "Remove missing.md from history", exact: true }).click();
-  await expect(recent.locator("li")).toHaveCount(1);
-  await recent.getByRole("button", { name: "Clear history" }).click();
-  await page.reload(); await expect(recent).toContainText("No recently opened documents");
+  await expect.poll(async () => (await recentMenuEntries(page)).some((item) => item.text === "missing.md")).toBe(true);
+  await menuItem(page, "Clear Recent");
+  await page.reload();
+  await expect.poll(async () => (await recentMenuEntries(page)).map((item) => [item.text, item.enabled])).toEqual([["No Recent Files", false], ["Clear Recent", false]]);
 });
 
 test("keeps Context edits across refresh and persists confirmed settings across remount and reload", async ({ page }) => {
@@ -1039,4 +1036,144 @@ test("does not carry an unsaved Context draft into a different workspace", async
   await expect(page.getByRole("combobox", { name: "Capture mode" })).toBeEnabled();
   await expect(page.getByRole("combobox", { name: "Capture mode" })).toHaveValue("manual");
   await expect(page.getByRole("button", { name: "Save settings" })).toBeDisabled();
+});
+
+for (const targetRoot of ["/saved", "/other"]) test(`Save As preserves a late opened dirty target in ${targetRoot}`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const runtime = (window as any).__TAURI_INTERNALS__, invoke = runtime.invoke;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if (command === "write_markdown_file") return new Promise((resolve) => {
+        (window as any).__finishSaveAs = () => resolve({ revision: "source-saved" });
+      });
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/");
+  await page.evaluate(async (root) => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record(`${root}/Source.md`, 1);
+  }, targetRoot);
+  await menuItem(page, /Source.md/);
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click(); await page.keyboard.type("source buffer");
+  await page.keyboard.press("ControlOrMeta+Shift+s");
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.evaluate(async (root) => {
+    const path = "/src/features/workspace/recentDocuments.ts";
+    (await import(path)).recentDocumentStore().record(`${root}/Target.md`, 1);
+  }, targetRoot);
+  await menuItem(page, /Target.md/);
+  await editor.click(); await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" target unsaved edit");
+  await page.evaluate(() => (window as any).__finishSaveAs());
+  await expect(editor).toContainText("target unsaved edit");
+  await expect(page.locator(".window-tab.active .window-tab-dirty")).toHaveCount(1);
+  await expect(page.locator(".window-tab-title").filter({ hasText: "Target.md" })).toHaveCount(2);
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args.workspaceRoot)).toBe(targetRoot);
+  const saved = await page.evaluate(() => (window as any).__navigationCalls.filter((c: any) => c.command === "save_markdown_file").at(-1)?.args);
+  expect(saved.markdownContent).toContain("target unsaved edit");
+  expect(saved.expectedRevision).not.toBe("source-saved");
+});
+
+for (const reopen of [false, true]) test(`Save As completion preserves target registration after closing (reopen: ${reopen})`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state = window as any, runtime = state.__TAURI_INTERNALS__, invoke = runtime.invoke;
+    state.__writes = 0;
+    runtime.invoke = (command: string, args: any) => {
+      if (command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if (command === "write_markdown_file") { state.__writes++; return new Promise((resolve) => { state.__finishSaveAs = () => resolve({ revision: "saved" }); }); }
+      return invoke(command, args);
+    };
+  });
+  await page.goto("/tests/browser/navigation.html?documents");
+  await expect.poll(() => page.evaluate(() => Boolean((window as any).__documents))).toBe(true);
+  await page.evaluate(() => (window as any).__documents.openMarkdownPath("/saved/Source.md"));
+  const source = await page.evaluate(() => (window as any).__documents.activeFileId);
+  await page.evaluate(() => { void (window as any).__documents.saveActiveFileAs(); });
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.evaluate(async (id) => { const s=(window as any).__documents; await s.closeTab(id); await s.saveActiveFileAs(); }, source);
+  expect(await page.evaluate(() => (window as any).__writes)).toBe(1);
+  expect(await page.evaluate((id) => (window as any).__documents.openFileIds.includes(id), source)).toBe(true);
+  await page.evaluate(() => (window as any).__documents.openMarkdownPath("/saved/Target.md"));
+  const target = await page.evaluate(() => (window as any).__documents.activeFileId);
+  await page.evaluate((id) => (window as any).__documents.closeTab(id), target);
+  if (reopen) {
+    await page.evaluate(() => (window as any).__documents.openMarkdownPath("/saved/Target.md"));
+    await page.evaluate(() => (window as any).__documents.updateActiveDocument("reopened unsaved buffer"));
+  }
+  await page.evaluate(() => (window as any).__finishSaveAs());
+  await expect.poll(() => page.evaluate((id) => (window as any).__documents.openFileIds.includes(id), source)).toBe(false);
+  const state = await page.evaluate(() => { const s=(window as any).__documents; return { ids:s.openFileIds, docs:s.documents, revisions:s.documentRevisions, dirty:[...s.dirtyFileIds] }; });
+  expect(new Set(state.ids).size).toBe(state.ids.length);
+  if (reopen) { expect(Object.values(state.docs)).toContain("reopened unsaved buffer"); expect(state.dirty.length).toBe(1); }
+  expect(Object.values(state.revisions)).toContain("saved");
+});
+
+test("accepted uploads with pending remote confirmation remain visible and retryable", async ({ page }) => {
+  await reloadFixture(page);
+  await page.evaluate(() => {
+    const runtime=(window as any).__TAURI_INTERNALS__, invoke=runtime.invoke;
+    runtime.invoke=(command:string,args:any) => {
+      if (command === "repository_sync_now") return Promise.resolve({ conflicts: [], localChanges: 0, remoteChanged: true, account: { provider: "gitlab", login: "fixture" }, binding: { provider: "gitlab", owner: "fixture", repo: "fixture", branch: "main", manifest: {}, hasSynced: true, lastSyncCommitSha: null } });
+      if (command === "load_markdown_file") return Promise.resolve({ markdownContent: "# Opened document\n\nContent.", revision: "fixture" });
+      return invoke(command,args);
+    };
+  });
+  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await expect(page.locator(".workspace-status")).toContainText("Sync again to check");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sync now", exact: true }).last()).toBeEnabled();
+});
+
+test("Save As and a target open completed in one task allocate distinct identities", async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state=window as any, runtime=state.__TAURI_INTERNALS__, invoke=runtime.invoke;
+    runtime.invoke=(command:string,args:any) => {
+      if(command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if(command === "write_markdown_file") return new Promise(resolve=>{state.__finishSaveAs=()=>resolve({revision:"source-saved"});});
+      return invoke(command,args);
+    };
+  });
+  await page.goto("/tests/browser/navigation.html?documents");
+  await expect.poll(()=>page.evaluate(()=>Boolean((window as any).__documents))).toBe(true);
+  await page.evaluate(()=>(window as any).__documents.openMarkdownPath("/saved/Source.md"));
+  await page.evaluate(()=>{void (window as any).__documents.saveActiveFileAs();});
+  await expect.poll(()=>page.evaluate(()=>typeof (window as any).__finishSaveAs)).toBe("function");
+  await page.evaluate(async()=>{
+    await (window as any).__documents.openMarkdownPath("/saved/Target.md");
+    (window as any).__finishSaveAs();
+  });
+  await expect.poll(()=>page.evaluate(()=>{
+    const s=(window as any).__documents;
+    return s.openFileIds.filter((id:string)=>s.documentRelativePaths[id]==="Target.md").length;
+  })).toBe(2);
+  const ids=await page.evaluate(()=>(window as any).__documents.openFileIds as string[]);
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+for (const saveAs of [false, true]) test(`an edit batched with the save receipt stays dirty (Save As: ${saveAs})`, async ({ page }) => {
+  await nativeFixture(page);
+  await page.addInitScript(() => {
+    const state=window as any, runtime=state.__TAURI_INTERNALS__, invoke=runtime.invoke;
+    runtime.invoke=(command:string,args:any) => {
+      if(command === "plugin:dialog|save") return Promise.resolve("/saved/Target.md");
+      if(["write_markdown_file","save_markdown_file"].includes(command)) return new Promise(resolve=>{state.__finishSave=()=>resolve({revision:"saved-snapshot"});});
+      return invoke(command,args);
+    };
+  });
+  await page.goto("/tests/browser/navigation.html?documents");
+  await expect.poll(()=>page.evaluate(()=>Boolean((window as any).__documents))).toBe(true);
+  await page.evaluate(()=>(window as any).__documents.openMarkdownPath("/saved/Source.md"));
+  await page.evaluate(()=>(window as any).__documents.updateActiveDocument("saved snapshot"));
+  await page.evaluate((saveAs)=>{const s=(window as any).__documents; void (saveAs?s.saveActiveFileAs():s.saveActiveFile());},saveAs);
+  await expect.poll(()=>page.evaluate(()=>typeof (window as any).__finishSave)).toBe("function");
+  await page.evaluate(()=>{(window as any).__documents.updateActiveDocument("late unsaved edit");(window as any).__finishSave();});
+  await expect.poll(()=>page.evaluate(()=>Object.values((window as any).__documents.documentRevisions).includes("saved-snapshot"))).toBe(true);
+  const snapshot=await page.evaluate(()=>{const s=(window as any).__documents;return {content:s.documents[s.activeFileId],dirty:s.dirtyFileIds.has(s.activeFileId)};});
+  expect(snapshot).toEqual({content:"late unsaved edit",dirty:true});
 });

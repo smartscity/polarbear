@@ -1,0 +1,605 @@
+{
+  "attempt-3/1MiB-A1.json": {
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 23.100000000093132,
+          "max": 24.299999999813735
+        },
+        "editMs": {
+          "median": 34.800000000046566,
+          "max": 35.800000000046566
+        },
+        "previewMs": {
+          "median": 185.19999999995343,
+          "max": 201.70000000018626
+        },
+        "rssKiB": {
+          "median": 343488,
+          "max": 357176
+        }
+      }
+    }
+  },
+  "attempt-3/1MiB-A2.json": {
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 22.9000000001397,
+          "max": 39
+        },
+        "editMs": {
+          "median": 33.699999999953434,
+          "max": 35.699999999953434
+        },
+        "previewMs": {
+          "median": 187.30000000004657,
+          "max": 195.39999999990687
+        },
+        "rssKiB": {
+          "median": 343612,
+          "max": 357848
+        }
+      }
+    }
+  },
+  "attempt-3/1MiB-B1.json": {
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 23.699999999953434,
+          "max": 39.199999999953434
+        },
+        "editMs": {
+          "median": 34.60000000009313,
+          "max": 39.10000000009313
+        },
+        "previewMs": {
+          "median": 184.10000000009313,
+          "max": 192.69999999995343
+        },
+        "rssKiB": {
+          "median": 343744,
+          "max": 357204
+        }
+      }
+    }
+  },
+  "attempt-3/1MiB-B2.json": {
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 22.300000000046566,
+          "max": 24.199999999953434
+        },
+        "editMs": {
+          "median": 33.699999999953434,
+          "max": 39
+        },
+        "previewMs": {
+          "median": 183.39999999990687,
+          "max": 189.39999999990687
+        },
+        "rssKiB": {
+          "median": 344444,
+          "max": 359768
+        }
+      }
+    }
+  },
+  "attempt-6/full-A.json": {
+    "ordinary": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 11.200000000186265,
+          "max": 12.599999999627471
+        },
+        "editMs": {
+          "median": 28.700000000186265,
+          "max": 32.700000000186265
+        },
+        "previewMs": {
+          "median": 33.200000000186265,
+          "max": 33.59999999962747
+        },
+        "rssKiB": {
+          "median": 283480,
+          "max": 284208
+        }
+      }
+    },
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 25.799999999813735,
+          "max": 40.200000000186265
+        },
+        "editMs": {
+          "median": 38.60000000055879,
+          "max": 40.10000000055879
+        },
+        "previewMs": {
+          "median": 196.3999999994412,
+          "max": 224.3999999994412
+        },
+        "rssKiB": {
+          "median": 347096,
+          "max": 361132
+        }
+      }
+    },
+    "10MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 158.30000000074506,
+          "max": 165
+        },
+        "editMs": {
+          "median": 210.90000000037253,
+          "max": 227.20000000018626
+        },
+        "previewMs": {
+          "median": 1957.8999999994412,
+          "max": 2010.1000000005588
+        },
+        "rssKiB": {
+          "median": 812284,
+          "max": 915840
+        }
+      }
+    },
+    "diagrams": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 9.700000000186265,
+          "max": 17.100000000558794
+        },
+        "editMs": {
+          "median": 27.600000000558794,
+          "max": 33.5
+        },
+        "previewMs": {
+          "median": 32.700000000186265,
+          "max": 33.5
+        },
+        "allDiagramsMs": {
+          "median": 503.80000000074506,
+          "max": 505.69999999925494
+        },
+        "rssKiB": {
+          "median": 309180,
+          "max": 310452
+        }
+      }
+    }
+  },
+  "attempt-6/full-B.json": {
+    "ordinary": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 11.699999999254942,
+          "max": 16
+        },
+        "editMs": {
+          "median": 28,
+          "max": 32.89999999944121
+        },
+        "previewMs": {
+          "median": 33.700000000186265,
+          "max": 34.299999999813735
+        },
+        "rssKiB": {
+          "median": 283132,
+          "max": 284080
+        }
+      }
+    },
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 24.200000000186265,
+          "max": 40.5
+        },
+        "editMs": {
+          "median": 36,
+          "max": 37.40000000037253
+        },
+        "previewMs": {
+          "median": 199,
+          "max": 210.29999999981374
+        },
+        "rssKiB": {
+          "median": 347900,
+          "max": 362224
+        }
+      }
+    },
+    "10MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 158.3999999994412,
+          "max": 170.5
+        },
+        "editMs": {
+          "median": 218.59999999962747,
+          "max": 232.30000000074506
+        },
+        "previewMs": {
+          "median": 1951.3999999994412,
+          "max": 2021.4000000003725
+        },
+        "rssKiB": {
+          "median": 827568,
+          "max": 954712
+        }
+      }
+    },
+    "diagrams": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 9.700000000186265,
+          "max": 16.300000000745058
+        },
+        "editMs": {
+          "median": 30.299999999813735,
+          "max": 33.59999999962747
+        },
+        "previewMs": {
+          "median": 33.5,
+          "max": 33.90000000037253
+        },
+        "allDiagramsMs": {
+          "median": 491.29999999981374,
+          "max": 504.79999999981374
+        },
+        "rssKiB": {
+          "median": 338924,
+          "max": 340060
+        }
+      }
+    }
+  },
+  "attempt-7-strict/1MiB-A.json": {
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 25.5,
+          "max": 40.299999999813735
+        },
+        "editMs": {
+          "median": 35.90000000037253,
+          "max": 36.60000000055879
+        },
+        "previewMs": {
+          "median": 193.5,
+          "max": 231.79999999981374
+        },
+        "rssKiB": {
+          "median": 346624,
+          "max": 358388
+        }
+      }
+    }
+  },
+  "attempt-9-strict/1MiB-A.json": {
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 26,
+          "max": 39.5
+        },
+        "editMs": {
+          "median": 35.90000000037253,
+          "max": 39.10000000055879
+        },
+        "previewMs": {
+          "median": 206.5,
+          "max": 237.59999999962747
+        },
+        "rssKiB": {
+          "median": 343976,
+          "max": 358904
+        }
+      }
+    }
+  },
+  "full-A.json": {
+    "ordinary": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 11.599999999976717,
+          "max": 17.599999999976717
+        },
+        "editMs": {
+          "median": 25.599999999976717,
+          "max": 34.10000000009313
+        },
+        "previewMs": {
+          "median": 34.09999999997672,
+          "max": 34.300000000046566
+        },
+        "rssKiB": {
+          "median": 287472,
+          "max": 288400
+        }
+      }
+    },
+    "1MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 25.600000000093132,
+          "max": 28.900000000023283
+        },
+        "editMs": {
+          "median": 39.09999999997672,
+          "max": 39.59999999997672
+        },
+        "previewMs": {
+          "median": 217.80000000004657,
+          "max": 236
+        },
+        "rssKiB": {
+          "median": 346664,
+          "max": 360772
+        }
+      }
+    },
+    "10MiB": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 186.5,
+          "max": 214.90000000002328
+        },
+        "editMs": {
+          "median": 221.59999999997672,
+          "max": 227.30000000004657
+        },
+        "previewMs": {
+          "median": 2214.4000000000233,
+          "max": 2417.4000000000233
+        },
+        "rssKiB": {
+          "median": 846132,
+          "max": 947372
+        }
+      }
+    },
+    "diagrams": {
+      "count": 5,
+      "metrics": {
+        "openMs": {
+          "median": 15.599999999976717,
+          "max": 15.900000000023283
+        },
+        "editMs": {
+          "median": 34.300000000046566,
+          "max": 34.5
+        },
+        "previewMs": {
+          "median": 32.59999999997672,
+          "max": 33.10000000009313
+        },
+        "allDiagramsMs": {
+          "median": 505.5,
+          "max": 506.80000000004657
+        },
+        "rssKiB": {
+          "median": 313252,
+          "max": 314232
+        }
+      }
+    }
+  },
+  "native-1/after.json": {
+    "4096": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "saveMs": {
+          "median": 42.024565,
+          "max": 43.269705
+        },
+        "scanAndHashMs": {
+          "median": 0.614443,
+          "max": 0.671155
+        }
+      }
+    },
+    "1048576": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "saveMs": {
+          "median": 47.01959,
+          "max": 47.546892
+        },
+        "scanAndHashMs": {
+          "median": 12.419998999999999,
+          "max": 12.485474
+        }
+      }
+    },
+    "10485760": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "saveMs": {
+          "median": 80.621023,
+          "max": 80.707971
+        },
+        "scanAndHashMs": {
+          "median": 91.26266,
+          "max": 97.243794
+        }
+      }
+    }
+  },
+  "native-1/before.json": {
+    "4096": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "saveMs": {
+          "median": 42.489307,
+          "max": 43.886466999999996
+        },
+        "scanAndHashMs": {
+          "median": 0.600253,
+          "max": 0.696468
+        }
+      }
+    },
+    "1048576": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "saveMs": {
+          "median": 47.592841,
+          "max": 48.624709
+        },
+        "scanAndHashMs": {
+          "median": 12.314491,
+          "max": 12.34826
+        }
+      }
+    },
+    "10485760": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "saveMs": {
+          "median": 79.811574,
+          "max": 80.463864
+        },
+        "scanAndHashMs": {
+          "median": 89.45900499999999,
+          "max": 92.988183
+        }
+      }
+    }
+  },
+  "native-1/stages.json": {
+    "4096": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "enumerateMs": {
+          "median": 0.053543,
+          "max": 0.09894
+        },
+        "independentCheckpointMs": {
+          "median": 1.285999,
+          "max": 1.328167
+        },
+        "independentMemoryHashMs": {
+          "median": 0.033507,
+          "max": 0.033534
+        },
+        "independentReadMs": {
+          "median": 0.041449,
+          "max": 0.042281
+        },
+        "streamReadAndHashMs": {
+          "median": 0.082667,
+          "max": 0.084019
+        }
+      }
+    },
+    "1048576": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "enumerateMs": {
+          "median": 0.06267400000000001,
+          "max": 0.073493
+        },
+        "independentCheckpointMs": {
+          "median": 1.7534720000000001,
+          "max": 2.0831690000000003
+        },
+        "independentMemoryHashMs": {
+          "median": 8.196047,
+          "max": 9.291706
+        },
+        "independentReadMs": {
+          "median": 0.277324,
+          "max": 0.31214200000000003
+        },
+        "streamReadAndHashMs": {
+          "median": 8.697382,
+          "max": 9.264057
+        }
+      }
+    },
+    "10485760": {
+      "count": 5,
+      "metrics": {
+        "digestBytes": {
+          "median": 148,
+          "max": 148
+        },
+        "enumerateMs": {
+          "median": 0.09254699999999999,
+          "max": 0.134754
+        },
+        "independentCheckpointMs": {
+          "median": 2.325419,
+          "max": 2.665359
+        },
+        "independentMemoryHashMs": {
+          "median": 80.781776,
+          "max": 81.082146
+        },
+        "independentReadMs": {
+          "median": 3.125332,
+          "max": 4.692328
+        },
+        "streamReadAndHashMs": {
+          "median": 83.968463,
+          "max": 86.355347
+        }
+      }
+    }
+  }
+}

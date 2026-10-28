@@ -3,6 +3,7 @@ use super::{
     policy::remote_path_for,
     provider::{github_client, gitlab_api_base, gitlab_client, gitlab_file_id, gitlab_project_id},
     response_limits,
+    sync_coordinator::PublishedCommit,
     sync_plan::Manifest,
 };
 use crate::repository_identity::repository_token;
@@ -19,7 +20,7 @@ pub(super) fn publish(
     expected: &str,
     remote: &Manifest,
     changes: &Changes,
-) -> Result<String, String> {
+) -> Result<PublishedCommit, String> {
     if binding.provider == "gitlab" {
         let client = gitlab_client(&repository_token(app, "gitlab")?)?;
         gitlab_publish(
@@ -34,6 +35,7 @@ pub(super) fn publish(
             remote,
             changes,
         )
+        .map(PublishedCommit::ChangedPaths)
     } else {
         let client = github_client(&repository_token(app, "github")?)?;
         github_publish(
@@ -43,6 +45,7 @@ pub(super) fn publish(
             expected,
             changes,
         )
+        .map(PublishedCommit::FullSnapshot)
     }
 }
 

@@ -1,0 +1,1603 @@
+Error:   Failed to scan for dependencies from entries:
+  /private/tmp/polarbear-perf-1028/candidate/apps/desktop/index.html
+/private/tmp/polarbear-perf-1028/candidate/apps/desktop/caption.html
+
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/liveMarkdownDecorations.ts:15:158:
+[37m      15 │ ...MarkdownImagePreviewWidget } from [32m"./widgets/blockPreviewWidgets"[37m;
+         ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/shared/debug/useStoredDebugEnabled.ts:2:27:
+[37m      2 │ import { APP_EVENTS } from [32m"../events/appEvents"[37m;
+        ╵                            [32m~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/vocab/translation/offlineTranslation.ts:1:36:
+[37m      1 │ import { MAX_SENTENCE_LENGTH } from [32m"../readingSelection"[37m;
+        ╵                                     [32m~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/shared/debug/useStoredDebugEnabled.ts:3:39:
+[37m      3 │ import { readStoredDebugEnabled } from [32m"./debugSettings"[37m;
+        ╵                                        [32m~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/vocab/translation/offlineTranslation.ts:2:33:
+[37m      2 │ ...slationError } from [32m"../../../shared/translation/translationError"[37m;
+        ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/vocab/translation/offlineTranslation.ts:66:42:
+[37m      66 │ ...er } = await import([32m"../../../shared/translation/bergamotWorker"[37m);
+         ╵                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/inlineMarkdownWidgets.ts:2:33:
+[37m      2 │ import { translateCurrent } from [32m"../../../shared/i18n/translate"[37m;
+        ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/markdown/previewBlocks.ts:2:37:
+[37m      2 │ import { findClosingFenceLine } from [32m"../markdown/codeFenceState"[37m;
+        ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:7:7:
+[37m      7 │ } from [32m"../../diagram/diagramExport"[37m;
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/codeFenceLanguageWidget.ts:2:33:
+[37m      2 │ import { translateCurrent } from [32m"../../../shared/i18n/translate"[37m;
+        ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/markdown/codeFenceCommands.ts:7:7:
+[37m      7 │ } from [32m"./codeFenceState"[37m;
+        ╵        [32m~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:2:33:
+[37m      2 │ import { translateCurrent } from [32m"../../../shared/i18n/translate"[37m;
+        ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/markdown/previewBlocks.ts:3:194:
+[37m      3 │ ...orLine, parseCodeFenceLine } from [32m"../markdown/liveMarkdownSyntax"[37m;
+        ╵                                      [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/inlineMarkdownWidgets.ts:3:31:
+[37m      3 │ import { renderMathText } from [32m"../markdown/mathText"[37m;
+        ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:8:33:
+[37m      8 │ import { renderMermaidSvg } from [32m"../../diagram/mermaidRenderer"[37m;
+        ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/codeFenceLanguageWidget.ts:6:7:
+[37m      6 │ } from [32m"../markdown/liveMarkdownSyntax"[37m;
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:4:98:
+[37m      4 │ ... scheduleEditorMeasureFromDom } from [32m"../widgets/markdownBlockDom"[37m;
+        ╵                                         [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:9:35:
+[37m      9 │ import { DiagramRenderCache } from [32m"../../diagram/diagramRenderCache"[37m;
+        ╵                                    [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:5:31:
+[37m      5 │ import { isTableRowLine } from [32m"../markdown/liveMarkdownSyntax"[37m;
+        ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:10:33:
+[37m      10 │ import { DiagramBusyError } from [32m"../../diagram/diagramRenderQueue"[37m;
+         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:6:85:
+[37m      6 │ ...ableAlignments, parseTableCells } from [32m"../markdown/markdownTable"[37m;
+        ╵                                           [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:13:7:
+[37m      13 │ } from [32m"../../diagram/plantUmlRenderer"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:7:31:
+[37m      7 │ import { TABLE_COMMANDS } from [32m"../table/tableCommands"[37m;
+        ╵                                [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:14:44:
+[37m      14 │ ...ibePlantUmlRenderError } from [32m"../../diagram/plantUmlRenderError"[37m;
+         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:8:48:
+[37m      8 │ ...tallTableInteractionControls } from [32m"../table/tableInteractionDom"[37m;
+        ╵                                        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:18:7:
+[37m      18 │ } from [32m"../../diagram/plantUmlRemoteConsent"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:9:32:
+[37m      9 │ import { closeTableMenus } from [32m"../table/tableMenuLifecycle"[37m;
+        ╵                                 [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:19:33:
+[37m      19 │ import { translateCurrent } from [32m"../../../shared/i18n/translate"[37m;
+         ╵                                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:10:38:
+[37m      10 │ import { readTableColumnWidths } from [32m"../table/tableLayoutState"[37m;
+         ╵                                       [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:20:29:
+[37m      20 │ import { errorMessage } from [32m"../../../shared/tauri/invokeTauri"[37m;
+         ╵                              [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:12:67:
+[37m      12 │ ...Editable, handleTableSelectionKeydown } from [32m"./tableCellEditing"[37m;
+         ╵                                                 [32m~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/widgets/diagramPreviewWidgets.ts:26:7:
+[37m      26 │ } from [32m"./markdownBlockDom"[37m;
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:13:79:
+[37m      13 │ ... activeTableColumn, openTableSizeMenu } from [32m"./tableWidgetMenus"[37m;
+         ╵                                                 [32m~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:14:34:
+[37m      14 │ import { applyTableCommand } from [32m"./tableWidgetTransactions"[37m;
+         ╵                                   [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:15:47:
+[37m      15 │ ... { writeTableSelectionToClipboard } from [32m"./tableWidgetClipboard"[37m;
+         ╵                                             [32m~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42373:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:42552:9)
+    at resolveId (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14314:40)
+    at resolve (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14325:28)
+    at file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14534:34
+    at requestCallbacks.on-resolve (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+
+  This error came from the "onResolve" callback registered here:
+
+    ../../../../Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14529:13)
+    at handlePlugins (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/liyunlong/Documents/Smartscity/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    apps/desktop/src/features/editor/table/tablePreviewWidget.ts:16:78:
+[37m      16 │ ...utoFitTableColumn, resizeTableColumn } from [32m"./tableColumnSizing"[37m;
+         ╵                                                [32m~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+    at failureErrorWithLog (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:926:25
+    at runOnEndCallbacks (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:1307:45)
+    at buildResponseToResult (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:924:7)
+    at /Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:936:9
+    at new Promise (<anonymous>)
+    at requestCallbacks.on-end (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:935:54)
+    at handleRequest (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/liyunlong/Documents/Smartscity/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:509:20)
+    at addChunk (node:internal/streams/readable:568:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:519:3)
+    at Readable.push (node:internal/streams/readable:399:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

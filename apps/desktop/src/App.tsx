@@ -16,6 +16,7 @@ import { CreateItemDialog } from "./features/workspace/components/CreateItemDial
 import { ExternalFileChangedDialog } from "./features/workspace/components/ExternalFileChangedDialog";
 import { useAppShortcuts } from "./commands/useAppShortcuts";
 import { resolveFileCommandTarget } from "./commands/commandTarget";
+import { useRecentDocumentMenu } from "./features/workspace/useRecentDocumentMenu";
 import { useNativeAppMenu } from "./commands/useNativeAppMenu";
 import { useEventCallback } from "./shared/hooks/useEventCallback";
 import { getCommandState, type CommandRuntimeContext } from "./commands/commandState";
@@ -766,7 +767,9 @@ export function App() {
   });
 
   useAppShortcuts(executeCommand, commandRuntimeContext);
+  const recentDocuments = useRecentDocumentMenu(openMarkdownPath, setStatusMessage);
   useNativeAppMenu(executeCommand, {
+    recentDocuments,
     commandContext: commandRuntimeContext,
     repositoryAccount,
     repositoryBinding,
@@ -830,7 +833,6 @@ export function App() {
               onRenameConfirm={(item, nextName) => void confirmRename(item, nextName)}
               onSelectDocumentStructureItem={selectDocumentStructureItem}
               onSelectFile={(fileId) => void selectFile(fileId)}
-              onOpenRecent={openMarkdownPath}
               onSelectTab={(tabId) => void activateTab(tabId)}
               onSelectTreeItem={documentSession.selectTreeItem}
               onSidebarClose={() => setSidebarOpen(false)}
