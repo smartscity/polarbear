@@ -1,0 +1,56 @@
+[
+  {
+    "kCGWindowAlpha" : 1,
+    "kCGWindowBounds" : {
+      "Height" : 93,
+      "Width" : 394,
+      "X" : 390,
+      "Y" : 125
+    },
+    "kCGWindowIsOnscreen" : true,
+    "kCGWindowLayer" : 101,
+    "kCGWindowMemoryUsage" : 2368,
+    "kCGWindowName" : "",
+    "kCGWindowNumber" : 733,
+    "kCGWindowOwnerName" : "Polarbear Recent Acceptance",
+    "kCGWindowOwnerPID" : 10212,
+    "kCGWindowSharingState" : 1,
+    "kCGWindowStoreType" : 1
+  },
+  {
+    "kCGWindowAlpha" : 1,
+    "kCGWindowBounds" : {
+      "Height" : 235,
+      "Width" : 144,
+      "X" : 251,
+      "Y" : 31
+    },
+    "kCGWindowIsOnscreen" : true,
+    "kCGWindowLayer" : 101,
+    "kCGWindowMemoryUsage" : 2368,
+    "kCGWindowName" : "",
+    "kCGWindowNumber" : 732,
+    "kCGWindowOwnerName" : "Polarbear Recent Acceptance",
+    "kCGWindowOwnerPID" : 10212,
+    "kCGWindowSharingState" : 1,
+    "kCGWindowStoreType" : 1
+  },
+  {
+    "kCGWindowAlpha" : 1,
+    "kCGWindowBounds" : {
+      "Height" : 800,
+      "Width" : 1200,
+      "X" : 296,
+      "Y" : 80
+    },
+    "kCGWindowIsOnscreen" : true,
+    "kCGWindowLayer" : 0,
+    "kCGWindowMemoryUsage" : 2368,
+    "kCGWindowName" : "Polarbear",
+    "kCGWindowNumber" : 697,
+    "kCGWindowOwnerName" : "Polarbear Recent Acceptance",
+    "kCGWindowOwnerPID" : 10212,
+    "kCGWindowSharingState" : 1,
+    "kCGWindowStoreType" : 1
+  }
+]

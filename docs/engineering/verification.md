@@ -1,5 +1,60 @@
 # Engineering Verification
 
+## Native Menu Capture and Idle-Gate Follow-up: 2026-10-28
+
+Evidence: [2026-10-28-follow-up](evidence/2026-10-28-follow-up).
+The previous temporary app and performance archives had been removed. Rebuilt
+the isolated acceptance app from the unchanged `3ff3ac3` source, with the same
+`dev.polarbear.recentacceptance` identifier and no file associations. The build
+passed; executable hash and source identity are retained in `provenance.json`.
+No installed application or product source was changed.
+
+**Native menu screenshot delivery: PASS.** After explicit user authorization,
+`open -a` and System Events opened the actual File > Open Recent menu. Read-only
+CoreGraphics metadata identified only this app's menu windows (layer 101), then
+`screencapture -x -o -l<window-id>` captured them in the same shell operation.
+Capturing the parent menu also includes its attached submenu. The images are
+actual native captures, not reconstructed UI or composites:
+
+- `native-open-recent.png`: File entry next to Open, two same-name generated
+  files distinguished by Chinese/space parent paths, separator and Clear Recent.
+- `native-open-recent-empty.png`: after clearing the isolated history, disabled
+  No Recent Files and Clear Recent entries.
+- `native-main-panel.png`: the actual app window, without a recent-files panel.
+
+Earlier fixed-region attempts were unsuitable and discarded; they are not
+acceptance evidence. Reading accessibility menu state alone had not produced a
+visible system popup. The successful procedure retains menu-window metadata and
+requires no system-setting or permission changes. Only generated temporary files
+and this app's isolated history were used; the acceptance app was quit afterward.
+This closes the screenshot limitation recorded in the previous section below.
+
+**Strict browser performance pair: BLOCKED by external workload.** Recreated
+`64d394a` and `eeea3b4` archives; installed dependency versions matched their lock.
+Preserved the initial strict attempt and every subsequent preflight/partial run.
+A temporary copy of the runner adds a quiet gate after the excluded warmup and
+before the five measured observations. This waits for three consecutive clean
+snapshots; it does not change production code, fixtures, sample count or thresholds.
+Startup bursts remain recorded. Any risky sample after admission still terminates
+only the owned measurement process. This amended protocol is not silently pooled
+with the earlier protocol's observations.
+
+One admitted candidate run was interrupted by an external installed Chrome
+renderer at 21.1% CPU. Later attempts did not reach measurement. The final bounded
+five-minute wait recorded 141 preflight snapshots, with external headless-browser
+CPU up to 146.1%, Java up to 809.5%, and installed Chrome renderer up to 163.4%.
+Process working-directory checks distinguished another task's browser tests in
+the original checkout from this run's temporary archives. No external process was
+stopped, paused or reprioritized. The wait ended without three consecutive clean
+snapshots; no formal before/after pair or new performance PASS is claimed.
+
+The earlier 1 MiB signal remains NOT REPRODUCED by the completed observations,
+while strict quiet-host qualification remains open. No speculative product
+optimization was added. Resume the retained gate/runner on an idle host after
+the other local workloads finish; require complete before/after output and clean
+measurement-phase load traces before updating this status. Windows/Linux desktop
+menu interaction and the broader real-provider acceptance limits are unchanged.
+
 ## Recent Menu and Performance Follow-up: 2026-10-27
 
 Menu source: `3ff3ac3`; starting snapshot: `eeea3b4`. All changes are isolated on
@@ -62,7 +117,8 @@ showed the acceptance window without its expanded menu and with a different
 application's menu bar. That unsuitable image was discarded and is not evidence.
 CUA window Raise and menu actions did not resolve the foreground mismatch; the
 subsequent Dock activation attempt returned `timeoutReached`. Menu screenshot
-delivery remains BLOCKED by desktop activation/capture, not pending permission.
+delivery was BLOCKED at that point by desktop activation/capture, not pending
+permission. The later 2026-10-28 follow-up above resolves this capture limitation.
 No mock menu image is substituted, and no system settings were changed.
 
 For another desktop: create `a/Notes.md` and `中文 文件/Notes.md`, open both, edit one

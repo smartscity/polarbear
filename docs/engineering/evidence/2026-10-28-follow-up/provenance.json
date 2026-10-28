@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "3ff3ac3a1af72fcd5c055ac91935f9890ab8d43f",
+  "bundleIdentifier": "dev.polarbear.recentacceptance",
+  "appExecutableSha256": "97682a4171050cbdf32c0137b8e59bb8462e124ac13b89fc743ad9455d067b0d",
+  "performanceBaseline": "64d394ae9fd05c24bbf599f55bf1aeef3769b2d5",
+  "performanceCandidate": "eeea3b46ef9ed41048c29b1b9d29ab1d113568ea",
+  "runnerSha256": "111c7de9962ac412dfebbe25b2f4fbb5fdeae388326d20bcd5bec890beca8140",
+  "installedDependencyVersionDifferences": 0,
+  "scope": "Isolated reconstructed app; post-warmup idle gate only changes the temporary runner, not frozen production code."
+}

@@ -1,0 +1,4128 @@
+[
+  {
+    "at": "2026-10-28T14:33:34.226024+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 57.6,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 82.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 53.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10540,
+        "ppid": 10488,
+        "cpu": 159.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10540,
+        "ppid": 10488,
+        "cpu": 159.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 82.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 57.6,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 53.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 39.2,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 36.6,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 17.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 10.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 9.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 5.3,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 673,
+        "ppid": 1,
+        "cpu": 5.1,
+        "command": "/System/Library/ExtensionKit/Extensions/VPN.appex/Contents/MacOS/VPN"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:36.424956+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 53.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 33.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10542,
+        "ppid": 10488,
+        "cpu": 123.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10542,
+        "ppid": 10488,
+        "cpu": 123.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 53.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 33.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 30.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 27.0,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 22.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 14.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 14.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10544,
+        "ppid": 1,
+        "cpu": 11.8,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 472,
+        "ppid": 1,
+        "cpu": 11.2,
+        "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 11.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10543,
+        "ppid": 1,
+        "cpu": 10.6,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:38.711921+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 63.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 69.4,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 69.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 26.8,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 86.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 49.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10556,
+        "ppid": 10488,
+        "cpu": 119.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10556,
+        "ppid": 10488,
+        "cpu": 119.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 86.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 69.4,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 69.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 63.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 49.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 48.6,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 26.8,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 23.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 20.5,
+        "command": "node"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 19.8,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:41.181333+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 84.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 574,
+        "ppid": 1,
+        "cpu": 82.3,
+        "command": "/System/Library/CoreServices/NotificationCenter.app/Contents/MacOS/NotificationCenter"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 63.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 25.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10558,
+        "ppid": 10488,
+        "cpu": 113.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10558,
+        "ppid": 10488,
+        "cpu": 113.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 84.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 574,
+        "ppid": 1,
+        "cpu": 82.3,
+        "command": "/System/Library/CoreServices/NotificationCenter.app/Contents/MacOS/NotificationCenter"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 63.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 33.2,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 26.9,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 25.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 17.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 17.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 497,
+        "ppid": 1,
+        "cpu": 15.4,
+        "command": "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 11.2,
+        "command": "node"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 10.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:43.469119+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 58.2,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 91.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 53.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10563,
+        "ppid": 10488,
+        "cpu": 166.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10563,
+        "ppid": 10488,
+        "cpu": 166.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 91.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 58.2,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 53.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 49.5,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 24.8,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 14.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10566,
+        "ppid": 1,
+        "cpu": 11.5,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 11.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 9.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10565,
+        "ppid": 1,
+        "cpu": 9.2,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 5.7,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:45.653381+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 54.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 59.3,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 109.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 68.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10568,
+        "ppid": 10488,
+        "cpu": 163.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10568,
+        "ppid": 10488,
+        "cpu": 163.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 109.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 68.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 59.3,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 54.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 25.6,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 17.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1198,
+        "ppid": 480,
+        "cpu": 14.9,
+        "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 10.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 6.6,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 751,
+        "ppid": 480,
+        "cpu": 6.2,
+        "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper.app/Contents/MacOS/Google Chrome Helper"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:47.900023+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 45.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10572,
+        "ppid": 10488,
+        "cpu": 99.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10572,
+        "ppid": 10488,
+        "cpu": 99.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 45.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 44.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 31.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 21.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 17.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 17.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 15.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 11.0,
+        "command": "node"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 10.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 480,
+        "ppid": 1,
+        "cpu": 6.3,
+        "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      },
+      {
+        "pid": 10571,
+        "ppid": 480,
+        "cpu": 5.8,
+        "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:50.102426+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 28.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 42.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10572,
+        "ppid": 10488,
+        "cpu": 107.5,
+        "command": "(chrome-headless-)"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10572,
+        "ppid": 10488,
+        "cpu": 107.5,
+        "command": "(chrome-headless-)"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 44.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 42.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10578,
+        "ppid": 1,
+        "cpu": 31.6,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 28.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10577,
+        "ppid": 1,
+        "cpu": 19.9,
+        "command": "/System/Library/Frameworks/AddressBook.framework/Versions/A/Helpers/AddressBookManager.app/Contents/MacOS/AddressBookManager"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 18.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1192,
+        "ppid": 1,
+        "cpu": 11.5,
+        "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+      },
+      {
+        "pid": 10575,
+        "ppid": 1,
+        "cpu": 10.6,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 10.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:52.316626+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10581,
+        "ppid": 10488,
+        "cpu": 99.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 60.4,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10581,
+        "ppid": 10488,
+        "cpu": 99.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 60.4,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 20.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 18.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 18.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 14.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 12.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 9.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 480,
+        "ppid": 1,
+        "cpu": 6.8,
+        "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      },
+      {
+        "pid": 10149,
+        "ppid": 1,
+        "cpu": 6.1,
+        "command": "/usr/libexec/trustd"
+      },
+      {
+        "pid": 273,
+        "ppid": 1,
+        "cpu": 4.8,
+        "command": "/usr/libexec/syspolicyd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:54.488017+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 22.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 93.1,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10586,
+        "ppid": 10488,
+        "cpu": 131.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10586,
+        "ppid": 10488,
+        "cpu": 131.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 93.1,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 42.0,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 22.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 14.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 12.5,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 12.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 8.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 7.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 6.9,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.3,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:56.771628+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 31.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 54.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10586,
+        "ppid": 10488,
+        "cpu": 101.5,
+        "command": "(chrome-headless-)"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10586,
+        "ppid": 10488,
+        "cpu": 101.5,
+        "command": "(chrome-headless-)"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 54.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 47.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 31.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 650,
+        "ppid": 1,
+        "cpu": 23.4,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdbulkimport"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 17.8,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 7.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 5.3,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 5.3,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:33:58.941727+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 23.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.7,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10591,
+        "ppid": 10488,
+        "cpu": 117.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10591,
+        "ppid": 10488,
+        "cpu": 117.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.7,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 44.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 23.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 650,
+        "ppid": 1,
+        "cpu": 20.0,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdbulkimport"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 16.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 14.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 12.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 11.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 9.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 6.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10570,
+        "ppid": 1,
+        "cpu": 4.7,
+        "command": "/System/Library/Frameworks/AddressBook.framework/Versions/A/Helpers/AddressBookSourceSync.app/Contents/MacOS/AddressBookSourceSync"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:01.109536+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 52.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 30.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 56.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 94.5,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10591,
+        "ppid": 10488,
+        "cpu": 117.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10591,
+        "ppid": 10488,
+        "cpu": 117.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 94.5,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 56.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 52.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 30.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 20.9,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 18.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 650,
+        "ppid": 1,
+        "cpu": 16.0,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdbulkimport"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 15.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 14.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 12.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10129,
+        "ppid": 1,
+        "cpu": 11.7,
+        "command": "/usr/libexec/trustd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:03.293845+00:00",
+    "risks": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.2,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10596,
+        "ppid": 10488,
+        "cpu": 81.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.2,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10596,
+        "ppid": 10488,
+        "cpu": 81.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 43.1,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10570,
+        "ppid": 1,
+        "cpu": 18.4,
+        "command": "/System/Library/Frameworks/AddressBook.framework/Versions/A/Helpers/AddressBookSourceSync.app/Contents/MacOS/AddressBookSourceSync"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 18.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 650,
+        "ppid": 1,
+        "cpu": 14.9,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdbulkimport"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 13.9,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 12.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 11.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 8.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.9,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:05.668114+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 78.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 117.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 94.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 52.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 90.6,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10601,
+        "ppid": 10488,
+        "cpu": 135.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10601,
+        "ppid": 10488,
+        "cpu": 135.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 117.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 94.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 90.6,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 78.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 52.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 23.0,
+        "command": "node"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 18.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10610,
+        "ppid": 472,
+        "cpu": 17.8,
+        "command": "(git)"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10611,
+        "ppid": 1,
+        "cpu": 14.8,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 10612,
+        "ppid": 1,
+        "cpu": 14.5,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:07.878705+00:00",
+    "risks": [
+      {
+        "pid": 1192,
+        "ppid": 1,
+        "cpu": 69.7,
+        "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 35.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 89.5,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 89.5,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 1192,
+        "ppid": 1,
+        "cpu": 69.7,
+        "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 48.1,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 35.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 35.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 18.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 16.9,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 16.3,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 16.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 10.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 496,
+        "ppid": 1,
+        "cpu": 9.5,
+        "command": "/System/Library/PrivateFrameworks/CoreSuggestions.framework/Versions/A/Support/suggestd"
+      },
+      {
+        "pid": 10129,
+        "ppid": 1,
+        "cpu": 8.5,
+        "command": "/usr/libexec/trustd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:10.073052+00:00",
+    "risks": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10633,
+        "ppid": 10488,
+        "cpu": 55.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 95.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10633,
+        "ppid": 10488,
+        "cpu": 55.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 45.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 16.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 15.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 14.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 9.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 6.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 5.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 4.9,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.2,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 10129,
+        "ppid": 1,
+        "cpu": 3.7,
+        "command": "/usr/libexec/trustd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:12.425823+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 113.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 72.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 73.8,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10637,
+        "ppid": 10488,
+        "cpu": 175.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10637,
+        "ppid": 10488,
+        "cpu": 175.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 113.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 73.8,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 72.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 46.2,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 28.8,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 17.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 11.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 480,
+        "ppid": 1,
+        "cpu": 11.3,
+        "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 9.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1192,
+        "ppid": 1,
+        "cpu": 9.7,
+        "command": "/System/Library/Frameworks/Contacts.framework/Support/contactsd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:14.845666+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.5,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 86.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 51.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 82.0,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10642,
+        "ppid": 10488,
+        "cpu": 156.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10642,
+        "ppid": 10488,
+        "cpu": 156.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 86.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 82.0,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.5,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 51.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 43.2,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 22.0,
+        "command": "node"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 9.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 8.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 8.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 5.5,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:17.128681+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 42.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 43.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 94.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 94.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 45.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 43.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 42.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 37.2,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 16.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 14.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10645,
+        "ppid": 10488,
+        "cpu": 13.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 506,
+        "ppid": 1,
+        "cpu": 11.7,
+        "command": "/System/Library/Frameworks/ApplicationServices.framework/Frameworks/ATS.framework/Support/fontd"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 10.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 472,
+        "ppid": 1,
+        "cpu": 6.2,
+        "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.8,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:19.296209+00:00",
+    "risks": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 98.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 10645,
+        "ppid": 10488,
+        "cpu": 36.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10583,
+        "ppid": 773,
+        "cpu": 98.9,
+        "command": "/usr/local/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/Resources/Python.app/Contents/MacOS/Python"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 38.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10645,
+        "ppid": 10488,
+        "cpu": 36.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 10.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 9.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 7.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 6.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 5.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.2,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 2.2,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 673,
+        "ppid": 1,
+        "cpu": 1.8,
+        "command": "/System/Library/ExtensionKit/Extensions/VPN.appex/Contents/MacOS/VPN"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:21.476687+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 44.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10649,
+        "ppid": 10488,
+        "cpu": 133.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10649,
+        "ppid": 10488,
+        "cpu": 133.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 44.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 41.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 30.3,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 19.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 12.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 9.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 8.1,
+        "command": "node"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 6.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.6,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 480,
+        "ppid": 1,
+        "cpu": 4.0,
+        "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 1.4,
+        "command": "/usr/libexec/replayd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:23.747479+00:00",
+    "risks": [
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 56.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 101.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 59.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10652,
+        "ppid": 10488,
+        "cpu": 173.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10652,
+        "ppid": 10488,
+        "cpu": 173.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 101.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 59.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 56.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 47.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 23.7,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 18.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 10.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 5.1,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 4.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 2.1,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:26.063303+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 53.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 1198,
+        "ppid": 480,
+        "cpu": 93.0,
+        "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 31.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 22.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10656,
+        "ppid": 10488,
+        "cpu": 31.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 1198,
+        "ppid": 480,
+        "cpu": 93.0,
+        "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 53.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 31.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10656,
+        "ppid": 10488,
+        "cpu": 31.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 29.4,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 23.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 22.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 15.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 14.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10439,
+        "ppid": 773,
+        "cpu": 11.7,
+        "command": "npm exec playwright test --config /private/tmp/polarbear-fullscreen-playwright.config.mjs"
+      },
+      {
+        "pid": 10655,
+        "ppid": 480,
+        "cpu": 11.2,
+        "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/156.0.8078.48/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)"
+      },
+      {
+        "pid": 506,
+        "ppid": 1,
+        "cpu": 6.8,
+        "command": "/System/Library/Frameworks/ApplicationServices.framework/Frameworks/ATS.framework/Support/fontd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:28.330911+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 26.3,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 21.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 34.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10656,
+        "ppid": 10488,
+        "cpu": 77.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10656,
+        "ppid": 10488,
+        "cpu": 77.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 56.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 47.5,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 44.8,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 34.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 211,
+        "ppid": 1,
+        "cpu": 32.5,
+        "command": "/System/Library/PrivateFrameworks/TCC.framework/Support/tccd"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 26.3,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 10461,
+        "ppid": 10456,
+        "cpu": 25.9,
+        "command": "npm exec vite --host 127.0.0.1 --port 1437 --strictPort"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 21.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 16.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 12.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 12.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:30.512603+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 72.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 574,
+        "ppid": 1,
+        "cpu": 84.3,
+        "command": "/System/Library/CoreServices/NotificationCenter.app/Contents/MacOS/NotificationCenter"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 59.7,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 97.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 52.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10662,
+        "ppid": 10488,
+        "cpu": 162.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10662,
+        "ppid": 10488,
+        "cpu": 162.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 97.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 574,
+        "ppid": 1,
+        "cpu": 84.3,
+        "command": "/System/Library/CoreServices/NotificationCenter.app/Contents/MacOS/NotificationCenter"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 72.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 59.7,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 52.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1,
+        "ppid": 0,
+        "cpu": 36.2,
+        "command": "/sbin/launchd"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 28.5,
+        "command": "node"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 15.8,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 563,
+        "ppid": 1,
+        "cpu": 15.4,
+        "command": "/usr/libexec/duetexpertd"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:32.848811+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 51.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 90.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 53.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10665,
+        "ppid": 10488,
+        "cpu": 155.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10665,
+        "ppid": 10488,
+        "cpu": 155.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 90.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 53.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 51.7,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 48.3,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 24.0,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 18.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 563,
+        "ppid": 1,
+        "cpu": 12.6,
+        "command": "/usr/libexec/duetexpertd"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 11.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 7.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 5.0,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:35.045435+00:00",
+    "risks": [
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 32.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 32.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10665,
+        "ppid": 10488,
+        "cpu": 90.4,
+        "command": "(chrome-headless-)"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10665,
+        "ppid": 10488,
+        "cpu": 90.4,
+        "command": "(chrome-headless-)"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 38.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 35.0,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 32.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 32.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 563,
+        "ppid": 1,
+        "cpu": 25.3,
+        "command": "/usr/libexec/duetexpertd"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 16.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 13.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 11.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 9.7,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 4.3,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 472,
+        "ppid": 1,
+        "cpu": 2.5,
+        "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:37.276470+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 69.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10669,
+        "ppid": 10488,
+        "cpu": 111.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10669,
+        "ppid": 10488,
+        "cpu": 111.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 69.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 37.9,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 37.8,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 563,
+        "ppid": 1,
+        "cpu": 25.5,
+        "command": "/usr/libexec/duetexpertd"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 20.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 211,
+        "ppid": 1,
+        "cpu": 20.2,
+        "command": "/System/Library/PrivateFrameworks/TCC.framework/Support/tccd"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 16.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 15.8,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 15.6,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 14.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:39.446226+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 54.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 54.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 24.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10674,
+        "ppid": 10488,
+        "cpu": 140.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10674,
+        "ppid": 10488,
+        "cpu": 140.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 54.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 54.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 30.8,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 24.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 563,
+        "ppid": 1,
+        "cpu": 18.3,
+        "command": "/usr/libexec/duetexpertd"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 16.3,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 11.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 11.1,
+        "command": "node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 8.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 7.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 5.7,
+        "command": "/usr/libexec/replayd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:41.630179+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 61.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 64.5,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 112.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 69.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10677,
+        "ppid": 10488,
+        "cpu": 171.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10677,
+        "ppid": 10488,
+        "cpu": 171.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 112.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 69.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 64.5,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 61.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 27.1,
+        "command": "node"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 19.0,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 10.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.4,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 3.3,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 2.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:43.873931+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 64.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 55.6,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 100.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 48.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10677,
+        "ppid": 10488,
+        "cpu": 137.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10677,
+        "ppid": 10488,
+        "cpu": 137.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 100.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 64.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 55.6,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 48.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 17.0,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 14.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 11.4,
+        "command": "node"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 9.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 8.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 3.5,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:46.074281+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 53.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 61.1,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 29.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10683,
+        "ppid": 10488,
+        "cpu": 122.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10683,
+        "ppid": 10488,
+        "cpu": 122.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 61.1,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 53.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 29.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 20.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 18.4,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 11.2,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 11.2,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 211,
+        "ppid": 1,
+        "cpu": 10.0,
+        "command": "/System/Library/PrivateFrameworks/TCC.framework/Support/tccd"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 9.3,
+        "command": "/usr/libexec/replayd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:48.227583+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 51.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      }
+    ],
+    "top": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 51.3,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 23.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 20.7,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 16.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 14.5,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 7.7,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 472,
+        "ppid": 1,
+        "cpu": 5.4,
+        "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 3.2,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 673,
+        "ppid": 1,
+        "cpu": 1.5,
+        "command": "/System/Library/ExtensionKit/Extensions/VPN.appex/Contents/MacOS/VPN"
+      },
+      {
+        "pid": 497,
+        "ppid": 1,
+        "cpu": 0.8,
+        "command": "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter"
+      },
+      {
+        "pid": 167,
+        "ppid": 1,
+        "cpu": 0.7,
+        "command": "/usr/sbin/bluetoothd"
+      },
+      {
+        "pid": 983,
+        "ppid": 472,
+        "cpu": 0.6,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:50.405631+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 54.5,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 31.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 58.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 58.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 54.5,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 31.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 25.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 19.2,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 16.7,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 13.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 12.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 4.0,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 3.4,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 472,
+        "ppid": 1,
+        "cpu": 3.2,
+        "command": "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+      },
+      {
+        "pid": 167,
+        "ppid": 1,
+        "cpu": 2.4,
+        "command": "/usr/sbin/bluetoothd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:52.613654+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 58.2,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10688,
+        "ppid": 10488,
+        "cpu": 55.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 58.2,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10688,
+        "ppid": 10488,
+        "cpu": 55.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 13.5,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 9.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 9.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 8.4,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10149,
+        "ppid": 1,
+        "cpu": 7.6,
+        "command": "/usr/libexec/trustd"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 7.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 7.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 6.9,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 273,
+        "ppid": 1,
+        "cpu": 6.1,
+        "command": "/usr/libexec/syspolicyd"
+      },
+      {
+        "pid": 211,
+        "ppid": 1,
+        "cpu": 4.3,
+        "command": "/System/Library/PrivateFrameworks/TCC.framework/Support/tccd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:54.899574+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 71.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 83.6,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 95.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 63.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10692,
+        "ppid": 10488,
+        "cpu": 167.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10692,
+        "ppid": 10488,
+        "cpu": 167.8,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 95.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 83.6,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 71.8,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 63.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10482,
+        "ppid": 10461,
+        "cpu": 25.8,
+        "command": "node"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 18.2,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 15.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 14.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 9.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 5.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 3.4,
+        "command": "/usr/libexec/replayd"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:57.386152+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 69.0,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 61.1,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 44.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10695,
+        "ppid": 10488,
+        "cpu": 99.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10695,
+        "ppid": 10488,
+        "cpu": 99.4,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 69.0,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 61.1,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 44.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 38.2,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 211,
+        "ppid": 1,
+        "cpu": 35.5,
+        "command": "/System/Library/PrivateFrameworks/TCC.framework/Support/tccd"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 26.7,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 17.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 15.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 14.6,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 12.5,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 12.1,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:34:59.557598+00:00",
+    "risks": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 60.0,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 28.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 36.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10695,
+        "ppid": 10488,
+        "cpu": 80.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10695,
+        "ppid": 10488,
+        "cpu": 80.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 60.0,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 45.9,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 36.1,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 28.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 16.1,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 12.2,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 9.3,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.0,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 5.0,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 497,
+        "ppid": 1,
+        "cpu": 4.8,
+        "command": "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter"
+      },
+      {
+        "pid": 10133,
+        "ppid": 1,
+        "cpu": 4.6,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:35:01.744794+00:00",
+    "risks": [
+      {
+        "pid": 10699,
+        "ppid": 10488,
+        "cpu": 81.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      }
+    ],
+    "top": [
+      {
+        "pid": 10699,
+        "ppid": 10488,
+        "cpu": 81.5,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 46.9,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 10488,
+        "ppid": 10485,
+        "cpu": 18.0,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 17.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10485,
+        "ppid": 10456,
+        "cpu": 14.1,
+        "command": "/Users/liyunlong/.nvm/versions/node/v26.1.0/bin/node"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 13.8,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 12.5,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 10489,
+        "ppid": 10488,
+        "cpu": 9.3,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 8.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 8.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10490,
+        "ppid": 10488,
+        "cpu": 5.7,
+        "command": "/Users/liyunlong/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-x64/chrome-headless-shell"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 2.6,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      }
+    ]
+  },
+  {
+    "at": "2026-10-28T14:35:03.893115+00:00",
+    "risks": [],
+    "top": [
+      {
+        "pid": 210,
+        "ppid": 1,
+        "cpu": 45.4,
+        "command": "/System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer"
+      },
+      {
+        "pid": 1284,
+        "ppid": 472,
+        "cpu": 13.5,
+        "command": "/Users/liyunlong/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+      },
+      {
+        "pid": 770,
+        "ppid": 472,
+        "cpu": 12.9,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 696,
+        "ppid": 472,
+        "cpu": 7.8,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+      },
+      {
+        "pid": 880,
+        "ppid": 472,
+        "cpu": 7.5,
+        "command": "/Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/156.0.8078.48/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)"
+      },
+      {
+        "pid": 10611,
+        "ppid": 1,
+        "cpu": 3.3,
+        "command": "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Support/mdworker_shared"
+      },
+      {
+        "pid": 10135,
+        "ppid": 1,
+        "cpu": 2.4,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent"
+      },
+      {
+        "pid": 550,
+        "ppid": 1,
+        "cpu": 2.3,
+        "command": "/usr/libexec/replayd"
+      },
+      {
+        "pid": 10124,
+        "ppid": 1,
+        "cpu": 1.4,
+        "command": "/Users/liyunlong/Documents/Smartscity/target/release/bundle/macos/Polarbear UI Acceptance.app/Contents/MacOS/polarbear-desktop"
+      },
+      {
+        "pid": 773,
+        "ppid": 472,
+        "cpu": 1.2,
+        "command": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
+      },
+      {
+        "pid": 10129,
+        "ppid": 1,
+        "cpu": 1.2,
+        "command": "/usr/libexec/trustd"
+      },
+      {
+        "pid": 10133,
+        "ppid": 1,
+        "cpu": 1.2,
+        "command": "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU"
+      }
+    ]
+  }
+]
