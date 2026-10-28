@@ -16,13 +16,21 @@ impl FullscreenTransition {
 }
 
 #[cfg(any(target_os = "macos", test))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FocusTarget {
+    Host,
+    WebView,
+    Other,
+}
+
+#[cfg(any(target_os = "macos", test))]
 fn should_restore(
     key_window: bool,
-    host_has_focus: bool,
+    focus: FocusTarget,
     sheet_open: bool,
     fullscreen: bool,
 ) -> bool {
-    key_window && host_has_focus && !sheet_open && !fullscreen
+    key_window && focus != FocusTarget::Other && !sheet_open && !fullscreen
 }
 
 #[cfg(target_os = "macos")]
@@ -76,13 +84,26 @@ pub fn install(app: &tauri::App) -> tauri::Result<()> {
                             std::ptr::eq::<NSResponder>(responder.as_ref(), host.as_ref())
                         })
                 });
+                let focus = if host_has_focus {
+                    FocusTarget::Host
+                } else if responder.as_ref().is_some_and(|responder| {
+                    responder.downcast_ref::<NSView>().is_some_and(|responder| {
+                        std::ptr::eq(responder, view.as_ref()) || responder.isDescendantOf(&view)
+                    })
+                }) {
+                    FocusTarget::WebView
+                } else {
+                    FocusTarget::Other
+                };
                 if should_restore(
                     window.isKeyWindow(),
-                    host_has_focus,
+                    focus,
                     window.attachedSheet().is_some(),
                     window.styleMask().contains(NSWindowStyleMask::FullScreen),
                 ) {
-                    window.makeFirstResponder(Some(&view));
+                    if focus == FocusTarget::Host {
+                        window.makeFirstResponder(Some(&view));
+                    }
                     // WebKit may reset its DOM range while CodeMirror retains
                     // the correct selection. Let the focused editor reconcile it.
                     let event = crate::ipc_contracts::NATIVE_FULLSCREEN_RESTORED_EVENT;
@@ -131,10 +152,18 @@ mod tests {
 
     #[test]
     fn does_not_steal_focus_from_another_window_control_or_sheet() {
-        assert!(should_restore(true, true, false, false));
-        assert!(!should_restore(false, true, false, false));
-        assert!(!should_restore(true, false, false, false));
-        assert!(!should_restore(true, true, true, false));
-        assert!(!should_restore(true, true, false, true));
+        assert!(should_restore(true, FocusTarget::Host, false, false));
+        assert!(!should_restore(false, FocusTarget::Host, false, false));
+        assert!(!should_restore(true, FocusTarget::Other, false, false));
+        assert!(!should_restore(true, FocusTarget::Host, true, false));
+        assert!(!should_restore(true, FocusTarget::Host, false, true));
+    }
+
+    #[test]
+    fn reconciles_selection_even_when_webkit_already_owns_native_focus() {
+        assert!(should_restore(true, FocusTarget::WebView, false, false));
+        assert!(!should_restore(false, FocusTarget::WebView, false, false));
+        assert!(!should_restore(true, FocusTarget::WebView, true, false));
+        assert!(!should_restore(true, FocusTarget::WebView, false, true));
     }
 }

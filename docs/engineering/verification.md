@@ -1,5 +1,17 @@
 # Engineering Verification
 
+## Packaged Fullscreen Regression: 2026-10-28
+
+All three hosted workflows passed on `1185b42`, including the universal DMG
+build. Actual execution of that hash-verified artifact nevertheless reproduced
+immediate typing at the document start after exiting fullscreen. A debug bundle
+and a green hosted test suite are not substitutes for packaged interaction
+acceptance. The [packaged follow-up](native-ui-acceptance-2026-10-27.md#packaged-follow-up-2026-10-28)
+records the failure, the new native policy regression, and a separately reproduced
+React debug-panel ownership crash. Follow-up release-mode acceptance remains
+pending until recorded there; the historical results below are not certification
+of the new correction.
+
 ## Native Fullscreen Input Recovery: 2026-10-27
 
 Baseline: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5`; its Quality and iPhone

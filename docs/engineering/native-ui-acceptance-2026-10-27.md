@@ -1,5 +1,51 @@
 # Native Workspace UI Acceptance
 
+## Packaged Follow-up (2026-10-28)
+
+Commit `1185b42f7e1abc04fbf9484e88987689f9dfbd2b` passed Quality
+(`40459987769`), iPhone Reader Quality (`40459987858`) and Release Polarbear
+(`40459987821`). The main-branch validation artifact is version 0.1.0, not a
+new release tag. Artifact `12715585573` was downloaded and its ZIP SHA-256
+verified as `dafdb162509b23a332dfe024f8253d877e579f55d1be56a5218a3bb0ec9a6540`.
+The read-only mounted DMG contains a universal x86_64/arm64 app. Its copied
+executable was verified before launch; the original installation was untouched.
+It is unsigned, so signing/notarization acceptance remains unavailable.
+
+**FAIL:** in this exact packaged app, immediate input after fullscreen exit
+inserted at the document start instead of replacing the selected final line.
+A later, slower attempt with diagnostics enabled succeeded. The earlier debug
+bundle observations below therefore do not certify the packaged behavior.
+
+Two test-first follow-ups address observed gaps:
+
+- Native recovery excluded a responder already inside WKWebView, although its
+  DOM selection can still need reconciliation. A new policy test failed before
+  allowing that target. Host focus is reassigned; WebView focus is only notified.
+  Other native controls, sheets, fullscreen windows and non-key windows remain
+  excluded. This policy test alone is not native interaction acceptance.
+- Turning diagnostics off crashed the packaged app with a DOM not-found error.
+  A new WebKit case reproduced editor unmount. Imperative overlay cleanup was
+  deleting the React-owned inline panel before React could reconcile it. Cleanup
+  now removes only imperatively owned overlays. The shared browser native fixture
+  also implements the previously missing event-unregistration stub, without
+  suppressing page errors. All four focused WebKit cases then passed.
+
+The follow-up was built with optimized Rust release settings and production Vite
+assets as `dev.polarbear.uiacceptance`, without replacing the installed app. Its
+running executable was verified under `target/release/bundle/macos`. With Debug
+off, three consecutive native Control-Command-F enter/exit cycles immediately
+replaced the selected final line with `Release recovery cycle one.`, `two.`, and
+`three.`. Undo restored `two.`, Redo restored `three.`. A fourth cycle kept
+`Architecture` input in Find without changing the document. Source mode also
+passed immediate final-line replacement and Undo. Turning Debug on/off no longer
+unmounted the editor. The temporary fixture was restored and saved at 1785
+characters. This is local release-mode evidence, not final CI artifact evidence.
+
+Local checks passed: typecheck, ESLint, 365 Vitest cases, 40 Node cases, strict
+Clippy, Rust format, 138 Rust cases (4 existing ignored), 18 targeted WebKit
+cases, and all 142 Chromium cases (5.9 minutes) on the isolated port. Final hosted checks and final-artifact repetition
+must be recorded separately before acceptance.
+
 ## Native Focus Recovery Follow-up
 
 Baseline: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5`. Its Quality

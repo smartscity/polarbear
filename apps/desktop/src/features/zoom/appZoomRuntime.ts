@@ -122,8 +122,9 @@ async function copyDebugText(text: string): Promise<void> {
 export function removePolarbearDebugOverlays(): void {
   document.getElementById("polarbear-app-zoom-debug-overlay")?.remove();
   document.getElementById("polarbear-live-debug-overlay")?.remove();
+  // React owns the inline debug panel and removes it during reconciliation.
   document
-    .querySelectorAll("[data-polarbear-debug-overlay='true'], .typora-live-debug-panel")
+    .querySelectorAll("[data-polarbear-debug-overlay='true']")
     .forEach((element) => element.remove());
 }
 

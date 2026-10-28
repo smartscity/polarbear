@@ -5,7 +5,9 @@ export async function nativeFixture(page: Page) {
     let captionState = "stopped";
     let captionSource = "system";
     const calls: { command: string; args: Record<string, any> }[] = [];
-    Object.assign(window, { __navigationCalls: calls, __TAURI_INTERNALS__: {
+    Object.assign(window, { __navigationCalls: calls,
+      __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener: () => undefined },
+      __TAURI_INTERNALS__: {
       transformCallback: () => 1,
       metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
       invoke: async (command: string, args: Record<string, any> = {}) => {

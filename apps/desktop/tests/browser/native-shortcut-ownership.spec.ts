@@ -60,3 +60,26 @@ test("does not redirect native fullscreen recovery from Find to the editor", asy
   await expect(search).toHaveValue("Keep");
   await expect(editor).toHaveText("Keep this draft.");
 });
+
+test("keeps rich content mounted when disabling diagnostics after selection recovery", async ({ page }) => {
+  await nativeFixture(page);
+  await page.goto("/");
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click();
+  await page.keyboard.insertText("# Heading\n\n| A | B |\n| --- | --- |\n| One | Two |\n\nFinal sentinel.");
+  await page.keyboard.press("Shift+ArrowLeft");
+  const selection = await page.evaluate(() => window.getSelection()?.toString());
+  await page.evaluate(() => window.dispatchEvent(new Event("polarbear-native-fullscreen-restored")));
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(selection);
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await page.getByRole("button", { name: "Debug", exact: true }).click();
+    await expect(page.locator(".typora-live-debug-panel")).toBeVisible();
+    await page.getByRole("button", { name: "Debug", exact: true }).click();
+    await expect(page.locator(".typora-live-debug-panel")).toHaveCount(0);
+    await expect(page.locator("[data-polarbear-debug-overlay='true']")).toHaveCount(0);
+    await expect(editor).toContainText("Final sentinel.");
+  }
+  expect(errors).toEqual([]);
+});
