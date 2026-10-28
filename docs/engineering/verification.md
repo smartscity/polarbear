@@ -502,6 +502,47 @@ the proposed required contexts. No credentials should be posted in chat. No remo
 test branch/data was created, so no remote cleanup is claimed. The test repository
 must be retained once created. Merge, tag, release and repository-rule mutation
 were not performed.
+## Packaged Fullscreen Regression: 2026-10-28
+
+All three hosted workflows passed on `1185b42`, including the universal DMG
+build. Actual execution of that hash-verified artifact nevertheless reproduced
+immediate typing at the document start after exiting fullscreen. A debug bundle
+and a green hosted test suite are not substitutes for packaged interaction
+acceptance. The [packaged follow-up](native-ui-acceptance-2026-10-27.md#packaged-follow-up-2026-10-28)
+records the failure, the new native policy regression, and a separately reproduced
+React debug-panel ownership crash. Follow-up release-mode acceptance remains
+pending until recorded there; the historical results below are not certification
+of the new correction.
+
+## Native Fullscreen Input Recovery: 2026-10-27
+
+Baseline: `64d394ae9fd05c24bbf599f55bf1aeef3769b2d5`; its Quality and iPhone
+Reader Quality runs passed. The [native focus follow-up](native-ui-acceptance-2026-10-27.md#native-focus-recovery-follow-up)
+records a separate responder defect after the shortcut ownership correction.
+Tao's asynchronous macOS style restoration focuses the outer host view, not the
+WebView. The macOS window adapter queues guarded responder restoration, then the
+active editor projects its existing selection back into WebKit's DOM. This fixes
+the separate stale-DOM-range failure without changing document state or history.
+
+Transition tests failed before implementation. Native testing also rejected an
+initial synchronous attempt and responder-only approaches. A new browser
+regression failed before selection reconciliation and passed afterward on an
+isolated current-source server. Native interactions remain a separate gate.
+The rebuilt native app passed three actual enter/exit cycles with immediate
+final-line replacement, Undo/Redo and a separate Find-focus check. The linked
+report records the discarded intermediate attempts and startup timeouts rather
+than counting them as successful validation. Exact-source local and installer
+results are maintained there.
+
+Final local checks passed: typecheck, ESLint, 365 Vitest and 40 Node cases,
+137 Rust tests (4 existing ignored cases), strict Clippy, Rust format,
+17 targeted WebKit cases and all 141 Chromium cases. The final WebKit run was
+serial; earlier startup timeouts during compilation remain documented.
+
+The official v0.10.11 artifact download subsequently completed with its expected
+SHA-256. Its universal DMG mounted and the copied app launched, but it is unsigned
+and predates the fixes. Remaining interactions timed out in native automation;
+that is not a confirmed application deadlock or completed release acceptance.
 
 ## Native Fullscreen Shortcut Follow-up: 2026-10-27
 

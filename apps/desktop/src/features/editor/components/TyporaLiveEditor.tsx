@@ -13,6 +13,7 @@ import { useCodeFenceLanguageHover } from "../hooks/useCodeFenceLanguageHover";
 import { createRichMarkdownCopyExtension } from "../richMarkdownClipboard";
 import { createMermaidPasteExtension } from "../mermaidPasteExtension";
 import { liveDocumentSelection } from "../liveDocumentSelection";
+import { nativeFullscreenFocus } from "../nativeFullscreenFocus";
 import { createImagePasteExtension, type ImagePasteHandler } from "../imagePasteExtension";
 import { createLinkClickExtension, preserveLargeEnterScrollJumpExtension, trimSingleLineBreakSelectionExtension } from "../codeMirrorInteractionExtensions";
 import { tableLayoutExtension } from "../table/tableLayoutState";
@@ -113,6 +114,7 @@ export function TyporaLiveEditor({
       createRichMarkdownCopyExtension(onClipboardStatus),
       createMermaidPasteExtension(onClipboardStatus),
       liveDocumentSelection,
+      nativeFullscreenFocus,
       trimSingleLineBreakSelectionExtension,
       preserveLargeEnterScrollJumpExtension,
       markdownLanguage(),

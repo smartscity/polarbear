@@ -25,3 +25,61 @@ test("leaves Control-Command-F to the native window without searching or changin
   await page.keyboard.press("ControlOrMeta+f");
   await expect(page.locator(".cm-search")).toBeVisible();
 });
+
+test("resynchronizes the editor selection after native fullscreen focus restoration", async ({ page }) => {
+  await nativeFixture(page);
+  await page.goto("/");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click();
+  await page.keyboard.insertText("First line\nLast word");
+  await page.keyboard.press("Shift+ArrowLeft");
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe("d");
+  await editor.evaluate((node) => {
+    // AppKit can restore the native responder without restoring WebKit's range.
+    window.getSelection()?.collapse(node.firstChild!, 0);
+    window.dispatchEvent(new Event("polarbear-native-fullscreen-restored"));
+  });
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe("d");
+  await page.keyboard.insertText("D");
+  await expect(editor).toContainText("Last worD");
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(editor).toContainText("Last word");
+});
+
+test("does not redirect native fullscreen recovery from Find to the editor", async ({ page }) => {
+  await nativeFixture(page);
+  await page.goto("/");
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click();
+  await page.keyboard.insertText("Keep this draft.");
+  await page.keyboard.press("ControlOrMeta+f");
+  const search = page.locator(".cm-search input[name=search]");
+  await search.fill("Keep");
+  await page.evaluate(() => window.dispatchEvent(new Event("polarbear-native-fullscreen-restored")));
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("Keep");
+  await expect(editor).toHaveText("Keep this draft.");
+});
+
+test("keeps rich content mounted when disabling diagnostics after selection recovery", async ({ page }) => {
+  await nativeFixture(page);
+  await page.goto("/");
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const editor = page.locator(".editor-workspace .cm-content").first();
+  await editor.click();
+  await page.keyboard.insertText("# Heading\n\n| A | B |\n| --- | --- |\n| One | Two |\n\nFinal sentinel.");
+  await page.keyboard.press("Shift+ArrowLeft");
+  const selection = await page.evaluate(() => window.getSelection()?.toString());
+  await page.evaluate(() => window.dispatchEvent(new Event("polarbear-native-fullscreen-restored")));
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(selection);
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await page.getByRole("button", { name: "Debug", exact: true }).click();
+    await expect(page.locator(".typora-live-debug-panel")).toBeVisible();
+    await page.getByRole("button", { name: "Debug", exact: true }).click();
+    await expect(page.locator(".typora-live-debug-panel")).toHaveCount(0);
+    await expect(page.locator("[data-polarbear-debug-overlay='true']")).toHaveCount(0);
+    await expect(editor).toContainText("Final sentinel.");
+  }
+  expect(errors).toEqual([]);
+});
