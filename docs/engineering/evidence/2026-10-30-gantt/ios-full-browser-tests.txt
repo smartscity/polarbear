@@ -1,0 +1,31 @@
+
+> polarbear-ios@0.1.0 test:ui
+> playwright test
+
+[WebServer] (node:98834) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 4 workers
+
+(node:98839) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:98838) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:98837) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:98840) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   4 tests/browser/open-in.spec.ts:3:1 › opens cold and warm native deliveries directly and recovers after an import error (1.7s)
+  ✓   2 tests/browser/reading-tools.spec.ts:58:1 › translates a selection in place, stops speech and persists an honest pending capture (2.3s)
+  ✓   3 tests/browser/gantt.spec.ts:22:1 › the mobile reader renders and reopens the original Gantt without changing source (3.3s)
+  ✓   1 tests/browser/reader.spec.ts:33:1 › imports, reads, restores progress, switches language and never requests remote images (3.1s)
+  ✓   6 tests/browser/reader.spec.ts:66:1 › handles import failure without losing an existing collection (971ms)
+  ✓   5 tests/browser/reading-tools.spec.ts:84:1 › supports manual lookup, discards stale translations and localizes the reading panel (3.2s)
+  ✓   7 tests/browser/reader.spec.ts:78:1 › keeps wide tables inside the reading area at narrow widths and large text (1.8s)
+  ✓   8 tests/browser/reading-tools.spec.ts:105:1 › requires a word for sentence captures and offers source opt-out (1.1s)
+  ✓   9 tests/browser/reader.spec.ts:91:1 › imports local images and linked documents as an offline collection (1.1s)
+  ✓  10 tests/browser/reader.spec.ts:117:1 › keeps PlantUML source readable and does not render remotely (1.1s)
+  ✓  11 tests/browser/reader.spec.ts:129:37 › flushes a mid-document position before debounce with a visible container (913ms)
+  ✓  12 tests/browser/reader.spec.ts:129:37 › flushes a mid-document position before debounce with a hidden container (881ms)
+
+  12 passed (15.5s)

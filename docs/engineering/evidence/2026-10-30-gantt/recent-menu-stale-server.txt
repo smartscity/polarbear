@@ -1,0 +1,55 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test recent-menu.spec.ts --output /tmp/polarbear-gantt-recent-rerun
+
+
+Running 4 tests using 1 worker
+
+(node:94145) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/recent-menu.spec.ts:12:1 › moves the history into File, restores it, distinguishes names and preserves an already open draft (2.4s)
+  ✓  2 tests/browser/recent-menu.spec.ts:35:1 › retains unavailable entries and draft contents, then clears only persisted history (2.2s)
+  ✓  3 tests/browser/recent-menu.spec.ts:57:1 › updates translated menus and successful Save As paths while preserving File commands (1.6s)
+  ✘  4 tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount (1.7s)
+
+
+  1) tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 4
+    Received:    0
+
+      129 |   });
+      130 |   expect(balance.calls).toBe(0);
+    > 131 |   expect(balance.added.length).toBeGreaterThanOrEqual(4);
+          |                                ^
+      132 |   expect(balance.removed.sort()).toEqual(balance.added.sort());
+      133 | });
+      134 |
+        at /Users/liyunlong/Documents/Smartscity/apps/desktop/tests/browser/recent-menu.spec.ts:131:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../tmp/polarbear-gantt-recent-rerun/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../tmp/polarbear-gantt-recent-rerun/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../tmp/polarbear-gantt-recent-rerun/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../tmp/polarbear-gantt-recent-rerun/recent-menu-admits-one-ope-379c4-ry-subscriptions-on-remount/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount
+  3 passed (9.6s)
+npm error Lifecycle script `test:ui` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/Documents/Smartscity/apps/desktop
+npm error workspace polarbear-desktop@0.1.0
+npm error location /Users/liyunlong/Documents/Smartscity/apps/desktop
+npm error command failed
+npm error command sh -c playwright test recent-menu.spec.ts --output /tmp/polarbear-gantt-recent-rerun

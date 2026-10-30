@@ -13,6 +13,7 @@ and checks without a recorded acceptance pass.
 | [Architecture](../ARCHITECTURE.md) | Desktop/mobile ownership, native boundaries and current gaps |
 | [Desktop vocabulary and reading](planning/desktop-vocab-reading.md) | Bundled offline Desktop translation, local Vocab protocol, favorites and verification |
 | [Rich document copy](planning/desktop-rich-document-copy.md) | Readable copy, explicit Markdown source, native table/images and receiver acceptance |
+| [Mermaid Gantt rendering](engineering/mermaid-gantt-rendering.md) | Gantt compatibility boundary, root cause, source integrity, error lifecycle and regression evidence |
 | [iPhone reader](../apps/ios/README.md) | Development commands, immutable imports, reading capabilities and device limits |
 | [iPhone reading assistant](planning/iphone-reading-assistant.md) | Separate Apple translation/speech, system dictionary and explicit capture-file transfer |
 | [Bundled model notices](../apps/desktop/public/models/en-zh/README.md) | Model/engine provenance, integrity and third-party licenses |

@@ -1,5 +1,6 @@
 export const mermaidDiagramConfig = {
   startOnLoad: false,
+  suppressErrorRendering: true,
   securityLevel: "strict",
   theme: "base",
   themeVariables: {

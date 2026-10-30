@@ -1298,6 +1298,11 @@ button:disabled {
   height: auto;
 }
 
+.mermaid-render-target > .mermaid-svg {
+  width: 100%;
+  min-width: 0;
+}
+
 .mermaid-loading,
 .mermaid-error {
   color: #334155;

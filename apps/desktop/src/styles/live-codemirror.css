@@ -22,6 +22,11 @@ body,
   min-height: 0;
 }
 
+.editor-workspace > .preview-pane {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .typora-live-editor-pane {
   flex: 1 1 auto;
   min-width: 0;

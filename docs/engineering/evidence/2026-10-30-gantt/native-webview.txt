@@ -1,0 +1,5 @@
+
+> polarbear-desktop@0.1.0 test:native-gantt
+> node scripts/test-gantt-webview.mjs
+
+PASS: 6 production-renderer cases in macOS WKWebView under tauri://localhost; original source unchanged; no unhandled errors or leaked SVG containers

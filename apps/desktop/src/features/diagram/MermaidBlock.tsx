@@ -8,6 +8,7 @@ import {
   copySvgElementAsPng,
 } from "./diagramExport";
 import { renderMermaidSvg } from "./mermaidRenderer";
+import { describeMermaidRenderError } from "./mermaidRenderError";
 import { DiagramBusyError } from "./diagramRenderQueue";
 import { errorMessage } from "../../shared/tauri/invokeTauri";
 
@@ -20,25 +21,12 @@ export type MermaidBlockProps = {
 
 export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
   const { t } = useI18n();
-  const renderVersionRef = useRef(0);
-  const renderingRef = useRef(false);
   const renderTargetRef = useRef<HTMLDivElement | null>(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
+  const [retryVersion, setRetryVersion] = useState(0);
   const [svgContent, setSvgContent] = useState("");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState("");
-
-  useEffect(() => {
-    renderVersionRef.current += 1;
-    renderingRef.current = false;
-    setSvgContent("");
-    setRenderError(null);
-    setActionStatus("");
-  }, [diagramId, source]);
-
-  useEffect(() => () => {
-    renderVersionRef.current += 1;
-  }, []);
 
   useEffect(() => {
     const target = renderTargetRef.current;
@@ -49,14 +37,22 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
 
     const scrollRoot = target.closest<HTMLElement>(".markdown-preview");
     const observer = new IntersectionObserver((entries) => {
-      setIsNearViewport(entries.some((entry) => entry.isIntersecting));
+      // Visibility admits the block once. Error UI replaces the observed target;
+      // observing its removal must not disable manual retry or later source edits.
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setIsNearViewport(true);
+        observer.disconnect();
+      }
     }, { root: scrollRoot, rootMargin: "300px 0px" });
     observer.observe(target);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    if (!isNearViewport || svgContent || renderError || renderingRef.current) return;
+    if (!isNearViewport) return;
+    setSvgContent("");
+    setRenderError(null);
+    setActionStatus("");
 
     let cancelled = false;
     const controller = new AbortController();
@@ -70,24 +66,15 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       timerId = null;
       if (cancelled || started) return;
       started = true;
-      renderingRef.current = true;
-      renderVersionRef.current += 1;
-      const renderVersion = renderVersionRef.current;
-
-      void renderMermaidSvg(`${diagramId}-${renderVersion}`, source, controller.signal)
+      void renderMermaidSvg(diagramId, source, controller.signal)
         .then((nextSvgContent) => {
-          if (!cancelled && renderVersionRef.current === renderVersion) {
+          if (!cancelled) {
             setSvgContent(nextSvgContent);
           }
         })
         .catch((error: unknown) => {
-          if (!cancelled && renderVersionRef.current === renderVersion) {
-            setRenderError(error instanceof DiagramBusyError ? t("diagram.renderBusy") : errorMessage(error));
-          }
-        })
-        .finally(() => {
-          if (renderVersionRef.current === renderVersion) {
-            renderingRef.current = false;
+          if (!cancelled) {
+            setRenderError(error instanceof DiagramBusyError ? t("diagram.renderBusy") : describeMermaidRenderError(error, t));
           }
         });
     };
@@ -108,12 +95,11 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
     return () => {
       cancelled = true;
       controller.abort();
-      renderingRef.current = false;
       scrollRoot?.removeEventListener("scroll", scheduleRender);
       if (idleCallbackId !== null) window.cancelIdleCallback(idleCallbackId);
       if (timerId !== null) window.clearTimeout(timerId);
     };
-  }, [diagramId, isNearViewport, renderError, source, svgContent, t]);
+  }, [diagramId, isNearViewport, retryVersion, source, t]);
 
   const copySource = async () => {
     try {
@@ -158,7 +144,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
       <figure className="mermaid-card mermaid-card-error">
         <figcaption>{t("diagram.mermaidRenderFailed")}</figcaption>
         <pre>{renderError}</pre>
-        <button type="button" onClick={() => setRenderError(null)}>{t("diagram.retry")}</button>
+        <button type="button" onClick={() => setRetryVersion((version) => version + 1)}>{t("diagram.retry")}</button>
         <details className="mermaid-source"><summary>{t("diagram.source")}</summary><pre><code>{source}</code></pre></details>
       </figure>
     );
@@ -190,7 +176,7 @@ export function MermaidBlock({ source, diagramId }: MermaidBlockProps) {
         ref={renderTargetRef}
       >
         {svgContent ? (
-          <span dangerouslySetInnerHTML={{ __html: svgContent }} />
+          <span className="mermaid-svg" dangerouslySetInnerHTML={{ __html: svgContent }} />
         ) : (
           <span className="mermaid-loading">{t("diagram.renderingMermaid")}</span>
         )}

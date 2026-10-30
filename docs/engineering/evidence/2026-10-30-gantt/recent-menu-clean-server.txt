@@ -1,0 +1,19 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test recent-menu.spec.ts --output /tmp/polarbear-gantt-recent-clean
+
+[WebServer] (node:94313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:94336) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:94339) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/recent-menu.spec.ts:12:1 › moves the history into File, restores it, distinguishes names and preserves an already open draft (3.9s)
+  ✓  2 tests/browser/recent-menu.spec.ts:35:1 › retains unavailable entries and draft contents, then clears only persisted history (2.0s)
+  ✓  3 tests/browser/recent-menu.spec.ts:57:1 › updates translated menus and successful Save As paths while preserving File commands (2.2s)
+  ✓  4 tests/browser/recent-menu.spec.ts:83:1 › admits one open while a native receipt is pending and cleans history subscriptions on remount (2.3s)
+
+  4 passed (14.9s)

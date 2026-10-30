@@ -1,0 +1,7 @@
+
+> lint
+> npm --workspace apps/desktop run lint
+
+
+> polarbear-desktop@0.1.0 lint
+> eslint src

@@ -1,0 +1,52 @@
+{
+  "chromium": {
+    "original": {
+      "parse": {
+        "diagramType": "gantt",
+        "config": {}
+      },
+      "error": "TypeError: Cannot read properties of undefined (reading 'type')",
+      "stack": "TypeError: Cannot read properties of undefined (reading 'type')\n    at compileTask (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1627:41)\n    at compileTasks (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1661:5)\n    at Object.getTasks (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1301:27)\n    at Object.draw (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1862:32)\n    at Object.render (http://127.0.0.1:1422/node_modules/.vite/deps/mermaid.js:1613:27)"
+    },
+    "excessFields": {
+      "parse": {
+        "diagramType": "gantt",
+        "config": {}
+      },
+      "error": "TypeError: Cannot read properties of undefined (reading 'type')",
+      "stack": "TypeError: Cannot read properties of undefined (reading 'type')\n    at compileTask (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1627:41)\n    at compileTasks (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1661:5)\n    at Object.getTasks (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1301:27)\n    at Object.draw (http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js?v=426520e0:1862:32)\n    at Object.render (http://127.0.0.1:1422/node_modules/.vite/deps/mermaid.js:1613:27)"
+    },
+    "invalidEnd": {
+      "parse": {
+        "diagramType": "gantt",
+        "config": {}
+      },
+      "render": "succeeded"
+    }
+  },
+  "webkit": {
+    "original": {
+      "parse": {
+        "diagramType": "gantt",
+        "config": {}
+      },
+      "error": "TypeError: undefined is not an object (evaluating 'rawTasks[pos].raw.startTime.type')",
+      "stack": "@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1627:40\n@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1661:16\n@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1301:39\n@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1862:40\n@http://127.0.0.1:1422/node_modules/.vite/deps/mermaid.js:1613:31"
+    },
+    "excessFields": {
+      "parse": {
+        "diagramType": "gantt",
+        "config": {}
+      },
+      "error": "TypeError: undefined is not an object (evaluating 'rawTasks[pos].raw.startTime.type')",
+      "stack": "@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1627:40\n@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1661:16\n@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1301:39\n@http://127.0.0.1:1422/node_modules/.vite/deps/ganttDiagram-EL5Y4UJY-IBMJY6GM.js:1862:40\n@http://127.0.0.1:1422/node_modules/.vite/deps/mermaid.js:1613:31"
+    },
+    "invalidEnd": {
+      "parse": {
+        "diagramType": "gantt",
+        "config": {}
+      },
+      "render": "succeeded"
+    }
+  }
+}

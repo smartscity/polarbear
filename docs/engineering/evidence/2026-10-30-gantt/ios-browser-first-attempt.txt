@@ -1,0 +1,84 @@
+
+> polarbear-ios@0.1.0 test:ui
+> playwright test --config playwright.gantt.config.ts
+
+[WebServer] (node:97531) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 2 workers
+
+(node:97537) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:97538) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source (30.2s)
+  ✘  2 [webkit] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source (30.2s)
+
+
+  1) [chromium] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source
+
+    Test timeout of 30000ms exceeded.
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.reader-diagram > img')
+    Expected: visible
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('.reader-diagram > img') with timeout 30000ms
+      - waiting for locator('.reader-diagram > img')
+      - Test timeout of 30000ms exceeded.
+
+
+      13 |     await page.getByRole("button", { name: "Gantt.md Gantt.md" }).click();
+      14 |     const image = page.locator(".reader-diagram > img");
+    > 15 |     await expect(image).toBeVisible({ timeout: 30000 });
+         |                         ^
+      16 |     await expect.poll(() => image.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+      17 |     const svg = await image.evaluate(async (el) => (await fetch((el as HTMLImageElement).src)).text());
+      18 |     expect(svg).toContain("14:40 落库");
+        at /Users/liyunlong/Documents/Smartscity/apps/ios/tests/browser/gantt.spec.ts:15:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-chromium/error-context.md
+
+  2) [webkit] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Gantt.md Gantt.md' })
+        - waiting for navigation to finish...
+        - navigated to "http://127.0.0.1:1430/"
+
+
+      11 |   await page.locator('input[type="file"]').first().setInputFiles({ name: "Gantt.md", mimeType: "text/markdown", buffer: Buffer.from(`# Gantt\n\n\`\`\`mermaid\n${original}\`\`\`\n`) });
+      12 |   for (let attempt = 0; attempt < 2; attempt++) {
+    > 13 |     await page.getByRole("button", { name: "Gantt.md Gantt.md" }).click();
+         |                                                                   ^
+      14 |     const image = page.locator(".reader-diagram > img");
+      15 |     await expect(image).toBeVisible({ timeout: 30000 });
+      16 |     await expect.poll(() => image.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        at /Users/liyunlong/Documents/Smartscity/apps/ios/tests/browser/gantt.spec.ts:13:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source
+    [webkit] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source
+npm error Lifecycle script `test:ui` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/Documents/Smartscity/apps/ios
+npm error workspace polarbear-ios@0.1.0
+npm error location /Users/liyunlong/Documents/Smartscity/apps/ios
+npm error command failed
+npm error command sh -c playwright test --config playwright.gantt.config.ts

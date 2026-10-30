@@ -1,0 +1,55 @@
+
+> polarbear-desktop@0.1.0 test:ui
+> playwright test --config playwright.gantt.config.ts
+
+
+Running 42 tests using 1 worker
+
+(node:93203) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/browser/diagram-lifecycle.spec.ts:3:1 › a burst of obsolete Mermaid requests is bounded and leaves the renderer usable (972ms)
+  ✓   2 [chromium] › tests/browser/diagram-lifecycle.spec.ts:23:1 › destroyed diagram widgets do not receive late SVG or cancel surviving consumers (851ms)
+  ✓   3 [chromium] › tests/browser/gantt-save.spec.ts:9:1 › App Save As and reopen preserve original Gantt bytes through file-backed IPC (1.9s)
+  ✓   4 [chromium] › tests/browser/gantt.spec.ts:30:1 › original Gantt renders in preview and live editing, copies and reopens without changing Markdown (2.0s)
+  ✓   5 [chromium] › tests/browser/gantt.spec.ts:70:1 › invalid Gantt is isolated, retry is manual, source is accessible, and edits recover (1.6s)
+  ✓   6 [chromium] › tests/browser/gantt.spec.ts:90:1 › rapid source changes and real CodeMirror edits cannot restore obsolete diagrams (3.3s)
+  ✓   7 [chromium] › tests/browser/gantt.spec.ts:115:4 › real Mermaid renders Unicode, multiple colons, and explicit timestamps: YYYY-MM-DD (2.4s)
+  ✓   8 [chromium] › tests/browser/gantt.spec.ts:115:4 › real Mermaid renders Unicode, multiple colons, and explicit timestamps: YYYY-MM-DD HH:mm (1.9s)
+  ✓   9 [chromium] › tests/browser/gantt.spec.ts:115:4 › real Mermaid renders Unicode, multiple colons, and explicit timestamps: YYYY-MM-DD HH:mm:ss (2.2s)
+  ✓  10 [chromium] › tests/browser/gantt.spec.ts:122:1 › real engine rejects malformed metadata and dates without leaked SVG or unhandled errors (1.6s)
+  ✓  11 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves flowchart (1.9s)
+  ✓  12 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves sequence (3.0s)
+  ✓  13 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves class (3.3s)
+  ✓  14 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves state (2.2s)
+  ✓  15 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves er (2.1s)
+  ✓  16 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves journey (2.4s)
+  ✓  17 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves pie (2.4s)
+  ✓  18 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves mindmap (2.3s)
+  ✓  19 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves timeline (1.8s)
+  ✓  20 [chromium] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves git (2.2s)
+  ✓  21 [chromium] › tests/browser/gantt.spec.ts:154:1 › Gantt task compilation preserves all eleven original timestamps and flags (1.8s)
+(node:93281) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  22 [webkit] › tests/browser/diagram-lifecycle.spec.ts:3:1 › a burst of obsolete Mermaid requests is bounded and leaves the renderer usable (3.1s)
+  ✓  23 [webkit] › tests/browser/diagram-lifecycle.spec.ts:23:1 › destroyed diagram widgets do not receive late SVG or cancel surviving consumers (2.4s)
+  ✓  24 [webkit] › tests/browser/gantt-save.spec.ts:9:1 › App Save As and reopen preserve original Gantt bytes through file-backed IPC (6.9s)
+  ✓  25 [webkit] › tests/browser/gantt.spec.ts:30:1 › original Gantt renders in preview and live editing, copies and reopens without changing Markdown (7.5s)
+  ✓  26 [webkit] › tests/browser/gantt.spec.ts:70:1 › invalid Gantt is isolated, retry is manual, source is accessible, and edits recover (6.5s)
+  ✓  27 [webkit] › tests/browser/gantt.spec.ts:90:1 › rapid source changes and real CodeMirror edits cannot restore obsolete diagrams (12.7s)
+  ✓  28 [webkit] › tests/browser/gantt.spec.ts:115:4 › real Mermaid renders Unicode, multiple colons, and explicit timestamps: YYYY-MM-DD (3.3s)
+  ✓  29 [webkit] › tests/browser/gantt.spec.ts:115:4 › real Mermaid renders Unicode, multiple colons, and explicit timestamps: YYYY-MM-DD HH:mm (4.4s)
+  ✓  30 [webkit] › tests/browser/gantt.spec.ts:115:4 › real Mermaid renders Unicode, multiple colons, and explicit timestamps: YYYY-MM-DD HH:mm:ss (4.8s)
+  ✓  31 [webkit] › tests/browser/gantt.spec.ts:122:1 › real engine rejects malformed metadata and dates without leaked SVG or unhandled errors (5.0s)
+  ✓  32 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves flowchart (4.7s)
+  ✓  33 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves sequence (3.6s)
+  ✓  34 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves class (3.3s)
+  ✓  35 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves state (6.5s)
+  ✓  36 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves er (4.2s)
+  ✓  37 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves journey (6.9s)
+  ✓  38 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves pie (5.6s)
+  ✓  39 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves mindmap (4.6s)
+  ✓  40 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves timeline (3.7s)
+  ✓  41 [webkit] › tests/browser/gantt.spec.ts:148:61 › shared renderer preserves git (4.4s)
+  ✓  42 [webkit] › tests/browser/gantt.spec.ts:154:1 › Gantt task compilation preserves all eleven original timestamps and flags (4.8s)
+
+  42 passed (2.6m)

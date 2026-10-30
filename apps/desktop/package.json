@@ -23,7 +23,9 @@
     "memory-m1:evaluate": "node scripts/evaluate-memory-m1-results.mjs",
     "memory-m1:engine-evaluate": "node scripts/run-memory-m1-engine-evaluation.mjs",
     "test": "vitest run && node --test scripts/memory-m1-assets.node-test.mjs scripts/caption-engine-fixture.node-test.mjs scripts/macos-release-artifacts.node-test.mjs scripts/workspace-dependencies.node-test.mjs scripts/architecture-graph.node-test.mjs scripts/dependency-audit.node-test.mjs",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test:native-gantt": "node scripts/test-gantt-webview.mjs",
+    "test:gantt:performance": "playwright test --config playwright.gantt-performance.config.ts"
   },
   "dependencies": {
     "@browsermt/bergamot-translator": "0.4.9",
@@ -36,6 +38,7 @@
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@uiw/react-codemirror": "^4.23.13",
+    "dayjs": "1.11.21",
     "dompurify": "^3.4.12",
     "fflate": "0.8.3",
     "lucide-react": "^0.468.0",

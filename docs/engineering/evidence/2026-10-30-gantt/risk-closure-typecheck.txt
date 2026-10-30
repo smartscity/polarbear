@@ -1,0 +1,7 @@
+
+> typecheck
+> npm --workspace apps/desktop run typecheck
+
+
+> polarbear-desktop@0.1.0 typecheck
+> tsc --noEmit

@@ -1,0 +1,72 @@
+{
+  "scope": "Local absolute latency characterization; not a cross-version comparison or a capacity/SLA benchmark.",
+  "environment": {
+    "platform": "darwin",
+    "os": "25.5.0",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "node": "v26.1.0",
+    "browser": "153.0.8010.12",
+    "loadBefore": [
+      9.1396484375,
+      8.8798828125,
+      8.34912109375
+    ],
+    "thermal": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\n2026-10-31 00:06:48 +0800 CPU Power notify\n\tCPU_Scheduler_Limit \t= 100\n\tCPU_Available_CPUs \t= 12\n\tCPU_Speed_Limit \t= 100\n"
+  },
+  "sourceHashes": {
+    "ganttSourceAdapter.ts": "7e8332bb8e57a40facf9b2cff8a0ea0146c74aed74bb73d48a27a782e21b3093",
+    "ganttDatePolicy.ts": "848c5e7ffc5a05edac5997022871fd51a7347062efca0875f0cb00842ee6ad70",
+    "ganttScheduleValidation.ts": "364095d4a3c3e783ba8ce4631154d0284e5e7c875591cc0c56f991836728d2ff",
+    "mermaidRenderer.ts": "df03703b04d3a9992cc528ee2bc22f27777fde3b079ace98d77dfd720fadad05"
+  },
+  "rows": [
+    {
+      "tasks": 11,
+      "fixtureHash": "ad3ae575f01b9baa08b958fcd7fe6ee4e15df0384664c725515aa6020554a2e0",
+      "warmupMs": 80.69999998807907,
+      "samplesMs": [
+        20.600000023841858,
+        17.900000005960464,
+        18.69999998807907,
+        19,
+        15.899999976158142
+      ],
+      "medianMs": 18.69999998807907,
+      "maxMs": 20.600000023841858
+    },
+    {
+      "tasks": 50,
+      "fixtureHash": "87765a6cfa30a9751369b22ebbc228593cfd5c7aed80cc7b26e88b1f47556ee4",
+      "warmupMs": 31.5,
+      "samplesMs": [
+        28.700000017881393,
+        28.69999998807907,
+        27.30000001192093,
+        28.200000017881393,
+        27.299999982118607
+      ],
+      "medianMs": 28.200000017881393,
+      "maxMs": 28.700000017881393
+    },
+    {
+      "tasks": 200,
+      "fixtureHash": "62794863277b0ebbbe1851ccbff739852eb62ad4846baac4b73f5f8a18f65cf3",
+      "warmupMs": 92.80000001192093,
+      "samplesMs": [
+        85.7000000178814,
+        80.90000000596046,
+        81.59999999403954,
+        86.19999998807907,
+        86.10000002384186
+      ],
+      "medianMs": 85.7000000178814,
+      "maxMs": 86.19999998807907
+    }
+  ],
+  "errors": [],
+  "loadAfter": [
+    9.1396484375,
+    8.8798828125,
+    8.34912109375
+  ]
+}

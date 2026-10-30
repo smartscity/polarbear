@@ -6,6 +6,7 @@ import {
   copySvgElementAsPng,
 } from "../../diagram/diagramExport";
 import { renderMermaidSvg } from "../../diagram/mermaidRenderer";
+import { describeMermaidRenderError } from "../../diagram/mermaidRenderError";
 import { DiagramRenderCache } from "../../diagram/diagramRenderCache";
 import { DiagramBusyError } from "../../diagram/diagramRenderQueue";
 import {
@@ -312,7 +313,7 @@ async function renderPreview(source: string, content: HTMLElement, signal: Abort
     .then((svgContent) => ({ svgContent }))
     .catch((error: unknown) => ({
       error: error instanceof DiagramBusyError ? translateCurrent("diagram.renderBusy")
-        : kind === "plantuml" ? describePlantUmlRenderError(error, translateCurrent) : errorMessage(error),
+        : kind === "plantuml" ? describePlantUmlRenderError(error, translateCurrent) : describeMermaidRenderError(error, translateCurrent),
     }));
   if (signal.aborted) return;
   if (result.svgContent) content.innerHTML = result.svgContent;
@@ -323,6 +324,15 @@ async function renderPreview(source: string, content: HTMLElement, signal: Abort
     button.type = "button"; button.textContent = translateCurrent("diagram.retry");
     button.addEventListener("click", retry, { once: true });
     content.append(button);
+    if (kind === "mermaid") {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = translateCurrent("diagram.source");
+      const code = document.createElement("pre");
+      code.textContent = source;
+      details.append(summary, code);
+      content.append(details);
+    }
   }
   scheduleEditorMeasureFromDom(content);
 }

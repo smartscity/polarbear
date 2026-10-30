@@ -1,0 +1,59 @@
+
+> polarbear-ios@0.1.0 test:ui
+> playwright test --config playwright.gantt.config.ts --trace retain-on-failure
+
+[WebServer] (node:98339) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:98341) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source (2.0s)
+(node:98348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [webkit] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source (1.0m)
+
+
+  1) [webkit] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source
+
+    Test timeout of 60000ms exceeded.
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Gantt.md Gantt.md' })
+
+
+      23 |   await page.locator('input[type="file"]').first().setInputFiles({ name: "Gantt.md", mimeType: "text/markdown", buffer: Buffer.from(`# Gantt\n\n\`\`\`mermaid\n${original}\`\`\`\n`) });
+      24 |   for (let attempt = 0; attempt < 2; attempt++) {
+    > 25 |     await page.getByRole("button", { name: "Gantt.md Gantt.md" }).click();
+         |                                                                   ^
+      26 |     const image = page.locator(".reader-diagram > img");
+      27 |     await expect(image).toBeVisible({ timeout: 30000 });
+      28 |     await expect.poll(() => image.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        at /Users/liyunlong/Documents/Smartscity/apps/ios/tests/browser/gantt.spec.ts:25:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-webkit/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-webkit/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/gantt-the-mobile-reader-re-68a1f-ntt-without-changing-source-webkit/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [webkit] › tests/browser/gantt.spec.ts:6:1 › the mobile reader renders and reopens the original Gantt without changing source
+  1 passed (1.1m)
+npm error Lifecycle script `test:ui` failed with error:
+npm error code 1
+npm error path /Users/liyunlong/Documents/Smartscity/apps/ios
+npm error workspace polarbear-ios@0.1.0
+npm error location /Users/liyunlong/Documents/Smartscity/apps/ios
+npm error command failed
+npm error command sh -c playwright test --config playwright.gantt.config.ts --trace retain-on-failure

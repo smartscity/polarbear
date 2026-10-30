@@ -1,0 +1,20 @@
+{
+  error: 'null',
+  events: [
+    {
+      operation: 'add',
+      name: 'UnknownError',
+      message: 'Error preparing Blob/File data to be stored in object store'
+    }
+  ]
+}
+Persistent context: {
+  entries: [
+    {
+      collection: '9c75663c-32f4-41d4-9dff-3f2fcb210c25',
+      path: 'Probe.md',
+      importedAt: 1793376910297
+    }
+  ],
+  text: '# Probe'
+}
