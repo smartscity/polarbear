@@ -7,9 +7,8 @@ const FinalEnglish = memo(function FinalEnglish({ segments }: { segments: readon
 });
 
 /** Present recognition chunks as flowing text without changing durable segment boundaries. */
-export const LiveTranscript = memo(function LiveTranscript({ segments, partial, showChinese }: {
+export const LiveTranscript = memo(function LiveTranscript({ segments, showChinese }: {
   segments: readonly CaptionSegment[];
-  partial: string;
   showChinese: boolean;
 }) {
   const { t } = useI18n();
@@ -19,7 +18,6 @@ export const LiveTranscript = memo(function LiveTranscript({ segments, partial, 
   return <div className="caption-live-text">
     <p className="caption-live-english" lang="en">
       <FinalEnglish segments={segments} />
-      {partial && <span className="caption-partial">{segments.length ? " " : ""}{partial.trim()}</span>}
     </p>
     {showChinese && <>
       {translated.length > 0 && <p lang="zh-CN" className="caption-chinese">

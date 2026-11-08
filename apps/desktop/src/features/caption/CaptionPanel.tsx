@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Check, Copy, Download, History, MoreHorizontal, Pause, Pin, Play, RotateCw, Square, Trash2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowLeft, Check, Copy, Download, History, MoreHorizontal, Pause, Pin, Play, RotateCw, Square, Trash2 } from "lucide-react";
 import { useI18n } from "../../shared/i18n/I18nProvider";
 import { useUserSettings } from "../../shared/settings/useUserSettings";
 import { updateUserSettings } from "../../shared/settings/userSettings";
@@ -29,9 +29,9 @@ export function CaptionPanel() {
   const [pollError, setPollError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-  const [follow, setFollow] = useState(true);
   const [recordAudio, setRecordAudio] = useState(false);
   const scroll = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   const viewRevision = useRef<number | undefined>(undefined);
   const selectedId = selected ?? status?.sessionId;
   const active = status && ["capturing", "starting", "paused"].includes(status.state);
@@ -64,9 +64,23 @@ export function CaptionPanel() {
     void poll();
     return () => { disposed = true; clearTimeout(timer); };
   }, [selected, history, query, offset, after]);
-  useEffect(() => {
-    if (follow && scroll.current && !window.getSelection()?.toString()) scroll.current.scrollTop = scroll.current.scrollHeight;
-  }, [segments, status?.partial, follow]);
+  useLayoutEffect(() => {
+    const viewport = scroll.current;
+    const text = content.current;
+    if (history || selected || !viewport || !text) return;
+    const scrollToBottom = () => {
+      // Scroll only this viewport, without animation or redundant writes at the bottom.
+      if (Math.abs(viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop) > 1) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    };
+    scrollToBottom();
+    // Observe both reflowing text and available space (including header/footer changes).
+    const observer = new ResizeObserver(scrollToBottom);
+    observer.observe(viewport);
+    observer.observe(text);
+    return () => observer.disconnect();
+  }, [segments, settings.caption.showChinese, history, selected]);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -109,7 +123,6 @@ export function CaptionPanel() {
       <CaptionSourceSelect source={source} disabled={busy} onChange={(next) => perform(async () => {
         await changeCaptionSource(next);
         setStatus(await captionRequest<"status">({ action: "status" }));
-        setFollow(true);
       })} />
     </div>}
     <div className="caption-options caption-options-popover" id="caption-options" popover="auto">
@@ -142,7 +155,7 @@ export function CaptionPanel() {
     {history && !selected ? <div className="caption-history">
       <input type="search" aria-label={t("caption.search")} placeholder={t("caption.search")} value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); }} />
       {!sessions.length && <p>{t("caption.noHistory")}</p>}
-      {sessions.map((session) => <button key={session.id} type="button" className="caption-session" onClick={() => { setSelected(session.id); setAfter(0); setFollow(false); }}>
+      {sessions.map((session) => <button key={session.id} type="button" className="caption-session" onClick={() => { setSelected(session.id); setAfter(0); }}>
         <strong>{session.title || new Date(session.startedAt).toLocaleString()}</strong>
         <span>{session.place} · {t(`caption.${session.source}`)} · {session.count} · {session.timeZone}</span>
       </button>)}
@@ -159,24 +172,23 @@ export function CaptionPanel() {
           if (window.confirm(t("caption.confirmDelete"))) perform(() => captionRequest({ action: "delete", id: currentSession.id }), () => setSelected(undefined));
         })}
       </form>}
-      <div className="caption-transcript" ref={scroll} onScroll={() => {
-        const el = scroll.current; if (el) setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < 32);
-      }}>
-        {!segments.length && !status?.partial && <div className="caption-empty">
-          <p>{t(active ? "caption.listening" : "caption.empty")}</p>
-          {!history && <p className="caption-source-hint">{t(`caption.sourceHint.${source}`)}</p>}
-        </div>}
-        {selected ? segments.map((segment) => <article key={segment.id}>
-          <time>{captionTimestamp(segment.startMs)}</time><p lang="en">{segment.english}</p>
-          {preferences.showChinese && <p lang="zh-CN" className="caption-chinese">{segment.chinese || t(`caption.translation.${segment.translationStatus}`)}</p>}
-        </article>) : <LiveTranscript segments={segments} partial={status?.partial ?? ""} showChinese={preferences.showChinese} />}
+      <div className="caption-transcript" ref={scroll}>
+        <div ref={content} className="caption-transcript-content">
+          {!segments.length && <div className="caption-empty">
+            <p>{t(active ? "caption.listening" : "caption.empty")}</p>
+            {!history && <p className="caption-source-hint">{t(`caption.sourceHint.${source}`)}</p>}
+          </div>}
+          {selected ? segments.map((segment) => <article key={segment.id}>
+            <time>{captionTimestamp(segment.startMs)}</time><p lang="en">{segment.english}</p>
+            {preferences.showChinese && <p lang="zh-CN" className="caption-chinese">{segment.chinese || t(`caption.translation.${segment.translationStatus}`)}</p>}
+          </article>) : <LiveTranscript segments={segments} showChinese={preferences.showChinese} />}
+        </div>
       </div>
       {selected && <div className="caption-options">
         {after > 0 && <button onClick={() => setAfter(0)}>{t("caption.firstPage")}</button>}
         {segments.length === 200 && <button onClick={() => setAfter(segments[segments.length - 1].id)}>{t("caption.next")}</button>}
         {button("caption.retryTranslation", <RotateCw size={16} />, () => perform(() => captionRequest({ action: "retry", id: selected })))}
       </div>}
-      {!follow && !selected && <button type="button" className="caption-follow" onClick={() => setFollow(true)}><ArrowDown size={16} />{t("caption.latest")}</button>}
     </>}
     <footer><span>{captionTimestamp(status?.elapsedMs ?? 0)}</span><meter min={0} max={100} value={status?.audioLevel ?? 0} aria-label={t("caption.audioLevel")} title={t("caption.audioLevel")} /><span role="status">{t(active && status.recordAudio && !status.recordingFailed ? "caption.recordingAudio" : "caption.localOnly")}</span></footer>
   </main>;

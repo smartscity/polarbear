@@ -7,6 +7,37 @@ The design still requires Both mode with proven echo cancellation; it is not
 implemented or exposed by this preview. The initial checks used public fixtures;
 the consented microphone follow-up below is separate from those checks.
 
+## Confirmed-only presentation and live scrolling, 2026-11-08
+
+`LiveTranscript` now receives only durable segments and the translation preference;
+it no longer accepts or renders `status.partial`. The listening placeholder also
+depends only on committed segment availability. Native provisional state, sequence
+deduplication, atomic final/job insertion, polling, translation leases and history
+remain unchanged. Translation already consumes only committed English.
+
+`CaptionPanel` replaces conditional follow state with a layout effect after segment
+or translation changes. It scrolls the existing transcript viewport directly to
+its bottom, without moving ancestor containers or animating. A native
+`ResizeObserver` watches the content wrapper and viewport for wrapping, font-size
+and available-height changes. History views are excluded; observers disconnect on
+effect cleanup. Unchanged snapshots retain structural sharing, partial updates do
+not trigger the effect, and an already-bottomed viewport receives no scroll write.
+No scroll timer or new application abstraction was introduced.
+
+Validation passed: 16 caption Playwright tests, 412 Vitest tests, 45 Node tests,
+21 Rust `live_caption` tests, desktop typecheck, ESLint and production Vite build.
+The browser suite adds partial-only listening/DOM stability, successive finals and
+delayed translation (including same-length replacement), and last-line geometry
+after wrapping/content/viewport resizing. Existing presentation and recovery tests
+now assert confirmed-only rendering and automatic follow after resizing. The IPC
+fixture returns cloned snapshots to match the native serialization boundary.
+Continuous-text and wrapped-last-line screenshots were visually inspected.
+
+Browser capture IPC is mocked; the bundled offline translator test uses the actual
+engine. Native microphone capture and installed macOS WebView behavior were not
+manually exercised in this change. Rust emitted an SDK discovery environment
+warning; Vite emitted its large-chunk warning. Both commands completed successfully.
+
 ## Diagnostic alpha packaging, 2026-10-24
 
 `v0.10.10-alpha.1` points to `f8394cc`. Release run
@@ -353,8 +384,9 @@ and English persistence, not acceptable recognition accuracy or bilingual succes
 The stored schema does not retain the failure code, so the exact session-ending
 cause cannot be inferred from the failed flag alone.
 
-`LiveTranscript.tsx` now joins finalized English and the provisional suffix in one
-flowing paragraph, with continuous Chinese below and a single translation status.
+At this stage, `LiveTranscript.tsx` joined finalized English and the provisional
+suffix in one flowing paragraph (superseded by the confirmed-only presentation
+above), with continuous Chinese below and a single translation status.
 The live view has no per-segment timestamps/cards. History, durable segment IDs,
 timestamped export and whole-session copy retain their existing boundaries. This
 is a presentation change, not a new recognition engine or an accuracy improvement.

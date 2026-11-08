@@ -19,7 +19,7 @@
 .caption-transcript article { margin-bottom: 12px; user-select: text; overflow-wrap: anywhere; }
 .caption-transcript p { margin: 3px 0; line-height: 1.55; font-size: 17px; }
 .caption-chinese { color: var(--caption-muted); }
-.caption-partial { opacity: .65; }
+.caption-transcript-content { display: flow-root; }
 .caption-live-text { user-select: text; overflow-wrap: anywhere; }
 .caption-live-text .caption-live-english { font-size: 20px; line-height: 1.6; }
 .caption-live-text .caption-chinese { margin-top: 10px; }
@@ -30,7 +30,6 @@
 .caption-metadata { display: flex; gap: 6px; padding: 6px 12px; flex-wrap: wrap; }
 .caption-error, .caption-notice { padding: 6px 12px; margin: 0; font-size: 13px; display: flex; gap: 6px; }
 .caption-error { color: #c43535; }
-.caption-follow { align-self: center; }
 .caption-settings { border-top: 1px solid var(--border-color, #a0a0a0); padding-top: 12px; }
 .caption-settings > label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .caption-settings button { display: inline-flex; align-items: center; gap: 6px; }

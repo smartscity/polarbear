@@ -178,15 +178,17 @@ rewrite it. Repeated transport delivery is idempotent. If an engine cannot safel
 finalize a prefix yet, it remains provisional rather than being prematurely saved.
 
 **INV-08: Empty completion clears, not saves.** If a stream ends without valid
-final text, clear its provisional display and finish its lifecycle explicitly.
+final text, clear its provisional state and finish its lifecycle explicitly.
 Never write an empty English row, leave stale text on screen, or translate a
 discarded partial. Distinguish silence, uncertain speech and engine failure in
 diagnostic outcomes without inventing words.
 
 **INV-09: Display stays continuous.** The panel shows continuous English and
 Chinese text, not one timestamp/card per utterance. Internal commits must not
-cause duplicate words or reset the visible transcript. Existing selection,
-auto-follow, history timestamps and copy behavior remain. Copy uses a consistent
+cause duplicate words or reset the visible transcript. Only confirmed text is
+rendered; provisional recognition remains internal. Live content and translation
+updates always follow the bottom, including after reflow. Text selection, history
+timestamps and copy remain available. Copy uses a consistent
 saved snapshot and does not silently include mutable partials.
 
 **INV-10: Translation cannot stall recognition.** Only committed English enters
@@ -465,12 +467,14 @@ Pause and Close stay directly available. No action depends solely on hover.
 
 Body presents the recent English transcript as continuous text, with continuous
 Chinese below. Recognition segment boundaries must not introduce timestamp labels,
-cards or paragraph breaks in the live view. The unfinished suffix is visually
-differentiated; finalized text does not jump with every partial result. Translation
+cards or paragraph breaks in the live view. The unfinished suffix stays internal
+and is not rendered; only confirmed segments enter the visible transcript. Translation
 has one pending/error indicator and never blocks English. Segment timestamps remain
 available in history and optional copy/export output, not between live sentences.
-Text is selectable. Auto-follow only while at the bottom; selecting text or scrolling
-up suspends follow and reveals a Jump to latest action. A bounded visible tail avoids
+Text is selectable. Each confirmed-content or translation update scrolls the live
+viewport to the bottom, even after manual scrolling or selection. Content reflow
+and viewport resizing also keep the last line visible, without animated scrolling
+or scroll-position polling. History remains manually scrollable. A bounded visible tail avoids
 rendering hours of text. Copy still includes the whole session, not only that tail.
 
 Footer: elapsed time, System/Microphone activity, saved-through indicator, and
