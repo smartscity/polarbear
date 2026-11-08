@@ -1796,3 +1796,38 @@ Only trailing blank lines were removed from three new files after these runtime
 checks; executable statements are unchanged. The staged commit excludes the
 pre-existing Feedback additions. Hosted CI must be checked for the pushed SHA;
 the baseline result and local cache are not substitutes for that result.
+
+## 2026-11-08: Minimatch audit repair for v0.10.15
+
+The v0.10.14 release was blocked by
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+in `minimatch@10.2.5`. The advisory identifies `>=7.0.0 <11.0.1` as affected.
+ESLint 10.7.0, `@eslint/config-array` 0.23.5 and
+`@typescript-eslint/typescript-estree` 8.63.0 still request 10.x, so the workspace
+root pins an override to 11.0.1. Remove the override when all owning tools accept
+a patched release directly. No audit exception, gate or application API changed.
+
+The lockfile changes only minimatch and its new development dependency,
+`@isaacs/nonrecursive-glob-match@1.1.0`. Existing brace-expansion 5.0.12 is reused.
+The consumers use `Minimatch.match` and `minimatch`, including directory partial
+matching and dot-file options; they do not use the removed regular-expression API.
+Dependency resolution used npm 11.20.0, matching the observed hosted CI version.
+Local npm 11.13.0 initially retained a vulnerable 10.x resolution when updating
+the override; the resulting 11.0.1 lockfile passed clean installation with 11.20.0
+and an offline `npm ci --dry-run` with 11.13.0.
+
+Local validation before commit:
+
+| Check | Result |
+| --- | --- |
+| Existing complete dependency gate | PASS: 11 findings covered by unchanged, expiring exceptions; no minimatch finding and no unreviewed findings. |
+| Scanner provenance | npm 11.20.0; cargo-audit 0.22.2; RustSec `309392b18f6b17022f82c701f300433126901068`; scanned 2026-11-08 07:40 UTC. |
+| Lockfile identity | SHA-256 `e64d7fbb051cf016b7c5a6719902293b053b9ab3eba8fc73c8d6c74a6f79861b`; Cargo.lock unchanged. |
+| Tooling compatibility | Desktop 250 files and iOS 19 files: identical lint coverage and diagnostics against the interim 10.2.6 resolution; zero errors. |
+| TypeScript | Desktop and iOS PASS. |
+| Tests | Desktop 412 Vitest and 45 Node tests; iOS 39 Vitest tests PASS. |
+| Production frontend builds | Desktop and iOS PASS; existing large-chunk warnings remain. |
+
+These checks used the modified working tree based on `0ef9c81`. Hosted native,
+browser, packaged-helper and installer gates must run against the new tagged SHA;
+local dependency validation does not establish their result or publication status.

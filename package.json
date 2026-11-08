@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.2"
+  },
+  "overrides": {
+    "minimatch": "11.0.1"
   }
 }
