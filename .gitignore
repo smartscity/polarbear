@@ -18,6 +18,7 @@ Thumbs.db
 # Editors / IDE
 # =========================
 
+# Keep local IDE project files untracked.
 .idea/
 .vscode/*
 !.vscode/extensions.json
