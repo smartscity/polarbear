@@ -1,10 +1,10 @@
 # Documentation index
 
-Start with [the project overview](../README.md) and
-[v0.9.3 implementation and verification](releases/v0.9.3.md). The latter records
-the state verified on 2026-10-14 against commit `66eec710`, including successful
-CI/package builds, the intentional draft release, current platform boundaries
-and checks without a recorded acceptance pass.
+Start with [the product overview](../README.md) for capabilities, platforms, and
+installation. Use [engineering verification](engineering/verification.md) for dated
+validation evidence and [Live Caption implementation](planning/live-caption-implementation.md)
+for caption-specific progress and remaining gates. Release records describe their
+own commit and date; they do not certify a later build.
 
 ## Current implementation guides
 
@@ -35,7 +35,8 @@ packaging does not establish their completion.
 
 | Document | Scope and status |
 | --- | --- |
-| [Live Caption design](planning/live-caption.md) | Partial preview exists; scoped clock/lifecycle repair authorized with local tests required before commit. Streaming engine replacement remains unqualified. |
+| [Live Caption implementation](planning/live-caption-implementation.md) | macOS preview with confirmed-only captions, automatic following, optional translation, history and export; accuracy and long-session qualification remain separate. |
+| [Live Caption design](planning/live-caption.md) | Feature design, scoped repair contracts, and qualification gates; proposed streaming replacement is not a delivered capability. |
 | [Apple linked editing and iCloud plan](planning/icloud-markdown-sync.md) | Native foundation exists; user-facing linked editing/sync is not feature-complete |
 | [Apple document-store package](../packages/apple-document-store/README.md) | Shared native foundation and validation; not an enabled cross-device editing workflow |
 | [Memory/context design](planning/desktop-memory-context-design.md) | M1 technical slice; rollout constrained by the recorded evaluation |

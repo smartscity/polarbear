@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-labelledby="title desc">
+  <title id="title">Polarbear — A clearer space for technical thinking.</title>
+  <desc id="desc">Local-first Markdown, diagrams, and reading. An abstract stack of document pages on an arctic blue background.</desc>
+  <defs>
+    <linearGradient id="sky" x2="1" y2="1"><stop stop-color="#101f32"/><stop offset="1" stop-color="#163e50"/></linearGradient>
+    <linearGradient id="paper" x2="0.8" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#dcecf1"/></linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#bde9ef" stroke-opacity=".05"/></pattern>
+  </defs>
+  <rect width="1280" height="440" rx="20" fill="url(#sky)"/>
+  <rect width="1280" height="440" rx="20" fill="url(#grid)"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif">
+    <rect x="64" y="54" width="8" height="8" rx="4" fill="#96e2dc"/>
+    <text x="86" y="65" fill="#b8dadf" font-size="14" letter-spacing="3">POLARBEAR</text>
+    <text x="60" y="155" fill="#f5fafc" font-size="54" font-weight="650" letter-spacing="-2">A clearer space</text>
+    <text x="60" y="219" fill="#f5fafc" font-size="54" font-weight="650" letter-spacing="-2">for technical thinking.</text>
+    <text x="64" y="274" fill="#b8ced8" font-size="21">Markdown. Diagrams. Reading.</text>
+    <path d="M64 321H680" stroke="#7295a4" stroke-opacity=".4"/>
+    <text x="64" y="366" fill="#a4dedc" font-size="14" letter-spacing="2">LOCAL FIRST</text>
+    <text x="246" y="366" fill="#b8ced8" font-size="14" letter-spacing="2">MIT LICENSE</text>
+    <text x="440" y="366" fill="#b8ced8" font-size="14" letter-spacing="2">YOUR FILES</text>
+  </g>
+  <g transform="translate(885 72) rotate(8 115 145)">
+    <rect x="32" y="28" width="230" height="280" rx="14" fill="#224f62" stroke="#598592"/>
+    <rect x="16" y="14" width="230" height="280" rx="14" fill="#43808b" stroke="#82b4bc"/>
+    <rect width="230" height="280" rx="14" fill="url(#paper)"/>
+    <path d="M32 46H140 M32 66H104" stroke="#173e50" stroke-width="7" stroke-linecap="round"/>
+    <path d="M32 98H194 M32 111H175" stroke="#adc4cf" stroke-width="4" stroke-linecap="round"/>
+    <rect x="32" y="146" width="65" height="41" rx="8" fill="#d1e9e8" stroke="#73a5a6"/>
+    <rect x="136" y="146" width="65" height="41" rx="8" fill="#dce6f4" stroke="#8ca9c7"/>
+    <path d="M98 166H135" stroke="#54838c" stroke-width="2"/>
+    <path d="M32 222H194 M32 235H156" stroke="#adc4cf" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

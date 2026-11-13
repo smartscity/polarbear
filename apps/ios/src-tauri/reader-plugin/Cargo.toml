@@ -2,6 +2,7 @@
 name = "tauri-plugin-reader"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 links = "tauri-plugin-reader"
 
 [dependencies]

@@ -1,457 +1,209 @@
-# Polarbear
+<p align="center">
+  <img src="docs/assets/polarbear-hero.svg" alt="Polarbear — A clearer space for technical thinking. Local-first Markdown, diagrams, and reading." width="100%">
+</p>
 
-[English](README.md) | [简体中文](README-zh.md) | [Documentation index](docs/README.md) | [v0.9.3 status](docs/releases/v0.9.3.md)
+<p align="center">
+  <strong>A local-first Markdown workspace for people who write, build, and learn.</strong>
+</p>
 
-> A local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows.
+<p align="center">
+  <a href="https://github.com/smartscity/polarbear/releases">Releases</a> ·
+  <a href="#what-you-can-do">Capabilities</a> ·
+  <a href="#get-started">Get started</a> ·
+  <a href="docs/README.md">Documentation</a> ·
+  <a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
-Polarbear is an open-source, local-first Markdown editor built with Rust, Tauri, and TypeScript.  
-It focuses on clean writing, live preview, Mermaid and PlantUML diagrams, and GitHub/GitLab document workflows.
+Polarbear brings technical writing, diagrams, repository workflows, and offline
+reading tools into one desktop workspace. Turn an engineering note into a readable
+document, explore a large architecture diagram, or translate an English passage
+without leaving your work.
 
-Current platform status (verified against v0.9.3, 2026-10-14):
+Your documents stay ordinary Markdown files. Work locally, organize them in
+folders, and connect GitHub or GitLab when you want repository synchronization.
+Built with **Rust, Tauri, React, and TypeScript**.
 
-- macOS desktop app: universal DMG built successfully
-- Windows desktop app: x64 NSIS installer built successfully
-- iPhone: separate experimental, read-only Tauri/React reader in `apps/ios`, with native document import and reading tools; signed-device distribution remains unverified
+<p align="center">
+  <img src="docs/assets/workspace-light.png" alt="Polarbear reading view with a folder workspace, architecture diagram, table, and task list" width="100%">
+  <br><sub>One document. The explanation, the diagram, and the next steps.</sub>
+</p>
 
-The existing v0.9.3 tag identifies commit `66eec710`. Release, Desktop Quality and
-iPhone Reader Quality workflows passed for that commit. The release workflow
-intentionally creates a draft release; successful packaging does not establish
-installed-device acceptance. See [the verification record](docs/releases/v0.9.3.md)
-for evidence, current limits and the distinction between recorded passes and
-checks without a recorded pass.
+## What you can do
 
----
+| Your work | What Polarbear brings |
+| --- | --- |
+| **Write a specification** | Source editing, live editing, split view, and reading preview, with tables, code blocks, task lists, and images. |
+| **Explain a system** | Mermaid diagrams rendered in the document, a zoomable diagram viewer, and SVG/PNG export. PlantUML rendering is available with explicit remote-render consent. |
+| **Navigate a knowledge base** | Folder workspaces, a file tree, multiple tabs, document outlines, and native recent-file menus. |
+| **Read across languages** | Bundled offline English-to-Chinese translation; local Vocab integration on macOS for dictionary information and vocabulary favorites. |
+| **Keep documentation in a repository** | GitHub/GitLab file browsing and workspace sync, including uploads, downloads, deletions, and conflict checks, without a local Git installation. |
+| **Share finished work** | Rich document copy with text, tables, and Mermaid images, explicit Markdown-source copy, and standalone diagram export. |
 
-## Why Polarbear?
+### Write with the source always within reach
 
-Polarbear is designed for people who write technical documents, engineering notes, product specs, architecture diagrams, and GitHub-based knowledge bases.
+Switch between Markdown source, live editing, split view, and preview as the task
+changes. Use the outline to move through longer documents and tabs to keep related
+notes open. Light and dark themes, zoom controls, and English/Chinese interface
+resources let you adapt the workspace to your reading and writing preferences.
 
-It is not just another Markdown editor.  
-It aims to become a local-first writing workspace with:
+Unsaved-change prompts and revision checks help protect edits when closing a
+document or saving over a file that changed on disk.
 
-- Fast native experience powered by Rust and Tauri
-- Clean Markdown editing and live preview
-- First-class Mermaid diagram support
-- Zoomable diagram viewer
-- GitHub and GitLab Cloud Sync
-- Clear architecture for long-term open-source maintenance
+![Markdown source and rendered document side by side in Polarbear](docs/assets/workspace-split.png)
 
-Write locally. Preview clearly. Sync when needed.
+<p align="center"><sub>Stay close to the source. See the result as you write.</sub></p>
 
-Desktop and the experimental iPhone reader are separate applications. The reader is not a mobile editor or a published App Store product. Platform-specific behavior stays behind adapters so portable code remains reusable without importing Desktop services into the reader.
+### Give technical ideas room to breathe
 
----
+Keep diagrams alongside the text that explains them. Mermaid supports workflows,
+sequence diagrams, state machines, entity relationships, Gantt schedules, and more.
+Open larger diagrams in the viewer to zoom and pan, then export SVG or PNG for
+presentations and other documents.
 
-## Features
-
-### Markdown Editing
-
-- Open local Markdown files
-- Edit Markdown with a clean editor
-- Live preview
-- Split view: editor and preview side by side
-- Preview-only mode
-- Editor-only mode
-- Unsaved change indicator
-- Local file access designed with desktop permissions and iOS sandbox limitations in mind
-
-### Diagram Support
-
-- Render Mermaid code blocks inside Markdown preview
-- Open Mermaid diagrams in a zoomable viewer
-- Zoom in, zoom out, reset zoom
-- Drag and pan large diagrams
-- Copy Mermaid source
-- Export SVG
-- Export Mermaid and PlantUML diagrams as SVG or PNG
-- Keep Mermaid rendering in the WebView layer; the iPhone reader reuses the pure rendering modules
-
-### Cloud Sync
-
-- Connect to a GitHub or GitLab repository
-- Browse Markdown files from a repository
-- Read remote Markdown files
-- Edit and commit changes back to the selected provider
-- Sync through provider APIs without requiring a local Git installation; GitHub publication uses a conditional GraphQL commit and GitLab uses a conditional batch commit.
-- Use commit messages such as:
-
-```text
-docs: update {file_path}
-```
-
-### Reading and Vocabulary
-
-- Desktop English-to-Chinese translation uses bundled Bergamot 0.4.9 and verified model assets, with no first-run model download, Apple language-pack requirement or cloud fallback
-- Selection reading supports cancellation, rapid reselection and a persistent opt-out
-- Dictionary senses, available IPA and vocabulary membership come from Vocab; neural translation is not authoritative dictionary data
-- macOS Vocab integration uses the existing local protocol, with a durable background favorite queue and source-context opt-out
-- The iPhone reader has its own installed-only Apple translation path, speech, system dictionary and explicit offline capture-file handoff
-
-See [Desktop reading](docs/planning/desktop-vocab-reading.md) and
-[iPhone reading](docs/planning/iphone-reading-assistant.md) for platform limits.
-Production Chromium/WebKit inference has passed; actual installed DMG/Tauri
-WebView and older-macOS/Windows-device acceptance have no recorded pass yet.
-
-### Rich Document Copy
-
-- Whole-document copy can carry readable text, rich HTML and Mermaid images while retaining a separate Markdown flavor
-- Copy Markdown Source explicitly preserves raw Markdown
-- macOS native rich-text receiver checks cover table structure and multiple Mermaid images
-- Mixed text/table/Mermaid paste into Lark and Word has no recorded acceptance pass; receiver behavior must be checked separately
-
-See [rich document copy](docs/planning/desktop-rich-document-copy.md).
-
-### Extensibility
-
-Mermaid, PlantUML, Cloud Sync, and export are built-in features with explicit module boundaries. Polarbear does not currently expose a runtime plugin API. A plugin system will only be considered after permissions, versioned contracts, and sandboxing are designed.
-
----
-
-## Tech Stack
-
-- Rust
-- Tauri v2 with mobile compatibility
-- React
-- TypeScript
-- Vite
-- CodeMirror 6
-- Mermaid
-- GitHub REST/GraphQL and GitLab REST APIs
-
----
-
-## Project Structure
-
-```text
-polarbear/
-  Cargo.toml
-  Cargo.lock
-  package.json
-  package-lock.json
-  README.md
-  README-zh.md
-  ARCHITECTURE.md
-  apps/
-    desktop/
-      package.json
-      src/
-        app/
-        commands/
-        features/
-        shared/
-      src-tauri/
-        Cargo.toml
-    ios/
-      package.json
-      src/
-      src-tauri/
-        reader-plugin/
-  packages/
-    reader-core/
-    apple-document-store/
-  docs/
-    README.md
-    planning/
-    releases/
-```
-
-`apps/desktop/src-tauri` is the only member of the root Cargo workspace.
-`apps/ios/src-tauri` has a separate Cargo workspace and native reader plugin.
-Root npm scripts target Desktop; use explicit `apps/ios` workspace scripts for
-the reader. `packages/reader-core` holds portable reader logic, while
-`packages/apple-document-store` contains a shared native linked-document
-foundation whose user-facing editing/sync integration is not yet delivered.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development and verification rules.
-The existing Cargo declaration `MIT OR Apache-2.0` is accompanied by
-[MIT](LICENSE-MIT) and [Apache-2.0](LICENSE-APACHE) texts. Bundled translation
-assets retain their separate included third-party license notices.
-
----
-
-## Architecture Principles
-
-Polarbear follows these principles:
-
-- Local-first by default
-- Feature-oriented TypeScript UI with a typed Tauri boundary
-- Desktop-first delivery with portable feature boundaries
-- Clear module boundaries
-- Built-in feature modules with explicit ownership
-- Thin Tauri command entry points backed by focused Rust services
-- Domain models separated from DTOs
-- Testable core logic
-- Explicit error handling
-- No token leakage in logs
-- Platform-specific logic behind traits or adapter modules
-- macOS-only APIs isolated in platform modules
-- Small, meaningful modules
-- Descriptive naming
-
----
-
-## Platform Support
-
-Desktop packaging targets macOS and Windows; the iPhone reader is an experimental development target.
-
-Supported release targets:
-
-- macOS
-- Windows
-
-Experimental target:
-
-- iPhone reader, with a dedicated workspace, simulator checks and browser preview; physical-device/provider acceptance and signed distribution remain separate gates
-
-Future targets:
-
-- Linux
-- Android
-
-Platform rules:
-
-- Use Tauri v2 and keep mobile compatibility in mind.
-- Keep UI responsive across desktop and mobile screen sizes.
-- Keep macOS-only APIs isolated from portable command and service logic.
-- Put platform-specific behavior behind traits or adapter modules.
-- Keep Tauri commands thin and free of platform-specific business logic.
-- Use provider APIs for sync so repository workflows do not depend on a local Git executable. Freeze the comparison commit and reject conditional publication conflicts rather than silently choosing local content.
-- Treat local file access as capability-based; the iPhone reader imports authorized snapshots inside its app sandbox.
-- Keep Mermaid rendering in the WebView layer.
-- Avoid dynamic native plugin loading for the MVP.
-
----
-
-## Rust Code Style
-
-Rust code should follow idiomatic naming conventions:
-
-- Types, traits, and enums use `UpperCamelCase`
-- Functions, methods, variables, and modules use `snake_case`
-- Constants use `SCREAMING_SNAKE_CASE`
-- Avoid unclear names such as `handle`, `process`, `data`, `info`, `manager`
-- Prefer meaningful names such as:
-
-  - `CloudSyncStore`
-  - `RepositorySettings`
-  - `SecretStoreError`
-  - `WorkspaceFile`
-
-Do not use `unwrap()` or `expect()` in production code.
-Use explicit error types and return meaningful errors.
-
----
-
-## Development
-
-### Prerequisites
-
-- Rust stable
-- Node.js LTS
-- npm (the committed lockfile is `package-lock.json`)
-- Tauri v2 prerequisites for the platform being built
-- Xcode Command Line Tools for macOS development
-
-### Install Dependencies
-
-For a clean checkout, install the exact versions from the committed lockfile:
+Mermaid renders locally. **PlantUML uses a remote rendering service only after
+approval**; its source is sent to that service. Choose Mermaid for diagrams that
+need to stay on the device.
+
+### Read, understand, and keep useful vocabulary
+
+Select English text for Chinese translation using the bundled Bergamot engine and
+model assets. Desktop translation needs no first-use model download, Apple
+language pack, or cloud fallback.
+
+On macOS, the separate local **Vocab** application supplies dictionary senses,
+available IPA, and vocabulary favorites. Translation works independently of Vocab;
+dictionary information and favorite delivery require that integration.
+
+[Reading tools and platform details →](docs/planning/desktop-vocab-reading.md)
+
+### Connect documents to your repository
+
+Associate a workspace with a GitHub or GitLab repository and remote directory.
+Review and synchronize local and remote changes through provider APIs. Conditional
+publication checks detect conflicting repository updates rather than silently
+overwriting them. Release builds store access tokens in the platform credential
+store.
+
+Rich copy helps move a document into another writing tool while keeping Markdown
+source available as a separate action. Receiving applications determine paste
+fidelity; Word/Lark mixed-content acceptance remains unverified. Complete-document
+PDF and HTML export are not currently available.
+
+[Rich document copy →](docs/planning/desktop-rich-document-copy.md)
+
+## Beyond the editor
+
+These capabilities have their own platform requirements and acceptance boundaries.
+
+### Live Caption · macOS preview
+
+![Polarbear Live Caption panel with confirmed English text and audio-source controls](docs/assets/live-caption.png)
+
+Capture **system audio or microphone input** on macOS 13+ and transcribe English
+locally with bundled recognition assets. The live panel displays confirmed text
+and follows new captions automatically. Chinese translation is an explicit opt-in;
+local history, copy, and TXT/Markdown/SRT export support later review.
+
+Capture starts through an explicit user action and requires OS permissions.
+Diagnostic audio recording is separately opt-in. Combined system-and-microphone
+capture with echo cancellation is not implemented. Recognition accuracy and
+long-session stability remain under qualification; this is a preview feature.
+
+[Implementation, validation, and remaining gates →](docs/planning/live-caption-implementation.md)
+
+### Memory & context · experimental integration
+
+Inspect and edit Memory records and history through the separate Polarbear Memory
+Engine's versioned Admin API. The Engine owns storage; Desktop provides the
+interface. This is an integration under development, with a separately configured
+Engine, not a built-in general-purpose agent chat host.
+
+The recorded M1 evaluation requires revision and does not establish rollout
+readiness or task-level token savings.
+
+[Memory design and evaluation →](docs/planning/desktop-memory-context-design.md)
+
+### iPhone reader · experimental companion
+
+The separate iPhone application imports document snapshots for reading, with
+installed-model Apple translation, speech, and system dictionary tools. It is a
+read-only companion under development. Signed-device distribution and provider
+acceptance remain separate gates; linked editing and iCloud sync are not delivered.
+
+[iPhone reader guide →](apps/ios/README.md)
+
+## Get started
+
+Browse [GitHub Releases](https://github.com/smartscity/polarbear/releases) for
+published installers and the notes attached to each version.
+
+| Platform | Distribution target | Scope |
+| --- | --- | --- |
+| **macOS** | Universal `.dmg` for Apple Silicon and Intel | Desktop workspace; Live Caption preview requires macOS 13+. |
+| **Windows** | x64 NSIS `.exe` installer | Desktop workspace; macOS audio capture and Vocab integration do not carry over. |
+| **iPhone** | Separate development workspace | Experimental reader; no App Store distribution claim. |
+| **Linux / Android** | No release installer in the current workflow | Not current distribution targets. |
+
+The release workflow prepares **draft releases**. An installer build does not by
+itself establish publication, signing/notarization, or installed-device acceptance.
+Check the selected release's notes and [verification records](docs/engineering/verification.md)
+for its exact scope.
+
+1. Install the package for your platform from a published release.
+2. Open a Markdown file or a folder workspace.
+3. Choose your editing or reading view and start working.
+4. Configure repository sync or the optional integrations when you need them.
+
+## Local work, explicit connections
+
+- **Portable documents.** Markdown files remain on your filesystem and usable by other tools.
+- **Offline translation.** Desktop English-to-Chinese inference uses bundled assets.
+- **Local Mermaid rendering.** Diagram rendering does not require a server.
+- **Optional network workflows.** Repository sync connects to the selected provider; PlantUML requires explicit approval before sending diagram source remotely. Documents can also reference remote images.
+- **Separate integration ownership.** Vocab and Memory are independent local services; Desktop does not directly access Memory's database.
+
+<sub>Images show the current frontend with synthetic demo documents and caption
+text. Native file/audio calls are simulated for capture; these images illustrate
+the interface, not installed-app or recognition acceptance.
+[Image provenance and reproduction](docs/assets/README.md).</sub>
+
+## Build from source
+
+Install Node.js LTS, npm, Rust stable, and the Tauri v2 prerequisites for your
+platform. macOS native development also requires Xcode Command Line Tools.
 
 ```bash
 npm ci
-```
-
-Use `npm install` only when intentionally updating dependencies and the lockfile. Rust dependencies are resolved by Cargo when a Rust or Tauri command runs.
-
-### Run macOS App
-
-```bash
 npm run tauri:dev
 ```
 
-This starts Vite on `127.0.0.1:1420`, compiles the Rust crate, and opens the Tauri desktop app.
-
-You can also run the workspace script directly:
+For a frontend-only development session:
 
 ```bash
-npm --workspace apps/desktop run tauri -- dev
+npm --workspace apps/desktop run dev
 ```
 
-The `tauri:dev` alias is defined at the repository root. There is no script with that name inside `apps/desktop/package.json`; the direct workspace form must use `run tauri -- dev` as shown above.
-
-### iOS Status
-
-Use the separate reader workspace rather than running Desktop's Tauri script
-with an iOS subcommand:
-
-```bash
-npm --workspace apps/ios run dev
-npm --workspace apps/ios run ios:init -- --ci
-npm --workspace apps/ios run ios:dev
-```
-
-The browser preview runs on port 1430. Native development requires Xcode and the
-iOS prerequisites; generated Xcode files and signing credentials are local build
-outputs, not committed source. See [the reader guide](apps/ios/README.md) for
-simulator commands, checks, device setup and known limitations.
-
-### Build Rust Workspace
-
-```bash
-cargo build --workspace
-```
-
-### Build Release Binary
-
-```bash
-cargo build --workspace --release
-```
-
-The release binary is generated under:
-
-```text
-target/release/
-```
-
-### Build Desktop Frontend
+Build the frontend or package the native desktop app:
 
 ```bash
 npm run build
-```
-
-The frontend bundle is generated under:
-
-```text
-apps/desktop/dist/
-```
-
-### Package macOS App
-
-```bash
 npm run tauri:build
 ```
 
-This creates the configured native packages through Tauri.
+Root scripts target Desktop. The [iPhone guide](apps/ios/README.md) covers the
+reader's separate workspace, Xcode setup, and simulator commands.
 
-Expected package outputs are generated under the Tauri target directory, commonly:
-
-```text
-target/release/bundle/
-```
-
-For macOS, expected artifacts may include `.app` and `.dmg` packages depending on the Tauri bundler configuration.
-
-### Install Locally
-
-For development, run the app directly:
-
-```bash
-npm run tauri:dev
-```
-
-For local installation on macOS after packaging:
-
-1. Build the app with `npm run tauri:build`.
-2. Open the generated `.dmg` or `.app` from the bundle output directory.
-3. Move `Polarbear.app` to `/Applications`.
-
-### Mobile Notes
-
-The reader already has a native Tauri entry point and iOS plugin. It uses immutable imports, sandboxed document access and WebView rendering. Generating its local Xcode project is a development setup step; a working browser preview or simulator build does not establish physical-device, provider or signed-distribution acceptance.
-
-### Run Rust Checks
-
-```bash
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace
-```
-
-### Run Frontend Checks
-
-```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm --workspace apps/desktop run test:translation-assets
-npm exec --workspace apps/desktop -- playwright install chromium webkit
-npm --workspace apps/desktop run test:offline-translation -- --webkit
-npm --workspace apps/desktop run test:ui
-```
-
-The native clipboard receiver check runs on macOS:
-
-```bash
-npm --workspace apps/desktop run test:native-clipboard
-```
-
-These commands describe checks to run. Their inclusion is not a claim that they
-were rerun for a documentation-only change. Recorded v0.9.3 results and remaining
-manual checks are in [the status page](docs/releases/v0.9.3.md).
-
-### Release Packaging
-
-The [release workflow](.github/workflows/release.yml) runs for `v*` tags or an
-explicit existing desktop release tag supplied through manual dispatch. It builds
-a universal macOS DMG and a Windows x64 NSIS installer, uploads the DMG as an
-Actions artifact, and attaches both installers to a draft GitHub Release.
-Publication is a separate action. `ios-v*` milestones use the independent iPhone
-quality workflow and do not trigger Desktop packaging.
-
-Release builds derive the app version from the selected tag and update build-local
-JSON metadata. Source manifest versions do not by themselves identify the packaged
-release. A documentation-only correction does not require changing versions,
-rebuilding artifacts or moving an existing tag.
-
----
-
-## Cloud Sync Token
-
-Polarbear uses a GitHub or GitLab personal access token to synchronize workspace files.
-
-Security rules:
-
-- Do not store tokens in plain text configuration files
-- Do not print tokens in logs
-- Token access must go through the Rust `secret_store` module
-- Release builds require the platform Keychain
-- Plaintext fallback storage is limited to debug builds
-
----
-
-## Mermaid Example
-
-```mermaid
-graph TD
-    A[Write Markdown] --> B[Live Preview]
-    B --> C[Render Mermaid]
-    C --> D[Zoom Diagram]
-    D --> E[Commit to GitHub]
-```
-
----
-
-## Roadmap
-
-### Current gaps
-
-- Complete physical-iPhone/provider acceptance and signed distribution for the experimental reader
-- Record installed Desktop/Tauri WebView acceptance and receiver-specific Lark/Word rich-paste results
-- Integrate the shared Apple document foundation before claiming linked cross-device editing or iCloud synchronization
-- Export complete documents to PDF and HTML
-- Continue extracting workspace, repository sync, and export services from the large Tauri entry point
-- Expand integration coverage around native commands and release packaging
-
-### Future
-
-- AI-assisted writing
-- GitHub Pull Request editing
-- Team knowledge base mode
-- Document publishing
-- Custom plugin marketplace
-
----
+| Explore the project | Start here |
+| --- | --- |
+| Development rules and checks | [Contributing](CONTRIBUTING.md) |
+| Application structure and boundaries | [Architecture](ARCHITECTURE.md) |
+| Feature guides, plans, and evidence | [Documentation index](docs/README.md) |
+| Native and platform acceptance | [Engineering verification](docs/engineering/verification.md) |
+| Packaging and candidate checks | [Release workflow](.github/workflows/release.yml) |
+| Report a problem or propose an improvement | [GitHub Issues](https://github.com/smartscity/polarbear/issues) |
 
 ## License
 
-Polarbear follows the existing `MIT OR Apache-2.0` Cargo declaration, at your option: [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE). This does not relicense bundled dependencies or models. Bergamot/model MPL-2.0 notices and the fflate MIT notice remain separate; see [the bundled asset notice](apps/desktop/public/models/en-zh/README.md).
+Polarbear is available under **[MIT](LICENSE-MIT)**. Bundled dependencies, translation models, and caption assets retain
+their own licenses and notices; see the [translation asset notices](apps/desktop/public/models/en-zh/README.md)
+and [caption asset documentation](apps/desktop/src-tauri/resources/caption/README.md).

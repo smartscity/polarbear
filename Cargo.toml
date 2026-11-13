@@ -6,7 +6,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/smartscity/polarbear"
 homepage = "https://github.com/smartscity/polarbear"
 description = "Polarbear is a local-first Markdown editor for writers, developers, and GitHub-based knowledge workflows."

@@ -1,6 +1,10 @@
 # Polarbear（北极熊）
 
-[英文](README.md) | [简体中文](README-zh.md)
+[Current product overview](README.md) | [Documentation](docs/README.md)
+
+> Historical translation: this page describes an earlier version. See the
+> [current README](README.md) for the maintained capability and platform overview.
+> New documentation is maintained in English under the repository language policy.
 
 > 一个本地优先、面向写作者与开发者的 Markdown 编辑器和知识工作台。
 
@@ -197,7 +201,7 @@ npm run build
 ```
 
 翻译资源完整性、生产环境 Chromium/WebKit 推理和剪贴板检查，
-请使用[英文开发指南](README.md#run-frontend-checks)中的补充命令。
+请使用[development checks](CONTRIBUTING.md#checks)中的补充命令。
 
 ### Rust 检查
 
@@ -267,7 +271,5 @@ target/release/bundle/
 
 ## 许可证
 
-Cargo 清单当前声明 `MIT OR Apache-2.0`，但仓库在正式分发前仍需补齐对应的许可证正文文件。
-
-内置翻译资源另附第三方许可声明，不能替代尚未补齐的项目根许可证正文。
-详见[资源许可说明](apps/desktop/public/models/en-zh/README.md)。
+Polarbear is available under [MIT](LICENSE-MIT). Bundled assets retain their separate third-party notices; see
+[the translation asset notices](apps/desktop/public/models/en-zh/README.md).
